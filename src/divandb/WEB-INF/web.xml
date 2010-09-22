@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+   version="2.5">
+
+    <description>Divan</description>
+    <display-name>Divan</display-name>
+    
+    <context-param>
+    	<param-name>test</param-name>
+    	<param-value>test</param-value>
+	</context-param>
+ 
+    <servlet>
+      <display-name>Divan Servlet</display-name> 
+      <servlet-name>divan</servlet-name>
+      <servlet-class>divandb.DivanServlet</servlet-class>
+     
+      <init-param>
+      	<description>max Input Length</description>
+      	<param-name>input.max-length</param-name>
+      	<param-value>10000</param-value>
+      </init-param>
+       <load-on-startup>1</load-on-startup>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>divan</servlet-name>
+        <url-pattern>/divan</url-pattern>
+    </servlet-mapping>
+    
+    <listener>
+    	<description>load the db</description>
+    	<display-name>divanCtxListener</display-name>
+    	<listener-class>divandb.DivanCtxListener</listener-class>
+    </listener>
+
+    
+    
+    <jsp-config>
+    <!-- 
+        <taglib>
+                <taglib-uri>http://java.sun.com/jstl/fmt</taglib-uri>
+                <taglib-location>/WEB-INF/tld/fmt.tld</taglib-location>
+        </taglib>
+
+
+        <taglib>
+                <taglib-uri>http://java.sun.com/jstl/core</taglib-uri>
+                <taglib-location>/WEB-INF/tld/c.tld</taglib-location>
+        </taglib>
+
+
+
+        <taglib>
+                <taglib-uri>http://java.sun.com/jstl/sql</taglib-uri>
+                <taglib-location>/WEB-INF/tld/sql.tld</taglib-location>
+        </taglib>
+
+
+
+        <taglib>
+                <taglib-uri>http://java.sun.com/jstl/x</taglib-uri>
+                <taglib-location>/WEB-INF/tld/x.tld</taglib-location>
+        </taglib>
+
+        <taglib>
+                <taglib-uri>http://java.sun.com/jstl/functions</taglib-uri>
+                <taglib-location>/WEB-INF/tld/fn.tld</taglib-location>
+        </taglib>
+	 -->     
+	  <!--  MY TAGS -->
+ 	<!--  
+        <taglib>
+                <taglib-uri>http://www.umr915.univ-nantes.fr</taglib-uri>
+                <taglib-location>/WEB-INF/tld/u915.tld</taglib-location>
+        </taglib>
+	 -->
+
+</jsp-config>
+  	<!-- 
+<error-page>
+        <exception-type>javax.servlet.ServletException</exception-type>
+   		<location>/WEB-INF/jsp/exception.jsp</location>
+</error-page>
+
+<error-page>
+        <exception-type>java.io.IOException</exception-type>
+  		<location>/WEB-INF/jsp/exception.jsp</location>
+</error-page>
+ 
+
+<error-page>
+   <error-code>500</error-code>
+   <location>/WEB-INF/jsp/exception.jsp</location>
+</error-page>
+ -->
+</web-app>

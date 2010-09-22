@@ -1,0 +1,31 @@
+<project default="all">
+
+<target name="all" depends="pubmed2gender">
+
+</target>
+	
+<target name="pubmed2gender">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<javac srcdir="src" destdir="tmp">
+		<include name="**/PubmedGender.java" />
+	</javac>
+		
+	<jar destfile="dist/pubmed2gender.jar" basedir="tmp">
+		<manifest>
+	        <attribute name="Built-By" value="${user.name}"/>
+	        <attribute name="Main-Class" value="sandbox.PubmedGender"/>
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
+</target>
+
+<target name="test" depends="pubmed2gender">
+	<java jar="dist/pubmed2gender.jar"
+		fork="true">
+		<arg value="-L"/><arg value="100"/>
+		<arg value="Rotavirus"/>
+	</java>
+</target>	
+	
+</project>
