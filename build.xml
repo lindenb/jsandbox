@@ -1,6 +1,6 @@
 <project default="all">
 
-<target name="all" depends="pubmed2gender">
+<target name="all" depends="pubmed2gender,pubmedperyear">
 
 </target>
 	
@@ -19,6 +19,23 @@
 	</jar>
 	<delete dir="tmp"/>
 </target>
+
+<target name="pubmedperyear">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<javac srcdir="src" destdir="tmp">
+		<include name="**/PubmedPerYear.java" />
+	</javac>
+	
+	<jar destfile="dist/pubmedperyear.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.PubmedPerYear"/>
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
+</target>
+
 
 <target name="test" depends="pubmed2gender">
 	<java jar="dist/pubmed2gender.jar"

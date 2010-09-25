@@ -29,10 +29,12 @@ public class PubmedGender
 	{
 	private Map<String,Float> males=null;
 	private Map<String,Float> females=null;
-	private int limit=1000;
 	private String query="";
 	private int canvasSize=200;
 	private boolean ignoreUndefined=false;
+	private boolean html=true;
+	private boolean firstAuthor=false;
+	
 	private PubmedGender()
 		{
 		Collator collator= Collator.getInstance(Locale.US);
@@ -44,7 +46,8 @@ public class PubmedGender
 	private void loadNames()
 		throws IOException
 		{
-		BufferedReader in=new BufferedReader(new InputStreamReader(new URL("http://cpansearch.perl.org/src/EDALY/Text-GenderFromName-0.33/GenderFromName.pm").openStream()));
+		BufferedReader in=new BufferedReader(new InputStreamReader(new URL(
+				"http://cpansearch.perl.org/src/EDALY/Text-GenderFromName-0.33/GenderFromName.pm").openStream()));
 		String  line;
 		Map<String,Float> map=null;
 		int posAssign=-1;
@@ -92,17 +95,18 @@ public class PubmedGender
 		int countMales=0;
 		int countFemales=0;
 		int countUnknown=0;
-		
+		int countIgnored=0;
 		URL url= new URL(
 			"http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term="+
 			URLEncoder.encode(this.query, "UTF-8")+	
-			"&retstart=0&retmax="+this.limit+"&usehistory=y&retmode=xml&email=plindenbaum_at_yahoo.fr&tool=gender");
+			"&retstart=0&retmax=0&usehistory=y&retmode=xml&email=plindenbaum_at_yahoo.fr&tool=gender");
 		
 		XMLEventReader reader= newReader(url);
 		XMLEvent evt;
 		String QueryKey=null;
 		String WebEnv=null;
-		int countId=0;
+		int count=-1;
+
 		while(!(evt=reader.nextEvent()).isEndDocument())
 			{
 			if(!evt.isStartElement()) continue;	
@@ -115,31 +119,36 @@ public class PubmedGender
 				{
 				WebEnv= reader.getElementText().trim();
 				}
-			else  if(tag.equals("Id"))
+			else  if(tag.equals("Count") && count==-1)
 				{
-				++countId;
+				count=Integer.parseInt(reader.getElementText());
 				}
 			}
 		reader.close();
-		
-		if(countId!=0)
+
+		if(count>0)
 			{
 			url= new URL("http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&WebEnv="+
 					URLEncoder.encode(WebEnv,"UTF-8")+
 					"&query_key="+URLEncoder.encode(QueryKey,"UTF-8")+
-					"&retmode=xml&retmax="+this.limit+"&email=plindenbaum_at_yahoo.fr&tool=mail");
+					"&retmode=xml&retmax="+count+"&email=plindenbaum_at_yahoo.fr&tool=mail");
 			
 			reader= newReader(url);
-			 
+			int authorIndex=0;
 			
 			while(reader.hasNext())
 				{
 				evt=reader.nextEvent();
 				if(!evt.isStartElement()) continue;
-				if(!evt.asStartElement().getName().getLocalPart().equals("Author")) continue;
+				String tagName= evt.asStartElement().getName().getLocalPart();
+				if(tagName.equals("AuthorList"))
+					{
+					authorIndex=-1;
+					}
+				if(!tagName.equals("Author")) continue;
 				String firstName=null;
 				String initials=null;
-	
+				authorIndex++;
 				while(reader.hasNext())
 					{
 					evt=reader.nextEvent();
@@ -157,12 +166,20 @@ public class PubmedGender
 						}
 					else if(evt.isEndElement())
 						{
-						if(evt.asEndElement().getName().getLocalPart().equals("Author")) break;
+						if(evt.asEndElement().getName().getLocalPart().equals("Author"))
+							{
+							break;
+							}
 						}
 					}
-				if(	firstName==null ) continue;
+				if(this.firstAuthor && authorIndex!=0) continue;
+				if(	firstName==null ) {countIgnored++;continue;}
 				if(	firstName.length()==1 ||
-					firstName.equals(initials)) continue;
+					firstName.equals(initials))
+					{
+					countIgnored++;
+					continue;
+					}
 					
 				String tokens[]=firstName.split("[ ]+");
 				firstName="";
@@ -176,7 +193,11 @@ public class PubmedGender
 				
 				
 				if(	firstName.length()==1 ||
-					firstName.equals(initials)) continue;
+					firstName.equals(initials))
+					{
+					countIgnored++;
+					continue;
+					}
 				
 				Float male= this.males.get(firstName);
 				Float female= this.females.get(firstName);
@@ -210,6 +231,7 @@ public class PubmedGender
 				}
 			reader.close();
 			}
+		int originalUndef=countUnknown;
 		if(ignoreUndefined) countUnknown=0;
 		
 		float total= countMales+countFemales+countUnknown;
@@ -220,59 +242,80 @@ public class PubmedGender
 		String id= "ctx"+System.currentTimeMillis()+""+(int)(Math.random()*1000);
 		XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
 		XMLStreamWriter w= xmlfactory.createXMLStreamWriter(System.out,"UTF-8");
-		w.writeStartElement("html");
-		w.writeStartElement("body");
-		w.writeStartElement("div");
-		w.writeAttribute("style","margin:10px;padding:10px;text-align:center;");
-		w.writeStartElement("div");
-		w.writeEmptyElement("canvas");
-		w.writeAttribute("width", String.valueOf(canvasSize+1));
-		w.writeAttribute("height", String.valueOf(canvasSize+1));
-		w.writeAttribute("id", id);
-		w.writeStartElement("script");
-		w.writeCharacters(
-		"function paint"+id+"(){var canvas=document.getElementById('"+id+"');"+
-		"if (!canvas.getContext) return;var c=canvas.getContext('2d');"+
-		"c.fillStyle='white';c.strokeStyle='black';"+
-		"c.fillRect(0,0,"+canvasSize+","+canvasSize+");"+
-		"c.fillStyle='gray';c.beginPath();c.arc("+(canvasSize/2)+","+(canvasSize/2)+","+radius+",0,Math.PI*2,true);c.fill();c.stroke();"+
-		"c.fillStyle='blue';c.beginPath();c.moveTo("+(canvasSize/2)+","+(canvasSize/2)+");c.arc("+(canvasSize/2)+","+(canvasSize/2)+","+radius+",0,"+radMale+",false);c.closePath();c.fill();c.stroke();"+
-		"c.fillStyle='pink';c.beginPath();c.moveTo("+(canvasSize/2)+","+(canvasSize/2)+");c.arc("+(canvasSize/2)+","+(canvasSize/2)+","+radius+","+radMale+","+(radMale+radFemale)+",false);c.closePath();c.fill();c.stroke();}"+
-		"window.addEventListener('load',function(){ paint"+id+"(); },true);"
-		);
-		w.writeEndElement();
-		w.writeEndElement();
-		
-		w.writeStartElement("span");
-		w.writeAttribute("style","color:pink;");
-		w.writeCharacters("Women: "+countFemales+" ("+(int)((countFemales/total)*100.0)+"%)");
-		w.writeEndElement();
-		w.writeCharacters(" ");
-		w.writeStartElement("span");
-		w.writeAttribute("style","color:blue;");
-		w.writeCharacters("Men: "+countMales+" ("+(int)((countMales/total)*100.0)+"%)");
-		w.writeEndElement();
-		w.writeCharacters(" ");
-		
-		if(!this.ignoreUndefined)
+		if(this.html)
 			{
+			w.writeStartElement("html");
+			w.writeStartElement("body");
+			}
+		
+		if(countMales+countFemales>0)
+			{
+			w.writeStartElement("div");
+			w.writeAttribute("style","margin:10px;padding:10px;text-align:center;");
+			w.writeStartElement("div");
+			w.writeEmptyElement("canvas");
+			w.writeAttribute("width", String.valueOf(canvasSize+1));
+			w.writeAttribute("height", String.valueOf(canvasSize+1));
+			w.writeAttribute("id", id);
+			w.writeStartElement("script");
+			w.writeCharacters(
+			"function paint"+id+"(){var canvas=document.getElementById('"+id+"');"+
+			"if (!canvas.getContext) return;var c=canvas.getContext('2d');"+
+			"c.fillStyle='white';c.strokeStyle='black';"+
+			"c.fillRect(0,0,"+canvasSize+","+canvasSize+");"+
+			"c.fillStyle='gray';c.beginPath();c.arc("+(canvasSize/2)+","+(canvasSize/2)+","+radius+",0,Math.PI*2,true);c.fill();c.stroke();"+
+			"c.fillStyle='blue';c.beginPath();c.moveTo("+(canvasSize/2)+","+(canvasSize/2)+");c.arc("+(canvasSize/2)+","+(canvasSize/2)+","+radius+",0,"+radMale+",false);c.closePath();c.fill();c.stroke();"+
+			"c.fillStyle='pink';c.beginPath();c.moveTo("+(canvasSize/2)+","+(canvasSize/2)+");c.arc("+(canvasSize/2)+","+(canvasSize/2)+","+radius+","+radMale+","+(radMale+radFemale)+",false);c.closePath();c.fill();c.stroke();}"+
+			"window.addEventListener('load',function(){ paint"+id+"(); },true);"
+			);
+			w.writeEndElement();
+			w.writeEndElement();
+			
+			w.writeStartElement("span");
+			w.writeAttribute("style","color:pink;");
+			w.writeCharacters("Women: "+countFemales+" ("+(int)((countFemales/total)*100.0)+"%)");
+			w.writeEndElement();
+			w.writeCharacters(" ");
+			w.writeStartElement("span");
+			w.writeAttribute("style","color:blue;");
+			w.writeCharacters("Men: "+countMales+" ("+(int)((countMales/total)*100.0)+"%)");
+			w.writeEndElement();
+			
+			w.writeEmptyElement("br");
+			
+			
 			w.writeStartElement("span");
 			w.writeAttribute("style","color:gray;");
-			w.writeCharacters("Undefined : "+countUnknown+" ("+(int)((countUnknown/total)*100.0)+"%)");
+			if(!this.ignoreUndefined)
+				{
+				w.writeCharacters("Undefined : "+countUnknown+" ("+(int)((countUnknown/total)*100.0)+"%)");
+				w.writeCharacters(" Ignored : "+countIgnored);
+				}
+			else
+				{
+				w.writeCharacters("Undefined : "+originalUndef);
+				w.writeCharacters(" Ignored : "+countIgnored);
+				}
+			w.writeEndElement();
+			
+			
+			w.writeEmptyElement("br");
+			
+			w.writeStartElement("a");
+			w.writeAttribute("target","_blank");
+			w.writeAttribute("href","http://www.ncbi.nlm.nih.gov/sites/entrez?db=pubmed&amp;cmd=search&amp;term="+URLEncoder.encode(this.query,"UTF-8"));
+			w.writeCharacters(this.query);
+			w.writeEndElement();
+			
+			
 			w.writeEndElement();
 			}
-		w.writeEmptyElement("br");
 		
-		w.writeStartElement("a");
-		w.writeAttribute("target","_blank");
-		w.writeAttribute("href","http://www.ncbi.nlm.nih.gov/sites/entrez?db=pubmed&amp;cmd=search&amp;term="+URLEncoder.encode(this.query,"UTF-8"));
-		w.writeCharacters(this.query);
-		w.writeEndElement();
-		
-		
-		w.writeEndElement();
-		w.writeEndElement();
-		w.writeEndElement();
+		if(this.html)
+			{
+			w.writeEndElement();//body
+			w.writeEndElement();//html
+			}
 		w.flush();
 		w.close();
 		}
@@ -293,22 +336,27 @@ public class PubmedGender
 					System.err.println("Options:");
 					System.err.println(" -h help; This screen.");
 					System.err.println(" -w <int> canvas size default:"+app.canvasSize);
-					System.err.println(" -L <int> limit number default:"+app.limit);
 					System.err.println(" -i ignore undefined default:"+app.ignoreUndefined);
+					System.err.println(" -H ignore html header & footer default:"+app.html);
+					System.err.println(" -f only first author");
 					System.err.println(" query terms...");
 					return;
-					}
-				else if(args[optind].equals("-L"))
-					{
-					app.limit=Integer.parseInt(args[++optind]);
 					}
 				else if(args[optind].equals("-w"))
 					{
 					app.canvasSize=Integer.parseInt(args[++optind]);
 					}
+				else if(args[optind].equals("-H"))
+					{
+					app.html=false;
+					}
 				else if(args[optind].equals("-i"))
 					{
 					app.ignoreUndefined=true;
+					}
+				else if(args[optind].equals("-f"))
+					{
+					app.firstAuthor=true;
 					}
 				else if(args[optind].equals("--"))
 					{
