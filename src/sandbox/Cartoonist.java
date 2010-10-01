@@ -395,7 +395,6 @@ public class Cartoonist
 							new Point2D.Double(h.x,h.y)
 							);
 						}
-					ImageInstanceEditor.this.instance.calc();
 					}
 				};
 			bot.add(new JButton(action));
@@ -501,17 +500,22 @@ public class Cartoonist
 	 */
 	static class ImageInstance
 		{
-		int id;
+		int id=0;
 		int imageSourceId=-1;
-		ImageSource source;
+		ImageSource source=null;
 		List<Point2D> polygon=new ArrayList<Point2D>();
-		Rectangle2D.Double bounds;
+		private Rectangle2D.Double viewRect=new Rectangle2D.Double();
+		
+		ImageInstance()
+			{
+			}
+		
 		public int getId()
 			{
 			return id;
 			}
 		
-		public Shape getShape()
+		private Shape getShape()
 			{
 			GeneralPath path=new GeneralPath();
 			for(int i=0;i<this.polygon.size();++i)
@@ -534,35 +538,29 @@ public class Cartoonist
 			{
 			return source;
 			}
-		void calc()
-			{
-			double minx=Integer.MAX_VALUE;
-			double miny=Integer.MAX_VALUE;
-			double maxx=0;
-			double maxy=0;
-			
-			for(Point2D pt: this.polygon)
-				{
-				minx= Math.min(minx, pt.getX());
-				miny= Math.min(miny, pt.getY());
-				maxx= Math.max(maxx, pt.getX());
-				maxy= Math.max(maxy, pt.getY());
-				}
-			this.bounds=new Rectangle2D.Double	(
-					minx,miny,
-					(maxx-minx),
-					(maxy-miny)
-					);
-			}
+		
+		
+		
+		
 		
 		public double getWidth()
 			{
-			return this.bounds.getWidth();
+			return this.viewRect.getWidth();
 			}
 		
 		public double getHeight()
 			{
-			return this.bounds.getHeight();
+			return this.viewRect.getHeight();
+			}
+		
+		public double getX()
+			{
+			return this.viewRect.getX();
+			}
+		
+		public double getY()
+			{
+			return this.viewRect.getY();
 			}
 		
 		public double getWHRatio()
@@ -575,9 +573,11 @@ public class Cartoonist
 			{
 			w.writeStartElement("ImageInstance");
 			w.writeAttribute("id", String.valueOf(getId()));
-			w.writeAttribute("image-id", String.valueOf(getImageSource().getId()));
+			w.writeAttribute("source", String.valueOf(getImageSource().getId()));
 			
 			w.writeStartElement("points");
+			w.writeAttribute("width", String.valueOf(getShape().getBounds2D().getWidth()));
+			w.writeAttribute("height", String.valueOf(getShape().getBounds2D().getHeight()));
 			for(int i=0;i< polygon.size();++i)
 				{
 				if(i>0) w.writeCharacters(" ");
@@ -585,6 +585,22 @@ public class Cartoonist
 				w.writeCharacters(",");
 				w.writeCharacters(String.valueOf(polygon.get(i).getY()));
 				}
+			w.writeEndElement();
+			
+			w.writeStartElement("x");
+			w.writeCharacters(String.valueOf(getX()));
+			w.writeEndElement();
+			
+			w.writeStartElement("y");
+			w.writeCharacters(String.valueOf(getY()));
+			w.writeEndElement();
+			
+			w.writeStartElement("width");
+			w.writeCharacters(String.valueOf(getWidth()));
+			w.writeEndElement();
+			
+			w.writeStartElement("height");
+			w.writeCharacters(String.valueOf(getHeight()));
 			w.writeEndElement();
 
 			w.writeEndElement();
@@ -594,7 +610,8 @@ public class Cartoonist
 			throws XMLStreamException,IOException
 			{
 			this.id=Integer.parseInt(e.getAttributeByName(new QName("id")).getValue());
-			this.imageSourceId= Integer.parseInt(e.getAttributeByName(new QName("image-id")).getValue());
+			this.imageSourceId= Integer.parseInt(e.getAttributeByName(new QName("source")).getValue());
+			
 			while(reader.hasNext())
 				{
 				XMLEvent evt=reader.nextEvent();
@@ -613,7 +630,22 @@ public class Cartoonist
 								));
 							}
 						}
-					
+					else if(localName.equals("x"))
+						{
+						this.viewRect.x= Double.parseDouble(reader.getElementText());
+						}
+					else if(localName.equals("y"))
+						{
+						this.viewRect.y= Double.parseDouble(reader.getElementText());
+						}
+					else if(localName.equals("width"))
+						{
+						this.viewRect.width= Double.parseDouble(reader.getElementText());
+						}
+					else if(localName.equals("height"))
+						{
+						this.viewRect.height= Double.parseDouble(reader.getElementText());
+						}
 					}
 				else if(evt.isEndElement())
 					{
@@ -733,11 +765,13 @@ public class Cartoonist
 		}
 	
 	
-	
+	/**
+	 * Model
+	 */
 	static class Model
 		{
 		private List<Figure> figures=new Vector<Figure>();
-		private Model parent;
+		private Model parent=null;
 		private Model getParent()
 			{
 			return this.parent;
@@ -796,7 +830,6 @@ public class Cartoonist
 	 */
 	static class DefaultModel extends Model
 		{
-		private int ID_GENERATOR=0;
 		private File fileSaveAs=null;
 		private boolean documentModified=false;
 		private List<ImageSource> imageSources=new Vector<ImageSource>();
@@ -864,7 +897,6 @@ public class Cartoonist
 			for(ImageInstance instance: imageInstances)
 				{
 				if(instance.source==null) throw new IOException("cannot find image-id");
-				instance.calc();
 				}
 			
 			try
@@ -908,7 +940,11 @@ public class Cartoonist
 		
 		}	
 	
-	
+	/**
+	 * 
+	 * ImageSourceEditorDialog
+	 *
+	 */
 	private class ImageSourceEditorDialog
 		extends JPanel
 		{
@@ -967,9 +1003,9 @@ public class Cartoonist
 	 * Figure
 	 *
 	 */
-	private class Figure
+	private abstract class Figure
 		{
-		private Rectangle2D.Double bounds=null;
+		//private Rectangle2D.Double bounds=null;
 		private Drag drags[];
 		private Double ratiowh=null;
 		
@@ -1009,13 +1045,17 @@ public class Cartoonist
 					{
 					dy=dx/getFigure().getRatioWH();
 					} 
-				if( getFigure().bounds.width-dx>0 &&
-					getFigure().bounds.height-dy>0)
+				Rectangle2D bounds= getFigure().getSrcBounds();
+				
+				if( bounds.getWidth()-dx>0 &&
+					bounds.getHeight()-dy>0)
 					{
-					getFigure().bounds.x+=dx;
-					getFigure().bounds.width-=dx;
-					getFigure().bounds.y+=dy;
-					getFigure().bounds.height-=dy;
+					getFigure().setSrcBounds(
+						bounds.getX()+dx,
+						bounds.getY()+dy,
+						bounds.getWidth()-dx,
+						bounds.getHeight()-dy
+						);
 					}
 				}
 			}
@@ -1043,13 +1083,17 @@ public class Cartoonist
 					{
 					dy=-dx/getFigure().getRatioWH();
 					}
+				Rectangle2D bounds= getFigure().getSrcBounds();
 				
-				if( getFigure().bounds.width-dx>0 &&
-					getFigure().bounds.height+dy>0)
+				if( bounds.getWidth()-dx>0 &&
+					bounds.getHeight()+dy>0)
 					{
-					getFigure().bounds.x+=dx;
-					getFigure().bounds.width-=dx;
-					getFigure().bounds.height+=dy;
+					getFigure().setSrcBounds(
+						bounds.getX()+dx,
+						bounds.getY(),
+						bounds.getWidth()-dx,
+						bounds.getHeight()+dy
+						);
 					}
 				}
 			}
@@ -1079,12 +1123,17 @@ public class Cartoonist
 					dy=-dx/getFigure().getRatioWH();
 					}
 				
-				if( getFigure().bounds.width+dx>0 &&
-					getFigure().bounds.height-dy>0)
+				Rectangle2D bounds= getFigure().getSrcBounds();
+				
+				if( bounds.getWidth()+dx>0 &&
+					bounds.getHeight()-dy>0)
 					{
-					getFigure().bounds.width+=dx;
-					getFigure().bounds.y+=dy;
-					getFigure().bounds.height-=dy;
+					setSrcBounds(
+							bounds.getX(),	
+							bounds.getY()+dy,
+							bounds.getWidth()+dx,
+							bounds.getHeight()-dy
+							);
 					}
 				}
 			}		
@@ -1114,22 +1163,23 @@ public class Cartoonist
 					dy=dx/getFigure().getRatioWH();
 					}
 				
-				if( getFigure().bounds.width+dx>0 &&
-					getFigure().bounds.height+dy>0)
+				Rectangle2D bounds= getFigure().getSrcBounds();
+				
+				if( bounds.getWidth()+dx>0 &&
+					bounds.getHeight()+dy>0)
 					{
-					getFigure().bounds.width+=dx;
-					getFigure().bounds.height+=dy;
+					setSrcBounds(
+							bounds.getX(),	
+							bounds.getY(),
+							bounds.getWidth()+dx,
+							bounds.getHeight()+dy
+						);
 					}
 				}
 			}
 		
-		public Figure(Rectangle2D r)
+		protected Figure()
 			{
-			this.bounds=new Rectangle2D.Double(
-					r.getX(),r.getY(),
-					r.getWidth(),
-					r.getHeight()
-					);
 			this.drags=new Drag[]{
 					new TopLeftDrag(),
 					new BottomLeftDrag(),
@@ -1151,22 +1201,22 @@ public class Cartoonist
 		
 		public double getX()
 			{
-			return (bounds.getX()*Cartoonist.this.zoom);
+			return (getSrcBounds().getX()*Cartoonist.this.zoom);
 			}
 		
 		public double getY()
 			{
-			return (bounds.getY()*Cartoonist.this.zoom);
+			return (getSrcBounds().getY()*Cartoonist.this.zoom);
 			}
 		
 		public double getWidth()
 			{
-			return (bounds.getWidth()*Cartoonist.this.zoom);
+			return (getSrcBounds().getWidth()*Cartoonist.this.zoom);
 			}
 		
 		public double getHeight()
 			{
-			return (bounds.getHeight()*Cartoonist.this.zoom);
+			return (getSrcBounds().getHeight()*Cartoonist.this.zoom);
 			}
 		
 		public Rectangle2D getViewRect()
@@ -1183,6 +1233,37 @@ public class Cartoonist
 			return getViewRect().contains(x,y);
 			}
 		
+		public abstract void setSrcBounds(double x,double y,double width,double height);
+		public abstract Rectangle2D getSrcBounds();
+			
+			
+		public abstract void paint(GC gc);
+		
+		}
+	
+	class DefaultFigure
+		extends Figure
+		{
+		private Rectangle2D.Double rect;
+		DefaultFigure(Rectangle2D.Double rect)
+			{
+			this.rect=rect;
+			}
+		
+		@Override
+		public Rectangle2D getSrcBounds()
+			{
+			return this.rect;
+			}
+		
+		@Override
+		public void setSrcBounds(double x,double y,double width,double height)
+			{
+			this.rect.x=x;
+			this.rect.y=y;
+			this.rect.width=width;
+			this.rect.height=height;
+			}
 		
 		public void paint(GC gc)
 			{
@@ -1194,23 +1275,80 @@ public class Cartoonist
 			}
 		}
 	
-	class ImageInstanceFigure
+	 /**
+	  * ImageInstanceFigure
+	  */
+	 class ImageInstanceFigure
 		extends Figure
 		{
 		private ImageInstance imageInstance;
 		ImageInstanceFigure(ImageInstance imageInstance)
 			{
-			super(new Rectangle());//TODO wrong
 			this.imageInstance=imageInstance;
 			}
 		
+		public ImageInstance getImageInstance()
+			{
+			return imageInstance;
+			}
+		
+		@Override
+		public Double getRatioWH()
+			{
+			return getImageInstance().getWHRatio();
+			}
+		
+		@Override
+		public Rectangle2D getSrcBounds()
+			{
+			return getImageInstance().viewRect;
+			}
+		@Override
+		public void setSrcBounds(double x, double y, double width, double height)
+			{
+			imageInstance.viewRect.x=x;
+			imageInstance.viewRect.y=y;
+			imageInstance.viewRect.width=width;
+			imageInstance.viewRect.height=height;
+			}
+		
+		@Override
+		public void paint(GC gc)
+			{
+			Rectangle2D r=getViewRect();
+			System.err.println(r);
+			gc.g.setColor(Color.WHITE);
+			gc.g.fill(r);
+			gc.g.setColor(Color.BLACK);
+			gc.g.draw(r);
+			
+			Shape shape=getImageInstance().getShape();
+			Rectangle2D bounds=shape.getBounds2D();
+			AffineTransform tr1=AffineTransform.getTranslateInstance(
+				-bounds.getX()+imageInstance.getX(),
+				-bounds.getY()+imageInstance.getY()
+				);
+			AffineTransform tr2=AffineTransform.getScaleInstance(zoom, zoom);
+			tr2.concatenate(tr1);
+			Shape shape2=tr2.createTransformedShape(shape);
+			gc.g.draw(shape2);
+			}
 		}
 	
-	
+	/**
+	 * Constructor
+	 * @param model
+	 */
 	public Cartoonist(DefaultModel model)
 		{
 		super("Cartoonist");
 		this.model=model;
+		for(ImageInstance is: model.imageInstances)
+			{
+			model.getFigures().add(new ImageInstanceFigure(is));
+			}
+		
+		
 		this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 		this.addWindowListener(new WindowAdapter()
 			{
@@ -1218,6 +1356,7 @@ public class Cartoonist
 			public void windowOpened(WindowEvent e)
 				{
 				reloadImageSrcMenu();
+				adjustSize();
 				}
 			@Override
 			public void windowClosing(WindowEvent e)
@@ -1287,8 +1426,11 @@ public class Cartoonist
 						double dy=e.getY()-mousePrev.y;
 						dx/=zoom;
 						dy/=zoom;
-						selected.bounds.x+=dx;
-						selected.bounds.y+=dy;
+						Rectangle2D rect=selected.getSrcBounds();
+						selected.setSrcBounds(
+							rect.getX()+dx, rect.getY()+dy,
+							rect.getWidth(), rect.getHeight()
+							);
 						}
 					drawingArea.repaint();
 					getModel().documentModified=true;
@@ -1409,10 +1551,11 @@ public class Cartoonist
 		int midX= drawingArea.getWidth()/2;
 		int midY= drawingArea.getHeight()/2;
 		
-		Figure figure=new Figure(new Rectangle(100,100,50,50));
+		Figure figure=new DefaultFigure(new Rectangle2D.Double(100,100,50,50));
 		Rectangle r=drawingArea.getVisibleRect();
-		figure.bounds.x=(int)r.getCenterX()-midX;
-		figure.bounds.y=(int)r.getCenterY()-midY;
+		
+		//figure.bounds.x=(int)r.getCenterX()-midX;
+		//figure.bounds.y=(int)r.getCenterY()-midY;
 		getModel().getFigures().add(figure);
 		getModel().documentModified=true;
 		adjustSize();
