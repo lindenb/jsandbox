@@ -1,7 +1,9 @@
+import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Composite;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GradientPaint;
@@ -51,7 +53,9 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JToolBar;
 import javax.swing.border.EmptyBorder;
@@ -64,6 +68,7 @@ import javax.xml.stream.XMLStreamWriter;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 
+import org.lindenb.awt.ColorUtils;
 import org.lindenb.io.PreferredDirectory;
 import org.lindenb.lang.ThrowablePane;
 import org.lindenb.swing.SwingUtils;
@@ -90,13 +95,82 @@ public class Cartoonist
 	private DefaultModel model;
 	
 	/**
-	 * 
 	 * Graphic Context
-	 *
 	 */
 	private class GC
 		{
 		Graphics2D g;
+		}
+	
+	private static class BorderStyle
+		{
+		float lineHeight=1;
+		Color color=Color.BLACK;
+		float opacity=1f;
+		
+		void paint(GC gc,Shape shape)
+			{
+			if(this.color==null || lineHeight==0) return;
+			Stroke oldstroke=gc.g.getStroke();
+			Composite oldComposite = gc.g.getComposite();
+			gc.g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,this.opacity));
+			gc.g.setColor(this.color);
+			gc.g.setStroke(new BasicStroke(this.lineHeight));
+			gc.g.draw(shape);
+			gc.g.setComposite(oldComposite);
+			gc.g.setStroke(oldstroke);
+			}
+		
+		void write(XMLStreamWriter w) throws XMLStreamException
+			{
+			w.writeStartElement("border");
+			
+			w.writeStartElement("height");
+			w.writeCharacters(String.valueOf(lineHeight));
+			w.writeEndElement();
+			
+			w.writeStartElement("color");
+			w.writeCharacters(ColorUtils.toRGB(color));
+			w.writeEndElement();
+			
+			w.writeStartElement("opacity");
+			w.writeCharacters(String.valueOf(opacity));
+			w.writeEndElement();
+			
+			w.writeEndElement();
+			}
+		
+		void read(StartElement e,XMLEventReader reader)
+			throws XMLStreamException,IOException
+			{
+			while(reader.hasNext())
+				{
+				XMLEvent evt=reader.nextEvent();
+				
+				if(evt.isStartElement())
+					{
+					String localName=evt.asStartElement().getName().getLocalPart();
+					if(localName.equals("height"))
+						{
+						this.lineHeight=Float.parseFloat(reader.getElementText());
+						}
+					else if(localName.equals("color"))
+						{
+						this.color= ColorUtils.parseColor(reader.getElementText());
+						}
+					else if(localName.equals("opacity"))
+						{
+						this.opacity= Float.parseFloat(reader.getElementText());
+						}
+					}
+				else if(evt.isEndElement())
+					{
+					String localName=evt.asEndElement().getName().getLocalPart();
+					if(localName.equals("border")) break;
+					}
+				}
+			}
+		
 		}
 	
 	private static class ColorButton
@@ -489,18 +563,126 @@ public class Cartoonist
 		
 		}
 	
+	/**
+	 * Drawable
+	 */
 	static abstract class Drawable
 		{
 		int id=0;
+		public int getId()
+			{
+			return id;
+			}
 		abstract void write(XMLStreamWriter w) throws XMLStreamException;
 		}
 	/**
 	 * ImageInstance
-	 *
+	 */
+	static class TextBox
+		extends Drawable
+		{
+		private Rectangle2D.Double viewRect=new Rectangle2D.Double();
+		private String text="";
+		
+		
+		public double getWidth()
+			{
+			return this.viewRect.getWidth();
+			}
+		
+		public double getHeight()
+			{
+			return this.viewRect.getHeight();
+			}
+		
+		public double getX()
+			{
+			return this.viewRect.getX();
+			}
+		
+		public double getY()
+			{
+			return this.viewRect.getY();
+			}
+		
+		void read(StartElement e,XMLEventReader reader)
+		throws XMLStreamException,IOException
+			{
+			this.id=Integer.parseInt(e.getAttributeByName(new QName("id")).getValue());
+			
+			while(reader.hasNext())
+				{
+				XMLEvent evt=reader.nextEvent();
+				
+				if(evt.isStartElement())
+					{
+					String localName=evt.asStartElement().getName().getLocalPart();
+					if(localName.equals("text"))
+						{
+						this.text=reader.getElementText();
+						}
+					else if(localName.equals("x"))
+						{
+						this.viewRect.x= Double.parseDouble(reader.getElementText());
+						}
+					else if(localName.equals("y"))
+						{
+						this.viewRect.y= Double.parseDouble(reader.getElementText());
+						}
+					else if(localName.equals("width"))
+						{
+						this.viewRect.width= Double.parseDouble(reader.getElementText());
+						}
+					else if(localName.equals("height"))
+						{
+						this.viewRect.height= Double.parseDouble(reader.getElementText());
+						}
+					}
+				else if(evt.isEndElement())
+					{
+					String localName=evt.asEndElement().getName().getLocalPart();
+					if(localName.equals("TextBox")) break;
+					}
+				}
+			}
+		
+		@Override
+		void write(XMLStreamWriter w) throws XMLStreamException
+			{
+			w.writeStartElement("TextBox");
+			w.writeAttribute("id", String.valueOf(getId()));
+			
+			w.writeStartElement("text");
+			w.writeCharacters(this.text);
+			w.writeEndElement();
+			
+			w.writeStartElement("x");
+			w.writeCharacters(String.valueOf(getX()));
+			w.writeEndElement();
+			
+			w.writeStartElement("y");
+			w.writeCharacters(String.valueOf(getY()));
+			w.writeEndElement();
+			
+			w.writeStartElement("width");
+			w.writeCharacters(String.valueOf(getWidth()));
+			w.writeEndElement();
+			
+			w.writeStartElement("height");
+			w.writeCharacters(String.valueOf(getHeight()));
+			w.writeEndElement();
+
+			
+			w.writeEndElement();
+			}
+		}
+	/**
+	 * ImageInstance
 	 */
 	static class ImageInstance
 		extends Drawable
 		{
+		private BorderStyle border=new BorderStyle();
 		int imageSourceId=-1;
 		ImageSource source=null;
 		List<Point2D> polygon=new ArrayList<Point2D>();
@@ -508,11 +690,6 @@ public class Cartoonist
 		
 		ImageInstance()
 			{
-			}
-		
-		public int getId()
-			{
-			return id;
 			}
 		
 		private Shape getShape()
@@ -603,7 +780,9 @@ public class Cartoonist
 			w.writeStartElement("height");
 			w.writeCharacters(String.valueOf(getHeight()));
 			w.writeEndElement();
-
+			
+			this.border.write(w);
+			
 			w.writeEndElement();
 			}
 	
@@ -646,6 +825,10 @@ public class Cartoonist
 					else if(localName.equals("height"))
 						{
 						this.viewRect.height= Double.parseDouble(reader.getElementText());
+						}
+					else if(localName.equals("border"))
+						{
+						this.border.read(e, reader);
 						}
 					}
 				else if(evt.isEndElement())
@@ -786,7 +969,14 @@ public class Cartoonist
 			{
 			return this.figures;
 			}
-		
+		public int getIndexOf(Figure f)
+			{
+			for(int i=0;i< this.figures.size();++i)
+				{
+				if(this.figures.get(i)==f) return i;
+				}
+			return -1;
+			}
 		protected Figure findFigureAt(int x,int y)
 			{
 			for(int i=this.getFigures().size()-1;
@@ -870,6 +1060,12 @@ public class Cartoonist
 						ImageInstance instance=new ImageInstance();
 						instance.read(e,reader);
 						this.drawables.add(instance);
+						}
+					else if(localName.equals("TextBox"))
+						{
+						TextBox box=new TextBox();
+						box.read(e,reader);
+						this.drawables.add(box);
 						}
 					}
 				else if(evt.isEndElement())
@@ -1213,6 +1409,79 @@ public class Cartoonist
 					};
 			}
 		
+		public void fillPopup(JPopupMenu menu)
+			{
+			AbstractAction action=new AbstractAction("Lock")
+				{
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					
+					}
+				};
+			
+			menu.add(action);
+			action=new AbstractAction("Move Back")
+				{
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					int index= getModel().getIndexOf(Figure.this);
+					if(index<=0 && getModel().getFigures().size()<2) return;	
+					getModel().getFigures().remove(index);
+					getModel().getFigures().add(0, Figure.this);
+					drawingArea.repaint();
+					}
+				};
+			menu.add(action);
+
+			action=new AbstractAction("Move Backward")
+				{
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					int index= getModel().getIndexOf(Figure.this);
+					if(index<=0) return;
+					Figure f2= getModel().getFigures().get(index-1);
+					getModel().getFigures().set(index, f2);
+					getModel().getFigures().set(index-1,Figure.this);
+					drawingArea.repaint();
+					}
+				};
+			menu.add(action);			
+			
+			action=new AbstractAction("Move Forward")
+				{
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					int index= getModel().getIndexOf(Figure.this);
+					if(index+1< getModel().getFigures().size()) return;
+					Figure f2= getModel().getFigures().get(index+1);
+					getModel().getFigures().set(index, f2);
+					getModel().getFigures().set(index+1,Figure.this);
+					drawingArea.repaint();
+					}
+				};
+			menu.add(action);
+			
+			action=new AbstractAction("Move Front")
+				{
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					int index= getModel().getIndexOf(Figure.this);
+					if(getModel().getFigures().size()<2) return;	
+					getModel().getFigures().remove(index);
+					getModel().getFigures().add(Figure.this);
+					drawingArea.repaint();
+					}
+				};
+			menu.add(action);
+			}
+		
+		public abstract Drawable getDrawable();
+		
 		public Double getRatioWH()
 			{
 			return this.ratiowh;
@@ -1289,7 +1558,7 @@ public class Cartoonist
 			this.rect.width=width;
 			this.rect.height=height;
 			}
-		
+		@Override
 		public void paint(GC gc)
 			{
 			Rectangle2D r=getViewRect();
@@ -1297,6 +1566,64 @@ public class Cartoonist
 			gc.g.fill(r);
 			gc.g.setColor(Color.BLACK);
 			gc.g.draw(r);
+			}
+		
+		@Override
+		public Drawable getDrawable()
+			{
+			return null;
+			}
+		
+		}
+	
+	 /**
+	  * ImageInstanceFigure
+	  */
+	 class TextBoxFigure
+		extends Figure
+		{
+		private TextBox tbox;
+		TextBoxFigure(TextBox tbox)
+			{
+			this.tbox=tbox;
+			}
+		@Override
+		public Drawable getDrawable()
+			{
+			return this.tbox;
+			}
+		
+		@Override
+		public Rectangle2D getSrcBounds()
+			{
+			return new Rectangle2D.Double(
+				this.tbox.getX(),
+				this.tbox.getY(),
+				this.tbox.getWidth(),
+				this.tbox.getHeight()
+				);
+			}
+		
+		@Override
+		public void setSrcBounds(double x, double y, double width, double height)
+			{
+			tbox.viewRect.x=x;
+			tbox.viewRect.y=y;
+			tbox.viewRect.width=width;
+			tbox.viewRect.height=height;
+			}
+		
+		@Override
+		public void paint(GC gc)
+			{
+			Rectangle2D r=getViewRect();
+			gc.g.setColor(Color.WHITE);
+			gc.g.fill(r);
+			gc.g.setColor(Color.BLUE);
+			gc.g.draw(r);
+			gc.g.drawString(tbox.text, (int)r.getX()+1, (int)r.getY()+12);
+			
+			
 			}
 		}
 	
@@ -1395,6 +1722,15 @@ public class Cartoonist
 			//gc.g.fill(r);
 			
 			gc.g.setClip(oldClip);
+			
+			getImageInstance().border.paint(gc, viewShape);
+			
+			}
+		
+		@Override
+		public Drawable getDrawable()
+			{
+			return getImageInstance();
 			}
 		}
 	
@@ -1412,6 +1748,11 @@ public class Cartoonist
 				{
 				ImageInstance is=ImageInstance.class.cast(d);
 				model.getFigures().add(new ImageInstanceFigure(is));
+				}
+			else if(d instanceof TextBox)
+				{
+				TextBox is=TextBox.class.cast(d);
+				model.getFigures().add(new TextBoxFigure(is));
 				}
 			else
 				{
@@ -1477,6 +1818,12 @@ public class Cartoonist
 				else
 					{
 					selected= getModel().findFigureAt(e.getX(), e.getY());
+					}
+				if(e.isPopupTrigger())
+					{
+					JPopupMenu pop=new JPopupMenu();
+					selected.fillPopup(pop);
+					pop.show(e.getComponent(), e.getX(), e.getY());
 					}
 				mousePrev=null;
 				}
@@ -1568,6 +1915,31 @@ public class Cartoonist
 		menu.add(action);
 		toolbar.add(action);
 		
+		JMenu subMenu=new JMenu("Export");
+		menu.add(subMenu);
+		
+		
+		action=new AbstractAction("As SVG")
+			{
+			@Override
+			public void actionPerformed(ActionEvent ae)
+				{
+				doMenuExportAsSVG();
+				}
+			};
+		subMenu.add(action);
+		action=new AbstractAction("As HTML")
+			{
+			@Override
+			public void actionPerformed(ActionEvent ae)
+				{
+				doMenuExportAsHTML();
+				}
+			};
+		subMenu.add(action);
+		
+		
+		
 		menu=new JMenu("Images Source");
 		this.menuImageSource=menu;
 		bar.add(menu);
@@ -1605,12 +1977,23 @@ public class Cartoonist
 		menu.add(action);
 		toolbar.add(action);
 		
-		action=new AbstractAction("test")
+		action=new AbstractAction("Add Image Source")
 			{
 			@Override
 			public void actionPerformed(ActionEvent e)
 				{
 				doMenuAddImageSource();
+				}
+			};
+		menu.add(action);
+		toolbar.add(action);
+		
+		action=new AbstractAction("TextBox")
+			{
+			@Override
+			public void actionPerformed(ActionEvent e)
+				{
+				doMenuAddTextBox();
 				}
 			};
 		menu.add(action);
@@ -1955,6 +2338,23 @@ public class Cartoonist
 		reloadImageSrcMenu();
 		}
 	
+	
+	private void doMenuAddTextBox()
+		{
+		TextBox tbox=new TextBox();
+		tbox.id=getModel().newId();
+		tbox.text="Hello World";
+		tbox.viewRect.x=5;
+		tbox.viewRect.y=5;
+		tbox.viewRect.width=150;
+		tbox.viewRect.height=50;
+		getModel().drawables.add(tbox);
+		getModel().getFigures().add(new TextBoxFigure(tbox));
+		getModel().documentModified=true;
+		reloadImageSrcMenu();
+		drawingArea.repaint();
+		}
+	
 	private void reloadImageSrcMenu()
 		{
 		this.menuImageSource.removeAll();
@@ -1982,11 +2382,27 @@ public class Cartoonist
 		ed.setVisible(true);
 		if(ed.exitStatus!=JOptionPane.OK_OPTION) return;
 		ed.instance.id=getModel().newId();
+		Rectangle2D rx =ed.instance.getShape().getBounds2D();
+		ed.instance.viewRect=new Rectangle2D.Double(10,10,rx.getWidth(),rx.getHeight());
 		getModel().drawables.add(ed.instance);
+		getModel().getFigures().add(new ImageInstanceFigure(ed.instance));
 		getModel().documentModified=true;
 		adjustSize();
 		}
-
+	
+	private void doMenuExportAsSVG()
+		{
+		File file=askFileSaveAs(".svg");
+		if(file==null) return;
+		}
+	
+	private void doMenuExportAsHTML()
+		{
+		File file=askFileSaveAs(".html");
+		if(file==null) return;
+		}
+	
+	
 	/**
 	 * main
 	 */
