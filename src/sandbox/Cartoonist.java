@@ -6,9 +6,9 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.MediaTracker;
+import java.awt.Paint;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Shape;
@@ -25,7 +25,6 @@ import java.awt.geom.GeneralPath;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
-import java.awt.image.ImageObserver;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
@@ -38,16 +37,13 @@ import java.util.Vector;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
-import javax.swing.ButtonGroup;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JColorChooser;
-import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JInternalFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -55,10 +51,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.DocumentEvent;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
@@ -70,7 +64,6 @@ import javax.xml.stream.events.XMLEvent;
 
 import org.lindenb.io.PreferredDirectory;
 import org.lindenb.lang.ThrowablePane;
-import org.lindenb.swing.DocumentAdapter;
 import org.lindenb.swing.SwingUtils;
 import org.lindenb.swing.layout.InputLayout;
 
@@ -215,7 +208,7 @@ public class Cartoonist
 			}
 		private List<HotSpot> hotspots=new Vector<HotSpot>();
 		private HotSpot selectedSpot=null;
-		private float zoom=1f;
+		private double zoom=1f;
 		private JPanel	paintArea;
 		private ImageSource	source;
 		private Point mousePrev=null;
@@ -412,7 +405,7 @@ public class Cartoonist
 			bot.add(new JButton(action));
 			}
 		
-		private void doZoom(float newzoom)
+		private void doZoom(double newzoom)
 			{
 			if(this.zoom==newzoom) return;
 			this.zoom=newzoom;
@@ -473,7 +466,7 @@ public class Cartoonist
 			return null;
 			}
 		
-		private Shape getPath(float scaled)
+		private Shape getPath(double scaled)
 			{
 			GeneralPath path=new GeneralPath();
 			for(int i=0;i<this.hotspots.size();++i)
@@ -1312,26 +1305,46 @@ public class Cartoonist
 			imageInstance.viewRect.height=height;
 			}
 		
+		public Shape getViewShape()
+			{
+			Shape shape=getImageInstance().getShape();
+			Rectangle2D bounds=shape.getBounds2D();
+			
+			double ratioW=((imageInstance.getWidth()/bounds.getWidth()));
+			double ratioH=((imageInstance.getHeight()/bounds.getHeight()));
+		
+			AffineTransform transforms[]=
+				{
+				AffineTransform.getScaleInstance(zoom, zoom),
+				AffineTransform.getTranslateInstance(imageInstance.getX(),imageInstance.getY()),
+				AffineTransform.getScaleInstance(ratioW, ratioH),
+				AffineTransform.getTranslateInstance(-bounds.getX(),-bounds.getY())
+				};
+			
+			
+			
+			AffineTransform tr=new AffineTransform();
+			for(int i=0;i< transforms.length;++i)
+				{
+				tr.concatenate(transforms[i]);
+				}
+			
+			return tr.createTransformedShape(shape);
+			}
+		
 		@Override
 		public void paint(GC gc)
 			{
 			Rectangle2D r=getViewRect();
-			System.err.println(r);
-			gc.g.setColor(Color.WHITE);
-			gc.g.fill(r);
-			gc.g.setColor(Color.BLACK);
+			Paint oldPaint=gc.g.getPaint();
+			gc.g.setXORMode(drawingArea.getBackground());
+			gc.g.setColor(Color.BLUE);
 			gc.g.draw(r);
+			gc.g.setPaint(oldPaint);
 			
-			Shape shape=getImageInstance().getShape();
-			Rectangle2D bounds=shape.getBounds2D();
-			AffineTransform tr1=AffineTransform.getTranslateInstance(
-				-bounds.getX()+imageInstance.getX(),
-				-bounds.getY()+imageInstance.getY()
-				);
-			AffineTransform tr2=AffineTransform.getScaleInstance(zoom, zoom);
-			tr2.concatenate(tr1);
-			Shape shape2=tr2.createTransformedShape(shape);
-			gc.g.draw(shape2);
+			gc.g.setColor(Color.WHITE);
+			gc.g.fill(getViewShape());
+			
 			}
 		}
 	
