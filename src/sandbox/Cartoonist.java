@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -21,6 +22,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Area;
 import java.awt.geom.GeneralPath;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -487,13 +489,18 @@ public class Cartoonist
 		
 		}
 	
+	static abstract class Drawable
+		{
+		int id=0;
+		abstract void write(XMLStreamWriter w) throws XMLStreamException;
+		}
 	/**
 	 * ImageInstance
 	 *
 	 */
 	static class ImageInstance
+		extends Drawable
 		{
-		int id=0;
 		int imageSourceId=-1;
 		ImageSource source=null;
 		List<Point2D> polygon=new ArrayList<Point2D>();
@@ -561,6 +568,7 @@ public class Cartoonist
 			return getWidth()/getHeight();
 			}
 		
+		@Override
 		void write(XMLStreamWriter w)
 		throws XMLStreamException
 			{
@@ -826,7 +834,7 @@ public class Cartoonist
 		private File fileSaveAs=null;
 		private boolean documentModified=false;
 		private List<ImageSource> imageSources=new Vector<ImageSource>();
-		private List<ImageInstance> imageInstances=new Vector<ImageInstance>();
+		private List<Drawable> drawables=new Vector<Drawable>();
 		
 		public DefaultModel()
 			{
@@ -861,7 +869,7 @@ public class Cartoonist
 						{
 						ImageInstance instance=new ImageInstance();
 						instance.read(e,reader);
-						this.imageInstances.add(instance);
+						this.drawables.add(instance);
 						}
 					}
 				else if(evt.isEndElement())
@@ -878,8 +886,10 @@ public class Cartoonist
 				{
 				img.image=Toolkit.getDefaultToolkit().getImage(img.getImageUrl());
 				mediaTracker.addImage(img.image,img.id);
-				for(ImageInstance instance: imageInstances)
+				for(Drawable drawable: drawables)
 					{
+					if(!(drawable instanceof ImageInstance)) continue;
+					ImageInstance instance=ImageInstance.class.cast(drawable);
 					if(instance.imageSourceId==img.id)
 						{
 						instance.source=img;
@@ -887,8 +897,10 @@ public class Cartoonist
 					}
 				}
 			
-			for(ImageInstance instance: imageInstances)
+			for(Drawable drawable: drawables)
 				{
+				if(!(drawable instanceof ImageInstance)) continue;
+				ImageInstance instance=ImageInstance.class.cast(drawable);
 				if(instance.source==null) throw new IOException("cannot find image-id");
 				}
 			
@@ -915,7 +927,7 @@ public class Cartoonist
 			{
 			w.writeStartElement("Cartoon");
 			for(ImageSource img: imageSources) img.write(w);
-			for(ImageInstance img: imageInstances) img.write(w);
+			for(Drawable d: this.drawables) d.write(w);
 			w.writeEndElement();
 			}
 		
@@ -929,6 +941,26 @@ public class Cartoonist
 			w.writeEndDocument();
 			w.flush();
 			w.close();
+			}
+		
+		public int newId()
+			{
+			int id=1;
+			boolean found=false;
+			while(!found)
+				{
+				found=true;
+				for(Drawable img: this.drawables)
+					{
+					if(img.id==id)
+						{
+						id++;
+						found=false;
+						break;
+						}
+					}
+				}
+			return id;
 			}
 		
 		}	
@@ -1336,15 +1368,33 @@ public class Cartoonist
 		public void paint(GC gc)
 			{
 			Rectangle2D r=getViewRect();
-			Paint oldPaint=gc.g.getPaint();
 			gc.g.setXORMode(drawingArea.getBackground());
 			gc.g.setColor(Color.BLUE);
 			gc.g.draw(r);
-			gc.g.setPaint(oldPaint);
+			gc.g.setPaintMode();
 			
-			gc.g.setColor(Color.WHITE);
-			gc.g.fill(getViewShape());
+			Rectangle2D srcRec=getImageInstance().getShape().getBounds2D();
+			Shape viewShape=getViewShape();
 			
+			Shape oldClip= gc.g.getClip();
+			Area newClip= new Area(viewShape);
+			newClip.intersect(new Area(oldClip));
+			gc.g.setClip(newClip);
+			gc.g.drawImage(
+				getImageInstance().getImageSource().image,
+				(int)r.getX(),
+				(int)r.getY(),
+				(int)r.getMaxX(),
+				(int)r.getMaxY(),
+				(int)srcRec.getX(),
+				(int)srcRec.getY(),
+				(int)srcRec.getMaxX(),
+				(int)srcRec.getMaxY(),
+				null
+				);
+			//gc.g.fill(r);
+			
+			gc.g.setClip(oldClip);
 			}
 		}
 	
@@ -1356,9 +1406,17 @@ public class Cartoonist
 		{
 		super("Cartoonist");
 		this.model=model;
-		for(ImageInstance is: model.imageInstances)
+		for(Drawable d: model.drawables)
 			{
-			model.getFigures().add(new ImageInstanceFigure(is));
+			if(d instanceof ImageInstance)
+				{
+				ImageInstance is=ImageInstance.class.cast(d);
+				model.getFigures().add(new ImageInstanceFigure(is));
+				}
+			else
+				{
+				throw new UnsupportedOperationException(d.getClass().getName());
+				}
 			}
 		
 		
@@ -1923,23 +1981,8 @@ public class Cartoonist
 		SwingUtils.center(ed,150);
 		ed.setVisible(true);
 		if(ed.exitStatus!=JOptionPane.OK_OPTION) return;
-		boolean found=false;
-		ed.instance.id=1;
-		//search a new Id
-		while(!found)
-			{
-			found=true;
-			for(ImageInstance img: getModel().imageInstances)
-				{
-				if(img.id==ed.instance.id)
-					{
-					ed.instance.id++;
-					found=false;
-					break;
-					}
-				}
-			}
-		getModel().imageInstances.add(ed.instance);
+		ed.instance.id=getModel().newId();
+		getModel().drawables.add(ed.instance);
 		getModel().documentModified=true;
 		adjustSize();
 		}
