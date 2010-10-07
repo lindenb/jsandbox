@@ -15,6 +15,7 @@ import java.io.OutputStream;
 import java.io.StringReader;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -72,15 +73,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-
-enum RangeType
-	{
-	STRING,
-	LONG,
-	DATE,
-	OBJECT
-	}
-
 class RDF
 	{
 	public static final String NS="http://www.w3.org/1999/02/22-rdf-syntax-ns#";
@@ -101,92 +93,11 @@ class XSD
 	public static final String NS="http://www.w3.org/2001/XMLSchema#";
 	}
 
-abstract class Range
+class MY
 	{
-	public abstract  String validate(InstanceOfProperty prop,String input);
+	public static final String NS="urn:schema:";
 	}
 
-class StringRange
-	extends Range
-	{
-	private Pattern pattern;
-	
-	public Pattern getPattern()
-		{
-		return pattern;
-		}
-	
-	public String validate(InstanceOfProperty prop,String input)
-		{
-		if(getPattern()!=null && getPattern().matcher(input).matches())
-			{
-			return "doesn't match "+getPattern().pattern();
-			}
-		return null;
-		}
-	}
-
-class LongRange
-extends Range
-	{
-	@Override
-	public String validate(InstanceOfProperty prop, String input)
-		{
-		try
-			{
-			Long.parseLong(input);
-			}
-		catch (NumberFormatException e)
-			{
-			return "Not a long";
-			}
-		return null;
-		}
-	}
-
-class DoubleRange
-extends Range
-	{
-	@Override
-	public String validate(InstanceOfProperty prop, String input)
-		{
-		try
-			{
-			Double.parseDouble(input);
-			}
-		catch (NumberFormatException e)
-			{
-			return "Not a double";
-			}
-		return null;
-		}
-	}
-
-class ObjectRange
-extends Range
-	{
-	private Set<OntClass> ontClassInRange=new HashSet<OntClass>();
-	
-	void add(OntClass c)
-		{
-		this.ontClassInRange.add(c);
-		}
-	
-	public Set<OntClass> getOntClassesInRange()
-		{
-		return this.ontClassInRange;
-		}
-	
-	@Override
-	public String validate(InstanceOfProperty prop, String input)
-		{
-		InstanceOfClass i=prop.getInstance().getDataStore().getInstanceById(input);
-		if(i==null) return null;
-		if(getOntClassesInRange().contains(i.getOntClass())) return null;
-		return "Bad Class";
-		}
-	
-	}
 
 interface OntNode
 	{
@@ -203,9 +114,47 @@ interface OntNode
 interface OntProperty extends OntNode
 	{
 	public OntClass getOntClass();
-	public Range getRange();
 	public Integer getMinCardinality();
 	public Integer getMaxCardinality();
+	}
+
+
+interface OntDataProperty extends OntProperty
+	{
+	public String getRangeUri();
+	}
+interface OntNumericProperty extends OntProperty {}
+
+interface OntStringProperty
+extends OntDataProperty
+	{
+	public Pattern getPattern();
+	public List<String> getEnum();
+	}
+
+interface OntLongProperty
+extends OntDataProperty
+	{
+	public  Long getMinInclusive();
+	public  Long getMaxInclusive();
+	}
+
+interface OntDoubleProperty
+extends OntDataProperty
+	{
+	public  Double getMinInclusive();
+	public  Double getMaxInclusive();
+	}
+
+interface OntDateProperty
+extends OntDataProperty
+	{
+	}
+
+
+interface OntObjectProperty extends OntProperty
+	{
+	public Set<OntClass> getRange();
 	}
 
 interface OntClass extends OntNode
@@ -317,6 +266,7 @@ abstract class AbstractOntNode
 		{
 		int i=getUri().lastIndexOf('#');
 		if(i==-1) i=getUri().lastIndexOf('/');
+		if(i==-1) i=getUri().lastIndexOf(':');
 		if(i==-1) throw new IllegalArgumentException("bad URI "+getUri());
 		return i;
 		}
@@ -389,13 +339,12 @@ class OntClassImpl
 	}
 
 /** OntPropertyImpl */
-class OntPropertyImpl
+abstract class OntPropertyImpl
 	extends AbstractOntNode
 	implements OntProperty,Cloneable
 	{
 	private OntModel ontModel;
 	private OntClass ontClass;
-	private Range range;
 	private Integer minCardinality;
 	private Integer maxCardinality;
 	public OntPropertyImpl()
@@ -418,17 +367,7 @@ class OntPropertyImpl
 		{
 		this.ontClass = ontClass;
 		}
-	
-	void setRange(Range range)
-		{
-		this.range = range;
-		}
-	
-	@Override
-	public Range getRange()
-		{
-		return range;
-		}
+
 
 	@Override
 	public Integer getMinCardinality()
@@ -452,14 +391,127 @@ class OntPropertyImpl
 		this.maxCardinality = maxCardinality;
 		}
 
-	
+	}
+
+
+class OntStringPropertyImpl
+	extends OntPropertyImpl
+	implements OntStringProperty
+	{
+	private Pattern pattern;
+	private List<String> enumeration=new ArrayList<String>();
 	@Override
-	protected Object clone()
+	public Pattern getPattern()
 		{
-		OntPropertyImpl prop=new OntPropertyImpl();
-		return prop;
+		return pattern;
+		}
+	void setPattern(Pattern pattern)
+		{
+		this.pattern = pattern;
+		}
+	@Override
+	public String getRangeUri()
+		{
+		return XSD.NS+"string";
+		}
+	@Override
+	public List<String> getEnum()
+		{
+		return this.enumeration;
+		}
+	void setEnumeration(List<String> enumeration)
+		{
+		this.enumeration.clear();
+		this.enumeration.addAll(enumeration);
 		}
 	}
+
+
+class OntLongPropertyImpl
+extends OntPropertyImpl
+implements OntLongProperty
+	{
+	private Long minInclusive=null;
+	private Long maxInclusive=null;
+	@Override
+	public Long getMinInclusive()
+		{
+		return minInclusive;
+		}
+	@Override
+	public Long getMaxInclusive()
+		{
+		return maxInclusive;
+		}
+	void setMaxInclusive(Long maxInclusive)
+		{
+		this.maxInclusive = maxInclusive;
+		}
+	
+	void setMinInclusive(Long minInclusive)
+		{
+		this.minInclusive = minInclusive;
+		}
+	@Override
+	public String getRangeUri()
+		{
+		return XSD.NS+"int";
+		}
+	}
+
+/**
+ * OntDoublePropertyImpl
+ */
+class OntDoublePropertyImpl
+extends OntPropertyImpl
+implements OntDoubleProperty
+	{
+	private Double minInclusive=null;
+	private Double maxInclusive=null;
+	@Override
+	public Double getMinInclusive()
+		{
+		return minInclusive;
+		}
+	@Override
+	public Double getMaxInclusive()
+		{
+		return maxInclusive;
+		}
+	void setMaxInclusive(Double maxInclusive)
+		{
+		this.maxInclusive = maxInclusive;
+		}
+	
+	void setMinInclusive(Double minInclusive)
+		{
+		this.minInclusive = minInclusive;
+		}
+	@Override
+	public String getRangeUri()
+		{
+		return XSD.NS+"double";
+		}
+	}
+
+class OntObjectPropertyImpl
+extends OntPropertyImpl
+implements OntObjectProperty
+	{
+	private Set<OntClass> range=new HashSet<OntClass>();
+	@Override
+	public Set<OntClass> getRange()
+		{
+		return this.range;
+		}
+
+	void setRange(Set<OntClass> range)
+		{
+		this.range.clear();
+		this.range.addAll(range);
+		}
+	}
+
 
 class NamespaceContextImpl
 	implements NamespaceContext
@@ -519,6 +571,9 @@ class OntModelImpl
 	
 	public OntModelImpl()
 		{
+		this.nsCtx.setPrefixNs("my", MY.NS);
+		this.nsCtx.setPrefixNs("owl", OWL.NS);
+		this.nsCtx.setPrefixNs("xsd", XSD.NS);
 		}
 	
 	@Override
@@ -594,90 +649,125 @@ class OntModelImpl
 			for(int i=0;i< list.getLength();++i)
 				{
 				Element e1=Element.class.cast(list.item(i));
-				Attr  att=e1.getAttributeNodeNS(RDF.NS, "about");
-				Set<OntClassImpl> ontClasses=new HashSet<OntClassImpl>();
 				
-				NodeList list2=(NodeList)xpath.evaluate("rdfs:domain/@rdf:resource",root,XPathConstants.NODESET);
+				//ontClass Domain
+				Set<OntClassImpl> domains=new HashSet<OntClassImpl>();
+				
+				//get all the domains
+				NodeList list2=(NodeList)xpath.evaluate("rdfs:domain/@rdf:resource",e1,XPathConstants.NODESET);
 				for(int j=0;j< list2.getLength();++j)
 					{
-					att=Attr.class.cast(list2.item(j));
+					Attr att=Attr.class.cast(list2.item(j));
 					OntClassImpl c=OntClassImpl.class.cast(getOntClassByUri(att.getValue()));
 					if(c==null) throw new IOException("cannot get OntClass "+att.getValue());
-					ontClasses.add(c);	
+					domains.add(c);	
 					}
 				
-				for(OntClassImpl ontClass:ontClasses)
+				//create a property for each domain
+				for(OntClassImpl domain:domains)
 					{
-					OntPropertyImpl ontProperty=new OntPropertyImpl();
-					ontProperty.setUri(att.getValue());
-					ontProperty.setOntClass(ontClass);
-					ontClass.add(ontProperty);
+					OntPropertyImpl ontProperty=null;
 					
-					for(Node c2=e1.getFirstChild();c2!=null;c2=c2.getNextSibling())
+					String range=(String)xpath.evaluate("rdfs:domain[1]/@rdf:resource",e1,XPathConstants.STRING);
+					if(range==null || range.isEmpty()) range=XSD.NS+"string";
+					/* RANGE IS STRING */
+					if(range.equals(XSD.NS+"string"))
 						{
-						if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
-						Element e2=Element.class.cast(c2);
-						if(	e2.getNamespaceURI().equals(RDFS.NS) &&
-							e2.getLocalName().equals("label"))
+						OntStringPropertyImpl property=new OntStringPropertyImpl();
+						ontProperty=property;
+						//get pattern
+						String s1=(String)xpath.evaluate("my:pattern",e1,XPathConstants.STRING);
+						if(s1==null)
 							{
-							ontProperty.setLabel(e2.getTextContent());
-							}
-						else if(e2.getNamespaceURI().equals(RDFS.NS) &&
-								e2.getLocalName().equals("comment"))
-							{
-							ontProperty.setDescription(e2.getTextContent());
-							}
-						else if(e2.getNamespaceURI().equals(OWL.NS) &&
-								e2.getLocalName().equals("minCardinality"))
-							{
-							ontProperty.setMinCardinality(Integer.parseInt(e2.getTextContent()));
-							}
-						else if(e2.getNamespaceURI().equals(OWL.NS) &&
-								e2.getLocalName().equals("maxCardinality"))
-							{
-							ontProperty.setMaxCardinality(Integer.parseInt(e2.getTextContent()));
-							}
-						else if(e2.getNamespaceURI().equals(RDFS.NS) &&
-								e2.getLocalName().equals("range"))
-							{
-							att=e2.getAttributeNodeNS(RDF.NS, "resource");
-							if(att==null) continue;
-							String range=att.getValue();
-							if(range.equals(XSD.NS+"string"))
+							int flags=0;
+							if("true".equals((String)xpath.evaluate("my:caseInsensitive",root,XPathConstants.STRING)))
 								{
-								StringRange r=new StringRange();
-								ontProperty.setRange(r);
-								for(Node c3=c2.getFirstChild();
-									c3!=null;c3=c3.getNextSibling())
-									{
-									if(c3.getNodeType()!=Node.ELEMENT_NODE) continue;
-									Element e3=Element.class.cast(c3);
-									if(	e3.getNamespaceURI().equals(RDFS.NS) &&
-										e3.getLocalName().equals("pattern"))
-										{
-										ontProperty.setLabel(e3.getTextContent());
-										}
-									}
+								flags=Pattern.CASE_INSENSITIVE;
 								}
-							else if(range.equals(XSD.NS+"int"))
+							Pattern pattern=Pattern.compile(s1, flags);
+							property.setPattern(pattern);
+							}
+						//get enums
+						NodeList enums=(NodeList)xpath.evaluate("my:enum",e1,XPathConstants.NODESET);
+						if(enums.getLength()>0)
+							{
+							List<String> items=new ArrayList<String>(enums.getLength());
+							for(int k=0;k< enums.getLength();++k)
 								{
-								LongRange r=new LongRange();
-								ontProperty.setRange(r);
+								items.add(enums.item(k).getTextContent());
 								}
-							else if(range.equals(XSD.NS+"double"))
-								{
-								DoubleRange r=new DoubleRange();
-								ontProperty.setRange(r);
-								}
-							else
-								{
-								if(range.startsWith("#")) range=range.substring(1);
-								OntClassImpl ont =OntClassImpl.class.cast(getOntClassByUri(range));
-								if(ont==null) throw new IOException("cant find class in domain "+range);
-								
-								}
+							property.setEnumeration(items);
 							}
 						}
+					/* RANGE IS INT */
+					else if(range.equals(XSD.NS+"int"))
+						{
+						OntLongPropertyImpl property=new OntLongPropertyImpl();
+						ontProperty=property;
+						String s1=(String)xpath.evaluate("xsd:minInclusive",e1,XPathConstants.STRING);
+						if(s1!=null)
+							{
+							property.setMinInclusive(Long.parseLong(s1));
+							}
+						s1=(String)xpath.evaluate("xsd:maxInclusive",e1,XPathConstants.STRING);
+						if(s1!=null)
+							{
+							property.setMaxInclusive(Long.parseLong(s1));
+							}
+						}
+					/* RANGE IS DOUBLE */
+					else if(range.equals(XSD.NS+"double"))
+						{
+						OntDoublePropertyImpl property=new OntDoublePropertyImpl();
+						ontProperty=property;
+						String s1=(String)xpath.evaluate("xsd:minInclusive",e1,XPathConstants.STRING);
+						if(s1!=null)
+							{
+							property.setMinInclusive(Double.parseDouble(s1));
+							}
+						s1=(String)xpath.evaluate("xsd:maxInclusive",e1,XPathConstants.STRING);
+						if(s1!=null)
+							{
+							property.setMaxInclusive(Double.parseDouble(s1));
+							}
+						}
+					/* RANGE IS OBJECT */
+					else 
+						{
+						OntObjectPropertyImpl property=new OntObjectPropertyImpl();
+						ontProperty=property;
+						NodeList ranges=(NodeList)xpath.evaluate("rdfs:domain/@rdf:resource",e1,XPathConstants.NODESET);
+						Set<OntClass> set=new HashSet<OntClass>();
+						for(int k=0;k< ranges.getLength();++k)
+							{
+							Attr rsrc=(Attr)ranges.item(k);
+							OntClass ontClass= this.getOntClassByUri(rsrc.getValue());
+							if(ontClass==null) throw new IOException("cannot find ontClass:"+rsrc.getValue());
+							set.add(ontClass);
+							}
+						if(set.isEmpty()) throw new IOException("no range");
+						property.setRange(set);
+						}
+					
+					Element e2=(Element)xpath.evaluate("rdfs:label",e1,XPathConstants.NODE);
+					if(e2!=null) ontProperty.setLabel(e2.getTextContent());
+					e2=(Element)xpath.evaluate("rdfs:comment",e1,XPathConstants.NODE);
+					if(e2!=null) ontProperty.setDescription(e2.getTextContent());
+					e2=(Element)xpath.evaluate("owl:minCardinality",e1,XPathConstants.NODE);
+					if(e2!=null && !e2.getTextContent().equals("unbounded"))
+						{
+						ontProperty.setMinCardinality(Integer.parseInt(e2.getTextContent()));
+						}
+					e2=(Element)xpath.evaluate("owl:maxCardinality",e1,XPathConstants.NODE);
+					if(e2!=null && !e2.getTextContent().equals("unbounded"))
+						{
+						ontProperty.setMaxCardinality(Integer.parseInt(e2.getTextContent()));
+						}
+					//finalize property
+					Attr  att=e1.getAttributeNodeNS(RDF.NS, "about");
+					ontProperty.setUri(att.getValue());
+					ontProperty.setOntClass(domain);
+					domain.add(ontProperty);
 					}
 				}
 			}
@@ -722,6 +812,97 @@ class OntModelImpl
 				{
 				w.writeStartElement("rdf", "Property",RDF.NS);
 				w.writeAttribute("rdf", RDF.NS, "about", prop.getUri());
+				
+				w.writeStartElement("rdfs", "label",RDFS.NS);
+				w.writeCharacters(prop.getLabel());
+				w.writeEndElement();
+				
+				w.writeStartElement("rdfs", "comment",RDFS.NS);
+				w.writeCharacters(prop.getDescription());
+				w.writeEndElement();
+				
+				if(prop.getMinCardinality()!=null)
+					{
+					w.writeStartElement("owl", "minCardinality",OWL.NS);
+					w.writeCharacters(String.valueOf(prop.getMinCardinality()));
+					w.writeEndElement();
+					}
+				
+				if(prop.getMaxCardinality()!=null)
+					{
+					w.writeStartElement("owl", "maxCardinality",OWL.NS);
+					w.writeCharacters(String.valueOf(prop.getMaxCardinality()));
+					w.writeEndElement();
+					}
+				
+				if(prop instanceof OntStringProperty)
+					{
+					OntStringProperty property=(OntStringProperty)prop;
+					
+					w.writeEmptyElement("rdfs","domain",RDFS.NS);
+					w.writeAttribute("rdf", RDF.NS, "resource", XSD.NS+"string");
+					
+					if(property.getPattern()!=null)
+						{
+						w.writeStartElement("my", "pattern",MY.NS);
+						w.writeCharacters(property.getPattern().pattern());
+						w.writeEndElement();
+						}
+					
+					for(String e: ((OntStringProperty) prop).getEnum())
+						{
+						w.writeStartElement("my", "enum",MY.NS);
+						w.writeCharacters(e);
+						w.writeEndElement();
+						}
+					}
+				else if(prop instanceof OntLongProperty)
+					{
+					OntLongProperty property=(OntLongProperty)prop;
+					
+					w.writeEmptyElement("rdfs", "domain",RDFS.NS);
+					w.writeAttribute("rdf", RDF.NS, "resource", XSD.NS+"int");
+					
+					if(property.getMinInclusive()!=null)
+						{
+						w.writeStartElement("xsd", "minInclusive",XSD.NS);
+						w.writeCharacters(String.valueOf(property.getMinInclusive()));
+						w.writeEndElement();
+						}
+					if(property.getMaxInclusive()!=null)
+						{
+						w.writeStartElement("xsd", "maxInclusive",XSD.NS);
+						w.writeCharacters(String.valueOf(property.getMaxInclusive()));
+						w.writeEndElement();
+						}
+					}
+				else if(prop instanceof OntDoubleProperty)
+					{
+					OntDoubleProperty property=(OntDoubleProperty)prop;
+					w.writeEmptyElement("rdfs", "domain",RDFS.NS);
+					w.writeAttribute("rdf", RDF.NS, "resource", XSD.NS+"double");
+					if(property.getMinInclusive()!=null)
+						{
+						w.writeStartElement("xsd", "minInclusive",XSD.NS);
+						w.writeCharacters(String.valueOf(property.getMinInclusive()));
+						w.writeEndElement();
+						}
+					if(property.getMaxInclusive()!=null)
+						{
+						w.writeStartElement("xsd", "maxInclusive",XSD.NS);
+						w.writeCharacters(String.valueOf(property.getMaxInclusive()));
+						w.writeEndElement();
+						}
+					}
+				else
+					{
+					OntObjectProperty property=(OntObjectProperty)prop;
+					for(OntClass c:property.getRange())
+						{
+						w.writeEmptyElement("rdfs", "domain",RDFS.NS);
+						w.writeAttribute("rdf", RDF.NS, "resource", c.getUri());
+						}
+					}
 				w.writeEndElement();
 				}
 			
@@ -1217,7 +1398,7 @@ public class Structured
 			{
 			JFrame.setDefaultLookAndFeelDecorated(true);
 			JDialog.setDefaultLookAndFeelDecorated(true);
-			Structured app=new Structured();
+			
 			
 			int optind=0;
 			while(optind< args.length)
