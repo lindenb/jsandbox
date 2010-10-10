@@ -1,3 +1,4 @@
+package sandbox;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -19,6 +20,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
+
 import java.io.InputStreamReader;
 
 import java.util.ArrayList;
@@ -26,7 +29,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
-
 import javax.imageio.ImageIO;
 import javax.xml.XMLConstants;
 import javax.xml.stream.XMLOutputFactory;
@@ -143,12 +145,12 @@ public class MyWordle
 	private Integer outputWidth=null;
 	private boolean allowRotate=false;
 	
-	private MyWordle()
+	public MyWordle()
 		{
 		}
 	
 	
-	private void layout()
+	public void doLayout()
 		{
 		this.imageSize=new Rectangle2D.Double(0, 0, 0, 0);
 		if(this.words.isEmpty()) return;
@@ -192,11 +194,21 @@ public class MyWordle
 		            });
 				break;
 				}
-			default:break;
+			default:
+				{
+				Collections.shuffle(this.words,this.rand);
+				break;
+				}
 			}
 		Word first=this.words.get(0);
-		double high = first.getWeight();
-		double low = this.words.get( this.words.size()-1).getWeight();
+		double high = -Double.MAX_VALUE;
+		double low = Double.MAX_VALUE;
+		for(Word w:this.words)
+			{
+			high= Math.max(high, w.getWeight());
+			low= Math.min(low, w.getWeight());
+			}
+		
 		
 		/* create small image */
 		BufferedImage img=new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
@@ -211,7 +223,7 @@ public class MyWordle
 			if(ff==null) ff=this.fontFamily;
 			int fontSize=(int)(((w.getWeight()-low)/(high-low))*(this.biggestSize-this.smallestSize))+this.smallestSize;
 			Font font=new Font(ff,Font.BOLD,fontSize);
-			System.err.println(fontSize);
+			System.err.println("fontsize:"+fontSize);
 			TextLayout textLayout=new TextLayout(w.getText(), font, frc);
 			Shape shape=textLayout.getOutline(null);
 			if(this.allowRotate && this.rand.nextBoolean())
@@ -367,6 +379,11 @@ public class MyWordle
 			words.add(w);
 			
 			}
+		}
+	
+	public void add(Word word)
+		{
+		this.words.add(word);
 		}
 	
 	public void saveAsPNG(File file)
@@ -533,15 +550,159 @@ public class MyWordle
 		fout.close();
 		}
 	
+	public void saveAsPostscript(File file)
+	throws IOException
+		{
+		
+		PrintWriter out= new PrintWriter(file);
+		out.println("%!PS-Adobe-2.0");
+		out.println("%%%BoundingBox: 0 0 "+(int)this.imageSize.getWidth()+" "+(int)this.imageSize.getHeight());
+		out.println("%%EndComments");
+
+		
+		for(Word word:this.words)
+			{
+			
+			out.print(""+word.getLineHeight()+" setlinewidth");
+			
+			out.print(" newpath");
+			
+			double mPenX=0;
+			double mPenY=0;
+			StringBuilder path=new StringBuilder();
+			double tab[] = new double[6];
+			PathIterator pathiterator = word.shape.getPathIterator(null);
+			while(!pathiterator.isDone())
+				{
+				int currSegmentType= pathiterator.currentSegment(tab);
+				for(int i=1;i< tab.length;i+=2)
+					{
+					tab[i]=this.imageSize.getHeight()-tab[i];
+					}
+				switch(currSegmentType)
+					{
+					case PathIterator.SEG_MOVETO:
+						{
+						out.print(' ');
+						out.print(tab[0]);out.print(' '); out.print(tab[1]);
+						out.print(" moveto");
+						break;
+						}
+					case PathIterator.SEG_LINETO:
+						{
+						out.print(' ');
+						out.print(tab[0]);out.print(' '); out.print(tab[1]);
+						out.print(" lineto");
+						mPenX=tab[0];
+						mPenY=tab[1];
+						break;
+						}
+					case PathIterator.SEG_CLOSE:
+						{
+						out.print(" closepath");
+						break;
+						}
+					case PathIterator.SEG_QUADTO:
+						{
+						double lastX = mPenX;
+						double lastY = mPenY;
+						double c1x = lastX + (tab[0] - lastX) * 2 / 3;
+						double c1y = lastY + (tab[1] - lastY) * 2 / 3;
+						double c2x = tab[2] - (tab[2] - tab[0]) * 2/ 3;
+						double c2y = tab[3] - (tab[3] - tab[1]) * 2/ 3;
+						out.print(' ');
+						out.print(c1x);out.print(' '); out.print(c1y);
+						out.print(' ');
+						out.print(c2x);out.print(' '); out.print(c2y);
+						out.print(' ');
+						out.print(tab[2]);out.print(' '); out.print(tab[3]);
+						out.print(" curveto");
+						mPenX = tab[2];
+						mPenY = tab[3];
+						break;
+						}
+					case PathIterator.SEG_CUBICTO:
+						{
+						out.print(' ');
+						out.print(tab[0]);out.print(' '); out.print(tab[1]);
+						out.print(' ');
+						out.print(tab[2]);out.print(' '); out.print(tab[3]);
+						out.print(' ');
+						out.print(tab[4]);out.print(' '); out.print(tab[5]);
+						out.print(" curveto ");
+						mPenX = tab[4];
+						mPenY = tab[5];
+						break;
+						}
+					default:
+						{
+						System.err.println("Cannot handled "+currSegmentType);
+						break;
+						}
+					}
+				pathiterator.next();
+				}
+			
+			if(word.getFill()!=null)
+				{
+				Color c=word.getStroke();
+				out.print(c.getRed()/255.0);
+				out.print(' ');
+				out.print(c.getGreen()/255.0);
+				out.print(' ');
+				out.print(c.getBlue()/255.0);
+				out.print(' ');
+				out.print(" setrgbcolor fill");
+				}
+			
+			if(word.getStroke()!=null)
+				{
+				Color c=word.getStroke();
+				out.print(c.getRed()/255.0);
+				out.print(' ');
+				out.print(c.getGreen()/255.0);
+				out.print(' ');
+				out.print(c.getBlue()/255.0);
+				out.print(' ');
+				out.print(" setrgbcolor stroke");
+				}
+			}
+		
+		out.println(" showpage");
+		out.flush();
+		out.close();
+		}
+	
+
+
+
+	
+	
 	private static String toRGB(Color c)
 		{
 		return "rgb("+c.getRed()+","+c.getGreen()+","+c.getBlue()+")";
 		}
 	
 	
+	public void setAllowRotate(boolean allowRotate)
+		{
+		this.allowRotate = allowRotate;
+		}
+	
+	public void setBiggestSize(int biggestSize)
+		{
+		this.biggestSize = biggestSize;
+		}
+	
+	public void setSmallestSize(int smallestSize)
+		{
+		this.smallestSize = smallestSize;
+		}
+	
+	
 	private void read(BufferedReader in)throws IOException
 		{
-	
+		
 		}
 	
 	public static void main(String[] args)
@@ -552,9 +713,6 @@ public class MyWordle
 			String format=null;
 			File fileOut=null;
 			int optind=0;
-			
-			format="png";
-			fileOut=new File("/home/pierre/jeter.png");
 			
 			while(optind< args.length)
 				{
@@ -630,22 +788,24 @@ public class MyWordle
 	                        }
 	                }
 			
-			app.random();
-			app.layout();
-			app.outputWidth=500;
-			app.doSortType=3;
 			
-			if(format.equalsIgnoreCase("svg"))
+			app.doLayout();
+			
+			if(fileOut.getName().toLowerCase().endsWith(".svg") || (format!=null && format.equalsIgnoreCase("svg")))
 				{
 				app.saveAsSVG(fileOut);
 				}
-			else if(format.equalsIgnoreCase("png"))
+			else if(fileOut.getName().toLowerCase().endsWith(".png") || (format!=null && format.equalsIgnoreCase("png")))
 				{
 				app.saveAsPNG(fileOut);
 				}
+			else if(fileOut.getName().toLowerCase().endsWith("ps") || (format!=null && format.equalsIgnoreCase("ps")))
+				{
+				app.saveAsPostscript(fileOut);
+				}
 			else
 				{
-				System.err.println("unknown format");
+				System.err.println("undefined format");
 				}
 			} 
 		catch(Throwable err)

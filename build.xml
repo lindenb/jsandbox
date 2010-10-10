@@ -1,8 +1,40 @@
 <project default="all">
 
-<target name="all" depends="pubmed2gender,pubmedperyear">
+<target name="all" depends="mywordle,pubmeddump,pubmed2gender,pubmedperyear">
 
 </target>
+
+<target name="mywordle">
+		<mkdir dir="dist"/>
+		<mkdir dir="tmp"/>
+		<javac srcdir="src" destdir="tmp">
+			<include name="**/MyWordle.java" />
+		</javac>
+			
+		<jar destfile="dist/mywordle.jar" basedir="tmp">
+			<manifest>
+		        <attribute name="Built-By" value="${user.name}"/>
+		        <attribute name="Main-Class" value="sandbox.MyWordle"/>
+			</manifest>
+		</jar>
+		<delete dir="tmp"/>
+	</target>		
+	
+<target name="pubmeddump">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<javac srcdir="src" destdir="tmp">
+		<include name="**/PubmedDump.java" />
+	</javac>
+		
+	<jar destfile="dist/pubmeddump.jar" basedir="tmp">
+		<manifest>
+	        <attribute name="Built-By" value="${user.name}"/>
+	        <attribute name="Main-Class" value="sandbox.PubmedDump"/>
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
+</target>	
 	
 <target name="pubmed2gender">
 	<mkdir dir="dist"/>
