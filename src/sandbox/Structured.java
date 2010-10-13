@@ -1,8 +1,17 @@
+
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.LayoutManager;
 import java.awt.Toolkit;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -27,22 +36,34 @@ import java.util.regex.Pattern;
 
 
 import javax.swing.AbstractAction;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.border.TitledBorder;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.text.JTextComponent;
 import javax.xml.XMLConstants;
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.namespace.QName;
@@ -111,11 +132,17 @@ interface OntNode
 	public OntModel getModel();
 	}
 
+enum PropertyType
+	{
+	STRING,LONG,DOUBLE,OBJECT
+	}
+
 interface OntProperty extends OntNode
 	{
 	public OntClass getOntClass();
 	public Integer getMinCardinality();
 	public Integer getMaxCardinality();
+	public PropertyType getPropertyType();
 	}
 
 
@@ -130,6 +157,7 @@ extends OntDataProperty
 	{
 	public Pattern getPattern();
 	public List<String> getEnum();
+	public boolean isMultiline();
 	}
 
 interface OntLongProperty
@@ -400,6 +428,7 @@ class OntStringPropertyImpl
 	{
 	private Pattern pattern;
 	private List<String> enumeration=new ArrayList<String>();
+	private boolean multiline=false;
 	@Override
 	public Pattern getPattern()
 		{
@@ -419,10 +448,28 @@ class OntStringPropertyImpl
 		{
 		return this.enumeration;
 		}
+	
+	@Override
+	public boolean isMultiline()
+		{
+		return multiline;
+		}
+	
+	public void setMultiline(boolean multiline)
+		{
+		this.multiline = multiline;
+		}
+
 	void setEnumeration(List<String> enumeration)
 		{
 		this.enumeration.clear();
 		this.enumeration.addAll(enumeration);
+		}
+	
+	@Override
+	public PropertyType getPropertyType()
+		{
+		return PropertyType.STRING;
 		}
 	}
 
@@ -456,6 +503,11 @@ implements OntLongProperty
 	public String getRangeUri()
 		{
 		return XSD.NS+"int";
+		}
+	@Override
+	public PropertyType getPropertyType()
+		{
+		return PropertyType.LONG;
 		}
 	}
 
@@ -492,6 +544,11 @@ implements OntDoubleProperty
 		{
 		return XSD.NS+"double";
 		}
+	@Override
+	public PropertyType getPropertyType()
+		{
+		return PropertyType.LONG;
+		}
 	}
 
 class OntObjectPropertyImpl
@@ -509,6 +566,12 @@ implements OntObjectProperty
 		{
 		this.range.clear();
 		this.range.addAll(range);
+		}
+	
+	@Override
+	public PropertyType getPropertyType()
+		{
+		return PropertyType.OBJECT;
 		}
 	}
 
@@ -1233,6 +1296,153 @@ class InstanceTable
 		}
 	}
 
+/**
+ * OnePropertyEditor
+ * @author pierre
+ *
+ */
+class OnePropertyEditor
+	extends JPanel
+	{
+	abstract private class Extractor
+		{
+		protected Object component;
+		public Extractor(Object component)
+			{
+			this.component=component;
+			}
+		public abstract String getValue();
+		public abstract void setValue(String s);
+		};
+	private OntProperty ontProperty;
+	private Extractor extractor;
+	protected OnePropertyEditor(OntProperty ontProperty)
+		{
+		super(new BorderLayout());
+		this.ontProperty=ontProperty;
+		switch(ontProperty.getPropertyType())
+			{
+			case STRING:
+				{
+				OntStringProperty pp=OntStringProperty.class.cast(ontProperty);
+				if(!pp.getEnum().isEmpty())
+					{
+					JComboBox comboBox=new JComboBox(new Vector<String>(pp.getEnum()));
+					this.add(comboBox,BorderLayout.CENTER);
+					this.extractor=new Extractor(comboBox)
+						{
+						@Override
+						public String getValue()
+							{
+							return (String)JComboBox.class.cast(this.component).getSelectedItem();
+							}
+						public void setValue(String s)
+							{
+							JComboBox.class.cast(this.component).setSelectedItem(s);
+							}
+						};
+					}
+				else if(pp.isMultiline())
+					{
+					JTextArea area=new JTextArea(5,10);
+					JScrollPane scroll=new JScrollPane(area);
+					this.add(scroll,BorderLayout.CENTER);
+					this.extractor=new Extractor(area)
+						{
+						@Override
+						public String getValue()
+							{
+							return (String)JTextComponent.class.cast(this.component).getText();
+							}
+						public void setValue(String s)
+							{
+							JTextComponent.class.cast(this.component).setText(s);
+							JTextComponent.class.cast(this.component).setCaretPosition(0);
+							}
+						};
+					}
+				else
+					{
+					JTextField tf=new JTextField();
+					this.add(tf,BorderLayout.CENTER);
+					this.extractor=new Extractor(tf)
+						{
+						@Override
+						public String getValue()
+							{
+							return (String)JTextComponent.class.cast(this.component).getText();
+							}
+						public void setValue(String s)
+							{
+							JTextComponent.class.cast(this.component).setText(s);
+							JTextComponent.class.cast(this.component).setCaretPosition(0);
+							}
+						};
+					}
+				break;
+				}
+			case LONG:
+				{
+				JTextField tf=new JTextField();
+				this.add(tf,BorderLayout.CENTER);
+				this.extractor=new Extractor(tf)
+					{
+					@Override
+					public String getValue()
+						{
+						return (String)JTextComponent.class.cast(this.component).getText();
+						}
+					public void setValue(String s)
+						{
+						JTextComponent.class.cast(this.component).setText(s);
+						JTextComponent.class.cast(this.component).setCaretPosition(0);
+						}
+					};
+				break;
+				}
+			case DOUBLE:
+				{
+				JTextField tf=new JTextField();
+				this.add(tf,BorderLayout.CENTER);
+				this.extractor=new Extractor(tf)
+					{
+					@Override
+					public String getValue()
+						{
+						return (String)JTextComponent.class.cast(this.component).getText();
+						}
+					public void setValue(String s)
+						{
+						JTextComponent.class.cast(this.component).setText(s);
+						JTextComponent.class.cast(this.component).setCaretPosition(0);
+						}
+					};
+				break;
+				}
+			case OBJECT:
+				{
+				break;
+				}
+			default:
+				{
+				throw new IllegalArgumentException("property not handled:"+ontProperty);
+				}
+			}
+		}
+	
+	
+	public String getValue()
+		{
+		return this.extractor.getValue();
+		}
+	
+	public OntProperty getOntProperty()
+		{
+		return ontProperty;
+		}
+	}
+
+
 class InstanceEd
 	extends JDialog
 	{
@@ -1291,6 +1501,120 @@ class InstanceEd
 		}
 	}
 
+
+class PropertyPane
+	extends JPanel
+	{
+	private OntProperty ontProperty;
+	private Box mainPane;
+	
+	abstract class ValuePane
+		extends JPanel
+		{
+		protected ValuePane()
+			{
+			super(new BorderLayout());
+			JButton but=new JButton("[-]");
+			but.setPreferredSize(new Dimension(12,12));
+			this.add(but,BorderLayout.EAST);
+			}
+		}
+	
+	class AbstractTextPane
+		extends ValuePane
+			{
+			protected AbstractTextPane()
+				{
+				
+				}
+			}
+	
+	class TextPane
+	extends AbstractTextPane
+		{
+		private JTextField textField;
+		public TextPane()
+			{
+			this.textField=new JTextField();
+			super.add(this.textField,BorderLayout.CENTER)
+;			}
+		}
+	
+	class TextAreaPane
+	extends AbstractTextPane
+		{
+		private JTextArea textArea;
+		public TextAreaPane()
+			{
+			this.textArea=new JTextArea(4,40);
+			super.add(new JScrollPane(this.textArea),BorderLayout.CENTER)
+;			}
+		}
+	
+	
+	PropertyPane(OntProperty ontProperty)
+		{
+		this(null,ontProperty);
+		
+		}
+	PropertyPane(InstanceOfProperty property)
+		{
+		this(property,property.getOntProperty());
+		}
+	PropertyPane(InstanceOfProperty property,OntProperty ontProperty)
+		{
+		super(new BorderLayout(5,5));
+		JPanel top=new JPanel(new BorderLayout(1,1));
+		this.add(top,BorderLayout.NORTH);
+		JLabel label=new JLabel(ontProperty.getLabel());
+		top.add(label,BorderLayout.CENTER);
+		label.setToolTipText(ontProperty.getDescription());
+		top.add(new JButton("[+]"),BorderLayout.EAST);
+		
+		this.mainPane=Box.createVerticalBox();
+		this.add(mainPane,BorderLayout.CENTER);
+		for(int i=0;i< 50;i++)
+			{
+			this.mainPane.add(i%2==0?new TextAreaPane():new TextPane());
+			}
+		}
+	}
+
+class InstancePane
+	extends JPanel
+	{
+	private static final long serialVersionUID = 1L;
+	private OntClass ontClass;
+	private InstanceOfClass instance;
+	private boolean instanceIsNew;
+	private JPanel mainPane;
+	private Store store;
+	InstancePane(Store store,OntClass ontClass)
+		{
+		this(store,ontClass,null);
+		}
+	
+	InstancePane(InstanceOfClass instance)
+		{
+		this(instance.getDataStore(),null,instance);
+		}
+	
+	private InstancePane( Store store,OntClass ontClass,InstanceOfClass instance)
+		{
+		super(new BorderLayout(5, 5));
+		this.setBorder(new EmptyBorder(5, 5, 5, 5));
+		this.store=store;
+		this.ontClass=ontClass;
+		this.instanceIsNew=(instance==null);
+		this.instance=instance;
+		if(this.instance==null)
+			{
+			this.instance=new InstanceOfClassImpl();
+			}
+
+		}
+	}
+
 @SuppressWarnings("serial")
 class Frame
 	extends JFrame
@@ -1299,6 +1623,18 @@ class Frame
 	private Store dataStore;
 	private boolean documentModified=false;
 	private JPanel cardPane;
+	
+	class LabelPane
+		{
+		OntProperty property;
+		
+		LabelPane(OntProperty property)
+			{
+			this.property=property;
+			}
+		
+		}
+	
 	
 	Frame(Store dataStore)
 		{
@@ -1344,8 +1680,27 @@ class Frame
 		
 		contentPane.add(new JScrollPane(new JTable(10, 10)));
 		
-		JPanel top=new JPanel(new FlowLayout(FlowLayout.LEADING));
+		Box top=Box.createVerticalBox();
 		contentPane.add(top,BorderLayout.NORTH);
+		JPanel hbox=new JPanel(new FlowLayout(FlowLayout.LEADING));
+		top.add(hbox);
+		hbox.setBorder(new TitledBorder("Classes"));
+		
+		for(OntClass clazz: dataStore.getOntModel().getOntClasses())
+			{
+			action=new AbstractAction(clazz.getLabel())
+				{
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					
+					}
+				};
+			action.putValue(AbstractAction.SHORT_DESCRIPTION, clazz.getDescription());
+			JToggleButton but=new JToggleButton(action);
+			hbox.add(but);
+			but.setSelected(true);
+			}
 		
 		JMenu subMenu=new JMenu("Create");
 		for(OntClass ontClass: getSchema().getOntClasses())
@@ -1388,6 +1743,70 @@ class Frame
 		return getDataStore().getOntModel();
 		}
 	}
+
+@SuppressWarnings("serial")
+class OntClassChooser
+	extends JDialog
+	{
+	private OntClass selected=null;
+	public OntClassChooser(
+		Window owner,
+		List<OntClass> ontClasses	
+		)
+		{
+		super(owner,"Class chooser",ModalityType.TOOLKIT_MODAL);
+		this.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+		JPanel pane=new JPanel(new BorderLayout(5,5));
+		pane.setBorder(new EmptyBorder(5, 5, 5, 5));
+		setContentPane(pane);
+		Box vbox=Box.createVerticalBox();
+		pane.add(vbox,BorderLayout.CENTER);
+		this.setContentPane(pane);
+		ButtonGroup group=new ButtonGroup();
+		for(OntClass ontclass: ontClasses)
+			{
+			AbstractAction action=new AbstractAction(
+					ontclass.getLabel()
+					)
+				{
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					OntClass c=OntClass.class.cast(getValue("ontclass"));
+					OntClassChooser.this.selected=c;
+					OntClassChooser.this.setVisible(false);
+					OntClassChooser.this.dispose();
+					}
+				};
+			action.putValue(AbstractAction.SHORT_DESCRIPTION, ontclass.getDescription());
+			action.putValue(AbstractAction.LONG_DESCRIPTION, ontclass.getDescription());
+			action.putValue("ontclass",ontclass);
+			JToggleButton button=new JToggleButton(action);
+			button.setFont(button.getFont().deriveFont(32f).deriveFont(Font.PLAIN));
+			group.add(button);
+			vbox.add(button);
+			}
+		JPanel bot=new JPanel(new FlowLayout(FlowLayout.TRAILING));
+		pane.add(bot,BorderLayout.SOUTH);
+		bot.add(new JButton(new AbstractAction("Cancel")
+			{
+			@Override
+			public void actionPerformed(ActionEvent e)
+				{
+				OntClassChooser.this.selected=null;
+				OntClassChooser.this.setVisible(false);
+				OntClassChooser.this.dispose();
+				}
+			}));
+		}
+	
+	public OntClass getSelected()
+		{
+		return this.selected;
+		}
+	}
+
+
 
 /** Structured */
 public class Structured
@@ -1433,15 +1852,36 @@ public class Structured
 				}
 			OntModelImpl model=new OntModelImpl();
 			model.read(new File("/home/pierre/jeter.rdf"));
-			model.write(System.out);
+			//model.write(System.out);
+			
+			if("1".equals("2"))
+				{
+				OntClassChooser f=new OntClassChooser(null, model.getOntClasses());
+				f.pack();
+				f.setVisible(true);
+				return;
+				}
+			
+			if("1".equals("2"))
+				{
+				InstancePane x=null;//new InstancePane(model.getOntClasses().get(0));
+				JDialog d=new JDialog();
+				d.setContentPane(x);
+				d.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+				d.pack();
+				d.setVisible(true);
+				return;
+				}
+			
 			DataStoreImpl dataStore=new DataStoreImpl(model);
 			final Frame f=new Frame(dataStore);
-			if(model.equals(null)) SwingUtilities.invokeAndWait(new Runnable()
+			SwingUtilities.invokeAndWait(new Runnable()
 				{
 				@Override
 				public void run()
 					{
 					f.setVisible(true);
+					
 					}
 				});
 			} 

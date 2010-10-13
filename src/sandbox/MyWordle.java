@@ -699,6 +699,15 @@ public class MyWordle
 		this.smallestSize = smallestSize;
 		}
 	
+	public void setSortType(int doSortType)
+		{
+		this.doSortType = doSortType;
+		}
+	
+	public void setUseArea(boolean useArea)
+		{
+		this.useArea = useArea;
+		}
 	
 	private void read(BufferedReader in)throws IOException
 		{
