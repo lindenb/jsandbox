@@ -1,14 +1,13 @@
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.awt.LayoutManager;
 import java.awt.Toolkit;
 import java.awt.Window;
@@ -19,9 +18,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.StringReader;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,13 +37,16 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultListModel;
 import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -54,6 +54,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -119,6 +120,11 @@ class MY
 	public static final String NS="urn:schema:";
 	}
 
+interface CloseableIterator<T>
+	extends Iterator<T>
+	{
+	public void close();
+	}
 
 interface OntNode
 	{
@@ -210,6 +216,7 @@ extends Instance
 	public String getName();
 	public String getDescription();
 	public List<InstanceOfProperty> getProperties();
+	public List<InstanceOfProperty> getProperties(OntProperty prop);
 	public Store getDataStore();
 	public OntClass getOntClass();
 	}
@@ -226,13 +233,10 @@ interface Store
 	{
 	public OntModel getOntModel();
 	public InstanceOfClass getInstanceById(String id);
+	public CloseableIterator<InstanceOfClass> listInstances();
 	}
 
-interface InstanceEditor
-	{
-	public void setDataStore(Store ds);
-	public void setInstance(InstanceOfClass instance);
-	}
+
 
 /** AbstractOntNode */
 abstract class AbstractOntNode
@@ -985,22 +989,70 @@ class DataStoreImpl
 	{
 	private OntModel model;
 	private List<InstanceOfClass> instances=new Vector<InstanceOfClass>();
+	
+	private class IterorImpl
+		implements CloseableIterator<InstanceOfClass>
+		{
+		private Iterator<InstanceOfClass> iter;
+		IterorImpl(Iterator<InstanceOfClass> iter)
+			{
+			this.iter=iter;
+			}
+		@Override
+		public boolean hasNext()
+			{
+			return this.iter.hasNext();
+			}
+		@Override
+		public InstanceOfClass next()
+			{
+			return this.iter.next();
+			}
+		@Override
+		public void remove()
+			{
+			throw new UnsupportedOperationException();
+			}
+		
+		@Override
+		public void close()
+			{
+			
+			}
+		}
+	
 	public DataStoreImpl(OntModel model)
 		{
 		this.model=model;
 		}
 	
-	public List<InstanceOfClass> getInstances()
+	@Override
+	public CloseableIterator<InstanceOfClass> listInstances()
 		{
-		return this.instances;
+		return new IterorImpl(this.instances.iterator());
 		}
+	
 	
 	@Override
 	public InstanceOfClass getInstanceById(String id)
 		{
-		for(InstanceOfClass i: getInstances())
+		CloseableIterator<InstanceOfClass> iter=null;
+		try
 			{
-			if(i.getId().equals(id)) return i;
+			iter=listInstances();
+			while(iter.hasNext())
+				{
+				InstanceOfClass i=iter.next();
+				if(i.getId().equals(id)) return i;
+				}
+			}
+		catch (Exception err)
+			{
+			throw new RuntimeException(err);
+			}
+		finally
+			{
+			if(iter!=null) iter.close();
 			}
 		return null;
 		}
@@ -1026,9 +1078,23 @@ class DataStoreImpl
 		XMLStreamWriter w= xmlfactory.createXMLStreamWriter(out);
 		w.writeStartDocument("UTF-8","1.0");
 		w.writeStartElement("rdf","RDF",RDF.NS);
-		for(InstanceOfClass ioc:getInstances())
+		CloseableIterator<InstanceOfClass> iter=null;
+		try
 			{
-			writeInstance(ioc,w);
+			iter=listInstances();
+			while(iter.hasNext())
+				{
+				InstanceOfClass i=iter.next();
+				writeInstance(i,w);
+				}
+			}
+		catch (Exception err)
+			{
+			throw new RuntimeException(err);
+			}
+		finally
+			{
+			if(iter!=null) iter.close();
 			}
 		w.writeEndElement();
 		w.writeEndDocument();
@@ -1053,23 +1119,23 @@ class DataStoreImpl
 	
 	
 	private void skip(XMLEventReader reader) throws XMLStreamException
-	{
-	int depth=1;
-	while(reader.hasNext())
 		{
-		XMLEvent evt=reader.nextEvent();
-		if(evt.isStartElement())
+		int depth=1;
+		while(reader.hasNext())
 			{
-			depth++;
+			XMLEvent evt=reader.nextEvent();
+			if(evt.isStartElement())
+				{
+				depth++;
+				}
+			else if(evt.isEndElement())
+				{
+				--depth;
+				if(depth==0) return;
+				}
 			}
-		else if(evt.isEndElement())
-			{
-			--depth;
-			if(depth==0) return;
-			}
+		throw new IllegalStateException("should not happen");
 		}
-	throw new IllegalStateException("should not happen");
-	}
 
 	private void insert(File xmlFile,InstanceOfClass node)
 		throws Exception
@@ -1212,6 +1278,15 @@ class InstanceOfClassImpl
 	private OntClass ontClass;
 	private Store dataStore;
 	
+	public InstanceOfClassImpl(
+		Store dataStore,
+		OntClass ontClass
+		)
+		{
+		this.dataStore=dataStore;
+		this.ontClass=ontClass;
+		}
+	
 	@Override
 	public boolean match(Pattern regex)
 		{
@@ -1240,6 +1315,20 @@ class InstanceOfClassImpl
 	public List<InstanceOfProperty> getProperties()
 		{
 		return properties;
+		}
+	
+	@Override
+	public List<InstanceOfProperty> getProperties(OntProperty ontProp)
+		{
+		List<InstanceOfProperty> array=new ArrayList<InstanceOfProperty>();
+		for(InstanceOfProperty iop:this.getProperties())
+			{
+			if(iop.getOntProperty().equals(ontProp))
+				{
+				array.add(iop);
+				}
+			}
+		return array;
 		}
 
 	@Override
@@ -1442,24 +1531,413 @@ class OnePropertyEditor
 		}
 	}
 
-
+@SuppressWarnings("serial")
 class InstanceEd
 	extends JDialog
 	{
 	private Store store;
 	private InstanceOfClass instance;
 	private OntClass ontClass;
-	//private JPanel contentPane;
-	public InstanceEd()
+	private int exitStatus;
+	private JPanel mainPane;
+	private Vector<PropertyPart> propParts=new Vector<InstanceEd.PropertyPart>();
+	
+	/**
+	 * MyLayout
+	 *
+	 */
+	private class MyLayout
+		implements LayoutManager
 		{
+		@Override
+		public void addLayoutComponent(String name, Component comp)
+			{
+			//
+			}
+
+		@Override
+		public void removeLayoutComponent(Component comp)
+			{
+			//
+			}
+
+		@Override
+		public Dimension preferredLayoutSize(Container target)
+			{
+			synchronized (target.getTreeLock())
+				{
+				Dimension dim=new Dimension(0,0);
+				int y=0;
+				for(PropertyPart p: propParts)
+					{
+					
+					}
+				return dim;
+				}
+			}
+
+		@Override
+		public Dimension minimumLayoutSize(Container target)
+			{
+			synchronized (target.getTreeLock())
+				{
+				Dimension dim=new Dimension(0,0);
+				for(PropertyPart p: propParts)
+					{
+					
+					}
+				return dim;
+				}
+			}
+
+		@Override
+		public void layoutContainer(Container target)
+			{
+			synchronized (target.getTreeLock())
+				{
+				for(PropertyPart p: propParts)
+					{
+					
+					}
+
+				}
+			}
+		
+		}
+	
+	/**
+	 * 
+	 * PropertyPart
+	 *
+	 */
+	private class PropertyPart
+		{
+		private OntProperty ontProperty;
+		private JLabel label;
+		private List<OneProperty> propertyValues=new Vector<OneProperty>();
+		
+		private abstract class OneProperty
+			{
+			protected JButton removeMe;
+			
+			protected OneProperty()
+				{
+				AbstractAction action=new AbstractAction("[-]")
+					{
+					@Override
+					public void actionPerformed(ActionEvent e)
+						{
+						removeMe();
+						}
+					};
+				this.removeMe=new JButton(action);
+				}
+			
+			public PropertyPart getPropertyPart()
+				{
+				return PropertyPart.this;
+				}
+			
+			public OntProperty getOntProperty()
+				{
+				return getPropertyPart().getOntProperty();
+				}
+			public abstract void setValue(String text);
+			public abstract String getValue();
+			public void removeMe()
+				{
+				InstanceEd.this.mainPane.remove(this.removeMe);
+				getPropertyPart().propertyValues.remove(this);
+				}
+			public void addComponents()
+				{
+				getPropertyPart().propertyValues.add(this);
+				InstanceEd.this.mainPane.add(this.removeMe);
+				}
+			}
+		
+		private class OneDataProperty
+		extends OneProperty
+			{
+			protected JTextComponent textComponent;
+			public void setValue(String text)
+				{
+				this.textComponent.setText(text);
+				this.textComponent.setCaretPosition(0);
+				}
+			public String getValue()
+				{
+				return this.textComponent.getText();
+				}
+			
+			}
+		
+		private class OneLongProperty
+			extends OneDataProperty
+			{
+			OneLongProperty()
+				{
+				super.textComponent=new JTextField(20);
+				}
+			
+			@Override
+			public void removeMe()
+				{
+				super.removeMe();
+				InstanceEd.this.mainPane.remove(this.textComponent);
+				}
+			
+			@Override
+			public void addComponents()
+				{
+				super.addComponents();
+				InstanceEd.this.mainPane.add(this.textComponent);
+				}
+			}
+		
+		private class OneDoubleProperty
+			extends OneDataProperty
+				{
+				OneDoubleProperty()
+					{
+					super.textComponent=new JTextField(20);
+					}
+				
+				@Override
+				public void removeMe()
+					{
+					super.removeMe();
+					InstanceEd.this.mainPane.remove(this.textComponent);
+					}
+				
+				@Override
+				public void addComponents()
+					{
+					super.addComponents();
+					InstanceEd.this.mainPane.add(this.textComponent);
+					}
+				}
+		
+		private class OneStringProperty
+			extends OneDataProperty
+				{
+				private JComboBox comboBox=null;
+				private JScrollPane scrollPane=null;
+				OneStringProperty()
+					{
+					OntStringProperty pp=OntStringProperty.class.cast(getOntProperty());
+					if(!pp.getEnum().isEmpty())
+						{
+						super.textComponent=null;
+						this.comboBox=new JComboBox(
+							new Vector<String>(pp.getEnum())	
+							);
+						}
+					else if(pp.isMultiline())
+						{
+						super.textComponent=new JTextArea(5,20);
+						this.scrollPane=new JScrollPane(this.textComponent);
+						}
+					else
+						{
+						super.textComponent=new JTextField(20);
+						}
+					}
+				
+				@Override
+				public String getValue()
+					{
+					String s=null;
+					if(this.comboBox!=null)
+						{
+						s=(String)this.comboBox.getSelectedItem();
+						if(s==null) s="";
+						}
+					else
+						{
+						s=this.textComponent.getText();
+						}
+					return s;
+					}
+				
+				@Override
+				public void removeMe()
+					{
+					super.removeMe();
+					if(this.comboBox!=null)
+						{
+						InstanceEd.this.mainPane.remove(this.comboBox);
+						}
+					else if(this.scrollPane!=null)
+						{
+						InstanceEd.this.mainPane.remove(this.scrollPane);
+						}
+					else
+						{
+						InstanceEd.this.mainPane.remove(this.textComponent);
+						}
+					}
+				
+				@Override
+				public void addComponents()
+					{
+					super.addComponents();
+					if(this.comboBox!=null)
+						{
+						InstanceEd.this.mainPane.add(this.comboBox);
+						}
+					else if(this.scrollPane!=null)
+						{
+						InstanceEd.this.mainPane.add(this.scrollPane);
+						}
+					else
+						{
+						InstanceEd.this.mainPane.add(this.textComponent);
+						}
+					}
+				
+				}
+		
+		private class OneObjectProperty
+		extends OneProperty
+			{
+			private JTextField textField=new JTextField(20);
+			OneObjectProperty()
+				{
+				
+				}
+			
+			@Override
+			public String getValue()
+				{
+				return textField.getText();
+				}
+			@Override
+			public void setValue(String text)
+				{
+				textField.setText(text);
+				textField.setCaretPosition(0);
+				}
+			
+			@Override
+			public void removeMe()
+				{
+				super.removeMe();
+				InstanceEd.this.mainPane.remove(this.textField);
+				}
+			
+			@Override
+			public void addComponents()
+				{
+				super.addComponents();
+				InstanceEd.this.mainPane.add(this.textField);
+				}
+			
+			}
+		
+		
+		PropertyPart(OntProperty ontProperty)
+			{
+			this.ontProperty=ontProperty;
+			this.label=new JLabel(ontProperty.getLabel());
+			this.label.setToolTipText(ontProperty.getDescription());
+			}
+		
+		public OntProperty getOntProperty()
+			{
+			return ontProperty;
+			}
+		
+		void addToContainer(JComponent c)
+			{
+			c.add(label);
+			}
+		
+		OneProperty createOnePropertyForValue(String content)
+			{
+			OneProperty oneProp=null;
+			switch(this.getOntProperty().getPropertyType())
+				{
+				case DOUBLE: oneProp= new OneDoubleProperty();break;
+				case LONG: oneProp= new OneLongProperty();break;
+				case STRING: oneProp=new OneStringProperty();break;
+				case OBJECT: oneProp=new OneObjectProperty();break;
+				default: throw new IllegalArgumentException("?");
+				}
+			return oneProp;
+			}
+		
+		void fromInstance(InstanceOfClass instance)
+			{
+			for(InstanceOfProperty iop:instance.getProperties(this.getOntProperty()))
+				{
+				String s=iop.getValue();
+				if(s==null || s.trim().length()==0) continue;
+				OneProperty oneProp=createOnePropertyForValue(s);
+				oneProp.addComponents();
+				}
+			}
+		}
+	
+	public InstanceEd(Window w,Store store,InstanceOfClass instance)
+		{
+		this(w,store,instance.getOntClass(),instance);
+		}
+	
+	
+	public InstanceEd(Window w,Store store,OntClass ontClass)
+		{
+		this(w,store,ontClass,null);
+		}
+	
+	private InstanceEd(Window w,Store store,OntClass ontClass,InstanceOfClass instance)
+		{
+		super(w,ontClass.getLabel(),ModalityType.APPLICATION_MODAL);
+		this.store=store;
+		boolean instanceIsNew=false;
+		this.ontClass=ontClass;
+		this.instance=instance;
+		if(this.instance==null)
+			{
+			instanceIsNew=true;
+			this.instance=new InstanceOfClassImpl(store,ontClass);
+			}
+		
 		this.addWindowListener(
 			new WindowAdapter()
 				{
-				
+				public void windowOpened(WindowEvent e)
+					{
+					Dimension s=Toolkit.getDefaultToolkit().getScreenSize();
+					Dimension w=e.getWindow().getSize();
+					e.getWindow().setBounds(
+						(s.width-w.width)/2,
+						(s.height-w.height)/2,
+						w.width,
+						w.height
+						);
+					}
 				}
 			);
 		JPanel pane=new JPanel(new BorderLayout(5,5));
 		pane.setBorder(new EmptyBorder(5,5,5,5));
+		
+		this.mainPane=new JPanel(new MyLayout());
+		pane.add(new JScrollPane(this.mainPane));
+		
+		for(OntProperty ontProperty:ontClass.getProperties())
+			{
+			PropertyPart part=new PropertyPart(ontProperty);
+			part.addToContainer(this.mainPane);
+			if(instanceIsNew)
+				{
+				
+				}
+			else
+				{
+				
+				}
+			}
 		
 		JPanel bot=new JPanel(new FlowLayout(FlowLayout.TRAILING));
 		pane.add(bot,BorderLayout.SOUTH);
@@ -1469,7 +1947,7 @@ class InstanceEd
 			@Override
 			public void actionPerformed(ActionEvent e)
 				{
-				
+				closeWithStatus(JOptionPane.OK_OPTION);
 				}
 			};
 		bot.add(new JButton(action));
@@ -1479,7 +1957,7 @@ class InstanceEd
 			@Override
 			public void actionPerformed(ActionEvent e)
 				{
-				
+				closeWithStatus(JOptionPane.NO_OPTION);
 				}
 			};
 		bot.add(new JButton(action));
@@ -1499,6 +1977,23 @@ class InstanceEd
 		{
 		this.ontClass = ontClass;
 		}
+	
+	private void closeWithStatus(int status)
+		{
+		this.exitStatus=status;
+		this.setVisible(false);
+		this.dispose();
+		}
+	public int getExitStatus()
+		{
+		return exitStatus;
+		}
+	
+	public InstanceOfClass getInstance()
+		{
+		return instance;
+		}
+	
 	}
 
 
@@ -1609,7 +2104,7 @@ class InstancePane
 		this.instance=instance;
 		if(this.instance==null)
 			{
-			this.instance=new InstanceOfClassImpl();
+			//this.instance=new InstanceOfClassImpl();
 			}
 
 		}
@@ -1623,7 +2118,8 @@ class Frame
 	private Store dataStore;
 	private boolean documentModified=false;
 	private JPanel cardPane;
-	
+	private Map<OntClass, Boolean> showOntClasses;
+	private JList  instanceList;
 	class LabelPane
 		{
 		OntProperty property;
@@ -1640,6 +2136,12 @@ class Frame
 		{
 		super("Structured");
 		this.dataStore=dataStore;
+		this.showOntClasses=new HashMap<OntClass, Boolean>();
+		for(OntClass ontClass:getSchema().getOntClasses())
+			{
+			this.showOntClasses.put(ontClass,Boolean.TRUE);
+			}
+		
 		this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 		this.addWindowListener(new WindowAdapter()
 			{
@@ -1648,7 +2150,9 @@ class Frame
 				{
 				Dimension d=Toolkit.getDefaultToolkit().getScreenSize();
 				e.getWindow().setBounds(50, 50, d.width-100, d.height-100);
+				reloadInstanceList();
 				}
+			
 			@Override
 			public void windowClosing(WindowEvent e)
 				{
@@ -1678,31 +2182,72 @@ class Frame
 		JPanel contentPane=new JPanel(new BorderLayout());
 		this.cardPane.add(contentPane,"MAIN");
 		
-		contentPane.add(new JScrollPane(new JTable(10, 10)));
+		contentPane.add(new JScrollPane(
+			this.instanceList=new JList(new DefaultListModel()))
+			);
 		
 		Box top=Box.createVerticalBox();
 		contentPane.add(top,BorderLayout.NORTH);
 		JPanel hbox=new JPanel(new FlowLayout(FlowLayout.LEADING));
 		top.add(hbox);
+		
+		JLabel label=new JLabel("Filter:",JLabel.RIGHT);
+		hbox.add(label);
+		JTextField tfRegex=new JTextField(20);
+		hbox.add(tfRegex);
+		action=new AbstractAction("OK")
+			{
+			@Override
+			public void actionPerformed(ActionEvent e)
+				{
+				reloadInstanceList();
+				}
+			};
+		tfRegex.addActionListener(action);	
+		hbox.add(new JButton(action));
+		hbox.add(new JSeparator(JSeparator.VERTICAL));
+		
+		action=new AbstractAction("Edit")
+			{
+			@Override
+			public void actionPerformed(ActionEvent e)
+				{
+				int i=instanceList.getSelectedIndex();
+				if(i==-1) return;
+				InstanceOfClass instance=(InstanceOfClass)instanceList.getSelectedValue();
+				editInstance(instance);
+				}
+			};
+		hbox.add(new JButton(action));
+		
+		
+		
+		hbox=new JPanel(new FlowLayout(FlowLayout.LEADING));
+		top.add(hbox);
 		hbox.setBorder(new TitledBorder("Classes"));
 		
 		for(OntClass clazz: dataStore.getOntModel().getOntClasses())
 			{
+			JToggleButton but=new JToggleButton(clazz.getLabel());
+			hbox.add(but);
+			but.setSelected(this.showOntClasses.get(clazz));
 			action=new AbstractAction(clazz.getLabel())
 				{
 				@Override
 				public void actionPerformed(ActionEvent e)
 					{
-					
+					OntClass ontClass=OntClass.class.cast(this.getValue("ontClass"));
+					showOntClasses.put(ontClass, !showOntClasses.get(ontClass));
+					reloadInstanceList();
 					}
 				};
 			action.putValue(AbstractAction.SHORT_DESCRIPTION, clazz.getDescription());
-			JToggleButton but=new JToggleButton(action);
-			hbox.add(but);
-			but.setSelected(true);
+			action.putValue("ontClass",clazz);
+			but.addActionListener(action);
 			}
 		
 		JMenu subMenu=new JMenu("Create");
+		menu.add(subMenu);
 		for(OntClass ontClass: getSchema().getOntClasses())
 			{
 			action=new AbstractAction(ontClass.getQName())
@@ -1720,12 +2265,49 @@ class Frame
 			}
 		}
 	
+	
+	
 	private void createOntClass(OntClass clazz)
 		{
-		
+		InstanceEd editor=new InstanceEd(
+			this,this.dataStore,
+			clazz);
+		editor.pack();
+		editor.setVisible(true);
 		documentModified=true;
 		}
 	
+	private void editInstance(InstanceOfClass instance)
+		{
+		
+		}
+	
+	
+	private void reloadInstanceList()
+		{
+		DefaultListModel lm=DefaultListModel.class.cast(this.instanceList.getModel());
+		lm.setSize(0);
+		CloseableIterator<InstanceOfClass> iter=null;
+		try
+			{
+			iter=getDataStore().listInstances();
+			while(iter.hasNext())
+				{
+				InstanceOfClass i=iter.next();
+				OntClass clazz=i.getOntClass();
+				if(!this.showOntClasses.get(clazz)) continue;
+				lm.addElement(i);
+				}
+			}
+		catch (Exception e)
+			{
+			throw new RuntimeException(e);
+			}
+		finally
+			{
+			if(iter!=null) iter.close();
+			}
+		}
 	
 	private void doMenuClose()
 		{
@@ -1786,6 +2368,8 @@ class OntClassChooser
 			group.add(button);
 			vbox.add(button);
 			}
+		
+		
 		JPanel bot=new JPanel(new FlowLayout(FlowLayout.TRAILING));
 		pane.add(bot,BorderLayout.SOUTH);
 		bot.add(new JButton(new AbstractAction("Cancel")
