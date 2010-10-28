@@ -1,24 +1,81 @@
 <project default="all">
 
-<target name="all" depends="mywordle,pubmeddump,pubmed2gender,pubmedperyear">
+<property name="jena.dir" value="/usr/local/package/Jena-2.6.2"/>	
+
+<path id="jena.jars" description="ALl Jar for JENA">
+	<fileset  dir="${jena.dir}">
+	      <include name="**/*.jar"/>
+	</fileset>
+</path>
+	
+
+<target name="all" depends="wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear">
 
 </target>
 
+<target name="wptimeline">
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp">
+      <include name="**/WikipediaBioEdits.java" />
+   </javac>
+   
+   <jar destfile="dist/wptimeline.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.WikipediaBioEdits"/>
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>	
+
+
+<target name="timelinemaker">
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp" debug="true">
+   	  <classpath refid="jena.jars"/>
+      <include name="**/TimeLineMaker.java" />
+   </javac>
+   
+	<pathconvert property="jena.claspath" pathsep=" ">
+		<path refid="jena.jars" />
+	</pathconvert>	
+	
+	
+   <jar destfile="dist/timelinemaker.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.TimeLineMaker"/>
+      	 <attribute name="Class-Path" value="${jena.claspath}" />
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>
+
+<target name="testtime" depends="timelinemaker">
+	<java jar="dist/timelinemaker.jar"
+			fork="true">
+			<arg value="${user.home}/src/mystructureddata/data/history.rdf"/>
+		</java>
+</target>
+	
+
 <target name="mywordle">
-		<mkdir dir="dist"/>
-		<mkdir dir="tmp"/>
-		<javac srcdir="src" destdir="tmp">
-			<include name="**/MyWordle.java" />
-		</javac>
-			
-		<jar destfile="dist/mywordle.jar" basedir="tmp">
-			<manifest>
-		        <attribute name="Built-By" value="${user.name}"/>
-		        <attribute name="Main-Class" value="sandbox.MyWordle"/>
-			</manifest>
-		</jar>
-		<delete dir="tmp"/>
-	</target>		
+         <mkdir dir="dist"/>
+         <mkdir dir="tmp"/>
+         <javac srcdir="src" destdir="tmp">
+               <include name="**/MyWordle.java" />
+         </javac>
+               
+         <jar destfile="dist/mywordle.jar" basedir="tmp">
+               <manifest>
+               <attribute name="Built-By" value="${user.name}"/>
+               <attribute name="Main-Class" value="sandbox.MyWordle"/>
+               </manifest>
+         </jar>
+         <delete dir="tmp"/>
+</target>		
 	
 <target name="pubmeddump">
 	<mkdir dir="dist"/>
