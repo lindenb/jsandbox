@@ -43,6 +43,7 @@ public class WikipediaBioEdits
 	private int imageWidth=1000;
 	private int imageHeight=(int)(imageWidth/((1+Math.sqrt(5))/2.0));
 	private Integer limitCountPersons=null;
+	private boolean removeIfTooMany=false;
 	
 	private static class Person
 		{
@@ -234,10 +235,37 @@ public class WikipediaBioEdits
 			}
 		}
 	
-	private void addPerson(Person person)
+	private boolean addPerson(Person person)
 		{
+		if(  this.limitCountPersons!=null &&
+                     this.removeIfTooMany==false &&
+                     this.persons.size()>=this.limitCountPersons)
+                        {
+                        return false;
+                        }
 		this.persons.add(person);
 		LOG.info(person.toString()+"N:"+this.persons.size());
+		
+		if(  this.limitCountPersons!=null &&
+                     this.removeIfTooMany==true &&
+                     this.persons.size()>=this.limitCountPersons)
+                        {
+                        int indexOf=-1;
+                        for(int i=0;i< this.persons.size();++i)
+                           {
+                           if(indexOf==-1 ||
+                              this.persons.get(indexOf).countEdits > this.persons.get(i).countEdits )
+                              {
+                              indexOf=i;
+                              } 
+                           }
+                        LOG.info("Removing "+this.persons.get(indexOf));
+                        this.persons.remove(indexOf);
+                        }
+		
+		
+		
+		return true;					
 		}
 	
 	private boolean getYears(Person person)
@@ -358,12 +386,7 @@ public class WikipediaBioEdits
 								continue;
 								}
 							findImage(person);
-							addPerson(person);
-							if( this.limitCountPersons!=null &&
-								this.persons.size()>this.limitCountPersons)
-								{
-								return;
-								}
+							if(!addPerson(person)) return;
 							}
 						
 						}
@@ -539,6 +562,7 @@ public class WikipediaBioEdits
 					System.err.println("Options:");
 					System.err.println(" -h help; This screen.");
 					System.err.println(" -v print logging information");
+					System.err.println(" -d (used with -N ) delete the individuals with the smallest number of revisions if there's too many individuals");
 					System.err.println(" -N <int> max-num-individuals default:"+app.limitCountPersons);
 					System.err.println(" -s <int> start-year default:"+app.limitStartYear);
 					System.err.println(" -e <int> end-year default:"+app.limitEndYear);
@@ -547,6 +571,10 @@ public class WikipediaBioEdits
 					System.err.println(" -H <int> screen height:"+app.imageHeight);
 					return;
 					}
+				else if(args[optind].equals("-d"))
+				        {
+				        app.removeIfTooMany=true;
+				        }
 				else if(args[optind].equals("-v"))//verbose
 					{
 					LOG.setLevel(Level.ALL);
