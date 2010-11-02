@@ -141,7 +141,8 @@ public class WikipediaBioEdits
 					 image.toLowerCase().contains("logo") ||
 					 image.toLowerCase().contains("animated") ||
 					 image.toLowerCase().contains("3D") ||
-					 image.toLowerCase().endsWith(".ogg")))
+					 image.toLowerCase().endsWith(".ogg") ||
+					 image.toLowerCase().endsWith(".mp3")))
 					{
 					r.close();
 					return image;
@@ -250,11 +251,10 @@ public class WikipediaBioEdits
                      this.removeIfTooMany==true &&
                      this.persons.size()>=this.limitCountPersons)
                         {
-                        int indexOf=-1;
+                        int indexOf=this.persons.size()-1;//last
                         for(int i=0;i< this.persons.size();++i)
                            {
-                           if(indexOf==-1 ||
-                              this.persons.get(indexOf).countEdits > this.persons.get(i).countEdits )
+                           if(this.persons.get(indexOf).countEdits > this.persons.get(i).countEdits )
                               {
                               indexOf=i;
                               } 
@@ -299,21 +299,26 @@ public class WikipediaBioEdits
 						if(title.startsWith("Category:"))
 							{
 							title=title.substring(9);
-							if(title.matches("(\\d)+ births"))
+							int space=title.indexOf(' ');
+							if(space==-1)
 								{
-								person.birth=Integer.parseInt(title.substring(0,title.indexOf(' ')));
+								//ignore
+								}
+							else if(title.matches("(\\d)+ births"))
+								{
+								person.birth=Integer.parseInt(title.substring(0,space));
 								}
 							else if(title.matches("(\\d)+ BC births"))
 								{
-								person.birth=-Integer.parseInt(title.substring(0,title.indexOf(' ')));
+								person.birth=-Integer.parseInt(title.substring(0,space));
 								}
 							else if(title.matches("(\\d)+ deaths"))
 								{
-								person.death=Integer.parseInt(title.substring(0,title.indexOf(' ')));
+								person.death=Integer.parseInt(title.substring(0,space));
 								}
 							else if(title.matches("(\\d)+ BC deaths"))
 								{
-								person.death=-Integer.parseInt(title.substring(0,title.indexOf(' ')));
+								person.death=-Integer.parseInt(title.substring(0,space));
 								}
 							}
 						}
@@ -412,6 +417,7 @@ public class WikipediaBioEdits
 		int minYear=Integer.MAX_VALUE;
 		int maxYear=Integer.MIN_VALUE;
 		int maxRev=0;
+		int minRev=Integer.MAX_VALUE;
 		
 		
 		Collections.sort(this.persons,new Comparator<Person>()
@@ -429,6 +435,7 @@ public class WikipediaBioEdits
 			minYear= Math.min(minYear, person.birth-1);
 			maxYear= Math.max(maxYear, person.death+1);
 			maxRev= Math.max(maxRev, person.countEdits);
+			minRev= Math.min(minRev, person.countEdits);
 			}
 		double duration=(maxYear-minYear);
 		int adjustedHeight=this.imageHeight-(THUMB_WIDTH+4);
@@ -450,7 +457,7 @@ public class WikipediaBioEdits
 		//y axis
 		for(int i=1;i<= 10;++i)
 			{
-			int rev= (int)((i*(maxRev/10.0)));
+			int rev= minRev+(int)((i*((maxRev-minRev)/10.0)));
 			int y=(int)(this.imageHeight-(i*this.imageHeight/10.0));
 			w.writeStartElement("span");
 			w.writeAttribute("style", "position:absolute;font-weight: bold; color:gray;top:"+y+"px;left:5px;");
@@ -478,7 +485,7 @@ public class WikipediaBioEdits
 			viewRect.x=(int)(((person.birth-minYear)/duration)*this.imageWidth);
 			viewRect.width=(int)(((person.death-person.birth)/duration)*this.imageWidth);
 			viewRect.height=(int)(THUMB_WIDTH+4);
-			viewRect.y=adjustedHeight-(int)((person.countEdits/(float)maxRev)*adjustedHeight);
+			viewRect.y=adjustedHeight-(int)(((person.countEdits-minRev)/(float)(maxRev-minRev))*adjustedHeight);
 			
 			
 			
