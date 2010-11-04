@@ -13,7 +13,9 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,6 +23,7 @@ import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 import javax.xml.stream.events.Attribute;
 import javax.xml.stream.events.StartElement;
@@ -44,6 +47,75 @@ public class WikipediaBioEdits
 	private int imageHeight=(int)(imageWidth/((1+Math.sqrt(5))/2.0));
 	private Integer limitCountPersons=null;
 	private boolean removeIfTooMany=false;
+	private boolean pileup=true;
+	private int maxDepth=4;
+
+	private static class Category
+		{
+		String title=null;
+		Integer pageId=null;
+		
+		public Category(String title)
+			{
+			this(title,null);
+			}
+		
+		public Category(String title,Integer pageId)
+			{
+			this.title=title;
+			this.pageId=pageId;
+			}
+		
+		@Override
+		public int hashCode()
+			{
+			return title.hashCode();
+			}
+
+		@Override
+		public boolean equals(Object obj)
+			{
+			if (this == obj) { return true; }
+			if (obj == null) { return false; }
+			if (getClass() != obj.getClass()) { return false; }
+			Category other = (Category) obj;
+			if(pageId != null && other.pageId!=null)
+				{
+				return this.pageId.equals(other.pageId);
+				}
+			if(title != null && other.title!=null)
+				{
+				return this.title.equals(other.title);
+				}
+			throw new IllegalStateException();
+			}
+
+
+
+		@Override
+		public String toString()
+			{
+			return String.valueOf(title);
+			}
+		}
+	
+	private abstract class PersonListHandler
+		{
+		protected WikipediaBioEdits owner()
+			{
+			return WikipediaBioEdits.this;
+			}
+		protected XMLStreamWriter getXMLStreamWriter()
+			throws Exception
+			{
+			XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
+			XMLStreamWriter w= xmlfactory.createXMLStreamWriter(System.out);
+			return w;
+			}
+		
+		
+		public abstract void paint(List<Person> persons) throws Exception;
+		}
 	
 	private static class Person
 		{
@@ -55,7 +127,7 @@ public class WikipediaBioEdits
 		String imageDescriptionurl=null;
 		int countEdits=0;
 		Dimension thumbDim=null;
-		
+		Rectangle viewRect=null;
 		
 		
 		@Override
@@ -74,7 +146,7 @@ public class WikipediaBioEdits
 
 		public String getCaption()
 			{
-			return String.valueOf(name)+" ("+birth+" / "+ death+ ") ";
+			return String.valueOf(name)+" ("+birth+"/"+ death+ ")";
 			}
 		
 		@Override
@@ -91,6 +163,9 @@ public class WikipediaBioEdits
 		xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, Boolean.TRUE);
 		xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, Boolean.TRUE);
 		}
+	
+
+	
 	
 	private XMLEventReader openXMLEventReader(URL url)
 		throws IOException
@@ -113,6 +188,110 @@ public class WikipediaBioEdits
 			}
 		throw error;
 		}
+	
+	private StringBuilder removeTemplates(StringBuilder content)
+		{
+		int level=0;
+		int pos=0;
+		while(pos< content.length())
+			{
+			if( pos+2<content.length() &&
+				content.charAt(pos)=='{' &&
+				content.charAt(pos+1)=='{' &&
+				!Character.isWhitespace(content.charAt(pos+2))
+				)
+				{
+				content.delete(pos, pos+2);
+				++level;
+				}
+			else if( pos+1<content.length() &&
+				content.charAt(pos)=='}' &&
+				content.charAt(pos+1)=='}')
+				{
+				content.delete(pos, pos+2);
+				--level;
+				}
+			else if(level!=0)
+				{
+				content.delete(pos, pos+1);
+				}
+			else
+				{
+				pos++;
+				}
+			}
+		return content;
+		}
+	
+	
+	private StringBuilder removeInternalLinks(StringBuilder content)
+		{
+		int pos=-1;
+		while((pos=content.indexOf("[["))!=-1)
+			{
+			int i1=content.indexOf("]]",pos+1);
+			if(i1==-1) break;
+			int i2=content.indexOf("|",pos+1);
+			if(i2!=-1 && i2<i1)
+				{
+				content.delete(i1, i1+2);//]]
+				content.delete(pos, i2+1);//|
+				}
+			else if(i2==-1 || i2>i1)
+				{
+				content.delete(i1, i1+2);//]]
+				content.delete(pos,pos+2);//[[
+				}
+			else
+				{
+				System.err.println("?? "+pos+" "+i1+" "+i2);
+				break;
+				}
+			}
+		return content;
+		}
+	
+	private StringBuilder getArticleContent(long articleId)
+		throws XMLStreamException,IOException
+		{
+		boolean inRev=false;
+		StringBuilder sb=new StringBuilder();
+		String urlStr="http://en.wikipedia.org/w/api.php?format=xml&action=query&prop=revisions&rvprop=content&pageids="+articleId;
+		XMLEventReader r=openXMLEventReader(new URL(urlStr));
+		while(r.hasNext())
+			{
+			XMLEvent evt=r.nextEvent();
+			if(evt.isStartElement())
+				{
+				StartElement start=evt.asStartElement();
+				String localName=start.getName().getLocalPart();
+				if(localName.equals("rev"))
+					{
+					inRev=true;
+					}
+				}
+			else if(evt.isEndElement())
+				{
+				if(inRev) break;
+				}
+			else if(evt.isCharacters() && inRev)
+				{
+				sb.append(evt.asCharacters().getData());
+				}
+			}
+		r.close();
+		return sb;
+		}
+	
+	private String getArticleFirstLine(long articleId)
+		throws XMLStreamException,IOException
+		{
+		String content= removeInternalLinks(removeTemplates(getArticleContent(articleId))).toString().trim();
+		int i=content.indexOf(".");
+		if(i==-1) return content;
+		return content.substring(0,i);
+		}
+	
 	
 	private String getOneImage(Person person)
 		throws Exception
@@ -151,6 +330,55 @@ public class WikipediaBioEdits
 			}
 		r.close();
 		return null;
+		}
+	
+	
+	private Set<Category> findSubCategories(Category parent)
+		throws Exception
+		{
+		Set<Category> children=new HashSet<Category>();
+		QName cmcontinueAttr=new QName("cmcontinue");
+		QName pageIdAttr=new QName("pageid");
+		QName titleAttr=new QName("title");
+		String urlStr="http://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmnamespace=14&cmlimit=500&format=xml"+
+			"&cmtitle="+URLEncoder.encode(parent.title.replace(' ', '_'),"UTF-8")
+			;
+		
+		URL url=new URL(urlStr);
+		while(url!=null)
+			{
+			String cmcontinue=null;
+			XMLEventReader r=openXMLEventReader(url);
+			url=null;
+			while(r.hasNext())
+				{
+				XMLEvent evt=r.nextEvent();
+				if(!evt.isStartElement()) continue;
+				StartElement start=evt.asStartElement();
+				String localName=start.getName().getLocalPart();
+				if(localName.equals("cm"))
+					{
+					Attribute attId =start.getAttributeByName(pageIdAttr);
+					Attribute attTitle =start.getAttributeByName(titleAttr);
+					children.add(new Category(
+							attTitle.getValue(),
+							Integer.parseInt(attId.getValue())
+							));
+					}
+				else if(localName.equals("categorymembers"))
+					{
+					Attribute att=start.getAttributeByName(cmcontinueAttr);
+					if(att!=null) cmcontinue=att.getValue();
+					}
+					
+				}
+			r.close();
+			if(cmcontinue!=null)
+				{
+				url=new URL(urlStr+"&cmcontinue="+cmcontinue);
+				}
+			}
+		return children;
 		}
 	
 	private void findImage(Person person)
@@ -237,31 +465,56 @@ public class WikipediaBioEdits
 		}
 	
 	private boolean addPerson(Person person)
+		throws Exception
 		{
+		for(Person other:this.persons)
+			{
+			if(other.pageid==person.pageid) return false;
+			}
+		
+		if(!getYears(person)) return false;
+			
+		if(this.limitStartYear!=null && this.limitStartYear> person.death)
+			{
+			LOG.info("ignore (death) "+person);
+			return false;
+			}
+		if(this.limitEndYear!=null && this.limitEndYear< person.birth)
+			{
+			LOG.info("ignore (birth) "+person);
+			return false;
+			}
+		countEdits(person);
+		if(this.minRevision> person.countEdits)
+			{
+			LOG.info("ignore (edit) "+person);
+			return false;
+			}
+		
 		if(  this.limitCountPersons!=null &&
-                     this.removeIfTooMany==false &&
-                     this.persons.size()>=this.limitCountPersons)
-                        {
-                        return false;
-                        }
+             this.removeIfTooMany==false &&
+             this.persons.size()>=this.limitCountPersons)
+                {
+                return false;
+                }
 		this.persons.add(person);
 		LOG.info(person.toString()+"N:"+this.persons.size());
 		
 		if(  this.limitCountPersons!=null &&
-                     this.removeIfTooMany==true &&
-                     this.persons.size()>=this.limitCountPersons)
-                        {
-                        int indexOf=this.persons.size()-1;//last
-                        for(int i=0;i< this.persons.size();++i)
-                           {
-                           if(this.persons.get(indexOf).countEdits > this.persons.get(i).countEdits )
-                              {
-                              indexOf=i;
-                              } 
-                           }
-                        LOG.info("Removing "+this.persons.get(indexOf));
-                        this.persons.remove(indexOf);
-                        }
+             this.removeIfTooMany==true &&
+             this.persons.size()>=this.limitCountPersons)
+                {
+                int indexOf=this.persons.size()-1;//last
+                for(int i=0;i< this.persons.size();++i)
+                   {
+                   if(this.persons.get(indexOf).countEdits > this.persons.get(i).countEdits )
+                      {
+                      indexOf=i;
+                      } 
+                   }
+                LOG.info("Removing "+this.persons.get(indexOf));
+                this.persons.remove(indexOf);
+                }
 		
 		
 		
@@ -372,28 +625,8 @@ public class WikipediaBioEdits
 						att=start.getAttributeByName(titleAtt);
 						person.name=att.getValue();
 						
-						if(getYears(person))
-							{
-							if(this.limitStartYear!=null && this.limitStartYear> person.death)
-								{
-								LOG.info("ignore (death) "+person);
-								continue;
-								}
-							if(this.limitEndYear!=null && this.limitEndYear< person.birth)
-								{
-								LOG.info("ignore (birth) "+person);
-								continue;
-								}
-							countEdits(person);
-							if(this.minRevision> person.countEdits)
-								{
-								LOG.info("ignore (edit) "+person);
-								continue;
-								}
-							findImage(person);
-							if(!addPerson(person)) return;
-							}
 						
+						addPerson(person);
 						}
 					else if(localName.equals("embeddedin"))
 						{
@@ -411,144 +644,457 @@ public class WikipediaBioEdits
 		
 		}
 	
-	private void paint()
+	
+	private void findInCategory(Category category)
 		throws Exception
 		{
-		int minYear=Integer.MAX_VALUE;
-		int maxYear=Integer.MIN_VALUE;
-		int maxRev=0;
-		int minRev=Integer.MAX_VALUE;
+		LOG.info("finding individuals in category "+category.title);
+		Set<Category> children=new HashSet<Category>();
+		QName cmcontinueAttr=new QName("cmcontinue");
+		QName pageIdAttr=new QName("pageid");
+		QName titleAttr=new QName("title");
+		String urlStr="http://en.wikipedia.org/w/api.php?cmlimit=500&format=xml&action=query&list=categorymembers&cmnamespace=0&cmtitle="+
+			"&cmtitle="+URLEncoder.encode(category.title.replace(' ', '_'),"UTF-8")
+			;
 		
-		
-		Collections.sort(this.persons,new Comparator<Person>()
+		URL url=new URL(urlStr);
+		while(url!=null)
 			{
-			@Override
-			public int compare(Person o1, Person o2)
+			String cmcontinue=null;
+			XMLEventReader r=openXMLEventReader(url);
+			url=null;
+			while(r.hasNext())
 				{
-				return o1.countEdits-o2.countEdits;
-				}
-			});
-		
-		
-		for(Person person: this.persons)
-			{
-			minYear= Math.min(minYear, person.birth-1);
-			maxYear= Math.max(maxYear, person.death+1);
-			maxRev= Math.max(maxRev, person.countEdits);
-			minRev= Math.min(minRev, person.countEdits);
-			}
-		double duration=(maxYear-minYear);
-		int adjustedHeight=this.imageHeight-(THUMB_WIDTH+4);
-		
-		XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
-		XMLStreamWriter w= xmlfactory.createXMLStreamWriter(System.out);
-		w.writeStartElement("html");
-		w.writeStartElement("body");
-		
-		w.writeStartElement("div");
-		w.writeAttribute("style",
-			"position:relative;white-space:nowrap;width:" +
-			this.imageWidth+	
-			"px;height:" +
-			this.imageHeight+
-			"px;background:-moz-linear-gradient(left,white,lightgray);"+
-			"border: 1px solid;"
-			);
-		//y axis
-		for(int i=1;i<= 10;++i)
-			{
-			int rev= minRev+(int)((i*((maxRev-minRev)/10.0)));
-			int y=(int)(this.imageHeight-(i*this.imageHeight/10.0));
-			w.writeStartElement("span");
-			w.writeAttribute("style", "position:absolute;font-weight: bold; color:gray;top:"+y+"px;left:5px;");
-			w.writeCharacters(String.valueOf(rev));
-			w.writeEndElement();
-			}
-		//x axis
-		for(int i=1;i< 10;++i)
-			{
-			int year=minYear+(int)((i*(duration/10.0)));
-			int x=(int)(i*this.imageWidth/10.0);
-			w.writeStartElement("span");
-			w.writeAttribute("style", "font-weight: bold; font-size:18px;color:gray; position:absolute;-moz-transform: translate("+x+"px, 19px) rotate(90deg);");
-			w.writeCharacters(String.valueOf(year));
-			w.writeEndElement();
-			}
-		
-		
-		for(Person person:this.persons)
-			{
-			w.writeStartElement("div");
-			w.writeAttribute("id", "wp"+person.pageid);
-			StringBuilder style=new StringBuilder("position:absolute;opacity:.5;");
-			Rectangle viewRect=new  Rectangle();
-			viewRect.x=(int)(((person.birth-minYear)/duration)*this.imageWidth);
-			viewRect.width=(int)(((person.death-person.birth)/duration)*this.imageWidth);
-			viewRect.height=(int)(THUMB_WIDTH+4);
-			viewRect.y=adjustedHeight-(int)(((person.countEdits-minRev)/(float)(maxRev-minRev))*adjustedHeight);
-			
-			
-			
-			if(viewRect.width< THUMB_WIDTH*2)
-				{
-				viewRect.width=THUMB_WIDTH*2;
-				if(viewRect.width+viewRect.x>=this.imageWidth)
+				XMLEvent evt=r.nextEvent();
+				if(!evt.isStartElement()) continue;
+				StartElement start=evt.asStartElement();
+				String localName=start.getName().getLocalPart();
+				if(localName.equals("cm"))
 					{
-					viewRect.x=this.imageWidth-viewRect.width;
+					Person person=new Person();
+					Attribute att=start.getAttributeByName(pageIdAttr);
+					person.pageid=Long.parseLong(att.getValue());
+					att=start.getAttributeByName(titleAttr);
+					person.name=att.getValue();
+					
+					addPerson(person);
 					}
+				else if(localName.equals("categorymembers"))
+					{
+					Attribute att=start.getAttributeByName(cmcontinueAttr);
+					if(att!=null) cmcontinue=att.getValue();
+					}
+					
 				}
-			
-			style.append("left:").append(viewRect.x).append("px;");
-			style.append("width:").append(viewRect.width).append("px;");
-			style.append("height:").append(viewRect.height).append("px;");
-			style.append("top:").append(viewRect.y).append("px;");
-			style.append("border: 1px solid;");
-			style.append("background:-moz-linear-gradient(top,gray,lightgray);");
-			style.append("overflow:hidden;-moz-border-radius:3px;");
-			w.writeAttribute("style", style.toString());
-			
-			if(person.imageURL!=null)
+			r.close();
+			if(cmcontinue!=null)
 				{
-				w.writeStartElement("a");
-				w.writeAttribute("href",person.imageDescriptionurl);
-				w.writeAttribute("target","_blank");
-				style=new StringBuilder("border-style:none;float:left;margin:");
-				style.append(2+(THUMB_WIDTH-person.thumbDim.height)/2).append("px ");//top
-				style.append("2px ");//right
-				style.append(2+(THUMB_WIDTH-person.thumbDim.height)/2).append("px ");//bottom
-				style.append("2px;");//left
-				w.writeEmptyElement("img");
-				w.writeAttribute("title", person.name);
-				w.writeAttribute("width", String.valueOf(person.thumbDim.width));
-				w.writeAttribute("height", String.valueOf(person.thumbDim.height));
-				w.writeAttribute("style", style.toString());
-				w.writeAttribute("src", person.imageURL);
+				url=new URL(urlStr+"&cmcontinue="+cmcontinue);
+				}
+			}
+		}
+	
+	
+	private class RevisionHandler
+		extends PersonListHandler
+		{
+		@Override
+		public void paint(List<Person> persons)
+			throws Exception
+			{
+			int minYear=Integer.MAX_VALUE;
+			int maxYear=Integer.MIN_VALUE;
+			int maxRev=0;
+			int minRev=Integer.MAX_VALUE;
+			
+			
+			Collections.sort(persons,new Comparator<Person>()
+				{
+				@Override
+				public int compare(Person o1, Person o2)
+					{
+					return o1.countEdits-o2.countEdits;
+					}
+				});
+			
+			
+			for(Person person: persons)
+				{
+				minYear= Math.min(minYear, person.birth-1);
+				maxYear= Math.max(maxYear, person.death+1);
+				maxRev= Math.max(maxRev, person.countEdits);
+				minRev= Math.min(minRev, person.countEdits);
+				}
+			double duration=(maxYear-minYear);
+			int adjustedHeight=owner().imageHeight-(THUMB_WIDTH+4);
+			
+			XMLStreamWriter w= getXMLStreamWriter();
+			w.writeStartElement("html");
+			w.writeStartElement("body");
+			
+			w.writeStartElement("div");
+			w.writeAttribute("style",
+				//white-space:nowrap;
+				"position:relative;width:" + 
+				owner().imageWidth+	
+				"px;height:" +
+				owner().imageHeight+
+				"px;background:-moz-linear-gradient(left,white,lightgray);"+
+				"border: 1px solid;"
+				);
+			//y axis
+			for(int i=1;i<= 10;++i)
+				{
+				int rev= minRev+(int)((i*((maxRev-minRev)/10.0)));
+				int y=(int)(owner().imageHeight-(i*owner().imageHeight/10.0));
+				w.writeStartElement("span");
+				w.writeAttribute("style", "position:absolute;font-weight: bold; color:gray;top:"+y+"px;left:5px;");
+				w.writeCharacters(String.valueOf(rev));
+				w.writeEndElement();
+				}
+			//x axis
+			for(int i=1;i< 10;++i)
+				{
+				int year=minYear+(int)((i*(duration/10.0)));
+				int x=(int)(i*owner().imageWidth/10.0);
+				w.writeStartElement("span");
+				w.writeAttribute("style", "font-weight: bold; font-size:18px;color:gray; position:absolute;-moz-transform: translate("+x+"px, 19px) rotate(90deg);");
+				w.writeCharacters(String.valueOf(year));
 				w.writeEndElement();
 				}
 			
-			w.writeStartElement("a");
-			w.writeAttribute("href", "http://en.wikipedia.org/wiki/"+person.name);
-			w.writeAttribute("title",person.getCaption());
-			w.writeAttribute("target","_blank");
-			w.writeAttribute("style","color:black;");
-			w.writeCharacters(person.getCaption());
+			
+			for(Person person:persons)
+				{
+				w.writeStartElement("div");
+				w.writeAttribute("id", "wp"+person.pageid);
+				StringBuilder style=new StringBuilder("position:absolute;opacity:.5;");
+				person.viewRect=new  Rectangle();
+				person.viewRect.x=(int)(((person.birth-minYear)/duration)*owner().imageWidth);
+				person.viewRect.width=(int)(((person.death-person.birth)/duration)*owner().imageWidth);
+				person.viewRect.height=(int)(THUMB_WIDTH+4);
+				person.viewRect.y=adjustedHeight-(int)(((person.countEdits-minRev)/(float)(maxRev-minRev))*adjustedHeight);
+				
+				
+				
+				if(person.viewRect.width< THUMB_WIDTH*2)
+					{
+					person.viewRect.width=THUMB_WIDTH*2;
+					if(person.viewRect.width+person.viewRect.x>=owner().imageWidth)
+						{
+						person.viewRect.x=owner().imageWidth-person.viewRect.width;
+						}
+					}
+				
+				style.append("left:").append(person.viewRect.x).append("px;");
+				style.append("width:").append(person.viewRect.width).append("px;");
+				style.append("height:").append(person.viewRect.height).append("px;");
+				style.append("top:").append(person.viewRect.y).append("px;");
+				style.append("border: 1px solid;");
+				style.append("background:-moz-linear-gradient(top,gray,lightgray);");
+				style.append("overflow:hidden;-moz-border-radius:3px;");
+				w.writeAttribute("style", style.toString());
+				
+				if(person.imageURL!=null)
+					{
+					w.writeStartElement("a");
+					w.writeAttribute("href",person.imageDescriptionurl);
+					w.writeAttribute("target","_blank");
+					style=new StringBuilder("border-style:none;float:left;margin:");
+					style.append(2+(THUMB_WIDTH-person.thumbDim.height)/2).append("px ");//top
+					style.append("2px ");//right
+					style.append(2+(THUMB_WIDTH-person.thumbDim.height)/2).append("px ");//bottom
+					style.append("2px;");//left
+					w.writeEmptyElement("img");
+					w.writeAttribute("title", person.name);
+					w.writeAttribute("width", String.valueOf(person.thumbDim.width));
+					w.writeAttribute("height", String.valueOf(person.thumbDim.height));
+					w.writeAttribute("style", style.toString());
+					w.writeAttribute("src", person.imageURL);
+					w.writeEndElement();
+					}
+				
+				w.writeStartElement("a");
+				w.writeAttribute("href", "http://en.wikipedia.org/wiki/"+person.name);
+				w.writeAttribute("title",person.getCaption());
+				w.writeAttribute("target","_blank");
+				w.writeAttribute("style","color:black;");
+				
+				String textContent= "";//getArticleFirstLine(person.pageid);
+				if(textContent.isEmpty())
+					{
+					textContent=person.getCaption();
+					}
+				
+				w.writeCharacters(textContent);
+				w.writeEndElement();
+				
+				w.writeEndElement();
+				w.writeCharacters("\n");
+				}
 			w.writeEndElement();
 			
 			w.writeEndElement();
-			w.writeCharacters("\n");
+			w.writeEndElement();
+			w.flush();
+			w.close();
 			}
-		w.writeEndElement();
-		
-		w.writeEndElement();
-		w.writeEndElement();
-		w.flush();
-		w.close();
 		}
+
+	private class PileupHandler
+		extends PersonListHandler
+		{
+		int minYear=Integer.MAX_VALUE;
+		int maxYear=Integer.MIN_VALUE;
+		
+		PileupHandler() {}
+		
+		
+		private double convertDate2Pixel(int date)
+			{
+			return owner().imageWidth*((date-this.minYear)/(double)(this.maxYear-this.minYear));
+			}
+		
+		private double x1(Person person)
+    		{
+    		return convertDate2Pixel(person.birth);
+    		}
+    	
+		private double x2(Person person)
+    		{
+    		return convertDate2Pixel(person.death);
+    		}
+		
+		@Override
+		public void paint(List<Person> persons)
+			throws Exception
+			{			
+			Collections.sort(persons,new Comparator<Person>()
+				{
+				@Override
+				public int compare(Person o1, Person o2)
+					{
+					int n= o1.birth-o2.birth;
+					if(n!=0) return n;
+					n= o1.death-o2.death;
+					if(n!=0) return n;
+					return o1.name.compareTo(o2.name);
+					}
+				});
+			
+			
+			for(Person person: persons)
+				{
+				minYear= Math.min(minYear, person.birth-1);
+				maxYear= Math.max(maxYear, person.death+1);
+				}
+			for(Person person: persons)
+				{
+				person.viewRect=new Rectangle();
+				person.viewRect.y=0;
+				person.viewRect.height=THUMB_WIDTH;
+				person.viewRect.x=(int)x1(person);
+				person.viewRect.width=(int)(x2(person)-x1(person));
+				}
+			double duration=(maxYear-minYear);
+			int adjustedHeight=owner().imageHeight-(THUMB_WIDTH+4);
+			
+			List<Person> remains=new ArrayList<Person>(persons);
+			int nLine=-1;
+			while(!remains.isEmpty())
+				{
+				++nLine;
+				Person first=remains.get(0);
+				remains.remove(0);
+				first.viewRect.y=nLine*THUMB_WIDTH;
+				first.viewRect.height=THUMB_WIDTH;
+				
+				while(true)
+					{
+					Person best=null;
+					int bestIndex=-1;
+					for(int i=0;i< remains.size();++i)
+						{
+						Person next=remains.get(i);
+						if(next.viewRect.getX() < first.viewRect.getMaxX()+5) continue;
+						if(best==null ||
+						  (next.viewRect.getX()- first.viewRect.getMaxX() < best.viewRect.getX()- first.viewRect.getMaxX()))
+							{
+							best=next;
+							bestIndex=i;
+							}
+						}
+					if(best==null) break;
+					first=best;
+					first.viewRect.y=nLine*THUMB_WIDTH;
+					remains.remove(bestIndex);
+					}
+				}
+			
+			
+			XMLStreamWriter w= getXMLStreamWriter();
+			w.writeStartElement("html");
+			w.writeStartElement("body");
+			
+			w.writeStartElement("div");
+			w.writeAttribute("style",
+				//white-space:nowrap;
+				"position:relative;width:" + 
+				owner().imageWidth+	
+				"px;height:" +
+				((nLine+1)*THUMB_WIDTH)+
+				"px;background:-moz-linear-gradient(left,white,lightgray);"+
+				"border: 1px solid;"
+				);
+			
+			//x axis
+			for(int i=1;i< 10;++i)
+				{
+				int year=minYear+(int)((i*(duration/10.0)));
+				int x=(int)(i*owner().imageWidth/10.0);
+				w.writeStartElement("span");
+				w.writeAttribute("style", "font-weight: bold; font-size:18px;color:gray; position:absolute;-moz-transform: translate("+x+"px, 19px) rotate(90deg);");
+				w.writeCharacters(String.valueOf(year));
+				w.writeEndElement();
+				}
+			
+			
+			for(Person person:persons)
+				{
+				w.writeStartElement("div");
+				w.writeAttribute("id", "wp"+person.pageid);
+				StringBuilder style=new StringBuilder("position:absolute;opacity:.5;");
+				
+				if(person.viewRect.width< THUMB_WIDTH*2)
+					{
+					person.viewRect.width=THUMB_WIDTH*2;
+					if(person.viewRect.width+person.viewRect.x>=owner().imageWidth)
+						{
+						person.viewRect.x=owner().imageWidth-person.viewRect.width;
+						}
+					}
+				
+				style.append("left:").append(person.viewRect.x).append("px;");
+				style.append("width:").append(person.viewRect.width).append("px;");
+				style.append("height:").append(person.viewRect.height).append("px;");
+				style.append("top:").append(person.viewRect.y).append("px;");
+				style.append("border: 1px solid;");
+				style.append("background:-moz-linear-gradient(top,gray,lightgray);");
+				style.append("overflow:hidden;-moz-border-radius:3px;");
+				w.writeAttribute("style", style.toString());
+				
+				if(person.imageURL!=null)
+					{
+					w.writeStartElement("a");
+					w.writeAttribute("href",person.imageDescriptionurl);
+					w.writeAttribute("target","_blank");
+					style=new StringBuilder("border-style:none;float:left;margin:");
+					style.append(2+(THUMB_WIDTH-person.thumbDim.height)/2).append("px ");//top
+					style.append("2px ");//right
+					style.append(2+(THUMB_WIDTH-person.thumbDim.height)/2).append("px ");//bottom
+					style.append("2px;");//left
+					w.writeEmptyElement("img");
+					w.writeAttribute("title", person.name);
+					w.writeAttribute("width", String.valueOf(person.thumbDim.width));
+					w.writeAttribute("height", String.valueOf(person.thumbDim.height));
+					w.writeAttribute("style", style.toString());
+					w.writeAttribute("src", person.imageURL);
+					w.writeEndElement();
+					}
+				
+				w.writeStartElement("a");
+				w.writeAttribute("href", "http://en.wikipedia.org/wiki/"+person.name);
+				w.writeAttribute("title",person.getCaption());
+				w.writeAttribute("target","_blank");
+				w.writeAttribute("style","color:black;");
+				
+				String textContent= "";//getArticleFirstLine(person.pageid);
+				if(textContent.isEmpty())
+					{
+					textContent=person.getCaption();
+					}
+				
+				w.writeCharacters(textContent);
+				w.writeEndElement();
+				
+				w.writeEndElement();
+				w.writeCharacters("\n");
+				}
+			w.writeEndElement();
+			
+			w.writeEndElement();
+			w.writeEndElement();
+			w.flush();
+			w.close();
+			}
+		}
+	
+	
+	
+	private void paint()
+		throws Exception
+		{
+		if(this.pileup)
+			{
+			new PileupHandler().paint(this.persons);
+			}
+		else
+			{
+			new RevisionHandler().paint(this.persons);
+			}
+		}
+	
+	private void recursiveCategory(
+		Set<Category> pool,
+		Set<Category> remains,
+		int depth
+		) throws Exception
+		{
+		if(depth>=this.maxDepth) return;
+		pool.addAll(remains);
+		Set<Category> remains2=new HashSet<Category>();
+		for(Category c1: remains)
+			{
+			Set<Category> subCats=findSubCategories(c1);
+			for(Category c2: subCats)
+				{
+				if(pool.add(c2))
+					{
+					remains2.add(c2);
+					}
+				}
+			}
+		if(!remains2.isEmpty())
+			{
+			recursiveCategory(pool,remains2,depth+1);
+			}
+		}
+	
+	private void findInCategories(Category cat)
+		throws Exception
+		{
+		Set<Category> pool=new HashSet<Category>(1);
+		Set<Category> remains=new HashSet<Category>(1);
+		pool.add(cat);
+		remains.add(cat);
+		recursiveCategory(pool,remains,0);
+		LOG.info("adding category "+pool);
+		for(Category c1:pool)
+			{
+			findInCategory(c1);
+			}
+		}
+	
 	
 	private void run()
 		throws Exception
 		{
-		havingInfobox("Infobox scientist");
+		//havingInfobox("Infobox scientist");
+		findInCategories(new Category("Category:Japanese scientists"));
+		for(Person p:this.persons)
+			{
+			findImage(p);
+			}
 		paint();
 		}
 	
@@ -569,6 +1115,7 @@ public class WikipediaBioEdits
 					System.err.println("Options:");
 					System.err.println(" -h help; This screen.");
 					System.err.println(" -v print logging information");
+					System.err.println(" -D max depth for finding sub categories: "+app.maxDepth);
 					System.err.println(" -d (used with -N ) delete the individuals with the smallest number of revisions if there's too many individuals");
 					System.err.println(" -N <int> max-num-individuals default:"+app.limitCountPersons);
 					System.err.println(" -s <int> start-year default:"+app.limitStartYear);
@@ -576,15 +1123,24 @@ public class WikipediaBioEdits
 					System.err.println(" -r <int> min revison default:"+app.minRevision);
 					System.err.println(" -w <int> screen width:"+app.imageWidth);
 					System.err.println(" -H <int> screen height:"+app.imageHeight);
+					System.err.println(" -p pileup instead of revision");
 					return;
 					}
 				else if(args[optind].equals("-d"))
-				        {
-				        app.removeIfTooMany=true;
-				        }
+			        {
+			        app.removeIfTooMany=true;
+			        }
+				else if(args[optind].equals("-p"))
+			        {
+			        app.pileup=true;
+			        }
 				else if(args[optind].equals("-v"))//verbose
 					{
 					LOG.setLevel(Level.ALL);
+					}
+				else if(args[optind].equals("-D"))
+					{
+					app.maxDepth=Integer.parseInt(args[++optind]);
 					}
 				else if(args[optind].equals("-N"))
 					{
