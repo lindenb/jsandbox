@@ -1,5 +1,16 @@
+/**
+ * Author:
+ * 		Pierre LIndenbaum PhD
+ * WWW:
+ * 		http://plindenbaum.blogspot.com
+ * Mail:
+ * 		plindenbaum@yahoo.fr
+ * Motivation:
+ * 		displays the annotation for a blast alignement.
+ * 		annotations are fetched from the NCBI if sequence def starts with 'gi|...'
+ * 
+ */
 package sandbox;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
@@ -301,7 +312,6 @@ public class BlastAnnotation
 		}
 	public static void main(String[] args)
 		{
-		args=new String[]{"/home/pierre/jeter.blast.xml"};
 		try
 			{
 			BlastAnnotation app=new BlastAnnotation();

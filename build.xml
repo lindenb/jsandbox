@@ -9,7 +9,7 @@
 </path>
 	
 
-<target name="all" depends="wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear">
+<target name="all" depends="blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear">
 
 </target>
 
@@ -134,6 +134,23 @@
 	</java>
 </target>	
 
+<target name="blastannot" depends="ncbi.api">
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp">
+      <include name="**/BlastAnnotation.java" />
+      <include name="**/blast/ObjectFactory.java" />
+      <include name="**/gbc/ObjectFactory.java" />
+   </javac>
+   
+   <jar destfile="dist/blastannot.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.BlastAnnotation"/>
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>	
 
 <target name="ncbi.api" depends="blast.api,gbc.api">
 </target>
