@@ -133,5 +133,28 @@
 		<arg value="Rotavirus"/>
 	</java>
 </target>	
-	
+
+
+<target name="ncbi.api" depends="blast.api,gbc.api">
+</target>
+
+<target name="blast.api">
+      <exec executable="xjc">
+         <arg value="-d"/>  <arg value="src"/>
+         <arg value="-p"/> <arg value="sandbox.ncbi.blast"/>
+         <arg value="-dtd"/>
+         <arg value="http://www.ncbi.nlm.nih.gov/dtd/NCBI_BlastOutput.dtd"/>
+      </exec>
+</target>
+
+<target name="gbc.api">
+   <exec executable="xjc">
+      <arg value="-d"/>  <arg value="src"/>
+      <arg value="-p"/> <arg value="sandbox.ncbi.gbc"/>
+      <arg value="-dtd"/>
+      <arg value="http://www.ncbi.nlm.nih.gov/dtd/INSD_INSDSeq.dtd"/>
+   </exec>
+</target>
+
+
 </project>
