@@ -137,7 +137,7 @@
 <target name="blastannot" depends="ncbi.api">
    <mkdir dir="dist"/>
    <mkdir dir="tmp"/>
-   <javac srcdir="src" destdir="tmp">
+   <javac srcdir="src" destdir="tmp" debug="true">
       <include name="**/BlastAnnotation.java" />
       <include name="**/blast/ObjectFactory.java" />
       <include name="**/gbc/ObjectFactory.java" />
