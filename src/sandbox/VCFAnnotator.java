@@ -3,16 +3,16 @@ package sandbox;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.io.StreamTokenizer;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.sql.Blob;
-import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -25,11 +25,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
-
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
-
-
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -227,7 +224,24 @@ class VCFCall
 		{
 		return getLine();
 		}
-
+	
+	public void addProperties(String opcode,Map<String, String> map)
+		{
+		if(columns[7].equals(".")) columns[7]="";
+		StringBuilder b=new StringBuilder(this.columns[7]);
+		if(!columns[7].isEmpty()) b.append(";");
+		b.append("=");
+		boolean first=true;
+		for(String key:map.keySet())
+			{
+			if(!first) b.append("|");
+			first=false;
+			b.append(key);
+			b.append(":");
+			b.append(map.get(key));
+			}
+		}
+	
 	}
 
 /**
@@ -285,8 +299,7 @@ class VCFFile
    
         return first;
         }
-    
-    @SuppressWarnings("unchecked")
+    /** get the calls at given position */
 	public List<VCFCall> get(ChromPosition pos)
     	{
     	int i=lowerBound(0,getCalls().size(),pos);
@@ -315,6 +328,7 @@ class VCFFile
 		out.flush();
 		}
 	
+	/** read VCF file */
 	private void read(BufferedReader in)
 	throws IOException
 		{
@@ -820,7 +834,11 @@ class KnownGene
 			
 			}
 	
-	
+		/**
+		 * 
+		 * KnownGene 
+		 * 
+		 */
 		public KnownGene(String tokens[])
 			throws IOException
 			{
@@ -849,18 +867,19 @@ class KnownGene
             	}
 			}
 		
-
+		/** returns knownGene ID */
 		public String getName()
 			{
 			return this.name;
 			}
 		
-
+		/** returns chromosome name */
 		public String getChromosome()
 			{
 			return this.chrom;
 			}
 		
+		/** returns the strand */
 		public char getStrand()
 			{
 			return strand;
@@ -930,18 +949,24 @@ class KnownGene
 		}
 
 
-class Mapability2SQL
+abstract class AbstractWigAnalysis
 	{
-	private static final String base="http://hgdownload.cse.ucsc.edu/goldenPath/hg18/encodeDCC/wgEncodeMapability/";
-	private String currChrom=null;
-	private int currPosition=0;
-	private int currStep=1;
-	private int currSpan=1;
-	private int variation_index=-1;
-	VCFFile vcfFile;
+	static Logger LOG=Logger.getLogger("vcf.annotator");
+	protected String currChrom=null;
+	protected int currPosition=0;
+	protected int currStep=1;
+	protected int currSpan=1;
+	protected int variation_index=-1;
+	VCFFile vcfFile=null;
 	
-	private void fixedStep(String line)
+	protected AbstractWigAnalysis()
 		{
+		
+		}
+	
+	protected void fixedStep(String line)
+		{
+		LOG.info(line);
 		currChrom=null;
 		currPosition=0;
 		currStep=1;
@@ -970,41 +995,15 @@ class Mapability2SQL
 				currSpan=Integer.parseInt(s.substring(i+1));
 				}
 			}
-		currPosition-=currStep;
-		variation_index= vcfFile.getCalls().size();
-		for(int i=0;i< vcfFile.getCalls().size();++i)
-			{
-			VCFCall c= this.vcfFile.getCalls().get(i);
-			if(!c.getChromPosition().getChromosome().equalsIgnoreCase(currChrom)) continue;
-			if(c.getChromPosition().getPosition()+1  >= currPosition)
-				{
-				variation_index=i;
-				break;
-				}
-			}
+		
+		variation_index= vcfFile.lowerBound(
+			new ChromPosition(currChrom, currPosition)
+			);
 		}
 	
-	
-	
-	/**
-	 * The Broad alignability track displays whether a region is made up of mostly unique or mostly non-unique sequence. 
-	 * @throws Exception
-	 */
-	public void run() throws Exception
+	protected void scanWig(BufferedReader r)
+		throws IOException
 		{
-		scanWig("wgEncodeBroadMapabilityAlign36mer.wig.gz","wgEncodeBroadMapabilityAlign36mer");
-		for(int i: new int[]{20,24,35})
-			{
-			scanWig("wgEncodeDukeUniqueness"+i+"bp.wig.gz","wgEncodeDukeUniqueness"+i);
-			}
-		}
-	
-	private void scanWig(String path,String table) throws Exception
-		{
-		URL url=new URL(base+path);
-		BufferedReader r=new BufferedReader(
-			new InputStreamReader(
-			new GZIPInputStream(url.openStream())));
 		String line;
 		
 		while((line=r.readLine())!=null)
@@ -1015,12 +1014,11 @@ class Mapability2SQL
 				continue;
 				}
 			
-			currPosition+=currStep;
 			
 			//advance variation_index
 			while(
 				variation_index<  vcfFile.getCalls().size() &&
-				(vcfFile.getCalls().get(variation_index).getChromPosition().getPosition() -1 ) <currPosition &&
+				(vcfFile.getCalls().get(variation_index).getChromPosition().getPosition() -1 ) < currPosition &&
 				(vcfFile.getCalls().get(variation_index).getChromPosition().getChromosome().equalsIgnoreCase(currChrom))
 				)
 				{
@@ -1033,10 +1031,59 @@ class Mapability2SQL
 					vcfFile.getCalls().get(n2).getChromPosition().getPosition() -1 <(currPosition+currStep) &&
 					vcfFile.getCalls().get(n2).getChromPosition().getChromosome().equalsIgnoreCase(currChrom))
 					{
-					//insert(table,variations.get(n2).getId(),line);
+					found(vcfFile.getCalls().get(n2),line);
 					++n2;
 					}
+
+			currPosition+=currStep;
 			}
+		r.close();
+		}
+	
+	protected abstract void found(VCFCall call,String line);
+	
+	}
+
+/**
+ * 
+ * Annotation for Mapability
+ * 
+ */
+class MapabilityAnnotator
+	extends AbstractWigAnalysis
+	{
+	private static final String base=
+		"http://hgdownload.cse.ucsc.edu/goldenPath/hg18/encodeDCC/wgEncodeMapability/";
+	private String table;
+	/**
+	 * The Broad alignability track displays whether a region is made up of mostly unique or mostly non-unique sequence. 
+	 * @throws Exception
+	 */
+	public void run() throws Exception
+		{
+		scanWig("wgEncodeBroadMapabilityAlign36mer.wig.gz",
+				"wgEncodeBroadMapabilityAlign36mer");
+		for(int i: new int[]{20,24,35})
+			{
+			scanWig("wgEncodeDukeUniqueness"+i+"bp.wig.gz",
+					"wgEncodeDukeUniqueness"+i);
+			}
+		}
+	
+	@Override
+	protected void found(VCFCall call,String line)
+		{
+		LOG.info(table+" "+call+" "+line+" "+this.currChrom+" "+this.currPosition);
+		}
+	private void scanWig(String path,String table) throws Exception
+		{
+		this.table=table;
+		URL url=new URL(base+path);
+		LOG.info("scanning "+url);
+		BufferedReader r=new BufferedReader(
+			new InputStreamReader(
+			new GZIPInputStream(url.openStream())));
+		scanWig(r);
 		r.close();
 		}
 		
@@ -1102,38 +1149,59 @@ class SnpAnnotator
 	public void run()
 		throws IOException
 		{
+		String currentChromosome=null;
+		int currentIndex=0;
 		Pattern tab=Pattern.compile("\t");
-		Set<String> chromosomes= vcfFile.getChromosomes();
 		URL url=new URL("http://hgdownload.cse.ucsc.edu/goldenPath/hg18/database/"+table+".txt.gz");
 		BufferedReader in=new BufferedReader(new InputStreamReader(new GZIPInputStream(url.openStream())));
 		String line;
 		while((line=in.readLine())!=null)
 			{
-			String tokens[]=tab.split(line);
-			if(!chromosomes.contains(tokens[1])) continue;
+			String tokens[]=tab.split(line,6);
+			String chrom=tokens[1];
+			if(currentChromosome==null || !currentChromosome.equalsIgnoreCase(chrom))
+				{
+				currentChromosome=chrom;
+				currentIndex=vcfFile.lowerBound(new ChromPosition(chrom, 0));
+				}
+			
 			int chromStart=Integer.parseInt(tokens[2]);
 			int chromEnd=Integer.parseInt(tokens[3]);
-			int i=this.vcfFile.lowerBound(new ChromPosition(tokens[1], chromStart+1));
-			while(i< this.vcfFile.getCalls().size())
+			
+			
+			//advance variation_index
+			while(
+				currentIndex<  vcfFile.getCalls().size() &&
+				(vcfFile.getCalls().get(currentIndex).getChromPosition().getPosition() -1 ) < chromStart &&
+				(vcfFile.getCalls().get(currentIndex).getChromPosition().getChromosome().equalsIgnoreCase(currentChromosome))
+				)
 				{
-				VCFCall call= this.vcfFile.getCalls().get(i);
-				int d=tokens[1].compareToIgnoreCase(call.getChromPosition().getChromosome());
-				if(d<0) { ++i; continue;}
-				if(d>0) break;
-				if(chromStart+1> call.getChromPosition().getPosition())
-					{
-					++i;
-					continue;
-					}
-				if(chromEnd+1 <= call.getChromPosition().getPosition())
-					{
-					break;
-					}
-				//TODP
-				LOG.info(line);
-				LOG.info(call.getLine());
-				++i;
+				currentIndex++;
 				}
+			
+			int n2=currentIndex;
+			while(n2 < vcfFile.getCalls().size() &&
+					vcfFile.getCalls().get(n2).getChromPosition().getPosition() -1 >=chromStart &&
+					vcfFile.getCalls().get(n2).getChromPosition().getPosition() -1 <(chromEnd) &&
+					vcfFile.getCalls().get(n2).getChromPosition().getChromosome().equalsIgnoreCase(currentChromosome))
+					{
+					VCFCall call=vcfFile.getCalls().get(n2);
+					String rsId= call.getColumns()[2];
+					if(rsId.equals(".")) rsId="";
+					Set<String> set=new HashSet<String>(Arrays.asList(rsId.split("[;]")));
+					LOG.info(line);
+					LOG.info(call.getLine());
+					set.remove("");
+					set.add(tokens[4]);
+					rsId="";
+					for(String s:set)
+						{
+						if(!rsId.isEmpty()) rsId+=";";
+						rsId+=s;
+						}
+					call.getColumns()[2]=rsId;
+					++n2;
+					}
 			}
 		}
 	}
@@ -1559,7 +1627,175 @@ class PredictionAnnotator
 	        		}//end of simpe ATCG
             	else
             		{
-            		LOG.info("not a substiturion");
+	        		Integer wildrna=null;
+	        		int position_in_cdna=-1;
+	        		
+	        		
+	        		
+	        		if(gene.isForward())
+	            		{
+	            		if(position < gene.getCdsStart())
+	            			{
+	            			annotations.put("type", "UTR5");
+	            			}
+	            		else if( gene.getCdsEnd()<= position )
+	            			{
+	            			annotations.put("type", "UTR3");
+	            			}
+	            		
+	            		int exon_index=0;
+	            		while(exon_index< gene.getExonCount())
+	            			{
+	            			KnownGene.Exon exon= gene.getExon(exon_index);
+	            			for(int i= exon.getStart();
+	            					i< exon.getEnd();
+	            					++i)
+	            				{
+	            				if(i==position)
+	        						{
+	        						annotations.put("exon", exon.getName());
+	        						}
+	            				if(i< gene.getCdsStart()) continue;
+	            				if(i>=gene.getCdsEnd()) break;
+	        					
+	        					if(wildrna==null)
+	        						{
+	        						wildrna=0;
+	        						}
+	        					
+	        					if(i==position)
+	        						{
+	        						annotations.put(KEY_TYPE, "EXON");
+	        						annotations.put("exon.name",exon.getName());
+	        						position_in_cdna=wildrna;
+	        						annotations.put("pos.cdna", String.valueOf(wildrna));
+	        						//in splicing ?
+	        						if(exon.isSplicing(position))
+	        							{
+	        							annotations.put(KEY_SPLICING, "SPLICING");
+	        							
+	        							if(exon.isSplicingAcceptor(position))
+	        								{
+	        								annotations.put(KEY_SPLICING, "SPLICING_ACCEPTOR");
+	        								}
+	        							else  if(exon.isSplicingDonor(position))
+	        								{
+	        								annotations.put(KEY_SPLICING, "SPLICING_DONOR");
+	        								}
+	        							}
+	        						}
+	        					
+	        					wildrna++;
+	            				}
+	            			KnownGene.Intron intron= exon.getNextIntron();
+	            			if(intron!=null && intron.contains(position))
+	            				{
+	            				annotations.put("intron.name",intron.getName());
+	            				annotations.put("type", "INTRON");
+	            				
+	            				if(intron.isSplicing(position))
+	        						{
+	            					annotations.put(KEY_SPLICING, "INTRON_SPLICING");
+	        						if(intron.isSplicingAcceptor(position))
+	        							{
+	        							annotations.put(KEY_SPLICING, "INTRON_SPLICING_ACCEPTOR");
+	        							}
+	        						else if(intron.isSplicingDonor(position))
+	        							{
+	        							annotations.put(KEY_SPLICING, "INTRON_SPLICING_DONOR");
+	        							}
+	        						}
+	            				}
+	            			++exon_index;
+	            			}
+	            		}
+	            	else // reverse orientation
+	            		{
+	            	
+	            		if(position < gene.getCdsStart())
+	            			{
+	            			annotations.put(KEY_TYPE, "UTR3");
+	            			}
+	            		else if( gene.getCdsEnd()<=position )
+	            			{
+	            			annotations.put(KEY_TYPE, "UTR5");
+	            			}
+	            	
+	            		
+	            		int exon_index = gene.getExonCount()-1;
+	            		while(exon_index >=0)
+	            			{
+	            			KnownGene.Exon exon= gene.getExon(exon_index);
+	            			for(int i= exon.getEnd()-1;
+	            				    i>= exon.getStart();
+	            				--i)
+	            				{
+	            				if(i==position)
+	        						{
+	            					annotations.put("exon.name", exon.getName());
+	        						}
+	            				if(i>= gene.getCdsEnd()) continue;
+	            				if(i<  gene.getCdsStart()) break;
+	            				
+	            				if(wildrna==null)
+	        						{
+	        						wildrna=0;
+	        						}
+	            				
+	            				if(i==position)
+	        						{
+	            					annotations.put(KEY_TYPE, "EXON");
+	            					position_in_cdna=wildrna;
+	        						annotations.put("pos.cdna",String.valueOf(position_in_cdna));
+	        						//in splicing ?
+	        						if(exon.isSplicing(position))
+	        							{
+	        							annotations.put(KEY_SPLICING, "INTRON_SPLICING");
+	        							
+	        							if(exon.isSplicingAcceptor(position))
+	        								{
+	        								annotations.put(KEY_SPLICING, "INTRON_SPLICING_ACCEPTOR");
+	        								}
+	        							else  if(exon.isSplicingDonor(position))
+	        								{
+	        								annotations.put(KEY_SPLICING, "INTRON_SPLICING_DONOR");
+	        								}
+	        							}
+	        						}
+	            				
+	            				wildrna++;
+	            				}
+	            			
+	            			KnownGene.Intron intron= exon.getPrevIntron();
+	            			if(intron!=null &&
+	            				intron.contains(position))
+	            				{
+	            				annotations.put("intron.name",intron.getName());
+	            				annotations.put(KEY_TYPE, "INTRON");
+	            				
+	            				if(intron.isSplicing(position))
+	        						{
+	            					annotations.put(KEY_SPLICING, "INTRON_SPLICING");
+	        						if(intron.isSplicingAcceptor(position))
+	        							{
+	        							annotations.put(KEY_SPLICING, "INTRON_SPLICING_ACCEPTOR");
+	        							}
+	        						else if(intron.isSplicingDonor(position))
+	        							{
+	        							annotations.put(KEY_SPLICING, "INTRON_SPLICING_DONOR");
+	        							}
+	        						}
+	            				}
+	            			--exon_index;
+	            			}
+
+	            		}//end of if reverse
+	        		if( wildrna!=null &&
+	        			position_in_cdna>=0)
+		    			{
+	            		int pos_aa=position_in_cdna/3;
+	            		annotations.put("position.protein",String.valueOf(pos_aa+1));
+		    			}
             		}
             	annotations.put("strand", ""+gene.getStrand());
             	annotations.put("kgId", gene.getName());
@@ -1588,21 +1824,17 @@ public class VCFAnnotator
 	{
 	static Logger LOG=Logger.getLogger("vcf.annotator");
 	private String genomeVersion="hg18";
-	private PredictionAnnotator prediction;
 	private VCFAnnotator() throws Exception
 		{
-		this.prediction=new PredictionAnnotator(this);
 		}
 	
-	public String getUcscGenomeVersion() {
-		return genomeVersion;
-		}
 	
 	
 	
 	public static void main(String[] args)
 		{
 		try {
+			String genomeVersion="hg18";
 			LOG.setLevel(Level.ALL);
 			VCFAnnotator app=new VCFAnnotator();
 			int optind=0;
@@ -1611,14 +1843,20 @@ public class VCFAnnotator
 				if(args[optind].equals("-h"))
 					{
 					System.out.println("VCF annotator");
+					System.out.println("Pierre Lindenbaum PhD. 2010. http://plindenbaum.blogspot.com");
+					System.out.println("Options:");
 					System.out.println(" -b ucsc.build default:"+app.genomeVersion);
+					System.out.println(" -log  <level> default:"+LOG.getLevel());
 					return;
 					}
 				else if(args[optind].equals("-b"))
 					{
 					app.genomeVersion=args[++optind];
 					}
-				
+				else if(args[optind].equals("-log"))
+					{
+					LOG.setLevel(Level.parse(args[++optind]));
+					}
 				else if(args[optind].equals("--"))
 					{
 					optind++;
@@ -1635,15 +1873,44 @@ public class VCFAnnotator
 					}
 				++optind;
 				}
-			
-			VCFFile vcf= VCFFile.parse(new BufferedReader(new FileReader(new File("/home/pierre/sample1.vcf"))));
-			GenomicSuperDupAnnotator an1=new GenomicSuperDupAnnotator();
-			an1.vcfFile=vcf;
-			an1.run();
+			VCFFile vcf=null;
+			if(optind==args.length)
+				{
+				vcf=VCFFile.parse(new BufferedReader(new InputStreamReader(System.in)));
+				}
+			else if(optind+1==args.length)
+				{
+				String filename=args[optind++];
+				InputStream in=new FileInputStream(filename);
+				if(filename.toLowerCase().endsWith(".gz"))
+					{
+					in=new GZIPInputStream(in);
+					}
+				vcf=VCFFile.parse(new BufferedReader(new InputStreamReader(in)));
+				in.close();
+				}
+			else
+				{
+				System.err.println("Illegal Number of arguments");
+				return;
+				}
 			
 			SnpAnnotator an2=new SnpAnnotator("snp129");
 			an2.vcfFile=vcf;
 			an2.run();
+			
+			MapabilityAnnotator an4=new MapabilityAnnotator();
+			an4.vcfFile=vcf;
+			an4.run();
+			
+			
+			GenomicSuperDupAnnotator an1=new GenomicSuperDupAnnotator();
+			an1.vcfFile=vcf;
+			an1.run();
+			
+			
+			
+			
 			
 			SnpAnnotator an3=new SnpAnnotator("snp130");
 			an3.vcfFile=vcf;
