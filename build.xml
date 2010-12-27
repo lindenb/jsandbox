@@ -9,7 +9,7 @@
 </path>
 	
 
-<target name="all" depends="blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear">
+<target name="all" depends="vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear">
 
 </target>
 
@@ -151,6 +151,23 @@
    </jar>
    <delete dir="tmp"/>
 </target>	
+
+<target name="vcfannotator" >
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp" debug="true">
+      <include name="**/VCFAnnotator.java" />
+   </javac>
+   
+   <jar destfile="dist/vcfannotator.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.VCFAnnotator"/>
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>
+
 
 <target name="ncbi.api" depends="blast.api,gbc.api">
 </target>

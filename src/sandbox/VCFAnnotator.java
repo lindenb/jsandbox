@@ -1,10 +1,20 @@
+/**
+ * Author:
+ * 	Pierre Lindenbaum PhD
+ * Date:
+ * 	Dec-2010
+ * Contact:
+ * 	plindenbaum@yahoo.fr
+ * WWW:
+ * 	http://plindenbaum.blogspot.com
+ * Motivation:
+ * 	Annotate a VCF file with the UCSC data
+ */
 package sandbox;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -31,7 +41,61 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-
+class IOUtils
+	{
+	static Logger LOG=Logger.getLogger("vcf.annotator");
+	private static BufferedReader _open(String uri)
+		{
+		try
+			{
+			InputStream in=null;
+			if(	uri.startsWith("http://") || 
+				uri.startsWith("https://") ||
+				uri.startsWith("ftp://")
+				)
+				{
+				URL url=new URL(uri);
+				in=url.openStream();
+				}
+			else
+				{
+				in=new FileInputStream(uri);
+				}
+			
+			if(uri.toLowerCase().endsWith(".gz"))
+				{
+				in=new GZIPInputStream(in);
+				}
+			return new BufferedReader(new InputStreamReader(in));
+			}
+		catch (IOException e)
+			{
+			LOG.info("error "+e.getMessage());
+			return null;
+			}
+		}
+	
+	
+	public static BufferedReader tryOpen(String uri)
+		{
+		LOG.info("try open "+uri);
+		BufferedReader r=_open(uri);
+		if(r==null)
+			{
+			System.err.println("Cannot open \""+uri+"\"");
+			return null;
+			}
+		return r;
+		}
+	public static BufferedReader mustOpen(String url)
+		throws IOException
+		{
+		LOG.info("must open "+url);
+		BufferedReader r= _open(url);
+		if(r==null) throw new IOException("Cannot open \""+url+"\"");
+		return r;
+		}
+	}
 
 /**
  * 
@@ -227,10 +291,7 @@ class VCFCall
 	
 	public void addProperties(String opcode,Map<String, String> map)
 		{
-		if(columns[7].equals(".")) columns[7]="";
-		StringBuilder b=new StringBuilder(this.columns[7]);
-		if(!columns[7].isEmpty()) b.append(";");
-		b.append("=");
+		StringBuilder b=new StringBuilder();
 		boolean first=true;
 		for(String key:map.keySet())
 			{
@@ -240,6 +301,14 @@ class VCFCall
 			b.append(":");
 			b.append(map.get(key));
 			}
+		addProperty(opcode, b.toString());
+		}
+	
+	public void addProperty(String key,String value)
+		{
+		if(columns[7].equals(".")) columns[7]="";	
+		if(!columns[7].isEmpty()) this.columns[7]+=";";
+		columns[7]+=(key+"="+value);
 		}
 	
 	}
@@ -252,6 +321,7 @@ class VCFCall
 class VCFFile
 	{
 	private static Logger LOG=Logger.getLogger("vcf.annotator");
+	private static final String DEFAULT_HEADER="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT";
 	private List<String> headers=new ArrayList<String>();
 	private List<VCFCall> calls=new ArrayList<VCFCall>(10000);
 	
@@ -343,11 +413,11 @@ class VCFFile
 		
 		if(!headers.isEmpty())
 			{
-			final String COLS="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT";
+			
 			String last=headers.get(headers.size()-1);
-			if(!last.startsWith(COLS))
+			if(!last.startsWith(DEFAULT_HEADER))
 				{
-				throw new IOException("Error in header got "+line+" but expected "+COLS);
+				throw new IOException("Error in header got "+line+" but expected "+DEFAULT_HEADER);
 				}
 			}
 		
@@ -374,6 +444,17 @@ class VCFFile
 			}
 		LOG.info(set.toString());
 		return set;
+		}
+	
+	public void addHeader(String key,String value)
+		{
+		while(!key.startsWith("##")) key="#"+key;
+		if(this.headers.isEmpty())
+			{
+			this.headers.add("##fileformat=VCFv4.0");
+			this.headers.add(DEFAULT_HEADER);
+			}
+		this.headers.add(this.headers.size()-1, key+"="+value);
 		}
 	
 	
@@ -957,11 +1038,20 @@ abstract class AbstractWigAnalysis
 	protected int currStep=1;
 	protected int currSpan=1;
 	protected int variation_index=-1;
-	VCFFile vcfFile=null;
+	private VCFFile vcfFile=null;
 	
 	protected AbstractWigAnalysis()
 		{
 		
+		}
+	
+	public void setVcfFile(VCFFile vcfFile)
+		{
+		this.vcfFile = vcfFile;
+		}
+	public VCFFile getVcfFile()
+		{
+		return vcfFile;
 		}
 	
 	protected void fixedStep(String line)
@@ -1080,130 +1170,375 @@ class MapabilityAnnotator
 		this.table=table;
 		URL url=new URL(base+path);
 		LOG.info("scanning "+url);
-		BufferedReader r=new BufferedReader(
-			new InputStreamReader(
-			new GZIPInputStream(url.openStream())));
+		BufferedReader r=IOUtils.tryOpen(base+path);
+		if(r==null) return;
 		scanWig(r);
 		r.close();
 		}
 		
 	}
 
-
-class GenomicSuperDupAnnotator
+/**
+ * 
+ * Annotation for PhastCons
+ * 
+ */
+class PhastConsAnnotator
+	extends AbstractWigAnalysis
 	{
-	static Logger LOG=Logger.getLogger("vcf.annotator");
+	private static final String base=
+		"http://hgdownload.cse.ucsc.edu/goldenPath/hg18/phastCons44way/vertebrate/";
+	private String table;
+	/**
+	 * The Broad alignability track displays whether a region is made up of mostly unique or mostly non-unique sequence. 
+	 * @throws Exception
+	 */
+	public void run() throws Exception
+		{
+        for(String c:getVcfFile().getChromosomes())
+                {
+                //URL url=new URL(base+c+".phastCons44way.wigFix.gz");
+                //LOG.info("scanning "+url);
+        		BufferedReader r=IOUtils.tryOpen(base+c+".phastCons44way.wigFix.gz");
+        		if(r==null) return ;
+                scanWig(r);
+                r.close();
+                }
+		}
 	
-	VCFFile vcfFile;
+	@Override
+	protected void found(VCFCall call,String line)
+		{
+		LOG.info(table+" "+call+" "+line+" "+this.currChrom+" "+this.currPosition);
+		}	
+		
+	}
+
+/**
+ * http://genome.ucsc.edu/cgi-bin/hgTrackUi?db=hg18&g=pgSnp&hgt_tSearch=Search
+ * @author pierre
+ *
+ */
+class PersonalGenomeAnnotator
+	extends AbstractRangeAnnotator
+	{
+	private String genomeVersion;
+	private String name;
+	private String table;
+	PersonalGenomeAnnotator(String genomeVersion,String name,String table)
+		{
+		this.genomeVersion=genomeVersion;
+		this.name=name;
+		this.table=table;
+		}
+	
+	
+	
 	public void run()
 		throws IOException
 		{
-		Pattern tab=Pattern.compile("\t");
-		Set<String> chromosomes= vcfFile.getChromosomes();
-		URL url=new URL("http://hgdownload.cse.ucsc.edu/goldenPath/hg18/database/genomicSuperDups.txt.gz");
-		BufferedReader in=new BufferedReader(new InputStreamReader(new GZIPInputStream(url.openStream())));
-		String line;
-		while((line=in.readLine())!=null)
-			{
-			String tokens[]=tab.split(line);
-			if(!chromosomes.contains(tokens[1])) continue;
-			int chromStart=Integer.parseInt(tokens[2]);
-			int chromEnd=Integer.parseInt(tokens[3]);
-			int i=this.vcfFile.lowerBound(new ChromPosition(tokens[1], chromStart+1));
-			while(i< this.vcfFile.getCalls().size())
-				{
-				VCFCall call= this.vcfFile.getCalls().get(i);
-				int d=tokens[1].compareToIgnoreCase(call.getChromPosition().getChromosome());
-				if(d<0) { ++i; continue;}
-				if(d>0) break;
-				if(chromStart+1> call.getChromPosition().getPosition())
-					{
-					++i;
-					continue;
-					}
-				if(chromEnd+1 <= call.getChromPosition().getPosition())
-					{
-					break;
-					}
-				//TODP
-				LOG.info(line);
-				LOG.info(call.getLine());
-				++i;
-				}
-			}
+		BufferedReader in=IOUtils.tryOpen("http://hgdownload.cse.ucsc.edu/goldenPath/"+genomeVersion+"/database/"+table+".txt.gz");
+		if(in==null) return ;
+		run(in);
+		in.close();
+		}
+	
+	@Override
+	protected int getSplitMax()
+		{
+		return 6;
+		}
+	
+	@Override
+	protected int getChromosomeColumn()
+		{
+		return 1;
+		}
+	
+	@Override
+	protected int getChromStartColumn()
+		{
+		return 2;
+		}
+	
+	@Override
+	protected int getChromEndColumn()
+		{
+		return 3;
+		}
+	
+	@Override
+	public void annotate(VCFCall call, String[] tokens)
+		{
+		
 		}
 	}
 
 
-class SnpAnnotator
+/**
+ * GenomicSuperDupAnnotator
+ */
+class GenomicSuperDupAnnotator
+	extends AbstractRangeAnnotator
 	{
-	static Logger LOG=Logger.getLogger("vcf.annotator");
+	private String genomeVersion;
 	
-	VCFFile vcfFile;
-	private String table;
-	public SnpAnnotator(String table)
+	GenomicSuperDupAnnotator(String genomeVersion)
 		{
+		this.genomeVersion=genomeVersion;
+		}
+	
+	
+	
+	public void run()
+		throws IOException
+		{
+		BufferedReader in=IOUtils.tryOpen("http://hgdownload.cse.ucsc.edu/goldenPath/"+genomeVersion+"/database/genomicSuperDups.txt.gz");
+		if(in==null) return ;
+		run(in);
+		in.close();
+		}
+	
+	@Override
+	protected int getSplitMax()
+		{
+		return 6;
+		}
+	
+	@Override
+	protected int getChromosomeColumn()
+		{
+		return 1;
+		}
+	
+	@Override
+	protected int getChromStartColumn()
+		{
+		return 2;
+		}
+	
+	@Override
+	protected int getChromEndColumn()
+		{
+		return 3;
+		}
+	
+	@Override
+	public void annotate(VCFCall call, String[] tokens)
+		{
+		call.addProperty("SEGDUP",tokens[4]);
+		}
+	}
+
+
+
+/**
+ * AbstractRangeAnnotator
+ */
+abstract class AbstractRangeAnnotator
+	{
+	static protected Logger LOG=Logger.getLogger("vcf.annotator");
+	private VCFFile vcfFile;
+	
+	
+	protected AbstractRangeAnnotator()
+		{
+		}
+	
+	public void setVcfFile(VCFFile vcfFile)
+		{
+		this.vcfFile = vcfFile;
+		}
+	
+	public VCFFile getVcfFile()
+		{
+		return vcfFile;
+		}
+	
+	abstract protected int getSplitMax();
+	abstract protected int getChromStartColumn();
+	abstract protected int getChromEndColumn();
+	abstract protected int getChromosomeColumn();
+	
+	public void run(BufferedReader in)
+		throws IOException
+		{
+		if(in==null) return;
+		final int chrom_col_index= getChromosomeColumn();
+		final int chromstart_col_index=getChromStartColumn();
+		final int chromend_col_index=getChromEndColumn();
+		
+		String currentChromosome=null;
+		int currentIndex=0;
+		Pattern tab=Pattern.compile("\t");
+		String line;
+		while((line=in.readLine())!=null)
+			{
+			String tokens[]=tab.split(line,getSplitMax());
+			String chrom=tokens[chrom_col_index];
+			if( currentChromosome==null ||
+			   !currentChromosome.equalsIgnoreCase(chrom))
+				{
+				currentChromosome = chrom;
+				currentIndex = getVcfFile().lowerBound(new ChromPosition(chrom, 0));
+				}
+			
+			int chromStart=Integer.parseInt(tokens[chromstart_col_index]);
+			int chromEnd=Integer.parseInt(tokens[chromend_col_index]);
+			
+			
+			//advance variation_index
+			while(currentIndex<  vcfFile.getCalls().size())
+				{
+				ChromPosition pos = vcfFile.getCalls().get(currentIndex).getChromPosition();
+				if(!(pos.getPosition()-1 < chromStart &&
+					 pos.getChromosome().equalsIgnoreCase(currentChromosome))
+					 )
+					{
+					break;
+					}
+				currentIndex++;	
+				}
+			int n2=currentIndex;
+			while(n2 < vcfFile.getCalls().size())
+				{
+				ChromPosition pos = vcfFile.getCalls().get(n2).getChromPosition();
+				if(!(pos.getPosition() -1 >=chromStart &&
+					pos.getPosition() -1 <(chromEnd) &&
+					pos.getChromosome().equalsIgnoreCase(currentChromosome))
+					)
+					{
+					break;
+					}
+				VCFCall call=vcfFile.getCalls().get(n2);
+				LOG.info(call.getLine());
+				LOG.info(line);
+				annotate(call,tokens);
+				++n2;
+				}
+			}
+		}
+	
+	public abstract void annotate(VCFCall c,final String tokens[]);
+	}
+
+
+/**
+ * Transcription Binding Factors
+ */
+class TranscriptionBindingSitesAnnotator
+extends AbstractRangeAnnotator
+	{
+	private String genomeVersion;
+	TranscriptionBindingSitesAnnotator(String genomeVersion)
+		{
+		this.genomeVersion=genomeVersion;
+		}
+	
+	public void run()
+	throws IOException
+		{
+		BufferedReader in=IOUtils.tryOpen(
+			"http://hgdownload.cse.ucsc.edu/goldenPath/"+genomeVersion+"/database/tfbsConsSites.txt.gz");
+		if(in==null) return;
+		run(in);
+		in.close();
+		}
+	
+	@Override
+	protected int getSplitMax()
+		{
+		return 6;
+		}
+	@Override
+	protected int getChromosomeColumn()
+		{
+		return 1;
+		}
+	@Override
+	protected int getChromStartColumn()
+		{
+		return 2;
+		}
+	@Override
+	protected int getChromEndColumn()
+		{
+		return 3;
+		}
+	@Override
+	public void annotate(VCFCall c, String[] tokens)
+		{
+		c.addProperty("TFBS", tokens[4]);
+		}
+	}
+
+
+/**
+ * SNP annotator
+ * @author pierre
+ */
+class SnpAnnotator extends AbstractRangeAnnotator
+	{
+	private String genomeVersion;
+	private String table;
+	public SnpAnnotator(String genomeVersion,String table)
+		{
+		this.genomeVersion=genomeVersion;
 		this.table=table;
 		}
 	
 	public void run()
 		throws IOException
 		{
-		String currentChromosome=null;
-		int currentIndex=0;
-		Pattern tab=Pattern.compile("\t");
-		URL url=new URL("http://hgdownload.cse.ucsc.edu/goldenPath/hg18/database/"+table+".txt.gz");
-		BufferedReader in=new BufferedReader(new InputStreamReader(new GZIPInputStream(url.openStream())));
-		String line;
-		while((line=in.readLine())!=null)
-			{
-			String tokens[]=tab.split(line,6);
-			String chrom=tokens[1];
-			if(currentChromosome==null || !currentChromosome.equalsIgnoreCase(chrom))
-				{
-				currentChromosome=chrom;
-				currentIndex=vcfFile.lowerBound(new ChromPosition(chrom, 0));
-				}
-			
-			int chromStart=Integer.parseInt(tokens[2]);
-			int chromEnd=Integer.parseInt(tokens[3]);
-			
-			
-			//advance variation_index
-			while(
-				currentIndex<  vcfFile.getCalls().size() &&
-				(vcfFile.getCalls().get(currentIndex).getChromPosition().getPosition() -1 ) < chromStart &&
-				(vcfFile.getCalls().get(currentIndex).getChromPosition().getChromosome().equalsIgnoreCase(currentChromosome))
-				)
-				{
-				currentIndex++;
-				}
-			
-			int n2=currentIndex;
-			while(n2 < vcfFile.getCalls().size() &&
-					vcfFile.getCalls().get(n2).getChromPosition().getPosition() -1 >=chromStart &&
-					vcfFile.getCalls().get(n2).getChromPosition().getPosition() -1 <(chromEnd) &&
-					vcfFile.getCalls().get(n2).getChromPosition().getChromosome().equalsIgnoreCase(currentChromosome))
-					{
-					VCFCall call=vcfFile.getCalls().get(n2);
-					String rsId= call.getColumns()[2];
-					if(rsId.equals(".")) rsId="";
-					Set<String> set=new HashSet<String>(Arrays.asList(rsId.split("[;]")));
-					LOG.info(line);
-					LOG.info(call.getLine());
-					set.remove("");
-					set.add(tokens[4]);
-					rsId="";
-					for(String s:set)
-						{
-						if(!rsId.isEmpty()) rsId+=";";
-						rsId+=s;
-						}
-					call.getColumns()[2]=rsId;
-					++n2;
-					}
-			}
+		BufferedReader in=IOUtils.tryOpen(
+			"http://hgdownload.cse.ucsc.edu/goldenPath/"+genomeVersion+"/database/"+table+".txt.gz");
+		if(in==null) return;
+		run(in);
+		in.close();
 		}
+	
+	@Override
+	protected int getSplitMax()
+		{
+		return 6;
+		}
+	
+	@Override
+	protected int getChromosomeColumn()
+		{
+		return 1;
+		}
+
+	@Override
+	protected int getChromStartColumn()
+		{
+		return 2;
+		}
+	
+	@Override
+	protected int getChromEndColumn()
+		{
+		return 3;
+		}
+	
+	
+	@Override
+	public void annotate(VCFCall call, String[] tokens)
+		{
+		String rsId= call.getColumns()[2];
+		if(rsId.equals(".")) rsId="";
+		Set<String> set=new HashSet<String>(Arrays.asList(rsId.split("[;]")));
+		
+		set.remove("");
+		set.add(tokens[4]);
+		rsId="";
+		for(String s:set)
+			{
+			if(!rsId.isEmpty()) rsId+=";";
+			rsId+=s;
+			}
+		call.getColumns()[2]=rsId;
+		}	
 	}
 
 
@@ -1218,15 +1553,20 @@ class PredictionAnnotator
 	static final String KEY_SPLICING="splicing";
 	static Logger LOG=Logger.getLogger("vcf.annotator");
 	private Map<String, List<KnownGene>> chrom2genes=new HashMap<String, List<KnownGene>>();
-	VCFAnnotator owner;
-	VCFFile vcfFile;
-	DasSequenceProvider dasServer;
+	private VCFFile vcfFile;
+	private DasSequenceProvider dasServer;
+	private String genomeVersion;
 	
-	
-	PredictionAnnotator(VCFAnnotator owner) throws Exception
+	PredictionAnnotator(String genomeVersion) throws Exception
 		{
-		this.owner=owner;
-		this.dasServer=new DasSequenceProvider("hg18");
+		this.genomeVersion=genomeVersion;
+		this.dasServer=new DasSequenceProvider(genomeVersion);
+		}
+	
+	
+	public void setVcfFile(VCFFile vcfFile)
+		{
+		this.vcfFile = vcfFile;
 		}
 	
 	private static char complement(char c)
@@ -1246,8 +1586,7 @@ class PredictionAnnotator
 		Map<String, KnownGene> kgId2gene=new HashMap<String, KnownGene>();
 		Pattern tab=Pattern.compile("\t");
 		Set<String> chromosomes= vcfFile.getChromosomes();
-		URL url=new URL("http://hgdownload.cse.ucsc.edu/goldenPath/hg18/database/knownGene.txt.gz");
-		BufferedReader in=new BufferedReader(new InputStreamReader(new GZIPInputStream(url.openStream())));
+		BufferedReader in=IOUtils.mustOpen("http://hgdownload.cse.ucsc.edu/goldenPath/"+genomeVersion+"/database/knownGene.txt.gz");
 		String line;
 		while((line=in.readLine())!=null)
 			{
@@ -1280,8 +1619,8 @@ class PredictionAnnotator
 					});
 			}
 		
-		url=new URL("http://hgdownload.cse.ucsc.edu/goldenPath/hg18/database/kgXref.txt.gz");
-		in=new BufferedReader(new InputStreamReader(new GZIPInputStream(url.openStream())));
+
+		in=IOUtils.mustOpen("http://hgdownload.cse.ucsc.edu/goldenPath/"+genomeVersion+"/database/kgXref.txt.gz");
 		while((line=in.readLine())!=null)
 			{
 			String tokens[]=tab.split(line);
@@ -1619,9 +1958,6 @@ class PredictionAnnotator
 		    			else
 		    				{
 		    				annotations.put("type", "EXON_CODING_NON_SYNONYMOUS");
-		    				System.err.println(annotations);
-		    				System.err.println(call.getLine());
-		    				System.exit(-1);//TODO
 		    				}
 		    			}
 	        		}//end of simpe ATCG
@@ -1823,20 +2159,21 @@ class PredictionAnnotator
 public class VCFAnnotator
 	{
 	static Logger LOG=Logger.getLogger("vcf.annotator");
-	private String genomeVersion="hg18";
 	private VCFAnnotator() throws Exception
 		{
 		}
-	
-	
-	
-	
 	public static void main(String[] args)
 		{
 		try {
+			String proxyHost=null;
+			String proxyPort=null;
+			boolean basicPrediction=false;
+			boolean mapability=false;
+			boolean genomicSuperDups=false;
+			boolean phastcons=false;
+			Set<String> dbsnpID=new HashSet<String>();
 			String genomeVersion="hg18";
-			LOG.setLevel(Level.ALL);
-			VCFAnnotator app=new VCFAnnotator();
+			LOG.setLevel(Level.OFF);
 			int optind=0;
 			while(optind<args.length)
 				{
@@ -1845,17 +2182,52 @@ public class VCFAnnotator
 					System.out.println("VCF annotator");
 					System.out.println("Pierre Lindenbaum PhD. 2010. http://plindenbaum.blogspot.com");
 					System.out.println("Options:");
-					System.out.println(" -b ucsc.build default:"+app.genomeVersion);
+					System.out.println(" -b ucsc.build default:"+ genomeVersion);
+					System.out.println(" -m mapability (hg18 only).");
+					System.out.println(" -g genomicSuperDups");
+					System.out.println(" -p basic prediction");
+					System.out.println(" -c phastcons prediction");
+					System.out.println(" -snp <id> add ucsc <id> must be present in \"http://hgdownload.cse.ucsc.edu/goldenPath/<ucscdb>/database/<id>.txt.gz\" e.g. snp129");
 					System.out.println(" -log  <level> default:"+LOG.getLevel());
+					System.out.println(" -proxyHost <host>");
+					System.out.println(" -proxyPort <port>");
 					return;
 					}
 				else if(args[optind].equals("-b"))
 					{
-					app.genomeVersion=args[++optind];
+					genomeVersion=args[++optind];
+					}
+				else if(args[optind].equals("-m"))
+					{
+					mapability=true;
+					}
+				else if(args[optind].equals("-snp"))
+					{
+					dbsnpID.add(args[++optind]);
+					}
+				else if(args[optind].equals("-g"))
+					{
+					genomicSuperDups=true;
+					}
+				else if(args[optind].equals("-c"))
+					{
+					phastcons=true;
+					}
+				else if(args[optind].equals("-p"))
+					{
+					basicPrediction=true;
 					}
 				else if(args[optind].equals("-log"))
 					{
 					LOG.setLevel(Level.parse(args[++optind]));
+					}
+				else if(args[optind].equals("-proxyHost"))
+					{
+					proxyHost=args[++optind];
+					}
+				else if(args[optind].equals("-proxyPort"))
+					{
+					proxyPort=args[++optind];
 					}
 				else if(args[optind].equals("--"))
 					{
@@ -1873,6 +2245,16 @@ public class VCFAnnotator
 					}
 				++optind;
 				}
+			
+			if(proxyHost!=null)
+				{
+				System.setProperty("http.proxyHost", proxyHost);
+				}
+			if(proxyPort!=null)
+				{
+				System.setProperty("http.proxyPort", proxyPort);
+				}
+			
 			VCFFile vcf=null;
 			if(optind==args.length)
 				{
@@ -1881,12 +2263,9 @@ public class VCFAnnotator
 			else if(optind+1==args.length)
 				{
 				String filename=args[optind++];
-				InputStream in=new FileInputStream(filename);
-				if(filename.toLowerCase().endsWith(".gz"))
-					{
-					in=new GZIPInputStream(in);
-					}
-				vcf=VCFFile.parse(new BufferedReader(new InputStreamReader(in)));
+				
+				BufferedReader in=IOUtils.mustOpen(filename);
+				vcf=VCFFile.parse(in);
 				in.close();
 				}
 			else
@@ -1895,31 +2274,57 @@ public class VCFAnnotator
 				return;
 				}
 			
-			SnpAnnotator an2=new SnpAnnotator("snp129");
-			an2.vcfFile=vcf;
-			an2.run();
+			for(String table: dbsnpID)
+				{
+				SnpAnnotator an2=new SnpAnnotator(genomeVersion,table);
+				an2.setVcfFile(vcf);
+				an2.run();
+				}
 			
-			MapabilityAnnotator an4=new MapabilityAnnotator();
-			an4.vcfFile=vcf;
-			an4.run();
+			if(mapability)
+				{
+				if(!genomeVersion.equals("hg18"))
+					{
+					System.err.println("Mapability is for hg18 only, not "+genomeVersion);
+					return;
+					}
+				MapabilityAnnotator an4=new MapabilityAnnotator();
+				an4.setVcfFile(vcf);
+				an4.run();
+				}
+			
+			if(phastcons)
+				{
+				if(!genomeVersion.equals("hg18"))
+					{
+					System.err.println("PhastCons is for hg18 only, not "+genomeVersion);
+					return;
+					}
+				PhastConsAnnotator an4=new PhastConsAnnotator();
+				an4.setVcfFile(vcf);
+				an4.run();
+				}
 			
 			
-			GenomicSuperDupAnnotator an1=new GenomicSuperDupAnnotator();
-			an1.vcfFile=vcf;
-			an1.run();
+			if(genomicSuperDups)
+				{
+				GenomicSuperDupAnnotator an1=new GenomicSuperDupAnnotator(genomeVersion);
+				an1.setVcfFile(vcf);
+				an1.run();
+				}
 			
+			if(basicPrediction)
+				{
+				PredictionAnnotator predictor=new PredictionAnnotator(genomeVersion);
+				predictor.setVcfFile(vcf);
+				predictor.preLoadUcsc();
+				predictor.run();
+				}
 			
+			PrintWriter out=new PrintWriter(System.out);
+			vcf.print(out);
+			out.flush();
 			
-			
-			
-			SnpAnnotator an3=new SnpAnnotator("snp130");
-			an3.vcfFile=vcf;
-			an3.run();
-			
-			
-			app.prediction.vcfFile=vcf;
-			app.prediction.preLoadUcsc();
-			app.prediction.run();
 			}
 		catch (Exception e) {
 			e.printStackTrace();
