@@ -43,6 +43,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 class IOUtils
 	{
+	static private final int BUFSIZ=1000000;
 	static Logger LOG=Logger.getLogger("vcf.annotator");
 	private static BufferedReader _open(String uri)
 		{
@@ -66,7 +67,7 @@ class IOUtils
 				{
 				in=new GZIPInputStream(in);
 				}
-			return new BufferedReader(new InputStreamReader(in));
+			return new BufferedReader(new InputStreamReader(in),BUFSIZ);
 			}
 		catch (IOException e)
 			{
@@ -1087,8 +1088,16 @@ abstract class AbstractWigAnalysis
 			}
 		
 		variation_index= vcfFile.lowerBound(
-			new ChromPosition(currChrom, currPosition)
+			new ChromPosition(currChrom, 0)
 			);
+		if(variation_index < vcfFile.getCalls().size())
+			{
+			ChromPosition pos = vcfFile.getCalls().get(variation_index).getChromPosition();
+			if(!pos.getChromosome().equalsIgnoreCase(currChrom))
+				{
+				variation_index=  vcfFile.getCalls().size();
+				}
+			}
 		}
 	
 	protected void scanWig(BufferedReader r)
@@ -1106,21 +1115,32 @@ abstract class AbstractWigAnalysis
 			
 			
 			//advance variation_index
-			while(
-				variation_index<  vcfFile.getCalls().size() &&
-				(vcfFile.getCalls().get(variation_index).getChromPosition().getPosition() -1 ) < currPosition &&
-				(vcfFile.getCalls().get(variation_index).getChromPosition().getChromosome().equalsIgnoreCase(currChrom))
-				)
+			while(variation_index<  vcfFile.getCalls().size())
 				{
+				ChromPosition pos=vcfFile.getCalls().get(variation_index).getChromPosition();
+				
+				if(!( (pos.getPosition() -1 ) < currPosition &&
+					  (pos.getChromosome().equalsIgnoreCase(currChrom))
+					))
+					{
+					break;
+					}
+				
 				variation_index++;
 				}
 			
 			int n2=variation_index;
-			while(n2 < vcfFile.getCalls().size() &&
-					vcfFile.getCalls().get(n2).getChromPosition().getPosition() -1 >=currPosition &&
-					vcfFile.getCalls().get(n2).getChromPosition().getPosition() -1 <(currPosition+currStep) &&
-					vcfFile.getCalls().get(n2).getChromPosition().getChromosome().equalsIgnoreCase(currChrom))
+			while(n2 < vcfFile.getCalls().size())
 					{
+					ChromPosition pos=vcfFile.getCalls().get(n2).getChromPosition();
+					if(!( pos.getPosition() -1 >=currPosition &&
+						  pos.getPosition() -1 <(currPosition+currStep) &&
+					      pos.getChromosome().equalsIgnoreCase(currChrom)
+					     ))
+						{
+						break;
+						}
+
 					found(vcfFile.getCalls().get(n2),line);
 					++n2;
 					}
@@ -1222,22 +1242,47 @@ class PhastConsAnnotator
 class PersonalGenomeAnnotator
 	extends AbstractRangeAnnotator
 	{
-	private String genomeVersion;
 	private String name;
-	private String table;
-	PersonalGenomeAnnotator(String genomeVersion,String name,String table)
+	private String genomeVersion;
+	PersonalGenomeAnnotator()
 		{
-		this.genomeVersion=genomeVersion;
-		this.name=name;
-		this.table=table;
 		}
 	
+	PersonalGenomeAnnotator(String name)
+		{
+		this.name=name;
+		}
 	
+	public void setName(String name)
+		{
+		this.name = name;
+		}
+	
+	public String getName()
+		{
+		return name;
+		}
+	public String getTable()
+		{
+		return "pg"+getName();
+		}
+	
+	public void setGenomeVersion(String genomeVersion)
+		{
+		this.genomeVersion = genomeVersion;
+		}
+	
+	public String getGenomeVersion()
+		{
+		return genomeVersion;
+		}
 	
 	public void run()
 		throws IOException
 		{
-		BufferedReader in=IOUtils.tryOpen("http://hgdownload.cse.ucsc.edu/goldenPath/"+genomeVersion+"/database/"+table+".txt.gz");
+		BufferedReader in=IOUtils.tryOpen(
+				"http://hgdownload.cse.ucsc.edu/goldenPath/"+
+				getGenomeVersion()+"/database/"+getTable()+".txt.gz");
 		if(in==null) return ;
 		run(in);
 		in.close();
@@ -1270,9 +1315,11 @@ class PersonalGenomeAnnotator
 	@Override
 	public void annotate(VCFCall call, String[] tokens)
 		{
-		
+		LOG.info(getName()+" "+Arrays.asList(tokens));
+		LOG.info(call.getLine());
 		}
 	}
+
 
 
 /**
@@ -1367,25 +1414,45 @@ abstract class AbstractRangeAnnotator
 		final int chrom_col_index= getChromosomeColumn();
 		final int chromstart_col_index=getChromStartColumn();
 		final int chromend_col_index=getChromEndColumn();
-		
+		int nLines=0;
 		String currentChromosome=null;
 		int currentIndex=0;
+		int prev_chromStart=0;
 		Pattern tab=Pattern.compile("\t");
 		String line;
 		while((line=in.readLine())!=null)
 			{
+			++nLines;
+			if(nLines%150000==0)
+				{
+				LOG.info(line);
+				}
 			String tokens[]=tab.split(line,getSplitMax());
 			String chrom=tokens[chrom_col_index];
 			if( currentChromosome==null ||
 			   !currentChromosome.equalsIgnoreCase(chrom))
 				{
 				currentChromosome = chrom;
+				prev_chromStart=-1;
 				currentIndex = getVcfFile().lowerBound(new ChromPosition(chrom, 0));
+				if(currentIndex< vcfFile.getCalls().size())
+					{
+					ChromPosition pos = vcfFile.getCalls().get(currentIndex).getChromPosition();
+					if(!pos.getChromosome().equalsIgnoreCase(currentChromosome))
+						{
+						currentIndex=  vcfFile.getCalls().size();
+						}
+					}
 				}
 			
 			int chromStart=Integer.parseInt(tokens[chromstart_col_index]);
 			int chromEnd=Integer.parseInt(tokens[chromend_col_index]);
 			
+			if(chromStart< prev_chromStart)
+				{
+				throw new IOException("exected sorted data chrom/chromStart");
+				}
+			prev_chromStart=chromStart;
 			
 			//advance variation_index
 			while(currentIndex<  vcfFile.getCalls().size())
@@ -1441,6 +1508,7 @@ extends AbstractRangeAnnotator
 		BufferedReader in=IOUtils.tryOpen(
 			"http://hgdownload.cse.ucsc.edu/goldenPath/"+genomeVersion+"/database/tfbsConsSites.txt.gz");
 		if(in==null) return;
+		LOG.info("OK reading");
 		run(in);
 		in.close();
 		}
@@ -2171,6 +2239,8 @@ public class VCFAnnotator
 			boolean mapability=false;
 			boolean genomicSuperDups=false;
 			boolean phastcons=false;
+			boolean transfac=false;
+			List<PersonalGenomeAnnotator> personalGenomes=new ArrayList<PersonalGenomeAnnotator>();
 			Set<String> dbsnpID=new HashSet<String>();
 			String genomeVersion="hg18";
 			LOG.setLevel(Level.OFF);
@@ -2187,6 +2257,8 @@ public class VCFAnnotator
 					System.out.println(" -g genomicSuperDups");
 					System.out.println(" -p basic prediction");
 					System.out.println(" -c phastcons prediction");
+					System.out.println(" -t transcription factors sites prediction");
+					System.out.println(" -pg personal genomes");
 					System.out.println(" -snp <id> add ucsc <id> must be present in \"http://hgdownload.cse.ucsc.edu/goldenPath/<ucscdb>/database/<id>.txt.gz\" e.g. snp129");
 					System.out.println(" -log  <level> default:"+LOG.getLevel());
 					System.out.println(" -proxyHost <host>");
@@ -2200,6 +2272,10 @@ public class VCFAnnotator
 				else if(args[optind].equals("-m"))
 					{
 					mapability=true;
+					}
+				else if(args[optind].equals("-t"))
+					{
+					transfac=true;
 					}
 				else if(args[optind].equals("-snp"))
 					{
@@ -2216,6 +2292,18 @@ public class VCFAnnotator
 				else if(args[optind].equals("-p"))
 					{
 					basicPrediction=true;
+					}
+				else if(args[optind].equalsIgnoreCase("-pg"))
+					{
+					personalGenomes.add(new PersonalGenomeAnnotator("NA12878"));
+					personalGenomes.add(new PersonalGenomeAnnotator("NA12891"));
+					personalGenomes.add(new PersonalGenomeAnnotator("NA12892"));
+					personalGenomes.add(new PersonalGenomeAnnotator("NA19240"));
+					personalGenomes.add(new PersonalGenomeAnnotator("Sjk"));
+					personalGenomes.add(new PersonalGenomeAnnotator("Venter"));
+					personalGenomes.add(new PersonalGenomeAnnotator("Watson"));
+					personalGenomes.add(new PersonalGenomeAnnotator("Yh1"));
+					personalGenomes.add(new PersonalGenomeAnnotator("Yoruban3"));
 					}
 				else if(args[optind].equals("-log"))
 					{
@@ -2281,6 +2369,13 @@ public class VCFAnnotator
 				an2.run();
 				}
 			
+			for(PersonalGenomeAnnotator pg:personalGenomes)
+				{
+				pg.setGenomeVersion(genomeVersion);
+				pg.setVcfFile(vcf);
+				pg.run();
+				}
+			
 			if(mapability)
 				{
 				if(!genomeVersion.equals("hg18"))
@@ -2305,6 +2400,12 @@ public class VCFAnnotator
 				an4.run();
 				}
 			
+			if(transfac)
+				{
+				TranscriptionBindingSitesAnnotator an=new TranscriptionBindingSitesAnnotator(genomeVersion);
+				an.setVcfFile(vcf);
+				an.run();
+				}
 			
 			if(genomicSuperDups)
 				{
