@@ -77,7 +77,7 @@ class IOUtils
 				{
 				in=new FileInputStream(uri);
 				}
-			
+			if(in==null) return null;
 			if(uri.toLowerCase().endsWith(".gz"))
 				{
 				in=new GZIPInputStream(in);
