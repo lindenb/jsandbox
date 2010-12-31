@@ -1257,8 +1257,9 @@ class MapabilityAnnotator
 	@Override
 	protected void found(VCFCall call,String line)
 		{
-		LOG.info(table+" "+call+" "+line+" "+this.currChrom+" "+this.currPosition);
+		call.addProperty("MAPABILITY_"+table.toUpperCase(), line);
 		}
+	
 	private void scanWig(String path,String table) throws Exception
 		{
 		this.table=table;
