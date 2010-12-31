@@ -352,7 +352,7 @@ class VCFCall
 class VCFFile
 	{
 	private static Logger LOG=Logger.getLogger("vcf.annotator");
-	private static final String DEFAULT_HEADER="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT";
+	private static final String DEFAULT_HEADER="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO";
 	private List<String> headers=new ArrayList<String>();
 	private List<VCFCall> calls=new ArrayList<VCFCall>(10000);
 	
@@ -446,7 +446,13 @@ class VCFFile
 			{
 			final String fmt="##fileformat=VCFv";
 			String first= headers.get(0);
-			if(!first.startsWith(fmt))
+			
+			if(first.startsWith("##format"))
+				{
+				first="##file"+first.substring(2);
+				}
+			
+			if(!(first.startsWith(fmt)))
 				{
 				throw new IOException("firt line should starts with "+fmt);
 				}
@@ -466,8 +472,8 @@ class VCFFile
 			{
 			LOG.info(line);
 			if(line.startsWith("#")) throw new IOException("line starting with # after header!"+line);
-			String tokens[]=tab.split(line, 9);
-			if(tokens.length<9) throw new IOException("illegal number of columns in "+line);
+			String tokens[]=tab.split(line, 8);
+			if(tokens.length<8) throw new IOException("illegal number of columns in "+line);
 			getCalls().add(new VCFCall(tokens));
 			line=in.readLine();
 			}
