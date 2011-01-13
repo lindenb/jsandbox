@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.Reader;
+import java.io.StringReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -38,7 +40,9 @@ import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
+
 import org.xml.sax.Attributes;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
@@ -712,6 +716,7 @@ class DasSequenceProvider
 		{
 		this.ucscBuild=ucscBuild;
 		SAXParserFactory f=SAXParserFactory.newInstance();
+		f.setSchema(null);
 		f.setNamespaceAware(false);
 		f.setValidating(false);
 		try
@@ -723,6 +728,11 @@ class DasSequenceProvider
 			throw new RuntimeException(err);
 			}
 		}
+	
+	 public InputSource resolveEntity (String publicId, String systemId)
+         {
+         return new InputSource(new StringReader(""));
+         }
 	
 	@Override
     public void startElement(String uri, String localName, String name,
@@ -762,8 +772,7 @@ class DasSequenceProvider
 			String uri="http://genome.ucsc.edu/cgi-bin/das/"+
 					this.ucscBuild+
 					"/dna?segment="+
-					URLEncoder.encode(chrom, "UTF-8")+
-					":"+(chromStart+1)+","+(chromEnd+2)
+					URLEncoder.encode(chrom+":"+(chromStart+1)+","+(chromEnd+2), "UTF-8")
 					;
 			LOG.info(uri);
 			this.parser.parse(uri, this);
@@ -1622,6 +1631,62 @@ extends AbstractRangeAnnotator
 
 
 /**
+ * RepeatMaskerAnnotator
+ */
+class RepeatMaskerAnnotator
+ extends AbstractRangeAnnotator
+	{
+	private String genomeVersion;
+	RepeatMaskerAnnotator(String genomeVersion)
+		{
+		this.genomeVersion=genomeVersion;
+		}
+	
+	public void run()
+	throws IOException
+		{
+		for(String chr:getVcfFile().getChromosomes())
+			{
+			BufferedReader in=IOUtils.tryOpen(
+				"http://hgdownload.cse.ucsc.edu/goldenPath/"+
+				this.genomeVersion+"/database/"+
+				chr+
+				"_rmskRM327.txt.gz");
+			if(in==null) continue;
+			run(in);
+			in.close();
+			}
+		getVcfFile().addInfo("RMSK", null, "String","Repeating Elements by RepeatMasker version 3.2.7");
+		}
+	
+	@Override
+	protected int getSplitMax()
+		{
+		return 12;
+		}
+	@Override
+	protected int getChromosomeColumn()
+		{
+		return 5;
+		}
+	@Override
+	protected int getChromStartColumn()
+		{
+		return 6;
+		}
+	@Override
+	protected int getChromEndColumn()
+		{
+		return 7;
+		}
+	@Override
+	public void annotate(VCFCall c, String[] tokens)
+		{
+		c.addProperty("RMSK", tokens[10]);
+		}
+	}
+
+/**
  * SNP annotator
  * @author pierre
  */
@@ -1876,7 +1941,7 @@ class PredictionAnnotator
     	            	{
     	            	genomicSeq=this.dasServer.getSequence(
     	            		gene.getChromosome(),
-    	            		Math.max(gene.getTxStart()-extra,0),
+    	            		Math.max(gene.getTxStart()-extra,1),
     	            		gene.getTxEnd()+extra
     	            		);
     	            	}
@@ -2328,6 +2393,7 @@ public class VCFAnnotator
 			boolean genomicSuperDups=false;
 			boolean phastcons=false;
 			boolean transfac=false;
+			boolean rmsk=false;
 			List<PersonalGenomeAnnotator> personalGenomes=new ArrayList<PersonalGenomeAnnotator>();
 			Set<String> dbsnpID=new HashSet<String>();
 			String genomeVersion="hg18";
@@ -2347,6 +2413,7 @@ public class VCFAnnotator
 					System.out.println(" -c phastcons prediction (phastCons44way)");
 					System.out.println(" -t transcription factors sites prediction");
 					System.out.println(" -pg personal genomes");
+					System.out.println(" -rmsk repeat masker");
 					System.out.println(" -snp <id> add ucsc <id> must be present in \"http://hgdownload.cse.ucsc.edu/goldenPath/<ucscdb>/database/<id>.txt.gz\" e.g. snp129");
 					System.out.println(" -log  <level> one value from "+Level.class.getName()+" default:"+LOG.getLevel());
 					System.out.println(" -proxyHost <host>");
@@ -2356,6 +2423,10 @@ public class VCFAnnotator
 				else if(args[optind].equals("-b"))
 					{
 					genomeVersion=args[++optind];
+					if(!genomeVersion.equals("hg18"))
+						{
+						System.err.println("** WARNING. This tool was mostly developed for hg18. I didn't check the URL for the other assemblies.");
+						}
 					}
 				else if(args[optind].equals("-m"))
 					{
@@ -2380,6 +2451,10 @@ public class VCFAnnotator
 				else if(args[optind].equals("-p"))
 					{
 					basicPrediction=true;
+					}
+				else if(args[optind].equals("-rmsk"))
+					{
+					rmsk=true;
 					}
 				else if(args[optind].equalsIgnoreCase("-pg"))
 					{
@@ -2426,10 +2501,12 @@ public class VCFAnnotator
 			
 			if(proxyHost!=null)
 				{
+				LOG.info("setting proxy host");
 				System.setProperty("http.proxyHost", proxyHost);
 				}
 			if(proxyPort!=null)
 				{
+				LOG.info("setting proxy port");
 				System.setProperty("http.proxyPort", proxyPort);
 				}
 			
@@ -2500,6 +2577,12 @@ public class VCFAnnotator
 				PredictionAnnotator predictor=new PredictionAnnotator(genomeVersion);
 				predictor.setVcfFile(vcf);
 				predictor.preLoadUcsc();
+				predictor.run();
+				}
+			if(rmsk)
+				{
+				RepeatMaskerAnnotator predictor=new RepeatMaskerAnnotator(genomeVersion);
+				predictor.setVcfFile(vcf);
 				predictor.run();
 				}
 			
