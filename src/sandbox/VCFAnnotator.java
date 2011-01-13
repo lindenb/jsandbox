@@ -5,10 +5,14 @@
  * 	Dec-2010
  * Contact:
  * 	plindenbaum@yahoo.fr
+ * Reference:
+ *   http://plindenbaum.blogspot.com/2011/01/my-tool-to-annotate-vcf-files.html
  * WWW:
  * 	http://plindenbaum.blogspot.com
  * Motivation:
  * 	Annotate a VCF file with the UCSC data. No SQL Driver required or a local database.
+ * Compilation:
+ *        cd jsandbox; ant vcfannotator
  */
 package sandbox;
 
@@ -19,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.io.Reader;
 import java.io.StringReader;
 import java.net.URL;
 import java.net.URLConnection;
