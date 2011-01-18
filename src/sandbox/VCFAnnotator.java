@@ -52,7 +52,8 @@ import org.xml.sax.helpers.DefaultHandler;
 class IOUtils
 	{
 	static private final int BUFSIZ=1000000;
-	static Logger LOG=Logger.getLogger("vcf.annotator");
+	static private final Logger LOG=Logger.getLogger("vcf.annotator");
+	static private final int TRY_CONNECT=10;
 	private static BufferedReader _open(String uri)
 		{
 		try
@@ -63,7 +64,7 @@ class IOUtils
 				uri.startsWith("ftp://")
 				)
 				{
-				for(int nTry=0; nTry<10; ++nTry)
+				for(int nTry=1; nTry<=TRY_CONNECT; ++nTry)
 					{
 					URL url=new URL(uri);
 					try
@@ -74,10 +75,11 @@ class IOUtils
 						}
 					catch(Exception err)
 						{
+						LOG.severe(err.getMessage());
 						in=null;
 						}
 					if(in!=null) break;
-					System.err.println("Trying to connect... "+uri);
+					System.err.println("Trying to connect... ("+(nTry+1)+"/"+TRY_CONNECT+") "+uri);
 					}
 				}
 			else
