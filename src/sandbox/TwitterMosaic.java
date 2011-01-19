@@ -140,7 +140,6 @@ public class TwitterMosaic
 		{
 		try
 			{
-			args=new String[]{"-w","-o","/home/pierre/jeter.png","7431072"};
 			File fileout=null;
 			TwitterMosaic app=new TwitterMosaic();
 			int optind=0;

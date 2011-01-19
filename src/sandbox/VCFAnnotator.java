@@ -54,7 +54,8 @@ class IOUtils
 	static private final int BUFSIZ=1000000;
 	static private final Logger LOG=Logger.getLogger("vcf.annotator");
 	static private final int TRY_CONNECT=10;
-	private static BufferedReader _open(String uri)
+	
+	private static InputStream _openStream(String uri)
 		{
 		try
 			{
@@ -91,13 +92,24 @@ class IOUtils
 				{
 				in=new GZIPInputStream(in);
 				}
-			return new BufferedReader(new InputStreamReader(in),BUFSIZ);
+			return in;
 			}
 		catch (IOException e)
 			{
 			LOG.info("error "+e.getMessage());
 			return null;
 			}
+		
+		}
+	
+	private static BufferedReader _open(String uri)
+		{
+		InputStream in=_openStream(uri);
+		if(in!=null)
+			{
+			return new BufferedReader(new InputStreamReader(in),BUFSIZ);
+			}
+		return null;
 		}
 	
 	
@@ -112,6 +124,16 @@ class IOUtils
 			}
 		return r;
 		}
+	
+	public static InputStream mustOpenStream(String url)
+	throws IOException
+		{
+		LOG.info("must open stream "+url);
+		InputStream r= _openStream(url);
+		if(r==null) throw new IOException("Cannot open \""+url+"\"");
+		return r;
+		}
+	
 	public static BufferedReader mustOpen(String url)
 		throws IOException
 		{
@@ -734,6 +756,12 @@ class DasSequenceProvider
 			}
 		}
 	
+	 @Override
+	public void startDocument() throws SAXException
+		{
+		baos=null;
+		}
+	
 	 public InputSource resolveEntity (String publicId, String systemId)
          {
          return new InputSource(new StringReader(""));
@@ -780,7 +808,9 @@ class DasSequenceProvider
 					URLEncoder.encode(chrom+":"+(chromStart+1)+","+(chromEnd+2), "UTF-8")
 					;
 			LOG.info(uri);
-			this.parser.parse(uri, this);
+			InputStream in=IOUtils.mustOpenStream(uri);
+			this.parser.parse(in, this);
+			in.close();
 			GenomicSequence g= new GenomicSequence(this.baos.toByteArray(),chrom,chromStart);
 			this.baos=null;
 			return g;
@@ -1944,11 +1974,33 @@ class PredictionAnnotator
 	        	               !(genomicSeq.getChromStart()<=gene.getTxStart() && gene.getTxEnd()<= genomicSeq.getChromEnd())
 	        	               )
     	            	{
-    	            	genomicSeq=this.dasServer.getSequence(
-    	            		gene.getChromosome(),
-    	            		Math.max(gene.getTxStart()-extra,1),
-    	            		gene.getTxEnd()+extra
-    	            		);
+    	            	final int maxTry=20;
+    	            	for(int tryCount=1;tryCount<=maxTry;++tryCount)
+    	            		{
+    	            		genomicSeq=null;
+    	            		try
+    	            			{
+		    	            	genomicSeq=this.dasServer.getSequence(
+		    	            		gene.getChromosome(),
+		    	            		Math.max(gene.getTxStart()-extra,1),
+		    	            		gene.getTxEnd()+extra
+		    	            		);
+    	            			}
+    	            		catch (Exception e)
+    	            			{
+								LOG.info("Cannot get DAS-DNA sequence "+e.getMessage());
+								genomicSeq=null;
+								}
+    	            		if(genomicSeq!=null)
+    	            			{
+    	            			break;
+    	            			}
+    	            		LOG.info("try to get DAS-DNA "+(tryCount)+"/"+maxTry);
+    	            		}
+    	            	if(genomicSeq==null)
+    	            		{
+    	            		throw new IOException("Cannot get DAS-DNA");
+    	            		}
     	            	}
 	        		
 	        		if(!String.valueOf(genomicSeq.charAt(position)).equalsIgnoreCase(ref))
