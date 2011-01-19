@@ -1,3 +1,19 @@
+/**
+ * Author:
+ * 	Pierre Lindenbaum PhD
+ * Date:
+ * 	Jan-2011
+ * Contact:
+ * 	plindenbaum@yahoo.fr
+ * WWW:
+ * 	http://plindenbaum.blogspot.com
+ * Wiki
+ *  https://github.com/lindenb/jsandbox/wiki/JSandbox-Wiki
+ * Motivation:
+ *  make a mosaic of twitter friends/follower
+ * Compilation:
+ *        cd jsandbox; ant twittermosaic
+ */
 package sandbox;
 
 import java.awt.Graphics2D;

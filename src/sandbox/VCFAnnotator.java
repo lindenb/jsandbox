@@ -9,6 +9,8 @@
  *   http://plindenbaum.blogspot.com/2011/01/my-tool-to-annotate-vcf-files.html
  * WWW:
  * 	http://plindenbaum.blogspot.com
+ * Wiki
+ *  https://github.com/lindenb/jsandbox/wiki/JSandbox-Wiki
  * Motivation:
  * 	Annotate a VCF file with the UCSC data. No SQL Driver required or a local database.
  * Compilation:
