@@ -73,7 +73,7 @@ class IOUtils
 					try
 						{
 						URLConnection con=url.openConnection();
-						con.setConnectTimeout(30*1000);
+						con.setConnectTimeout(60*1000);
 						in=con.getInputStream();
 						}
 					catch(Exception err)
@@ -286,6 +286,7 @@ class ChromPosition
 class VCFCall
 	implements Comparable<VCFCall> //order by chromPosition
 	{
+	private static Logger LOG=Logger.getLogger("vcf.annotator");
 	/** the position */
 	private ChromPosition chromPosition;
 	/** columns in the VCF */
@@ -359,6 +360,7 @@ class VCFCall
 		if(!columns[7].isEmpty()) this.columns[7]+=";";
 		columns[7]+=(key+"="+value);
 		}
+	
 	public void addId(String newId)
 		{
 		String rsId= this.getColumns()[2];
@@ -385,7 +387,7 @@ class VCFCall
 class VCFFile
 	{
 	private static Logger LOG=Logger.getLogger("vcf.annotator");
-	private static final String DEFAULT_HEADER="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO";
+	private static final String DEFAULT_HEADER="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSample";
 	private List<String> headers=new ArrayList<String>();
 	private List<VCFCall> calls=new ArrayList<VCFCall>(10000);
 	
@@ -503,9 +505,9 @@ class VCFFile
 		
 		while(line!=null)
 			{
-			LOG.info(line);
+			//LOG.info(line);
 			if(line.startsWith("#")) throw new IOException("line starting with # after header!"+line);
-			String tokens[]=tab.split(line, 8);
+			String tokens[]=tab.split(line);
 			if(tokens.length<8) throw new IOException("illegal number of columns in "+line);
 			getCalls().add(new VCFCall(tokens));
 			line=in.readLine();
