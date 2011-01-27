@@ -20,20 +20,27 @@ package sandbox;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.math.BigInteger;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
 
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 
@@ -42,7 +49,8 @@ import javax.xml.stream.events.XMLEvent;
 public class TwitterGraph
 	{
 	private static final Logger LOG=Logger.getLogger("sandbox.TwitterMosaic");
-
+	private XMLInputFactory xmlInputFactory;
+	
 	private static class User
 		{
 		BigInteger id;
@@ -52,22 +60,30 @@ public class TwitterGraph
 		}
 	
 	private static class Link
+		implements Comparable<Link>
 		{
 		BigInteger id1;
 		BigInteger id2;
+		byte count=1;
 		Link(BigInteger id1,BigInteger id2)
 			{
-			this.id1=id1;
-			this.id2=id2;
+			if(id1.compareTo(id2)<0)
+				{
+				this.id1=id1;
+				this.id2=id2;
+				}
+			else
+				{
+				this.id1=id2;
+				this.id2=id1;
+				}
 			}
 		@Override
-		public int hashCode()
+		public int compareTo(Link o)
 			{
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + ((id1 == null) ? 0 : id1.hashCode());
-			result = prime * result + ((id2 == null) ? 0 : id2.hashCode());
-			return result;
+			int i=id1.compareTo(o.id1);
+			if(i!=0) return i;
+			return id2.compareTo(o.id2);
 			}
 		@Override
 		public boolean equals(Object obj)
@@ -86,23 +102,113 @@ public class TwitterGraph
 	
 	private static class SocialGraph
 		{
-		List<User> friends;
-		Set<Link> links;
+		BigInteger owner;
+		Map<BigInteger,User> id2user=new HashMap<BigInteger,User>();
+		List<Link> links=new ArrayList<Link>(1000);
+		
+		private int lower_bound(int first,int last,Link L)
+			{
+            int len = last - first;
+            while (len > 0)
+                    {
+                    int half = len / 2;
+                    int middle = first + half;
+
+
+                    if ( links.get(middle).compareTo(L) < 0  )
+                            {
+                            first = middle + 1;
+                            len -= half + 1;
+                            }
+                    else
+                            {
+                            len = half;
+                            }
+                    }
+            return first;
+			}
+		
+		public int lowerBound(Link L)
+			{
+			return lower_bound(0,links.size(),L);
+			}
 		
 		public void toDot(PrintWriter out)
 			{
 			out.println("digraph G {");
+			for(User u:id2user.values())
+				{
+				out.println("n"+u.id+"[label='"+u.screenName+"'];");
+				}
 			for(Link L:links)
 				{
 				out.println("n"+L.id1+" -> n"+L.id2+";");
 				}
 			out.println("}");
 			}
+		
+		public void toGexf(OutputStream out)
+			throws IOException,XMLStreamException
+			{
+			XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
+			XMLStreamWriter w= xmlfactory.createXMLStreamWriter(out,"UTF-8");
+			w.writeStartDocument("UTF-8","1.0");
+			w.writeStartElement("gexf");
+			w.writeAttribute("xmlns", "http://www.gexf.net/1.2draft");
+			w.writeAttribute("version", "1.2");
+			
+			w.writeStartElement("graph");
+			w.writeAttribute("mode", "static");
+			w.writeAttribute("defaultedgetype", "directed");
+			
+			w.writeStartElement("attributes");
+			w.writeAttribute("class","nodes");
+			
+			w.writeEmptyElement("attribute");
+			w.writeAttribute("type","string");
+			w.writeAttribute("title","name");
+			w.writeAttribute("id","twitterName");
+			
+			
+			w.writeEndElement();
+			
+			w.writeStartElement("nodes");
+			
+			for(User u:id2user.values())
+				{
+				w.writeEmptyElement("node");
+				w.writeAttribute("id", u.id.toString());
+				w.writeAttribute("label", u.screenName);
+				}
+			
+			w.writeEndElement();
+			
+			w.writeStartElement("edges");
+			for(int i=0;i< links.size();++i)
+				{
+				w.writeEmptyElement("edge");
+				w.writeAttribute("id", "E"+(i+1));
+				w.writeAttribute("source", links.get(i).id1.toString());
+				w.writeAttribute("target", links.get(i).id2.toString());
+				}
+
+			w.writeEndElement();
+			
+			w.writeEndElement();
+
+			w.writeEndElement();
+			w.writeEndDocument();
+			w.flush();
+			}
+		
 		}
 	
 	private TwitterGraph()
 		{
-		
+		this.xmlInputFactory = XMLInputFactory.newInstance();
+		xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, Boolean.FALSE);
+		xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, Boolean.TRUE);
+		xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, Boolean.TRUE);
 		}
 	
 	
@@ -151,21 +257,41 @@ public class TwitterGraph
 			}
 		return u;
 		}
+	
 	private InputStream tryOpen(String uri) throws IOException
 		{
+		URLConnection con=null;
 		InputStream in=null;
 		for(int i=0;i< 3;++i)
 			{
 			try
 				{
 				URL url=new URL(uri);
-				URLConnection con=url.openConnection();
-				con.setConnectTimeout(10*1000);
+				con=url.openConnection();
+				con.setConnectTimeout(5*1000);
 				in=url.openStream();
 				return in;
 				}
 			catch(IOException err)
 				{
+				if(con!=null
+					&& (con instanceof HttpURLConnection)
+					)
+					{
+					int code=HttpURLConnection.class.cast(con).getResponseCode();
+					switch(code)
+						{
+						case 403: return null;
+						case 401: return null;
+						case 400:
+							{
+							LOG.info("Waiting for 10 minutes");
+							try { Thread.sleep(10*60*1000);}
+							catch(Throwable err2) {}
+							break;
+							}
+						}
+					}
 				System.err.println("Trying... "+err.getClass().getCanonicalName()+":"+err.getMessage());
 				in=null;
 				try { Thread.sleep(5*1000);}
@@ -174,19 +300,48 @@ public class TwitterGraph
 			}
 		return null;
 		}
-	private List<User> friends(BigInteger userId)
+	
+	private User getProfile(BigInteger userId)
+		throws Exception
+		{
+		User user=null;
+		String uri="http://api.twitter.com/1/users/show.xml?user_id="+
+				userId;
+		LOG.info(uri);
+		InputStream in=tryOpen(uri);
+		if(in==null)
+			{
+			user=new User();
+			user.id=userId;
+			user.imageUrl=null;
+			user.name=userId.toString();
+			user.screenName=userId.toString();
+			return user;
+			}
+		XMLEventReader reader= xmlInputFactory.createXMLEventReader(in);
+		while(reader.hasNext())
+			{
+			XMLEvent evt=reader.nextEvent();
+			if(!evt.isStartElement()) continue;
+			StartElement e=evt.asStartElement();
+			String localName=e.getName().getLocalPart();
+			if(!localName.equals("user")) continue;
+			user= parseUser(reader);
+			break;
+			}
+		reader.close();
+		in.close();
+		return user;
+		}
+	
+	private Set<BigInteger> listFriends(BigInteger userId)
 		throws Exception
 		{			
-		XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
-		xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, Boolean.FALSE);
-		xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, Boolean.TRUE);
-		xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, Boolean.TRUE);
-		 List<User> friends=new ArrayList<User>();
-		
+		Set<BigInteger> friends=new HashSet<BigInteger>();
 		BigInteger cursor=BigInteger.ONE.negate();
 		for(;;)
 			{
-			String uri="http://api.twitter.com/1/statuses/friends.xml?user_id="+
+			String uri="http://api.twitter.com/1/friends/ids.xml?user_id="+
 			userId+"&cursor="+cursor;
 			LOG.info(uri);
 			InputStream in=tryOpen(uri);
@@ -200,9 +355,9 @@ public class TwitterGraph
 				if(!evt.isStartElement()) continue;
 				StartElement e=evt.asStartElement();
 				String localName=e.getName().getLocalPart();
-				if(localName.equals("user"))
+				if(localName.equals("id"))
 					{
-					friends.add(parseUser(reader));
+					friends.add(new BigInteger(reader.getElementText()));
 					}
 				else if(localName.equals("next_cursor"))
 					{
@@ -219,34 +374,50 @@ public class TwitterGraph
 				}
 			cursor=new BigInteger(next_cursor);
 			}
-		LOG.info("count friends:"+friends.size());
+		LOG.info("count friends: of "+userId+"="+friends.size());
 		return friends;
-		}
+		}	
 	
 	private SocialGraph run(BigInteger userId)
 		throws Exception
 		{
 		SocialGraph g=new SocialGraph();
-		g.friends= friends(userId);
-		Set<BigInteger> friendIds=new HashSet<BigInteger>(g.friends.size()+1);
-		g.links=new HashSet<Link>(10000);
+		g.owner=userId;
+		g.id2user.put(userId, getProfile(userId));
 		
-		friendIds.add(userId);
-		for(User f:g.friends)
+		Set<BigInteger> friendIds=listFriends(userId);
+		for(BigInteger id:friendIds)
 			{
-			g.links.add(new Link(userId,f.id));
-			friendIds.add(f.id);
+			g.links.add(new Link(userId,id));
 			}
+		Collections.sort(g.links);
 		
-		for(User f:g.friends)
+		for(BigInteger id: friendIds)
 			{
-			List<User> friendOfAFriend= friends(f.id);
-			for(User f2:friendOfAFriend)
+			g.id2user.put(id, getProfile(id));
+			Set<BigInteger> hisFriends=listFriends(id);
+			hisFriends.retainAll(friendIds);
+			for(BigInteger id2: hisFriends)
 				{
-				if(!friendIds.contains(f2.id)) continue;
-				g.links.add(new Link(f.id,f2.id));
+				Link L=new Link(id, id2);
+				int index= g.lowerBound(L);
+				if(index==g.links.size())
+					{
+					g.links.add(L);
+					continue;
+					}
+				Link L2= g.links.get(index);
+				if(L2.compareTo(L)==0)
+					{
+					L2.count++;
+					}
+				else
+					{
+					g.links.add(index, L);
+					}
 				}
 			}
+		
 		return g;
 		}
 	

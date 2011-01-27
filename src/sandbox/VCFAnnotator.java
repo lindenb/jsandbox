@@ -286,6 +286,7 @@ class ChromPosition
 class VCFCall
 	implements Comparable<VCFCall> //order by chromPosition
 	{
+	@SuppressWarnings("unused")
 	private static Logger LOG=Logger.getLogger("vcf.annotator");
 	/** the position */
 	private ChromPosition chromPosition;
