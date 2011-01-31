@@ -55,8 +55,8 @@ class IOUtils
 	{
 	static private final int BUFSIZ=1000000;
 	static private final Logger LOG=Logger.getLogger("vcf.annotator");
-	static private final int TRY_CONNECT=10;
-	
+	static int TIMEOUT_SECONDS=60;
+	static int TRY_CONNECT=10;
 	private static InputStream _openStream(String uri)
 		{
 		try
@@ -73,7 +73,7 @@ class IOUtils
 					try
 						{
 						URLConnection con=url.openConnection();
-						con.setConnectTimeout(60*1000);
+						con.setConnectTimeout(TIMEOUT_SECONDS*1000);
 						in=con.getInputStream();
 						}
 					catch(Exception err)
@@ -388,7 +388,7 @@ class VCFCall
 class VCFFile
 	{
 	private static Logger LOG=Logger.getLogger("vcf.annotator");
-	private static final String DEFAULT_HEADER="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSample";
+	//private static final String DEFAULT_HEADER="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSample";
 	private List<String> headers=new ArrayList<String>();
 	private List<VCFCall> calls=new ArrayList<VCFCall>(10000);
 	
@@ -493,15 +493,16 @@ class VCFFile
 				throw new IOException("firt line should starts with "+fmt);
 				}
 			String last=headers.get(headers.size()-1);
-			if(!last.startsWith(DEFAULT_HEADER))
+			if(!last.startsWith("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO"))
 				{
-				throw new IOException("Error in header got "+line+" but expected "+DEFAULT_HEADER);
+				throw new IOException("Error in header got "+line+" but expected "+
+						"#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO");
 				}
 			}
 		else
 			{
 			this.headers.add("##fileformat=VCFv4.0");
-			this.headers.add(DEFAULT_HEADER);
+			this.headers.add("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSample");
 			}
 		
 		while(line!=null)
@@ -2480,7 +2481,17 @@ public class VCFAnnotator
 					System.out.println(" -log  <level> one value from "+Level.class.getName()+" default:"+LOG.getLevel());
 					System.out.println(" -proxyHost <host>");
 					System.out.println(" -proxyPort <port>");
+					System.out.println(" -timeout <seconds> connection timout default:"+IOUtils.TIMEOUT_SECONDS);
+					System.out.println(" -try <times> retry n-times of connection fails default:"+IOUtils.TRY_CONNECT);
 					return;
+					}
+				else if(args[optind].equals("-timeout"))
+					{
+					IOUtils.TIMEOUT_SECONDS=Integer.parseInt(args[++optind]);
+					}
+				else if(args[optind].equals("-try"))
+					{
+					IOUtils.TRY_CONNECT=Integer.parseInt(args[++optind]);
 					}
 				else if(args[optind].equals("-b"))
 					{
