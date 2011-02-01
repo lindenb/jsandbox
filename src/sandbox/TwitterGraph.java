@@ -18,6 +18,7 @@ package sandbox;
 
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -54,9 +55,17 @@ public class TwitterGraph
 	private static class User
 		{
 		BigInteger id;
-		String name;
-		String screenName;
-		String imageUrl;
+		String name=null;
+		String screenName=null;
+		String imageUrl=null;
+		String location=null;
+		String description=null;
+		boolean protectedProfile=false;
+		int friends=-1;
+		int followers=-1;
+		int listed=-1;
+		int utc_offset=-1;
+		int statuses_count=-1;
 		}
 	
 	private static class Link
@@ -93,6 +102,16 @@ public class TwitterGraph
 			Link other = (Link) obj;
 			return id1.equals(other.id1) && id2.equals(other.id2);
 			}
+		
+		public void toGexf(int index,XMLStreamWriter w)
+		throws XMLStreamException
+			{
+			w.writeEmptyElement("edge");
+			w.writeAttribute("id", "E"+(index+1));
+			w.writeAttribute("source", String.valueOf(id1));
+			w.writeAttribute("target", String.valueOf(id2));
+			}
+		
 		@Override
 		public String toString()
 			{
@@ -147,8 +166,21 @@ public class TwitterGraph
 			out.println("}");
 			}
 		
+		public void toTSV(PrintWriter out)
+			{
+			for(Link L:this.links)
+				{
+				User u=this.id2user.get(L.id1);
+				out.print(u==null?"":u.screenName);
+				out.print("\t");
+				u=this.id2user.get(L.id2);
+				out.print(u==null?"":u.screenName);
+				out.println();
+				}
+			}
+		
 		public void toGexf(OutputStream out)
-			throws IOException,XMLStreamException
+		throws XMLStreamException
 			{
 			XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
 			XMLStreamWriter w= xmlfactory.createXMLStreamWriter(out,"UTF-8");
@@ -177,8 +209,12 @@ public class TwitterGraph
 			for(User u:id2user.values())
 				{
 				w.writeEmptyElement("node");
-				w.writeAttribute("id", u.id.toString());
+				w.writeAttribute("id", String.valueOf(u.id));
 				w.writeAttribute("label", u.screenName);
+				
+				w.writeStartElement("attvalues");
+				
+				w.writeEndElement();
 				}
 			
 			w.writeEndElement();
@@ -186,16 +222,14 @@ public class TwitterGraph
 			w.writeStartElement("edges");
 			for(int i=0;i< links.size();++i)
 				{
-				w.writeEmptyElement("edge");
-				w.writeAttribute("id", "E"+(i+1));
-				w.writeAttribute("source", links.get(i).id1.toString());
-				w.writeAttribute("target", links.get(i).id2.toString());
+				
+				links.get(i).toGexf(i,w);
 				}
-
+	
 			w.writeEndElement();
 			
 			w.writeEndElement();
-
+	
 			w.writeEndElement();
 			w.writeEndDocument();
 			w.flush();
@@ -224,22 +258,60 @@ public class TwitterGraph
 			if(evt.isStartElement())
 				{
 				String localPart=evt.asStartElement().getName().getLocalPart();
-				
-				if(depth==1 && localPart.equals("id"))
+				if(depth==1)
 					{
-					u.id=new BigInteger(reader.getElementText());
-					}
-				else if(depth==1 && localPart.equals("profile_image_url"))
-					{
-					u.imageUrl=reader.getElementText();
-					}
-				else if(depth==1 && localPart.equals("name"))
-					{
-					u.name=reader.getElementText();
-					}
-				else if(depth==1 && localPart.equals("screen_name"))
-					{
-					u.screenName=reader.getElementText();
+					if(localPart.equals("id"))
+						{
+						u.id=new BigInteger(reader.getElementText());
+						}
+					else if(localPart.equals("profile_image_url"))
+						{
+						u.imageUrl=reader.getElementText();
+						}
+					else if(localPart.equals("name"))
+						{
+						u.name=reader.getElementText();
+						}
+					else if(localPart.equals("screen_name"))
+						{
+						u.screenName=reader.getElementText();
+						}
+					else if(localPart.equals("location"))
+						{
+						u.location=reader.getElementText();
+						}
+					else if(localPart.equals("description"))
+						{
+						u.description=reader.getElementText();
+						}
+					else if(localPart.equals("followers_count"))
+						{
+						u.followers=Integer.parseInt(reader.getElementText());
+						}
+					else if(localPart.equals("friends_count"))
+						{
+						u.friends=Integer.parseInt(reader.getElementText());
+						}
+					else if(localPart.equals("protected"))
+						{
+						u.protectedProfile=Boolean.parseBoolean(reader.getElementText());
+						}
+					else if(localPart.equals("listed_count"))
+						{
+						u.listed=Integer.parseInt(reader.getElementText());
+						}
+					else if(localPart.equals("statuses_count"))
+						{
+						u.statuses_count=Integer.parseInt(reader.getElementText());
+						}
+					else if(localPart.equals("utc_offset"))
+						{
+						u.utc_offset=Integer.parseInt(reader.getElementText());
+						}
+					else
+						{
+						depth++;
+						}
 					}
 				else
 					{
@@ -256,8 +328,7 @@ public class TwitterGraph
 				}
 			}
 		return u;
-		}
-	
+		}	
 	private InputStream tryOpen(String uri) throws IOException
 		{
 		URLConnection con=null;
@@ -482,6 +553,20 @@ public class TwitterGraph
 				{
 				PrintWriter p=new PrintWriter(fileout);
 				g.toDot(p);
+				p.flush();
+				p.close();
+				}
+			else if(fileout.getName().toLowerCase().endsWith(".gexf"))
+				{
+				FileOutputStream p=new FileOutputStream(fileout);
+				g.toGexf(p);
+				p.flush();
+				p.close();
+				}
+			else if(fileout.getName().toLowerCase().endsWith(".tsv"))
+				{
+				PrintWriter p=new PrintWriter(fileout);
+				g.toTSV(p);
 				p.flush();
 				p.close();
 				}
