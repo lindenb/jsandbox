@@ -9,9 +9,44 @@
 </path>
 	
 
-<target name="all" depends="vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear">
+<target name="all" depends="twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear">
 
 </target>
+
+<target name="twittergraph">
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp" debug="true">
+      <include name="**/TwitterGraph.java" />
+   </javac>
+   
+   <jar destfile="dist/twittergraph.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.TwitterGraph"/>
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>	
+
+
+<target name="twittermosaic">
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp">
+      <include name="**/TwitterMosaic.java" />
+   </javac>
+   
+   <jar destfile="dist/twittermosaic.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.TwitterMosaic"/>
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>	
+
+
 
 <target name="wptimeline">
    <mkdir dir="dist"/>

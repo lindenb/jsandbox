@@ -10,7 +10,7 @@
  * Wiki
  *  https://github.com/lindenb/jsandbox/wiki/JSandbox-Wiki
  * Motivation:
- *  make a mosaic of twitter friends/follower
+ *  make a graph of a twitter account
  * Compilation:
  *        cd jsandbox; ant twittermosaic
  */
@@ -66,25 +66,66 @@ public class TwitterGraph
 		int listed=-1;
 		int utc_offset=-1;
 		int statuses_count=-1;
+		
+		private void gexfAtt(XMLStreamWriter w,String key,String value)
+			throws XMLStreamException
+			{
+			if(value==null) return;
+			w.writeStartElement("attvalue");
+			w.writeAttribute("for", key);
+			w.writeAttribute("value", value);
+			w.writeEndElement();
+			}
+		
+		void toGexf(XMLStreamWriter w)
+			throws XMLStreamException
+			{
+			w.writeStartElement("node");
+			w.writeAttribute("id", String.valueOf(this.id));
+			w.writeAttribute("label", this.screenName);
+			
+			w.writeStartElement("attvalues");
+			gexfAtt(w,"name",this.name);
+			gexfAtt(w,"screenName",this.screenName);
+			gexfAtt(w,"imageUrl",this.imageUrl);
+			gexfAtt(w,"location",this.location);
+			gexfAtt(w,"description",this.description);
+			gexfAtt(w,"protectedProfile",String.valueOf(protectedProfile));
+			gexfAtt(w,"friends",String.valueOf(friends));
+			gexfAtt(w,"followers",String.valueOf(followers));
+			gexfAtt(w,"listed",String.valueOf(listed));
+			gexfAtt(w,"utc_offset",String.valueOf(utc_offset));
+			gexfAtt(w,"statuses_count",String.valueOf(statuses_count));
+			
+			w.writeEndElement();
+			
+			w.writeEndElement();
+			}
 		}
-	
+	/**
+	 * Link
+	 */
 	private static class Link
 		implements Comparable<Link>
 		{
 		BigInteger id1;
 		BigInteger id2;
-		byte count=1;
+		boolean one2two=false;
+		boolean two2one=false;
+		
 		Link(BigInteger id1,BigInteger id2)
 			{
 			if(id1.compareTo(id2)<0)
 				{
 				this.id1=id1;
 				this.id2=id2;
+				this.one2two=true;
 				}
 			else
 				{
 				this.id1=id2;
 				this.id2=id1;
+				this.two2one=true;
 				}
 			}
 		@Override
@@ -108,8 +149,24 @@ public class TwitterGraph
 			{
 			w.writeEmptyElement("edge");
 			w.writeAttribute("id", "E"+(index+1));
-			w.writeAttribute("source", String.valueOf(id1));
-			w.writeAttribute("target", String.valueOf(id2));
+			if(one2two && two2one)
+				{
+				w.writeAttribute("type", "mutual");
+				w.writeAttribute("source", String.valueOf(id1));
+				w.writeAttribute("target", String.valueOf(id2));
+				}
+			else if(one2two)
+				{
+				w.writeAttribute("type", "directed");
+				w.writeAttribute("source", String.valueOf(id1));
+				w.writeAttribute("target", String.valueOf(id2));
+				}
+			else
+				{
+				w.writeAttribute("type", "directed");
+				w.writeAttribute("source", String.valueOf(id2));
+				w.writeAttribute("target", String.valueOf(id1));
+				}
 			}
 		
 		@Override
@@ -179,58 +236,99 @@ public class TwitterGraph
 				}
 			}
 		
+		private void gexfAtt(XMLStreamWriter w,
+			String key,
+			String type,
+			String def
+			)throws XMLStreamException
+			{
+			if(def==null)
+				{
+				w.writeEmptyElement("attribute");
+				}
+			else
+				{
+				w.writeStartElement("attribute");
+				}
+			
+			w.writeAttribute("id", key);
+			w.writeAttribute("title", key.replace('_', ' '));
+			w.writeAttribute("type", type);
+			
+			if(def!=null)
+				{
+				w.writeStartElement("default");
+				w.writeCharacters(def);
+				w.writeEndElement();
+				
+				w.writeEndElement();
+				}
+			}
+		
 		public void toGexf(OutputStream out)
 		throws XMLStreamException
 			{
 			XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
 			XMLStreamWriter w= xmlfactory.createXMLStreamWriter(out,"UTF-8");
+			
 			w.writeStartDocument("UTF-8","1.0");
 			w.writeStartElement("gexf");
 			w.writeAttribute("xmlns", "http://www.gexf.net/1.2draft");
 			w.writeAttribute("version", "1.2");
 			
+			
+			/* meta */
+			w.writeStartElement("meta");
+				w.writeStartElement("creator");
+				  w.writeCharacters(TwitterGraph.class.getCanonicalName());
+				w.writeEndElement();
+				w.writeStartElement("description");
+				  w.writeCharacters("Graph of twitter user id. "+this.owner);
+				w.writeEndElement();
+			w.writeEndElement();
+			
+			/* graph */
 			w.writeStartElement("graph");
 			w.writeAttribute("mode", "static");
 			w.writeAttribute("defaultedgetype", "directed");
 			
+			
+			
+			/* attributes */
 			w.writeStartElement("attributes");
 			w.writeAttribute("class","nodes");
+			gexfAtt(w,"name","string",null);
+			gexfAtt(w,"screenName","string",null);
+			gexfAtt(w,"imageUrl","anyURI","http://a3.twimg.com/sticky/default_profile_images/default_profile_1_reasonably_small.png");
+			gexfAtt(w,"location","string",null);
+			gexfAtt(w,"description","string",null);
+			gexfAtt(w,"protectedProfile","boolean",null);
+			gexfAtt(w,"friends","integer",null);
+			gexfAtt(w,"followers","integer",null);
+			gexfAtt(w,"listed","integer",null);
+			gexfAtt(w,"utc_offset","integer",null);
+			gexfAtt(w,"statuses_count","integer",null);
+			w.writeEndElement();//attributes
 			
-			w.writeEmptyElement("attribute");
-			w.writeAttribute("type","string");
-			w.writeAttribute("title","name");
-			w.writeAttribute("id","twitterName");
-			
-			
-			w.writeEndElement();
-			
+			/* nodes */
 			w.writeStartElement("nodes");
-			
 			for(User u:id2user.values())
 				{
-				w.writeEmptyElement("node");
-				w.writeAttribute("id", String.valueOf(u.id));
-				w.writeAttribute("label", u.screenName);
-				
-				w.writeStartElement("attvalues");
-				
-				w.writeEndElement();
+				u.toGexf(w);
 				}
+			w.writeEndElement();//nodes
 			
-			w.writeEndElement();
-			
+			/* edges */
 			w.writeStartElement("edges");
 			for(int i=0;i< links.size();++i)
 				{
-				
 				links.get(i).toGexf(i,w);
 				}
+			w.writeEndElement();//edges
 	
-			w.writeEndElement();
+			w.writeEndElement();//graph
 			
-			w.writeEndElement();
-	
-			w.writeEndElement();
+			w.writeEndElement();//gexf
 			w.writeEndDocument();
 			w.flush();
 			}
@@ -246,7 +344,26 @@ public class TwitterGraph
 		}
 	
 	
-	
+	private static int parseInt(XMLEventReader r)
+		{
+		try
+			{
+			String s=null;
+			while(r.hasNext())
+				{
+				XMLEvent evt=r.nextEvent();
+				if(evt.isEndElement()) break;
+				if(s==null) s="";
+				s+=evt.asCharacters().getData();
+				}
+			if(s==null) return -1;
+			return Integer.parseInt(s);
+			}
+		catch (Exception e)
+			{
+			return -1;
+			}
+		}
 	
 	private User parseUser(XMLEventReader reader)throws XMLStreamException
 		{
@@ -286,11 +403,11 @@ public class TwitterGraph
 						}
 					else if(localPart.equals("followers_count"))
 						{
-						u.followers=Integer.parseInt(reader.getElementText());
+						u.followers=parseInt(reader);
 						}
 					else if(localPart.equals("friends_count"))
 						{
-						u.friends=Integer.parseInt(reader.getElementText());
+						u.friends=parseInt(reader);
 						}
 					else if(localPart.equals("protected"))
 						{
@@ -298,15 +415,15 @@ public class TwitterGraph
 						}
 					else if(localPart.equals("listed_count"))
 						{
-						u.listed=Integer.parseInt(reader.getElementText());
+						u.listed=parseInt(reader);
 						}
 					else if(localPart.equals("statuses_count"))
 						{
-						u.statuses_count=Integer.parseInt(reader.getElementText());
+						u.statuses_count=parseInt(reader);
 						}
 					else if(localPart.equals("utc_offset"))
 						{
-						u.utc_offset=Integer.parseInt(reader.getElementText());
+						u.utc_offset=parseInt(reader);
 						}
 					else
 						{
@@ -480,7 +597,8 @@ public class TwitterGraph
 				Link L2= g.links.get(index);
 				if(L2.compareTo(L)==0)
 					{
-					L2.count++;
+					L2.one2two |= L.one2two ;
+					L2.two2one |= L.two2one ;
 					}
 				else
 					{
@@ -495,7 +613,7 @@ public class TwitterGraph
 	public static void main(String[] args)
 		{
 		//id: 7431072
-		args=new String[]{"-o","/home/pierre/jeter.dot","7431072"};
+		//args=new String[]{"-o","/home/pierre/jeter.dot","7431072"};
 		File fileout=null;
 		TwitterGraph app=null;
 		try
@@ -518,7 +636,6 @@ public class TwitterGraph
 					{
 					fileout=new File(args[++optind]);
 					}
-				
 				else if(args[optind].equals("--"))
 					{
 					optind++;

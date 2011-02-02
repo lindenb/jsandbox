@@ -1,18 +1,32 @@
+/**
+ * Author:
+ * 	Pierre Lindenbaum PhD
+ * Date:
+ * 	Feb-2011
+ * Contact:
+ * 	plindenbaum@yahoo.fr
+ * Reference:
+ *   
+ * WWW:
+ * 	http://plindenbaum.blogspot.com
+ * Wiki
+ *  
+ * Motivation:
+ * 	Paint a PSI-MI graph using the GEPHI library
+ * Compilation:
+ *       TODO
+ */
 package sandbox;
 
 import java.awt.Color;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
 import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
 
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.parsers.DocumentBuilder;
@@ -53,83 +67,19 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+/**
+ * PsimiWithGephi
+ */
 public class PsimiWithGephi
 	{
+	@SuppressWarnings("unused")
 	static private final Logger LOG=Logger.getLogger("gephi.psi-mi");
 	private final static String PSI_NS="net:sf:psidev:mi";
-	private Integer taxId=9606;
+	private File outFile=null;
 	
-	private void run(Set<String> identifiers)
+	private void run(InputStream xmlIn)
 		throws Exception
 		{
-		Set<String> stringIds=new HashSet<String>(identifiers.size());
-		for(String identifier:identifiers)
-			{
-			List<String> lines=new ArrayList<String>();
-			URL url=new URL("http://string-db.org/api/tsv-no-header/resolve?identifier="+
-				URLEncoder.encode(identifier, "UTF-8")+
-				(this.taxId!=null?"&species="+this.taxId:"")+
-				"&limit=1000"
-				);
-			
-			BufferedReader r=new BufferedReader(new InputStreamReader(url.openStream()));
-			String line;
-			while((line=r.readLine())!=null)
-				{
-				if(line.startsWith("stringId")) continue;
-				
-				lines.add(line);
-				}
-			r.close();
-			
-			if(lines.size()>1)
-				{
-				for(String s:new ArrayList<String>(lines))
-					{
-					String tokens[]=s.split("\t");
-					if(tokens.length<4) continue;
-					if(tokens[3].equalsIgnoreCase(identifier))
-						{
-						lines.clear();
-						lines.add(s);
-						break;
-						}
-					}
-				}
-			
-			if(lines.isEmpty())
-				{
-				System.err.println("#Cannot find an entry for \""+identifier+"\"");
-				return;
-				}
-			else if(lines.size()!=1)
-				{
-				System.err.println("#Ambigous identifier \""+identifier+"\"");
-				for(String s:lines) System.err.println(s);
-				return ;
-				}
-			else
-				{
-				String tokens[]=lines.get(0).split("\t");
-				if(tokens.length<4) throw new IllegalStateException(lines.get(0));
-				stringIds.add(tokens[0]);
-				}
-			}
-		
-		StringBuilder b=new StringBuilder(
-			"http://string-db.org/api/psi-mi/interactionsList?identifiers="
-			);
-		boolean first=true;
-		for(String stringId: stringIds)
-			{
-			if(!first) b.append("%0D");
-			first=false;
-			b.append(URLEncoder.encode(stringId,"UTF-8"));
-			}
-		//b.append("&required_score=900"); 
-		System.err.println(b);
-			
-					
 		DocumentBuilderFactory f=DocumentBuilderFactory.newInstance();
 		f.setCoalescing(true);
 		f.setNamespaceAware(true);
@@ -138,7 +88,7 @@ public class PsimiWithGephi
 		f.setIgnoringComments(true);
 		f.setIgnoringElementContentWhitespace(true);
 		DocumentBuilder docBuilder= f.newDocumentBuilder();
-		Document dom=docBuilder.parse(b.toString());
+		Document dom=docBuilder.parse(xmlIn);
 	
 		XPathFactory xpathFactory=XPathFactory.newInstance();
 		XPath xpath=xpathFactory.newXPath();
@@ -171,7 +121,8 @@ public class PsimiWithGephi
 		 //Init a project - and therefore a workspace
         ProjectController pc = Lookup.getDefault().lookup(ProjectController.class);
         pc.newProject();
-        Workspace workspace = pc.getCurrentWorkspace();
+        @SuppressWarnings("unused")
+		Workspace workspace = pc.getCurrentWorkspace();
         GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
         AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
         RankingController rankingController = Lookup.getDefault().lookup(RankingController.class);
@@ -269,16 +220,14 @@ public class PsimiWithGephi
        
         
         ExportController ec = Lookup.getDefault().lookup(ExportController.class);
-        ec.exportFile(new File("/home/pierre/jeter.pdf"));
-        
+        ec.exportFile(outFile);
+      
 		}
 	
 	
 	
 	public static void main(String[] args)
 		{
-		//args=new String[]{"EIF4G1","ZC3H7B","EIF4G2"};
-		args=new String[]{"PDC","GNAT1","ADRBK1","PDE6B"};
 		PsimiWithGephi app=null;
 		try
 			{
@@ -293,11 +242,12 @@ public class PsimiWithGephi
 					System.err.println("Options:");
 					System.err.println(" -h help; This screen.");
 					System.err.println(" -t <int> restrict to a ncbi-taxon-id ");
+					System.err.println(" -o 'file.svg/file.pdf'.");
 					return;
 					}
-				else if(args[optind].equals("-t"))
+				else if(args[optind].equals("-o"))
 					{
-					app.taxId=Integer.parseInt(args[++optind]);
+					app.outFile=new File(args[++optind]);
 					}
 				else if(args[optind].equals("--"))
 					{
@@ -315,24 +265,39 @@ public class PsimiWithGephi
 					}
 				++optind;
 				}
+			
+			if(app.outFile==null)
+				{
+				System.err.println("-o fileout missing");
+				return;
+				}
+			
 			if(args.length==optind)
 				{
-				System.err.println("identifiers missing.");
-				return;
+				app.run(System.in);
 				}
-			Set<String> identifiers=new HashSet<String>();
-			                 
-            while(optind< args.length)
-                    {
-                    String ident=args[optind++].trim().toUpperCase();
-                    if(ident.isEmpty()) continue;
-                    identifiers.add(ident);
-                    }
-            if(identifiers.isEmpty())
+			else if(optind+1==args.length)
 				{
-				return;
+				InputStream in;
+				String uri=args[optind++];
+				if(	uri.startsWith("http://") ||
+					uri.startsWith("https://") ||
+					uri.startsWith("ftp://"))
+					{
+					in=new URL(uri).openStream();
+					}
+				else
+					{
+					in=new FileInputStream(uri);
+					}
+				if(uri.endsWith(".gz")) in=new GZIPInputStream(in);
+				app.run(in);
+				in.close();
 				}
-            app.run(identifiers);
+			else
+				{
+				System.err.println("Illegal number of arguments.");
+				}
 			} 
 		catch(Throwable err)
 			{
