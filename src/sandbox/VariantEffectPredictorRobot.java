@@ -65,19 +65,18 @@ public class VariantEffectPredictorRobot
 	{
 	private final URL BASE=new URL("http://www.ensembl.org/Homo_sapiens/UserData/UploadVariations");
 	private static final String MOZILLA_CLIENT="Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.8) Gecko/20100722 Firefox/3.6.8";
-	private static final int BATCH_SIZE=750;
+	private static final int BATCH_SIZE=500;
 	private static Logger LOG=Logger.getLogger("ensembl.robot");
 	private DocumentBuilder builder;
 	private XPath xpath=null;
-	/** httpClient */
-	private HttpClient httpClient=null;
+	
 	/** id generator */
 	private long id_generator=System.currentTimeMillis();
 	private boolean printEnst=false;
 	
 	private static class Mutation
 		{
-		
+		boolean flag=false;
 		String tokens[];
 		Set<String> genes=new HashSet<String>();
 		Set<String> transcripts=new HashSet<String>();
@@ -105,8 +104,16 @@ public class VariantEffectPredictorRobot
 		
 		private Object[] compute()
 			{
-			String alt=tokens[3].toUpperCase();
-			String ref=tokens[4].toUpperCase();
+			String ref=tokens[3].toUpperCase();
+			String alt=tokens[4].toUpperCase();
+			
+			int comma=alt.indexOf(",");
+			if(comma!=-1)
+				{
+				LOG.info("FIX THIS");
+				alt=alt.substring(0,comma);
+				}
+			
 			boolean is_indel=false;
 			if( alt.startsWith("D") ||
 				alt.startsWith("I") ||	
@@ -131,8 +138,9 @@ public class VariantEffectPredictorRobot
 					{
 					ref="-";
 					}
+				
 				}
-			return new Object[]{start,end,alt,ref};
+			return new Object[]{start,end,ref,alt};
 			}
 		
 		public int getStart()
@@ -217,13 +225,14 @@ public class VariantEffectPredictorRobot
 		
 		this.xpath=XPathFactory.newInstance().newXPath();
 		
-		this.httpClient= new HttpClient();
-		this.httpClient.getHttpConnectionManager().getParams().setConnectionTimeout(10000);
 		}
 	
 	/** submit data to ensembl */
 	private void submitOne(List<Mutation> mutations) throws Exception
 		{
+		HttpClient httpClient= new HttpClient();
+		httpClient.getHttpConnectionManager().getParams().setConnectionTimeout(10000);
+		
 		StringBuilder lines=new StringBuilder();
 		for(Mutation m:mutations)
 			{
@@ -240,12 +249,12 @@ public class VariantEffectPredictorRobot
 			LOG.info(url.toString());
 			methodGet=new GetMethod(url.toString());
 			methodGet.setRequestHeader("User-Agent", MOZILLA_CLIENT);
-			int status = this.httpClient.executeMethod(methodGet);
+			int status = httpClient.executeMethod(methodGet);
 			if(status!=HttpStatus.SC_OK)
 				{
 				throw new HttpException("post returned http-code="+status+" "+HttpStatus.SC_OK+" "+url);
 				}
-			System.err.println(Arrays.asList(httpClient.getState().getCookies()));
+			LOG.info(""+Arrays.asList(httpClient.getState().getCookies()));
 			}
 		finally
 			{
@@ -286,7 +295,7 @@ public class VariantEffectPredictorRobot
 			postMethod.addParameter(new NameValuePair("g",""));
 			postMethod.addParameter(new NameValuePair("t",""));
 			int status = httpClient.executeMethod(postMethod);
-			System.err.println(Arrays.asList(postMethod.getResponseHeaders()));
+			LOG.info(""+Arrays.asList(postMethod.getResponseHeaders()));
 			if(status!=302)
 				{
 				throw new HttpException("post returned http-code="+status+" "+HttpStatus.SC_OK+" "+url);
@@ -318,12 +327,12 @@ public class VariantEffectPredictorRobot
 			LOG.info(url.toString());
 			methodGet=new GetMethod(url.toString());
 			methodGet.setRequestHeader("User-Agent", MOZILLA_CLIENT);
-			int status = this.httpClient.executeMethod(methodGet);
+			int status = httpClient.executeMethod(methodGet);
 			if(status!=HttpStatus.SC_OK)
 				{
 				throw new HttpException("post returned http-code="+status+" "+HttpStatus.SC_OK+" "+url);
 				}
-			System.err.println(Arrays.asList(methodGet.getResponseHeaders()));
+			LOG.info(""+Arrays.asList(methodGet.getResponseHeaders()));
 			String html=methodGet.getResponseBodyAsString();
 			int i=html.indexOf("'/Homo_sapiens");
 			if(i==-1)
@@ -355,7 +364,7 @@ public class VariantEffectPredictorRobot
 			LOG.info(url.toString());
 			methodGet=new GetMethod(url.toString());
 			methodGet.setRequestHeader("User-Agent", MOZILLA_CLIENT);
-			int status = this.httpClient.executeMethod(methodGet);
+			int status = httpClient.executeMethod(methodGet);
 			if(status!=HttpStatus.SC_OK)
 				{
 				throw new HttpException("post returned http-code="+status+" "+HttpStatus.SC_OK+" "+url);
@@ -392,7 +401,7 @@ public class VariantEffectPredictorRobot
 			LOG.info(url.toString());
 			methodGet=new GetMethod(url.toString());
 			methodGet.setRequestHeader("User-Agent", MOZILLA_CLIENT);
-			int status = this.httpClient.executeMethod(methodGet);
+			int status =  httpClient.executeMethod(methodGet);
 			if(status!=HttpStatus.SC_OK)
 				{
 				throw new HttpException("post returned http-code="+status+" "+HttpStatus.SC_OK+" "+url);
@@ -430,7 +439,7 @@ public class VariantEffectPredictorRobot
 			LOG.info(url.toString());
 			methodGet=new GetMethod(url.toString());
 			methodGet.setRequestHeader("User-Agent", MOZILLA_CLIENT);
-			int status = this.httpClient.executeMethod(methodGet);
+			int status = httpClient.executeMethod(methodGet);
 			if(status!=HttpStatus.SC_OK)
 				{
 				throw new HttpException("post returned http-code="+status+" "+HttpStatus.SC_OK+" "+url);
@@ -444,18 +453,30 @@ public class VariantEffectPredictorRobot
 				String tokens[]=line.split("[\t]");
 				for(int i=0;i< tokens.length;++i)
 					{
-					if(tokens[i].equals("-")) tokens[i]="";
+					if(tokens[i].equals("-"))
+						{
+						tokens[i]="";
+						}
 					}
+				boolean found=false;
 				for(Mutation mut: mutations)
 					{
 					if(mut.getSignature().equalsIgnoreCase(tokens[0]))
 						{
+						found=true;
 						LOG.info("OK found "+mut.getSubmit());
+						mut.flag=true;
 						if(!tokens[2].isEmpty()) mut.genes.add(tokens[2]);
 						if(!tokens[3].isEmpty()) mut.transcripts.add(tokens[3]);
 						if(!tokens[4].isEmpty()) mut.consequences.add(tokens[4]);
 						if(!tokens[8].isEmpty()) mut.ids.add(tokens[8]);
+						LOG.info(mut.genes.toString());
+						
 						}
+					}
+				if(!found)
+					{
+					LOG.info("No mutation was found for "+line);
 					}
 				
 				}
@@ -476,7 +497,7 @@ public class VariantEffectPredictorRobot
 			LOG.info(url.toString());
 			methodGet=new GetMethod(url.toString());
 			methodGet.setRequestHeader("User-Agent", MOZILLA_CLIENT);
-			int status = this.httpClient.executeMethod(methodGet);
+			int status = httpClient.executeMethod(methodGet);
 			if(status!=HttpStatus.SC_OK)
 				{
 				throw new HttpException("post returned http-code="+status+" "+HttpStatus.SC_OK+" "+url);
@@ -512,7 +533,7 @@ public class VariantEffectPredictorRobot
 				LOG.info("deleting "+url.toString());
 				methodGet=new GetMethod(url.toString());
 				methodGet.setRequestHeader("User-Agent", MOZILLA_CLIENT);
-				this.httpClient.executeMethod(methodGet);
+				httpClient.executeMethod(methodGet);
 				}
 			catch(InvalidRedirectLocationException err)
 				{
@@ -524,7 +545,6 @@ public class VariantEffectPredictorRobot
 				methodGet=null;
 				}
 			}
-
 		wait(30);
 		}
 	
@@ -540,7 +560,7 @@ public class VariantEffectPredictorRobot
 		throws Exception
 		{
 		Exception lastException=null;
-		for(int i=0;i< 10;++i)
+		for(int i=0;i< 20;++i)
 			{
 			lastException=null;
 			try
@@ -551,11 +571,27 @@ public class VariantEffectPredictorRobot
 			catch (Exception e)
 				{
 				LOG.info("err:"+e.getMessage());
+				if(LOG.getLevel()!=Level.OFF)
+					{
+					e.printStackTrace();
+					}
 				lastException=e;
-				wait(60);
+				wait(180);
 				}
 			}
-		if(lastException!=null) throw new RuntimeException(lastException);
+		if(lastException!=null)
+			{
+			throw new RuntimeException(lastException);
+			}
+		
+		for(Mutation mut: mutations)
+			{
+			if(!mut.flag)
+				{
+				LOG.info("Mutation not found "+Arrays.asList(mut.tokens));
+				}
+			}
+		
 		for(Mutation m:mutations)
 			{
 			System.out.print(m.tokens[0]);
@@ -656,7 +692,7 @@ public class VariantEffectPredictorRobot
 				mutations.clear();
 				}
 			}
-		if(nLines!=0)
+		if(!mutations.isEmpty())
 			{
 			submit(mutations);
 			}
