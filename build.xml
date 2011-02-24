@@ -1,15 +1,24 @@
 <project default="all">
 
 <property name="jena.dir" value="/usr/local/package/Jena-2.6.2"/>	
+<property name="httpclient.dir" value="/usr/local/package/eclipse-jee-helios/plugins"/>	
 
-<path id="jena.jars" description="ALl Jar for JENA">
+<path id="jena.jars" description="ALl Jars for JENA">
 	<fileset  dir="${jena.dir}">
-	      <include name="**/*.jar"/>
+           <include name="**/*.jar"/>
 	</fileset>
 </path>
 	
 
-<target name="all" depends="twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear">
+<path id="httpclient.jars" description="ALl Jars for the Apache HttpClient library">
+   <fileset  dir="${httpclient.dir}">
+      <include name="org.apache.commons.codec*.jar"/>
+      <include name="org.apache.commons.httpclient*.jar"/>
+      <include name="*org.apache.commons.logging*.jar"/>
+   </fileset>
+</path>
+
+<target name="all" depends="twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor">
 
 </target>
 
@@ -225,5 +234,28 @@
    </exec>
 </target>
 
+
+<target name="variantpredictor">
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp" debug="true">
+      <classpath refid="httpclient.jars"/>
+      <include name="**/VariantEffectPredictorRobot.java" />
+   </javac>
+   
+   <pathconvert property="httpclient.claspath" pathsep=" ">
+      <path refid="httpclient.jars" />
+   </pathconvert>	
+   
+   
+   <jar destfile="dist/variantpredictor.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.VariantEffectPredictorRobot"/>
+         <attribute name="Class-Path" value="${httpclient.claspath}" />
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>
 
 </project>
