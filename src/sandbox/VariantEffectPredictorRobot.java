@@ -65,10 +65,12 @@ public class VariantEffectPredictorRobot
 	{
 	private final URL BASE=new URL("http://www.ensembl.org/Homo_sapiens/UserData/UploadVariations");
 	private static final String MOZILLA_CLIENT="Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.8) Gecko/20100722 Firefox/3.6.8";
-	private static final int BATCH_SIZE=500;
+	private static final int BATCH_SIZE=100;
 	private static Logger LOG=Logger.getLogger("ensembl.robot");
 	private DocumentBuilder builder;
 	private XPath xpath=null;
+	private String proxyHost=null;
+	private String proxyPort=null;
 	
 	/** id generator */
 	private long id_generator=System.currentTimeMillis();
@@ -228,10 +230,14 @@ public class VariantEffectPredictorRobot
 		}
 	
 	/** submit data to ensembl */
-	private void submitOne(List<Mutation> mutations) throws Exception
+	private void submitList(List<Mutation> mutations) throws Exception
 		{
 		HttpClient httpClient= new HttpClient();
 		httpClient.getHttpConnectionManager().getParams().setConnectionTimeout(10000);
+		if(proxyHost!=null && proxyPort!=null)
+			{
+			httpClient.getHostConfiguration().setProxy(proxyHost, Integer.parseInt(proxyPort));
+			}
 		
 		StringBuilder lines=new StringBuilder();
 		for(Mutation m:mutations)
@@ -545,7 +551,7 @@ public class VariantEffectPredictorRobot
 				methodGet=null;
 				}
 			}
-		wait(30);
+		
 		}
 	
 	private void wait(int seconds)
@@ -556,16 +562,19 @@ public class VariantEffectPredictorRobot
 		} catch(Throwable err) {}
 		}
 	
+	
+	
+	
 	private void submit(List<Mutation> mutations)
 		throws Exception
 		{
 		Exception lastException=null;
-		for(int i=0;i< 20;++i)
+		for(int i=0;i< 5;++i)
 			{
 			lastException=null;
 			try
 				{
-				submitOne(mutations);
+				submitList(mutations);
 				break;
 				}
 			catch (Exception e)
@@ -576,21 +585,28 @@ public class VariantEffectPredictorRobot
 					e.printStackTrace();
 					}
 				lastException=e;
-				wait(180);
+				wait((i+1)*30);
 				}
-			}
-		if(lastException!=null)
-			{
-			throw new RuntimeException(lastException);
 			}
 		
-		for(Mutation mut: mutations)
+		if(lastException!=null)
 			{
-			if(!mut.flag)
+			//submit 1 after 1 , ignore the errors
+			for(Mutation m:mutations)
 				{
-				LOG.info("Mutation not found "+Arrays.asList(mut.tokens));
+				if(m.flag) {continue;}
+				try {
+					List<Mutation> anotherList=new ArrayList<Mutation>(1);
+					anotherList.add(m);
+					submitList(anotherList);
+					} 
+				catch (Exception e)
+					{
+					LOG.info("Ignore Error "+e.getMessage());
+					}
 				}
 			}
+		
 		
 		for(Mutation m:mutations)
 			{
@@ -668,7 +684,6 @@ public class VariantEffectPredictorRobot
 		{
 		LOG.info("run...");
 		List<Mutation> mutations=new ArrayList<Mutation>(BATCH_SIZE);
-		int nLines=0;
 		String line;
 		while((line=in.readLine())!=null)
 			{
@@ -688,7 +703,6 @@ public class VariantEffectPredictorRobot
 			if(mutations.size()==BATCH_SIZE)
 				{
 				submit(mutations);
-				nLines=0;
 				mutations.clear();
 				}
 			}
@@ -703,6 +717,7 @@ public class VariantEffectPredictorRobot
 		{
 		LOG.setLevel(Level.OFF);
 		try {
+			
 			VariantEffectPredictorRobot app=new VariantEffectPredictorRobot();
 			int optind=0;
 			while(optind<args.length)
@@ -711,12 +726,22 @@ public class VariantEffectPredictorRobot
 					{
 					System.out.println("Variant Effect Predictor Robot.");
 					System.out.println("Pierre Lindenbaum PhD 2011.");
+					System.out.println(" -proxyHost <host>");
+					System.out.println(" -proxyPort <port>");
 					System.out.println("(stdin|file.vcf)");
 					return;
 					}
 				else if(args[optind].equals("-L"))
 					{
 					LOG.setLevel(Level.parse(args[++optind]));
+					}
+				else if(args[optind].equals("-proxyHost"))
+					{
+					app.proxyHost=args[++optind];
+					}
+				else if(args[optind].equals("-proxyPort"))
+					{
+					app.proxyPort=args[++optind];
 					}
 				else if(args[optind].equals("--"))
 					{
@@ -734,6 +759,18 @@ public class VariantEffectPredictorRobot
 					}
 				++optind;
 				}
+
+			if(app.proxyHost!=null)
+				{
+				LOG.info("setting proxy host");
+				System.setProperty("http.proxyHost", app.proxyHost);
+				}
+			if(app.proxyPort!=null)
+				{
+				LOG.info("setting proxy port");
+				System.setProperty("http.proxyPort", app.proxyPort);
+				}
+
 			if(optind==args.length)
 				{
 				app.runVCF(new BufferedReader(new InputStreamReader(System.in)));

@@ -18,6 +18,7 @@
  */
 package sandbox;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
@@ -90,10 +91,17 @@ class IOUtils
 				in=new FileInputStream(uri);
 				}
 			if(in==null) return null;
+			
+			if(in!=null)
+				{
+				in=new BufferedInputStream(in,BUFSIZ);
+				}
+			
 			if(uri.toLowerCase().endsWith(".gz"))
 				{
 				in=new GZIPInputStream(in);
 				}
+			
 			return in;
 			}
 		catch (IOException e)
@@ -620,13 +628,13 @@ class GenomicSequence
 	{
 	private String chrom;
 	private byte array[];
-	private int chromStart;
+	private int chromStart0;
 	
-	public GenomicSequence(byte array[],String chrom,int chromStart)
+	public GenomicSequence(byte array[],String chrom,int chromStart0)
 		{	
 		this.chrom=chrom;
 		this.array=array;
-		this.chromStart=chromStart;
+		this.chromStart0=chromStart0;
 		}
 	
 	public String getChrom()
@@ -635,7 +643,7 @@ class GenomicSequence
 		}
 	public int getChromStart()
 		{
-		return chromStart;
+		return chromStart0;
 		}
 	public int getChromEnd()
 		{
@@ -649,13 +657,13 @@ class GenomicSequence
 		}
 	
 	@Override
-	public char charAt(int index)
+	public char charAt(int index0)
 		{
-		if(index < getChromStart() || index >=getChromEnd())
+		if(index0 < getChromStart() || index0 >=getChromEnd())
 			{
-			throw new IndexOutOfBoundsException("index:"+index);
+			throw new IndexOutOfBoundsException("index:"+index0);
 			}
-		return (char)(array[index-chromStart]);
+		return (char)(array[index0-chromStart0]);
 		}
 	}
 
@@ -743,7 +751,7 @@ class DasSequenceProvider
 	private static Logger LOG=Logger.getLogger("vcf.annotator");
 	private String ucscBuild;
 	private ByteArrayOutputStream baos=null;
-	private int reserve=100;
+	int reserve=100000;
 	private SAXParser parser;
 	public DasSequenceProvider(String ucscBuild)
 		{
@@ -797,27 +805,58 @@ class DasSequenceProvider
         }
 
 
-	public GenomicSequence getSequence(String chrom, int chromStart, int chromEnd)
+	public GenomicSequence getSequence(String chrom, int chromStart0, int chromEnd0)
 			throws IOException
 		{
-		if(chromStart<1 || chromStart>=chromEnd)
+		if(chromStart0 <0 || chromStart0 >=chromEnd0)
 			{
 			throw new IllegalArgumentException("Error in start/end");
 			}
-		this.reserve=(1+(chromEnd-chromStart));
+		this.reserve=(1+(chromEnd0-chromStart0));
 		this.baos=null;
 		try
 			{
 			String uri="http://genome.ucsc.edu/cgi-bin/das/"+
 					this.ucscBuild+
 					"/dna?segment="+
-					URLEncoder.encode(chrom+":"+(chromStart+1)+","+(chromEnd+2), "UTF-8")
+					URLEncoder.encode(chrom+":"+(chromStart0+1)+","+(chromEnd0+2), "UTF-8")
 					;
 			LOG.info(uri);
 			InputStream in=IOUtils.mustOpenStream(uri);
 			this.parser.parse(in, this);
 			in.close();
-			GenomicSequence g= new GenomicSequence(this.baos.toByteArray(),chrom,chromStart);
+			GenomicSequence g= new GenomicSequence(
+				this.baos.toByteArray(),
+				chrom,
+				chromStart0
+				);
+			this.baos=null;
+			return g;
+			}
+		catch (SAXException err)
+			{
+			throw new IOException(err);
+			}
+		
+		}
+	
+	public GenomicSequence getSequence(String chrom)
+	throws IOException
+		{
+		this.baos=null;
+		this.reserve=200000000;
+		try
+			{
+			String uri="http://genome.ucsc.edu/cgi-bin/das/"+
+					this.ucscBuild+
+					"/dna?segment="+
+					URLEncoder.encode(chrom, "UTF-8")
+					;
+			LOG.info(uri);
+			InputStream in=IOUtils.mustOpenStream(uri);
+			this.parser.parse(in, this);
+			in.close();
+			GenomicSequence g= new GenomicSequence(this.baos.toByteArray(),chrom,0);
 			this.baos=null;
 			return g;
 			}
@@ -1785,7 +1824,129 @@ class SnpAnnotator extends AbstractRangeAnnotator
 		}	
 	}
 
+/*************************************************************************************/
+class PolyXAnnotator
+	{
+	static final int EXTEND=100;
+	static final int EXTRA=EXTEND+5;
+	static Logger LOG=Logger.getLogger("vcf.annotator");
+	private VCFFile vcfFile;
+	boolean loadWholeSegment=false;
+	
+	//private String genomeVersion;
+	private DasSequenceProvider dasServer;
+	PolyXAnnotator(String genomeVersion) throws Exception
+		{
+		//this.genomeVersion=genomeVersion;
+		this.dasServer=new DasSequenceProvider(genomeVersion);
+		}
+	
+	
+	public void setVcfFile(VCFFile vcfFile)
+		{
+		this.vcfFile = vcfFile;
+		}
+	
+	public void run() throws IOException
+		{
+		GenomicSequence genomicSeq=null;
+	
+		this.vcfFile.addInfo("POLYX",
+				null,
+				"Integer",
+				"Number of repeated bases"
+				);
+		
+		
+	    for(VCFCall call:this.vcfFile.getCalls())
+		        {
+		        LOG.info(call.toString());
+		        String ref=call.getColumns()[3].toUpperCase();
+		    	if(ref.length()!=1) continue;
+		    	
+		    	
+		    	ChromPosition pos=call.getChromPosition();
+		    	final int position0=pos.getPosition()-1;
+		    	
+        		if(genomicSeq==null ||
+        	               !pos.getChromosome().equals(genomicSeq.getChrom()) ||
+        	               !(genomicSeq.getChromStart()<=(position0-EXTEND) && (position0+EXTEND) <= genomicSeq.getChromEnd())
+        	               )
+	            	{
+	            	final int maxTry=20;
+	            	for(int tryCount=1;tryCount<=maxTry;++tryCount)
+	            		{
+	            		genomicSeq=null;
+	            		try
+	            			{
+	            			if(this.loadWholeSegment)
+	            				{
+	            				genomicSeq=this.dasServer.getSequence(
+			    	            		pos.getChromosome()
+			    	            		);
+	            				}
+	            			else
+		            			{
+		    	            	genomicSeq=this.dasServer.getSequence(
+		    	            		pos.getChromosome(),
+		    	            		Math.max(position0-EXTRA,0),
+		    	            		position0+EXTRA
+		    	            		);
+		            			}
+	            			}
+	            		catch (Exception e)
+	            			{
+							LOG.info("Cannot get DAS-DNA sequence "+e.getMessage());
+							genomicSeq=null;
+							}
+	            		if(genomicSeq!=null)
+	            			{
+	            			break;
+	            			}
+	            		LOG.info("try to get DAS-DNA "+(tryCount)+"/"+maxTry);
+	            		}
+	            	if(genomicSeq==null)
+	            		{
+	            		throw new IOException("Cannot get DAS-DNA");
+	            		}
+	            	}
+        		
+        		char theBase=genomicSeq.charAt(position0);
+        		if(!String.valueOf(theBase).equalsIgnoreCase(ref))
+        			{
+        			System.err.println("Warning REF!=GENOMIC SEQ!!! at "+theBase+"/"+ref+" pos0="+position0);
+        			return;
+        			}
+        		int count=1;
+        		
+        		int index= position0 -1;
+        		while(index> position0-EXTEND && index>=0)
+        			{
+        			if(Character.toUpperCase(genomicSeq.charAt(index))!=Character.toUpperCase(theBase))
+        				{
+        				break;
+        				}
+        			++count;
+        			--index;
+        			}
+        		
+        		index= position0 +1;
+        		while(index< position0+EXTEND && index < genomicSeq.length())
+        			{
+        			if(Character.toUpperCase(genomicSeq.charAt(index))!=Character.toUpperCase(theBase))
+        				{
+        				break;
+        				}
+        			++count;
+        			++index;
+        			}
+		        call.addProperty("POLYX", String.valueOf(count));
+		      	}
+			}	
+	
+	}
 
+/*************************************************************************************/
 
 /**
  * PredictionAnnotator
@@ -1800,6 +1961,7 @@ class PredictionAnnotator
 	private VCFFile vcfFile;
 	private DasSequenceProvider dasServer;
 	private String genomeVersion;
+	boolean loadWholeSegment=false;
 	
 	PredictionAnnotator(String genomeVersion) throws Exception
 		{
@@ -1986,11 +2148,18 @@ class PredictionAnnotator
     	            		genomicSeq=null;
     	            		try
     	            			{
-		    	            	genomicSeq=this.dasServer.getSequence(
-		    	            		gene.getChromosome(),
-		    	            		Math.max(gene.getTxStart()-extra,1),
-		    	            		gene.getTxEnd()+extra
-		    	            		);
+    	            			if(loadWholeSegment)
+    	            				{
+    	            				genomicSeq=this.dasServer.getSequence(gene.getChromosome());
+    	            				}
+    	            			else
+	    	            			{
+			    	            	genomicSeq=this.dasServer.getSequence(
+			    	            		gene.getChromosome(),
+			    	            		Math.max(gene.getTxStart()-extra,0),
+			    	            		gene.getTxEnd()+extra
+			    	            		);
+	    	            			}
     	            			}
     	            		catch (Exception e)
     	            			{
@@ -2457,6 +2626,8 @@ public class VCFAnnotator
 			boolean phastcons=false;
 			boolean transfac=false;
 			boolean rmsk=false;
+			boolean polyX=false;
+			boolean loadWholeSegment=false;
 			List<PersonalGenomeAnnotator> personalGenomes=new ArrayList<PersonalGenomeAnnotator>();
 			Set<String> dbsnpID=new HashSet<String>();
 			String genomeVersion="hg18";
@@ -2477,13 +2648,19 @@ public class VCFAnnotator
 					System.out.println(" -t transcription factors sites prediction");
 					System.out.println(" -pg personal genomes");
 					System.out.println(" -rmsk repeat masker");
+					System.out.println(" -polyX get the number of repeated bases in the genomic context");
 					System.out.println(" -snp <id> add ucsc <id> must be present in \"http://hgdownload.cse.ucsc.edu/goldenPath/<ucscdb>/database/<id>.txt.gz\" e.g. snp129");
+					System.out.println(" -whole  load whole chromosome in memory");
 					System.out.println(" -log  <level> one value from "+Level.class.getName()+" default:"+LOG.getLevel());
 					System.out.println(" -proxyHost <host>");
 					System.out.println(" -proxyPort <port>");
 					System.out.println(" -timeout <seconds> connection timout default:"+IOUtils.TIMEOUT_SECONDS);
 					System.out.println(" -try <times> retry n-times of connection fails default:"+IOUtils.TRY_CONNECT);
 					return;
+					}
+				else if(args[optind].equals("-whole"))
+					{
+					loadWholeSegment=true;
 					}
 				else if(args[optind].equals("-timeout"))
 					{
@@ -2508,6 +2685,10 @@ public class VCFAnnotator
 				else if(args[optind].equals("-t"))
 					{
 					transfac=true;
+					}
+				else if(args[optind].equals("-polyX"))
+					{
+					polyX=true;
 					}
 				else if(args[optind].equals("-snp"))
 					{
@@ -2648,6 +2829,7 @@ public class VCFAnnotator
 			if(basicPrediction)
 				{
 				PredictionAnnotator predictor=new PredictionAnnotator(genomeVersion);
+				predictor.loadWholeSegment=loadWholeSegment;
 				predictor.setVcfFile(vcf);
 				predictor.preLoadUcsc();
 				predictor.run();
@@ -2655,6 +2837,13 @@ public class VCFAnnotator
 			if(rmsk)
 				{
 				RepeatMaskerAnnotator predictor=new RepeatMaskerAnnotator(genomeVersion);
+				predictor.setVcfFile(vcf);
+				predictor.run();
+				}
+			if(polyX)
+				{
+				PolyXAnnotator predictor=new PolyXAnnotator(genomeVersion);
+				predictor.loadWholeSegment=loadWholeSegment;
 				predictor.setVcfFile(vcf);
 				predictor.run();
 				}
