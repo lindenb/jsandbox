@@ -18,9 +18,26 @@
    </fileset>
 </path>
 
-<target name="all" depends="twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor">
+<target name="all" depends="twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide">
 
 </target>
+
+
+<target name="grepmysql">
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp" debug="true">
+      <include name="**/GrepMysqlDatabase.java" />
+   </javac>
+   
+   <jar destfile="dist/grepmysql.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.GrepMysqlDatabase"/>
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>	
 
 <target name="twittergraph">
    <mkdir dir="dist"/>
@@ -207,6 +224,22 @@
       <manifest>
          <attribute name="Built-By" value="${user.name}"/>
          <attribute name="Main-Class" value="sandbox.VCFAnnotator"/>
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>
+
+<target name="wirepeptide" >
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp" debug="true">
+      <include name="**/WirePeptide.java" />
+   </javac>
+   
+   <jar destfile="dist/wirepeptide.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.WirePeptide"/>
       </manifest>
    </jar>
    <delete dir="tmp"/>
