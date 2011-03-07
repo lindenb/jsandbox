@@ -12,8 +12,9 @@
  * Motivation:
  * 	draws a peptide
  * Compilation & Run:
- *        cd jsandbox; ant wirepeptide
- *        java 
+ *        cd jsandbox
+ *        ant wirepeptide
+ *        java -jar dist/wirepeptide.jar
  */
 package sandbox;
 
