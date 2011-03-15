@@ -14,8 +14,8 @@
  * Compilation:
  *        cd jsandbox; ant twittermosaic
  */
-package sandbox;
 
+package sandbox;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -296,10 +296,11 @@ public class TwitterGraph
 			
 			/* attributes */
 			w.writeStartElement("attributes");
-			w.writeAttribute("class","nodes");
+			w.writeAttribute("class","node");
+			w.writeAttribute("mode","static");
 			gexfAtt(w,"name","string",null);
 			gexfAtt(w,"screenName","string",null);
-			gexfAtt(w,"imageUrl","anyURI","http://a3.twimg.com/sticky/default_profile_images/default_profile_1_reasonably_small.png");
+			gexfAtt(w,"imageUrl","string","http://a3.twimg.com/sticky/default_profile_images/default_profile_1_reasonably_small.png");
 			gexfAtt(w,"location","string",null);
 			gexfAtt(w,"description","string",null);
 			gexfAtt(w,"protectedProfile","boolean",null);
@@ -450,7 +451,7 @@ public class TwitterGraph
 		{
 		URLConnection con=null;
 		InputStream in=null;
-		for(int i=0;i< 3;++i)
+		for(int i=0;i< 100;++i)
 			{
 			try
 				{
@@ -473,9 +474,14 @@ public class TwitterGraph
 						case 401: return null;
 						case 400:
 							{
-							LOG.info("Waiting for 10 minutes");
+							LOG.info("I don't use the OAuth API. I'm waiting for 10 minutes ! :-P");
 							try { Thread.sleep(10*60*1000);}
 							catch(Throwable err2) {}
+							break;
+							}
+						default:
+							{
+							LOG.info("Http Error code:"+code);
 							break;
 							}
 						}
@@ -628,7 +634,7 @@ public class TwitterGraph
 					{
 					System.err.println("Options:");
 					System.err.println(" -h help; This screen.");
-					System.err.println(" -o <fileout> suffix required: png or jpg or jpeg");
+					System.err.println(" -o <fileout>.gexf");
 					System.err.println("[screen-id]");
 					return;
 					}
