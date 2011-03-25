@@ -1,5 +1,5 @@
 <project default="all">
-
+<property file="build.properties"/>
 <property name="jena.dir" value="/usr/local/package/Jena-2.6.2"/>	
 <property name="httpclient.dir" value="/usr/local/package/eclipse-jee-helios/plugins"/>	
 
@@ -18,10 +18,34 @@
    </fileset>
 </path>
 
-<target name="all" depends="twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd">
+<path id="mysql.jdbc.jar" description="JBCD driver for mysq">
+	<pathelement location="${mysql-connector.jar}"/>
+</path>
+
+<target name="all" depends="twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
 </target>
 
+<target name="backlocate">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<javac srcdir="src" destdir="tmp" debug="true">
+		<include name="**/BackLocate.java" />
+	</javac>
+	
+	<pathconvert property="mysql.classpath" pathsep=" ">
+		<path refid="mysql.jdbc.jar" />
+   	</pathconvert>	
+	
+	<jar destfile="dist/backlocate.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.BackLocate"/>
+			<attribute name="Class-Path" value="${mysql.classpath}" />
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
+</target>
 
 <target name="xml2xsd">
 	<mkdir dir="dist"/>
