@@ -55,6 +55,7 @@ import org.xml.sax.helpers.DefaultHandler;
  */
 public class BackLocate
 	{
+	private boolean printSequences=false;
 	private static final Logger LOG=Logger.getLogger("back.locate");
 	private String genomeVersion="hg19";
 	private Connection connection;
@@ -648,14 +649,19 @@ private class KnownGene
         	System.err.println("#index out of range for :"+gene.getName()+" petide length="+wildProt.length());
 	    	return;
         	}
+    
         if(wildProt.charAt(peptideIndex0)!=aa1)
         	{
-        	System.err.println("Warning ref aminod acid at "+peptidePos1+" is not the same ("+wildProt.charAt(peptideIndex0)+"/"+aa1+")");
+        	System.out.println("##Warning ref aminod acid for "+gene.getName() +"  ["+peptidePos1+"] is not the same ("+wildProt.charAt(peptideIndex0)+"/"+aa1+")");
+        	}
+        else
+        	{
+        	System.out.println("##"+gene.getName());
         	}
         int indexesInRNA[]=new int[]{
-        	0+ peptideIndex0/3,
-        	1+ peptideIndex0/3,
-        	2+ peptideIndex0/3
+        	0+ peptideIndex0*3,
+        	1+ peptideIndex0*3,
+        	2+ peptideIndex0*3
         	};
         String codon=""
         		+ wildRNA.charAt(indexesInRNA[0])
@@ -690,6 +696,15 @@ private class KnownGene
         	System.out.print(wildRNA.genomicPositions.get(indexInRna));
         	System.out.print('\t');
         	System.out.print(gene.getExonNameFromGenomicIndex(wildRNA.genomicPositions.get(indexInRna)));
+        	if(this.printSequences)
+        		{
+        		String s=wildRNA.toString();
+        		System.out.print('\t');
+            	System.out.print(s.substring(0,indexInRna)+"["+s.charAt(indexInRna)+"]"+(indexInRna+1<s.length()?s.substring(indexInRna+1):""));
+            	s=wildProt.toString();
+            	System.out.print('\t');
+            	System.out.print(s.substring(0,peptideIndex0)+"["+aa1+"/"+aa2+"/"+wildProt.charAt(peptideIndex0)+"]"+(peptideIndex0+1<s.length()?s.substring(peptideIndex0+1):""));
+        		}
         	System.out.println();
         	}
 		}
@@ -774,6 +789,7 @@ private class KnownGene
 					System.out.println("Pierre Lindenbaum PhD. 2011. http://plindenbaum.blogspot.com");
 					System.out.println("Options:");
 					System.out.println(" -b ucsc.build default:"+ app.genomeVersion);
+					System.out.println(" -p print mRNA & protein sequences");
 					System.out.println(" -log  <level> one value from "+Level.class.getName()+" default:"+LOG.getLevel());
 					System.out.println(" -proxyHost <host>");
 					System.out.println(" -proxyPort <port>");
@@ -784,6 +800,10 @@ private class KnownGene
 				else if(args[optind].equals("-b"))
 					{
 					app.genomeVersion=args[++optind];
+					}
+				else if(args[optind].equals("-p"))
+					{
+					app.printSequences=true;
 					}
 				else if(args[optind].equals("-log") ||
 						args[optind].equals("--log") || 
@@ -858,6 +878,13 @@ private class KnownGene
         	System.out.print("index0.in.genomic");
         	System.out.print('\t');
         	System.out.print("exon");
+        	if(app.printSequences)
+        		{
+        		System.out.print('\t');
+            	System.out.print("mRNA");
+            	System.out.print('\t');
+            	System.out.print("protein");
+        		}
         	System.out.println();
 			if(optind==args.length)
 				{
