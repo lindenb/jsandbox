@@ -1,0 +1,173 @@
+options {
+static=false;
+DEBUG_PARSER=false;
+IGNORE_CASE=true;
+}
+
+PARSER_BEGIN(SegmentParser)
+package sandbox;
+/**
+ * Author:
+ *	Pierre Lindenbaum PhD
+ * WWW
+ *	http://plindenbaum.blogspot.com
+ * Motivation
+ *	parsing a genomic fragment (chr:start-end)
+ *
+ */
+import java.math.BigInteger;
+class Segment
+	{
+	String chrom;
+	int start;
+	int end;
+	public Segment(String chrom,int start,int end)
+		{
+		this.chrom=chrom;
+		this.start=start;
+		this.end=end;
+		}
+	public String toString()
+		{
+		return chrom+":"+start+"-"+end;
+		}
+	}
+
+public class SegmentParser
+	{
+	private static final BigInteger TWO=new BigInteger("2");
+	private static final BigInteger INT_MAX=new BigInteger(String.valueOf(Integer.MAX_VALUE));
+	
+	public static Segment parseOne(String s)
+		{
+		try
+			{
+			SegmentParser parser = new SegmentParser(new java.io.StringReader(s));
+			return parser.one();
+			}
+		catch(ParseException err)
+			{
+			throw new IllegalArgumentException(err);
+			}
+		}
+	
+	public static java.util.List<Segment> parseMany(String s)
+		{
+		try
+			{
+			SegmentParser parser = new SegmentParser(new java.io.StringReader(s));
+			return parser.many();
+			}
+		catch(ParseException err)
+			{
+			throw new IllegalArgumentException(err);
+			}
+		}
+	
+	public static void main(String args[])
+		{
+		try
+			{
+			SegmentParser parser = new SegmentParser(System.in);
+			System.out.println(parser.one());
+			}
+		catch(Throwable err)
+			{
+			err.printStackTrace();
+			}
+		}
+	}
+	
+PARSER_END(SegmentParser)
+
+SKIP:{
+" "|"\n"
+}
+
+TOKEN:
+{
+  <#COMMA: ",">
+| <#LETTER:(["a"-"z"]|["A"-"Z"]|"_")>
+| <#DIGIT:["0"-"9"]>
+| <INT:<DIGIT> ( (<DIGIT>|<COMMA>)* <DIGIT>)? >
+| <BP: "b" ("p")?>
+| <KB: ("k") ("B")?>
+| <MB: ("m") ("B")?>
+| <GB: ("g") ("B")?>
+| <IDENTIFIER: <LETTER> (<DIGIT>|<LETTER>)* >
+| <COLON: ":" >
+| <DASH:  "-" >
+| <PLUS:  "+" >
+| <DELIM: ("|"|";") >
+}
+
+public java.util.List<Segment> many():
+	{
+	java.util.List<Segment> L=new java.util.ArrayList<Segment>();
+	Segment  s1;
+	Segment  s2;
+	}
+	{
+	( (s1=segment() { L.add(s1);} ((<DELIM>)? s2=segment() { L.add(s2);}  )* )? <EOF>)
+		{
+		return L;
+		}
+	}
+
+public Segment one():{Segment pos; }
+	{
+	( pos=segment() <EOF>)
+		{
+		return pos;
+		}
+	}
+
+private Segment segment():{String chrom;BigInteger start=null; BigInteger end=null ; char sign='?';}
+	{
+	( chrom=chromName() <COLON>  start= position() (<DASH> end=position() {sign='-';}| <PLUS> end=position() {sign='+';})? )
+		{
+		switch(sign)
+			{
+			case '?': end=start.add(BigInteger.ONE);break;
+			case '-': break;
+			case '+': start=start.subtract(end);end=BigInteger.ONE.add(start.add(end.multiply(TWO)));break;
+			}
+		if(start.compareTo(BigInteger.ZERO)<0)  throw new ParseException(start.toString()+" < 0)");
+		if(end.compareTo(start)<0)  throw new ParseException(start.toString()+" > "+end+")");
+		if(INT_MAX.compareTo(start)<=0) throw new ParseException(start.toString()+" > "+ INT_MAX);
+		if(INT_MAX.compareTo(end)<=0) throw new ParseException(end.toString()+" > "+ INT_MAX);
+		return new Segment(chrom,start.intValue(),end.intValue());
+		}
+	}
+
+private  BigInteger position():{BigInteger i=null; BigInteger mul=BigInteger.ONE;}
+	{
+	i=integer() (mul=factor())? { return i.multiply(mul);}
+	}
+
+private BigInteger factor():{}
+	{
+	(
+	  <BP> { return new BigInteger("1");}
+	| <KB> { return new BigInteger("1000");}
+	| <MB> { return new BigInteger("1000000");}
+	| <GB> { return new BigInteger("1000000000");}
+	)
+	}
+
+private BigInteger integer():{Token t;}
+	{
+	t=<INT> { return new BigInteger(t.image.replace(",","")); } 
+	}
+	
+private String chromName():{BigInteger i; String s;}
+	{
+	( i=integer() { return  "chr"+i.toString(); } 
+	| s=identifier() { return s;}
+	)
+	}
+
+private String identifier():{Token t;}
+	{
+	t=<IDENTIFIER> { return  t.image; } 
+	}

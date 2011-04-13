@@ -22,8 +22,26 @@
 	<pathelement location="${mysql-connector.jar}"/>
 </path>
 
-<target name="all" depends="twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
+<target name="all" depends="nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
+</target>
+
+<target name="nar404">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<javac srcdir="src" destdir="tmp" debug="true">
+		<include name="**/NucleicAcidsResearch404.java" />
+	</javac>
+	
+	
+	<jar destfile="dist/nar404.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.NucleicAcidsResearch404"/>
+			<attribute name="Class-Path" value="${mysql.classpath}" />
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
 </target>
 
 <target name="backlocate">
