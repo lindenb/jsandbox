@@ -1,3 +1,19 @@
+/**
+ * Author:
+ * 	Pierre Lindenbaum PhD
+ * Date:
+ * 	April-2011
+ * Contact:
+ * 	plindenbaum@yahoo.fr
+ * WWW:
+ * 	http://plindenbaum.blogspot.com
+ * Motivation:
+ *   http://biostar.stackexchange.com/questions/7527
+ * Compilation:
+ *        ant nar404
+ * Usage:
+ *        java -jar nar404.jar 
+ */
 package sandbox;
 
 import java.io.InputStream;
@@ -76,7 +92,7 @@ public class NucleicAcidsResearch404
 		void write(XMLStreamWriter w) throws XMLStreamException
 			{
 			w.writeStartElement("div");
-			if(code==200 && error!=null)
+			if(!(code==200 && error==null))
 				{
 				w.writeAttribute("style", "background-color:rgb(245,222,179);padding:5px;");
 				}
@@ -151,6 +167,7 @@ public class NucleicAcidsResearch404
 			pos=matcher.end();
 			String url=abstractText.substring(b,pos);
 			if(url.endsWith(".")) url=url.substring(0,url.length()-1);
+			if(url.endsWith("/")) url=url.substring(0,url.length()-1);
 			if(url.startsWith("www")) url="http://"+url;
 			if(url.startsWith("http://github")) continue;
 			boolean ok=true;
