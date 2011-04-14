@@ -44,10 +44,12 @@ import javax.xml.stream.events.Attribute;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 public class NucleicAcidsResearch404
 	{
@@ -58,7 +60,7 @@ public class NucleicAcidsResearch404
 	private String query="\"Nucleic Acids Res\"[JOUR] \"Database issue\"[ISS]";
 	private XPath xpath;
 	/** credit: http://stackoverflow.com/questions/5261136 **/
-	private Pattern hrefPattern=Pattern.compile("((https?:\\/\\/|www.)([-\\w.]+)+(:\\d+)?(\\/([\\w\\/_.]*(\\?\\S+)?)?)?)");
+	private Pattern hrefPattern=Pattern.compile("((https?:\\/\\/|www.)([-\\w.]+)+(:\\d+)?(\\/([\\-\\w\\/_.]*(\\?\\S+)?)?)?)");
 	private Map<String,Database> url2databases=new  HashMap<String,Database>();
 	private int limit=-1;
 	
@@ -66,12 +68,12 @@ public class NucleicAcidsResearch404
 		{
 		long pmid;
 		String title;
-		int year;
+		String year;
 		
 		void write(XMLStreamWriter w) throws XMLStreamException
 			{
 			w.writeCharacters("(");
-			w.writeCharacters(String.valueOf(year));
+			w.writeCharacters(year);
 			w.writeCharacters(") ");
 			
 			w.writeStartElement("a");
@@ -109,12 +111,15 @@ public class NucleicAcidsResearch404
 			w.writeEndElement();
 			
 			//code
-			w.writeStartElement("div");
-			w.writeStartElement("b");
-			w.writeCharacters("http status:");
-			w.writeEndElement();
-			w.writeCharacters(String.valueOf(code));
-			w.writeEndElement();
+			if(this.code!=200)
+				{
+				w.writeStartElement("div");
+				w.writeStartElement("b");
+				w.writeCharacters("http status:");
+				w.writeEndElement();
+				w.writeCharacters(String.valueOf(code));
+				w.writeEndElement();
+				}
 			
 			if(this.error!=null)
 				{
@@ -152,47 +157,51 @@ public class NucleicAcidsResearch404
 		article.pmid=Long.parseLong(xpath.evaluate("MedlineCitation/PMID", root));
 		
 		article.title=xpath.evaluate("MedlineCitation/Article/ArticleTitle", root);
-		article.year=Integer.parseInt(xpath.evaluate("MedlineCitation/Article/Journal/JournalIssue/PubDate/Year", root));
-		String abstractText=xpath.evaluate("MedlineCitation/Article/Abstract", root);
-		if(abstractText==null || abstractText.trim().isEmpty()) return;
-		abstractText=abstractText.replaceAll("http://nar. oupjo", "http://nar.oupjo");
-		
-		
-		Matcher matcher=hrefPattern.matcher(abstractText);
-		Set<String> urls=new HashSet<String>();
-		int pos=0;
-		while(pos<abstractText.length() &&  matcher.find(pos))
+		article.year=xpath.evaluate("MedlineCitation/Article/Journal/JournalIssue/PubDate/Year", root);
+		NodeList list=(NodeList)xpath.evaluate("MedlineCitation/Article/Abstract/AbstractText", root,XPathConstants.NODESET);
+		for(int i=0;i< list.getLength();++i)
 			{
-			int b=matcher.start();
-			pos=matcher.end();
-			String url=abstractText.substring(b,pos);
-			if(url.endsWith(".")) url=url.substring(0,url.length()-1);
-			if(url.endsWith("/")) url=url.substring(0,url.length()-1);
-			if(url.startsWith("www")) url="http://"+url;
-			if(url.startsWith("http://github")) continue;
-			boolean ok=true;
-			for(String s:urls)
+			String abstractText=list.item(i).getTextContent();
+			if(abstractText==null || abstractText.trim().isEmpty()) continue;
+			abstractText=abstractText.replaceAll("http://nar. oupjo", "http://nar.oupjo");
+		
+		
+			Matcher matcher=hrefPattern.matcher(abstractText);
+			Set<String> urls=new HashSet<String>();
+			int pos=0;
+			while(pos<abstractText.length() &&  matcher.find(pos))
 				{
-				if(url.startsWith(s) || s.startsWith(url))
+				int b=matcher.start();
+				pos=matcher.end();
+				String url=abstractText.substring(b,pos);
+				if(url.endsWith(".")) url=url.substring(0,url.length()-1);
+				//if(url.endsWith("/")) url=url.substring(0,url.length()-1);
+				if(url.startsWith("www")) url="http://"+url;
+				if(url.startsWith("http://github")) continue;
+				boolean ok=true;
+				for(String s:urls)
 					{
-					ok=false;
-					break;
+					if(url.startsWith(s) || s.startsWith(url))
+						{
+						ok=false;
+						break;
+						}
 					}
+				if(!ok) continue;
+				urls.add(url);
 				}
-			if(!ok) continue;
-			urls.add(url);
-			}
-		if(urls.isEmpty()) return;
-		for(String url:urls)
-			{
-			Database database=url2databases.get(url);
-			if(database==null)
+			if(urls.isEmpty()) continue;
+			for(String url:urls)
 				{
-				database=new Database();
-				database.url=url;
-				url2databases.put(url, database);
+				Database database=url2databases.get(url);
+				if(database==null)
+					{
+					database=new Database();
+					database.url=url;
+					url2databases.put(url, database);
+					}
+				database.articles.add(article);
 				}
-			database.articles.add(article);
 			}
 		}
 	private void run() throws Exception
@@ -307,7 +316,7 @@ public class NucleicAcidsResearch404
 					error.printStackTrace();
 					}
 				}
-			Map<Integer,int[]> year2count=new TreeMap<Integer, int[]>();
+			Map<String,int[]> year2count=new TreeMap<String, int[]>();
 			XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
 			XMLStreamWriter w= xmlfactory.createXMLStreamWriter(System.out,"UTF-8");
 			w.writeStartDocument("UTF-8","1.0");
@@ -350,12 +359,12 @@ public class NucleicAcidsResearch404
 			   w.writeCharacters("%");
 			   w.writeEndElement();//th
 			  w.writeEndElement();//tr
-			for(Integer year:year2count.keySet())
+			for(String year:year2count.keySet())
 				{
 				int[] array=  year2count.get(year);
 				w.writeStartElement("tr");
 				  w.writeStartElement("td");
-				   w.writeCharacters(String.valueOf(year));
+				   w.writeCharacters(year);
 				  w.writeEndElement();//td
 				  w.writeStartElement("td");
 				   w.writeCharacters(String.valueOf(array[0]));
