@@ -22,8 +22,24 @@
 	<pathelement location="${mysql-connector.jar}"/>
 </path>
 
-<target name="all" depends="nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
+<target name="all" depends="twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
+</target>
+
+<target name="twitterkml">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<javac srcdir="src" destdir="tmp" debug="true">
+		<include name="**/TwitterToKML.java" />
+	</javac>
+	
+	<jar destfile="dist/twitterkml.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.TwitterToKML"/>
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
 </target>
 
 <target name="nar404">
