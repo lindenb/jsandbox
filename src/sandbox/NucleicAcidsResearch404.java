@@ -308,7 +308,7 @@ public class NucleicAcidsResearch404
 			reader.close();
 			in.close();
 			
-			final int retmax=10000;
+			final int retmax=5000;
 			for(int retstart=0;retstart<count;retstart+=retmax)
 				{
 				url= new URL("http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&WebEnv="+
