@@ -65,6 +65,7 @@ public class TwitterToKML
 		String location=null;
 		Double longitude=null;
 		Double latitude=null;
+		@SuppressWarnings("unused")
 		String countryName=null;
 		String toponymName=null;
 		Set<User> users=new HashSet<TwitterToKML.User>();
@@ -133,6 +134,8 @@ public class TwitterToKML
 			StringWriter description=new StringWriter();
 			XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
 			XMLStreamWriter w2= xmlfactory.createXMLStreamWriter(description);
+			w2.writeStartElement("div");
+			w2.writeAttribute("style","max-height:200px;overflow:auto;");
 			w2.writeStartElement("ul");
 			for(User u:this.users)
 				{
@@ -140,6 +143,7 @@ public class TwitterToKML
 				u.toKML(w2);
 				w2.writeEndElement();
 				}
+			w2.writeEndElement();
 			w2.writeEndElement();
 			w2.flush();
 			
@@ -156,23 +160,6 @@ public class TwitterToKML
 			w.writeEndElement();//Placemark
 			}
 
-		@Override
-		public int hashCode()
-			{
-			final int prime = 31;
-			int result = 1;
-			result = prime * result
-					+ ((countryName == null) ? 0 : countryName.hashCode());
-			result = prime * result
-					+ ((latitude == null) ? 0 : latitude.hashCode());
-			result = prime * result
-					+ ((location == null) ? 0 : location.hashCode());
-			result = prime * result
-					+ ((longitude == null) ? 0 : longitude.hashCode());
-			result = prime * result
-					+ ((toponymName == null) ? 0 : toponymName.hashCode());
-			return result;
-			}
 
 		@Override
 		public boolean equals(Object obj)
@@ -182,27 +169,8 @@ public class TwitterToKML
 			if (getClass() != obj.getClass()) { return false; }
 			GeoLocation other = (GeoLocation) obj;
 			
-			if (countryName == null)
-				{
-				if (other.countryName != null) { return false; }
-				} else if (!countryName.equals(other.countryName)) { return false; }
-			if (latitude == null)
-				{
-				if (other.latitude != null) { return false; }
-				} else if (!latitude.equals(other.latitude)) { return false; }
-			if (location == null)
-				{
-				if (other.location != null) { return false; }
-				} else if (!location.equals(other.location)) { return false; }
-			if (longitude == null)
-				{
-				if (other.longitude != null) { return false; }
-				} else if (!longitude.equals(other.longitude)) { return false; }
-			if (toponymName == null)
-				{
-				if (other.toponymName != null) { return false; }
-				} else if (!toponymName.equals(other.toponymName)) { return false; }
-			return true;
+			return 	latitude.equals(other.latitude) &&
+					longitude.equals(other.longitude);
 			}
 
 		
@@ -230,10 +198,33 @@ public class TwitterToKML
 		throws XMLStreamException
 			{
 			w.writeStartElement("div");
+			if(imageUrl!=null && !imageUrl.isEmpty())
+				{
+				w.writeEmptyElement("img");
+				w.writeAttribute("src",imageUrl);
+				w.writeAttribute("width","48");
+				w.writeAttribute("alt",screenName);
+				w.writeEmptyElement("br");
+				}
 			w.writeStartElement("a");
 			w.writeAttribute("href", "http://twitter.com/#!/"+screenName);
 			w.writeCharacters("@"+String.valueOf(screenName));
 			w.writeEndElement();
+			
+			if(name!=null && !name.isEmpty())
+				{
+				w.writeEmptyElement("br");
+				w.writeStartElement("span");
+				w.writeCharacters(name);
+				w.writeEndElement();
+				}
+			if(description!=null && !description.isEmpty())
+				{
+				w.writeEmptyElement("br");
+				w.writeStartElement("span");
+				w.writeCharacters(description);
+				w.writeEndElement();
+				}
 			w.writeEndElement();
 			}
 
