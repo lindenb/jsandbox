@@ -9,10 +9,14 @@
  * 	http://plindenbaum.blogspot.com
  * Wiki
  *  https://github.com/lindenb/jsandbox/wiki/JSandbox-Wiki
+ * Reference
+ *   http://plindenbaum.blogspot.com/2011/04/mapping-people-im-following-on-twitter.html
  * Motivation:
  *  make a KML file of my following/followers
  * Compilation:
  *        cd jsandbox; ant twitterkml
+ * Execution:
+ *        java -jar dist/twitterkml.jar -g (geonames-id) -o file (twitter-id)
  */
 
 package sandbox;
@@ -59,7 +63,7 @@ public class TwitterToKML
 	private BigInteger owner=null;
 	private Map<BigInteger,User> id2user=new HashMap<BigInteger,User>();
 	private List<GeoLocation> geoLocations=new ArrayList<TwitterToKML.GeoLocation>();
-	
+	private boolean use_followers=false;
 	private class GeoLocation
 		{
 		String location=null;
@@ -539,7 +543,7 @@ public class TwitterToKML
 		BigInteger cursor=BigInteger.ONE.negate();
 		for(;;)
 			{
-			String uri="http://api.twitter.com/1/friends/ids.xml?user_id="+
+			String uri="http://api.twitter.com/1/"+(use_followers?"followers":"friends")+"/ids.xml?user_id="+
 			userId+"&cursor="+cursor;
 			LOG.info(uri);
 			InputStream in=tryOpen(uri);
@@ -629,6 +633,7 @@ public class TwitterToKML
 					System.err.println("Options:");
 					System.err.println(" -h help; This screen.");
 					System.err.println(" -o <fileout>.kml");
+					System.err.println(" -f use followers instead of following.");
 					System.err.println(" -g <genonames-id> id on geonames.org");
 					System.err.println("[screen-id]");
 					return;
@@ -636,6 +641,10 @@ public class TwitterToKML
 				else if(args[optind].equals("-g"))
 					{
 					app.geonamesId=args[++optind];
+					}
+				else if(args[optind].equals("-f"))
+					{
+					app.use_followers=true;
 					}
 				else if(args[optind].equals("-o"))
 					{
@@ -678,17 +687,12 @@ public class TwitterToKML
 			app.owner=new BigInteger(args[optind++]);
 			app.run();
 			
-			if(fileout.getName().toLowerCase().endsWith(".kml"))
-				{
-				FileOutputStream p=new FileOutputStream(fileout);
-				app.toKML(p);
-				p.flush();
-				p.close();
-				}
-			else
-				{
-				System.err.println("Boum");
-				}
+			
+			FileOutputStream p=new FileOutputStream(fileout);
+			app.toKML(p);
+			p.flush();
+			p.close();
+				
 			} 
 		catch(Throwable err)
 			{
