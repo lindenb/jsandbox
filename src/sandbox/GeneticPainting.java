@@ -153,6 +153,7 @@ public class GeneticPainting
 			this.x2+=plusMinus(3);
 			this.y2+=plusMinus(3);
 			this.weight+=plusMinus(3);
+			if(this.weight<=0) this.weight=1;
 			}
 		public void paint(Graphics2D g)
 			{
@@ -184,7 +185,10 @@ public class GeneticPainting
 		
 		@Override
 		String getSvgStyle() {
-			return "stroke:rgb("+red+","+green+","+blue+");stroke-opacity:"+(alpha/255.0)+";stroke-linecap:butt;fill:none;stroke-width:"+weight+"px;";
+			return "stroke:rgb("+red+","+green+","+blue+");stroke-opacity:"+(alpha/255.0)+";" +
+					"stroke-linecap:butt;" +
+					"stroke-linejoin:round;" +
+					"fill:none;stroke-width:"+weight+"px;";
 			}
 		
 		@Override
