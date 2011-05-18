@@ -10,7 +10,7 @@
  * Compilation:
  *        ant geneticpainting
  * Usage:
- *        java -jar nar404.jar 
+ *        java -jar geneticpainting.jar 
  */
 package sandbox;
 
