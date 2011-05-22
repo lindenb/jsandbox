@@ -918,6 +918,7 @@ public class GeneticPainting
 				{
 				if(args[optind].equals("-h"))
 					{
+					System.out.println("Pierre Lindenbaum PhD. 2011");
 					System.out.println(" -o fileprefix "+app.fileout);
 					System.out.println(" -n1 parents count");
 					System.out.println(" -n2 min shapes per solution");
