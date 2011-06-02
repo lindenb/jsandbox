@@ -16,6 +16,7 @@
  */
 package sandbox;
 
+
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -67,7 +68,7 @@ public class OilPainting
 					{
 					for(int i=left;i<=right;++i)
 						{
-						if(!inRange(i, j,x,y)) continue;
+						if(!inRange(x,y,i, j)) continue;
 						
 						int rgb = sourceImage.getRGB(i,j);
 						
@@ -106,7 +107,10 @@ public class OilPainting
 	
 	private boolean inRange(int cx,int cy,int i,int j)
 		{
-		return Point2D.distance(i, j,cx,cy)<radius;
+		double d;
+		//d= java.awt.geom.Line2D.ptLineDist(cx, cy, cx-radius, cy-radius, i, j);
+		d=Point2D.distance(i, j,cx,cy);
+		return d<radius;
 		}
 	
 	public static void main(String[] args)

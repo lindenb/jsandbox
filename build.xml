@@ -20,8 +20,40 @@
 	<pathelement location="${mysql-connector.jar}"/>
 </path>
 
-<target name="all" depends="raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
+<target name="all" depends="gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
+</target>
+
+<target name="gimpclient">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<javac srcdir="src" destdir="tmp" debug="true">
+		<include name="**/GimpClient.java" />
+	</javac>
+	
+	<jar destfile="dist/gimpclient.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.GimpClient"/>
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
+</target>
+
+<target name="convolution">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<javac srcdir="src" destdir="tmp" debug="true">
+		<include name="**/Convolution.java" />
+	</javac>
+	
+	<jar destfile="dist/convolution.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.Convolution"/>
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
 </target>
 
 <target name="raster2ora">
