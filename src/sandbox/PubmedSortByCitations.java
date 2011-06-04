@@ -14,7 +14,9 @@
  * Motivation:
  * 	Sort Pubmed records by number of citations
  * Compilation:
- *       
+ *       ant pubmedsortbycitations
+ *       java -jar dist/pubmedsortbycitations.jar -c -L ALL -e '"Nucleic Acids Res"[JOUR] "Database issue"[ISS] 2005[PDAT]' > sorted.xml
+ *       java -jar dist/pubmedsortbycitations.jar -c -L ALL pubmed_result.txt > sorted.xml
  */
 package sandbox;
 
@@ -29,7 +31,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -172,6 +173,7 @@ public class PubmedSortByCitations
 	public static void main(String[] args) {
 		try
 			{
+			String query=null;
 			LOG.setLevel(Level.OFF);
 			PubmedSortByCitations app=new PubmedSortByCitations();
 			int optind=0;
@@ -183,16 +185,21 @@ public class PubmedSortByCitations
 					{
 					System.err.println("Pierre Lindenbaum PhD. 2011");
 					System.err.println("Options:");
-					System.err.println(" -e <email> default:"+app.email);
+					System.err.println(" -m <email> default:"+app.email);
+					System.err.println(" -e <query> (optional)");
 					System.err.println(" -c create some XML nodes containing the pmids citing the article");
 					System.err.println(" -L <level: one of java.util.logging.Level> (optional)");
 					System.err.println(" -h help; This screen.");
-					System.err.println("(stdin|file|uri) pubmed xml document.");
+					System.err.println("(stdin|file|uri) pubmed xml document (if query is not defined).");
 					return;
+					}
+				else if(args[optind].equals("-m"))
+					{
+					app.email=args[++optind];
 					}
 				else if(args[optind].equals("-e"))
 					{
-					app.email=args[++optind];
+					query=args[++optind];
 					}
 				else if(args[optind].equals("-c"))
 					{
@@ -218,10 +225,38 @@ public class PubmedSortByCitations
 					}
 				++optind;
 				}
-			
-			
-			
-			if(args.length==optind)
+			if(args.length==optind && query!=null)
+				{
+				String uri="http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term="+
+					URLEncoder.encode(query, "UTF-8")+	
+					"&retstart=0" +
+					"&retmax=0" +
+					"&usehistory=y" +
+					"&retmode=xml" +
+					"&email=" +URLEncoder.encode(app.email,"UTF-8")+
+					"&tool="+URLEncoder.encode(PubmedSortByCitations.class.getName(),"UTF-8")
+					;
+				LOG.info(uri);
+				Document dom=app.builder.parse(uri);
+				String QueryKey=app.xpath.evaluate("/eSearchResult/QueryKey", dom);
+				String WebEnv=app.xpath.evaluate("/eSearchResult/WebEnv", dom);
+				int count=Integer.parseInt(app.xpath.evaluate("/eSearchResult/Count", dom));
+				
+				uri="http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed" +
+					"&WebEnv="+URLEncoder.encode(WebEnv,"UTF-8")+
+					"&query_key="+URLEncoder.encode(QueryKey,"UTF-8")+
+					"&retmode=xml&retmax="+count+
+					"&email="+URLEncoder.encode(app.email,"UTF-8")+
+					"&tool="+URLEncoder.encode(PubmedSortByCitations.class.getName(),"UTF-8")
+					;
+				LOG.info(uri);
+				app.run(app.builder.parse(uri));
+				}
+			else if(args.length!=optind && query!=null)
+				{
+				System.err.println("Query and file both defined.");
+				}
+			else if(args.length==optind)
 				{
 				app.run(app.builder.parse(System.in));
 				}
