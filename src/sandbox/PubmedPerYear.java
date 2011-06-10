@@ -15,18 +15,17 @@
 	2008    15
 	2009    17
 	2010    13
-
+ * History
+ * 	June 2011: faster results with rettype=2011
 
  */
 package sandbox;
-import java.io.IOException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.events.XMLEvent;
 
 /**
@@ -35,12 +34,14 @@ import javax.xml.stream.events.XMLEvent;
 public class PubmedPerYear
 	{
 	private String query="";
-	
+	private int startYear=1900;
+	private int endYear=3000;
 	private PubmedPerYear()
 		{
+		this.endYear=new GregorianCalendar().get(Calendar.YEAR);
 		}
 	
-	private XMLEventReader newReader(URL url) throws IOException,XMLStreamException
+	private void run() throws Exception
 		{
 		XMLInputFactory f= XMLInputFactory.newInstance();
 		f.setProperty(XMLInputFactory.IS_COALESCING, Boolean.TRUE);
@@ -48,99 +49,41 @@ public class PubmedPerYear
 		f.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES,Boolean.TRUE);
 		f.setProperty(XMLInputFactory.IS_VALIDATING,Boolean.FALSE);
 		f.setProperty(XMLInputFactory.SUPPORT_DTD,Boolean.FALSE);
-		XMLEventReader reader=f.createXMLEventReader(url.openStream());
-		return reader;
-		}
-	
-	private void run() throws Exception
-		{
-		Map<Integer,Integer> year2count=new TreeMap<Integer,Integer>();
-		URL url= new URL(
-			"http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term="+
-			URLEncoder.encode(this.query, "UTF-8")+	
-			"&retstart=0&retmax=0&usehistory=y&retmode=xml&email=plindenbaum_at_yahoo.fr&tool=gender");
 		
-		XMLEventReader reader= newReader(url);
-		XMLEvent evt;
-		String QueryKey=null;
-		String WebEnv=null;
-		int count=-1;
-
-		while(!(evt=reader.nextEvent()).isEndDocument())
-			{
-			if(!evt.isStartElement()) continue;	
-			String tag= evt.asStartElement().getName().getLocalPart();
-			if(tag.equals("QueryKey"))
-				{
-				QueryKey= reader.getElementText().trim();
-				}
-			else if(tag.equals("WebEnv"))
-				{
-				WebEnv= reader.getElementText().trim();
-				}
-			else  if(tag.equals("Count") && count==-1)
-				{
-				count=Integer.parseInt(reader.getElementText());
-				}
-			}
-		reader.close();
-
-		if(count>0)
-			{
-			url= new URL("http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&WebEnv="+
-					URLEncoder.encode(WebEnv,"UTF-8")+
-					"&query_key="+URLEncoder.encode(QueryKey,"UTF-8")+
-					"&retmode=xml&retmax="+count+"&email=plindenbaum_at_yahoo.fr&tool=mail");
-			
-			reader= newReader(url);
-			
-			
-			while(reader.hasNext())
-				{
-				evt=reader.nextEvent();
-				if(!evt.isStartElement()) continue;
-				String tagName= evt.asStartElement().getName().getLocalPart();
-				if(!tagName.equals("DateCreated")) continue;
+		int year=this.startYear;
 		
-				while(reader.hasNext())
+		while(year <=this.endYear)
+			{
+			URL url= new URL(
+				"http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?" +
+				"db=pubmed&term="+
+				URLEncoder.encode("("+this.query+")  "+year+"[PDAT]", "UTF-8")+	
+				"&retmode=xml&rettype=count&email=plindenbaum_at_yahoo.fr&tool=peryear");
+			
+			XMLEventReader reader= f.createXMLEventReader(url.openStream());
+			XMLEvent evt;
+			
+			int count=-1;
+			
+			while(!(evt=reader.nextEvent()).isEndDocument())
+				{
+				if(!evt.isStartElement()) continue;	
+				String tag= evt.asStartElement().getName().getLocalPart();
+				if(tag.equals("Count") && count==-1)
 					{
-					evt=reader.nextEvent();
-					if(evt.isStartElement())
-						{
-						String localName=evt.asStartElement().getName().getLocalPart();
-						if(localName.equals("Year"))
-							{
-							try
-								{
-								int year=Integer.parseInt(reader.getElementText());
-								Integer num=year2count.get(year);
-								if(num==null) num=0;
-								num++;
-								year2count.put(year,num);
-								}
-							catch(Exception numerr)
-								{
-								System.err.println(numerr.getMessage());
-								}
-							}
-						}
-					else if(evt.isEndElement())
-						{
-						if(evt.asEndElement().getName().getLocalPart().equals("DateCreated"))
-							{
-							break;
-							}
-						}
+					count=Integer.parseInt(reader.getElementText());
+					break;
 					}
 				}
 			reader.close();
-			}
-		for(Integer year:year2count.keySet())
-			{
-			System.out.println(""+year+"\t"+year2count.get(year));
+			if(count>0)
+				{
+				System.out.println(""+year+"\t"+count);
+				}
+			++year;
 			}
 		}
-	
+		
 	public static void main(String[] args)
 		{
 		try
@@ -148,7 +91,41 @@ public class PubmedPerYear
 			PubmedPerYear app=new PubmedPerYear();
 			
 			int optind=0;
-			
+			while(optind< args.length)
+				{
+				if(args[optind].equals("-h") ||
+				   args[optind].equals("-help") ||
+				   args[optind].equals("--help"))
+					{
+					System.err.println("Options:");
+					System.err.println(" -S <int> start year. Default:"+app.startYear);
+					System.err.println(" -E <int> end year. Default:"+app.endYear);
+					return;
+					}
+				else if(args[optind].equals("-S"))
+					{
+					app.startYear=Integer.parseInt(args[++optind]);
+					}
+				else if(args[optind].equals("-E"))
+					{
+					app.endYear=Integer.parseInt(args[++optind]);
+					}
+				else if(args[optind].equals("--"))
+					{
+					optind++;
+					break;
+					}
+				else if(args[optind].startsWith("-"))
+					{
+					System.err.println("Unknown option "+args[optind]);
+					return;
+					}
+				else 
+					{
+					break;
+					}
+				++optind;
+				}
 			
 			app.query="";
 			while(optind< args.length)
@@ -162,7 +139,11 @@ public class PubmedPerYear
 				System.err.println("Query is empty");
 				return;
 				}
-			
+			if(app.startYear>app.endYear)
+				{
+				System.err.println("start year > end year");
+				return;
+				}
 			
 			app.run();
 			
