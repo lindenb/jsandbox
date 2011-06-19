@@ -7,6 +7,11 @@
 	</fileset>
 </path>
 	
+<path id="jetty.jars" description="ALl Jars for Jetty">
+	<fileset  dir="${jetty.dir}">
+           <include name="**/lib/*.jar"/>
+	</fileset>
+</path>
 
 <path id="httpclient.jars" description="ALl Jars for the Apache HttpClient library">
    <fileset  dir="${httpclient.dir}">
@@ -20,10 +25,40 @@
 	<pathelement location="${mysql-connector.jar}"/>
 </path>
 
-<target name="all" depends="images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
+<path id="bdb.je.jars" description="BerkeleyDB JE libs">
+	<pathelement location="${bdb.je.jar}"/>
+</path>
+
+
+<target name="all" depends="divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
 </target>
 
+<target name="divandb">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<javac srcdir="src" destdir="tmp" debug="true">
+		<classpath refid="jetty.jars"/>
+		<classpath refid="bdb.je.jars"/>
+		<include name="**/DivanDB.java" />
+	</javac>
+	
+	<pathconvert property="jetty.claspath" pathsep=" ">
+		<path refid="jetty.jars" />
+		<path refid="bdb.je.jars" />
+	</pathconvert>	
+	
+	
+	<jar destfile="dist/divandb.jar" basedir="tmp">
+	      <manifest>
+		 <attribute name="Built-By" value="${user.name}"/>
+		 <attribute name="Main-Class" value="sandbox.DivanDB"/>
+	      	 <attribute name="Class-Path" value="${jetty.claspath}" />
+	      </manifest>
+	</jar>
+
+	<delete dir="tmp"/>
+</target>
 
 <target name="images2base64">
 	<mkdir dir="dist"/>
