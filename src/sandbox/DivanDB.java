@@ -12,9 +12,10 @@
  * Motivation:
  * 		a couchdb-like server. Prextext to learn JETTY
  * Compilation:
+ * 		  #edit or create the build.properties, set bdb.je.jar and jetty.dir
  *        cd jsandbox; ant divandb
  * Usage:
- *         echo -e "NOTCH2\tP29A" | java -jar backlocate.jar
+ *        java -jar dist/divandb.jar
  */
 package sandbox;
 import java.io.File;
@@ -37,9 +38,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.nio.SelectChannelConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.ajax.JSON;
@@ -158,15 +157,19 @@ public class DivanDB extends HttpServlet
 	    		String endkey=req.getParameter("endkey");
 	    		if(req.getParameter("limit")!=null)
 	    			{
-	    			limit=Integer.parseInt("limit");
+	    			limit=Integer.parseInt(req.getParameter("limit"));
 	    			}
 	    		if(req.getParameter("start")!=null)
 	    			{
-	    			startIndex=Integer.parseInt("start");
+	    			startIndex=Integer.parseInt(req.getParameter("start"));
 	    			}
 	    		for(;;)
 	    			{
-	    			if(limit!=null && limit>=countPrinted) break;
+	    			
+	    			if(limit!=null && countPrinted>=limit)
+	    				{
+	    				break;
+	    				}
 	    			OperationStatus status;
 	    			/* first cursor call */ 
 	    			if(first)
@@ -181,6 +184,7 @@ public class DivanDB extends HttpServlet
 	    					{
 	    					status=c.getNext(key, data, LockMode.DEFAULT);
 	    					}
+	    				first=false;
 	    				}
 	    			else /* not the first call */
 	    				{
@@ -196,7 +200,10 @@ public class DivanDB extends HttpServlet
 	    				if(keyVal.compareTo(endkey)>0) break;
 	    				}
 	    			++countFound;
-	    			if(startIndex!=null && startIndex<countFound) continue;
+	    			if(startIndex!=null && countFound<startIndex)
+	    				{
+	    				continue;
+	    				}
 	    			
 	    			
 	    			if(countPrinted>0) out.print(",");
@@ -205,10 +212,15 @@ public class DivanDB extends HttpServlet
 	    			}
 	    		
 	    		out.println("]");
+	    		c.close();
+	    		c=null;
 	    		txn.commit();
 	    		}
 	    	catch(Exception err)
 	    		{
+	    		err.printStackTrace();
+	    		if(c!=null) c.close();
+	    		c=null;
 	    		if(txn!=null) txn.abort();
 	    		}
 	    	finally
@@ -501,9 +513,7 @@ public class DivanDB extends HttpServlet
 				System.err.println("Illegal number of arguments.");
 				return;
 				}
-			SelectChannelConnector connector = new SelectChannelConnector();
-	        connector.setPort(port);
-	        connector.setName("main.connector");
+			
 			
 	        storage.open(bdbDir);
 	        ServletContextHandler context = new ServletContextHandler();
@@ -516,12 +526,11 @@ public class DivanDB extends HttpServlet
 	        context.setContextPath("/divandb");
 	        context.setResourceBase(".");
 
-	        /* creat enew server */
-			Server server = new Server();
+	        /* create a new server */
+			Server server = new Server(port);
 			/* context */
 			server.setHandler(context);
-			/* connector */
-			server.setConnectors(new Connector[]{connector});
+			
 			/* start server */
 			server.start();
 			/* loop forever */
