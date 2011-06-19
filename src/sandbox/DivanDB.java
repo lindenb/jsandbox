@@ -218,17 +218,17 @@ public class DivanDB extends HttpServlet
 	    		}
 	    	catch(Exception err)
 	    		{
-	    		err.printStackTrace();
 	    		if(c!=null) c.close();
 	    		c=null;
 	    		if(txn!=null) txn.abort();
+	    		throw new ServletException(err);
 	    		}
 	    	finally
 	    		{
 	    		if(c!=null) c.close();
 	    		}
 	    	}
-	    else //and id was specified
+	    else //an id was specified
 	    	{
 	    	//fill key entry
 	    	StringBinding.stringToEntry(id, key);
