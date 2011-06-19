@@ -25,11 +25,12 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -60,6 +61,7 @@ public class DivanDB extends HttpServlet
 	{
 	private static final String STORAGE_ATTRIBUTE="divandb.storage";
 	
+	/** string compartor for ordering the keys in bdb */
 	public static class StringComparator
 		implements Comparator<byte[]>
 		{
@@ -135,7 +137,7 @@ public class DivanDB extends HttpServlet
 		PrintWriter out=null;
 		
 		
-		
+		/** no id ? we want to list everything */
 	    if(id.isEmpty())
 	    	{
 	    	int countFound=0;
@@ -166,6 +168,7 @@ public class DivanDB extends HttpServlet
 	    			{
 	    			if(limit!=null && limit>=countPrinted) break;
 	    			OperationStatus status;
+	    			/* first cursor call */ 
 	    			if(first)
 	    				{
 	    				/* search start key if any */
@@ -179,28 +182,30 @@ public class DivanDB extends HttpServlet
 	    					status=c.getNext(key, data, LockMode.DEFAULT);
 	    					}
 	    				}
-	    			else
+	    			else /* not the first call */
 	    				{
 	    				status=c.getNext(key, data, LockMode.DEFAULT);
 	    				}
+	    			/* eof met */
 	    			if(status!=OperationStatus.SUCCESS) break;
 	    		
+	    			/* check end key if any */
 	    			if(endkey!=null)
 	    				{
 	    				String keyVal=StringBinding.entryToString(key);
 	    				if(keyVal.compareTo(endkey)>0) break;
 	    				}
 	    			++countFound;
-	    			if(startIndex!=null && startIndex<countFound) break;
+	    			if(startIndex!=null && startIndex<countFound) continue;
 	    			
 	    			
-	    			if(countPrinted>0)out.print(",");
+	    			if(countPrinted>0) out.print(",");
 	    			out.print(StringBinding.entryToString(data));
 	    			countPrinted++;
 	    			}
 	    		
 	    		out.println("]");
-	    		if(txn!=null) txn.commit();
+	    		txn.commit();
 	    		}
 	    	catch(Exception err)
 	    		{
@@ -208,21 +213,24 @@ public class DivanDB extends HttpServlet
 	    		}
 	    	finally
 	    		{
-	    		
 	    		if(c!=null) c.close();
 	    		}
 	    	}
-	    else
+	    else //and id was specified
 	    	{
+	    	//fill key entry
 	    	StringBinding.stringToEntry(id, key);
+	    	//get value
 	    	if(storage.database.get(null, key, data, LockMode.DEFAULT)!=OperationStatus.SUCCESS)
 	    		{
+	    		//not found
 	    		resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
 	    		out=resp.getWriter();
 	    		out.println("null");
 	    		}
 	    	else
 	    		{
+	    		//ok, found
 	    		resp.setStatus(HttpServletResponse.SC_OK);
 	    		out=resp.getWriter();
 	    	    out.println(StringBinding.entryToString(data));
@@ -231,17 +239,19 @@ public class DivanDB extends HttpServlet
 	    out.flush();
 	    out.close();
 	    }
+	
 	@Override
 	protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException
 		{
-		List<String> ids=new ArrayList<String>();
+		Set<String> ids=new TreeSet<String>();
 		String errorMessage=null;
 		BDBStorage storage=(BDBStorage)this.getServletContext().getAttribute(STORAGE_ATTRIBUTE);
 		InputStream in=req.getInputStream();
 		Transaction txn=null;
 		try
 			{
+			//begin transaction
 			txn=storage.environment.beginTransaction(null, null);
 			String charset=req.getCharacterEncoding();
 			if(charset==null) charset="UTF-8";
@@ -265,22 +275,39 @@ public class DivanDB extends HttpServlet
 				{
 				throw new IllegalArgumentException("not an array or an object");
 				}
-			/* loop over the list */
+			/* loop over this list */
 			for(Object o2:objects)
 				{
-				if(o2==null || !(o2 instanceof Map)) throw new IllegalArgumentException("not an object "+o2);
-				Map map=(Map)o2;
-				if(!map.containsKey("id")) throw new IllegalArgumentException("id missing");
-				Object ido=map.get("id");
-				if(ido==null) throw new IllegalArgumentException("nil id");
-				String id=String.valueOf(ido);
+				if(o2==null ) throw new NullPointerException("nil object");
+				String id;
+				/* json object */
+				if(o2 instanceof Map)
+					{
+					Map map=(Map)o2;
+					if(!map.containsKey("id")) throw new IllegalArgumentException("id missing");
+					Object ido=map.get("id");
+					if(ido==null) throw new IllegalArgumentException("nil id");
+					id=String.valueOf(ido);
+					}
+				/* json string */
+				else if(o2 instanceof String)
+					{
+					id=String.class.cast(o2);
+					}
+				else
+					{
+					throw new IllegalArgumentException("not an object or a string: "+o2);
+					}
+				// fill the entry key
 				DatabaseEntry key=new DatabaseEntry();
 				StringBinding.stringToEntry(id, key);
+				//remove 
 				if(storage.database.delete(txn, key)==OperationStatus.SUCCESS)
 					{
 					ids.add(id);
 					}
 				}
+			//we're done.
 			txn.commit();
 			}
 		catch (Exception e)
@@ -292,23 +319,12 @@ public class DivanDB extends HttpServlet
 		finally
 			{
 			if(in!=null) try{ in.close();} catch(Exception err){}
-			}		
+			}
 		resp.setContentType("application/json");
 		resp.setStatus(errorMessage==null?HttpServletResponse.SC_OK:HttpServletResponse.SC_BAD_REQUEST);
 		Map<String,Object> response=new LinkedHashMap<String,Object>();
 		response.put("ok", (errorMessage==null?"true":"false"));
-		if(ids.isEmpty())
-			{
-			//response.put("id",ids);
-			}
-		else if(ids.size()==1)
-			{
-			response.put("id",ids.get(0));
-			}
-		else
-			{
-			response.put("id",ids);
-			}
+		response.put("id",ids.toArray());
 		if(errorMessage!=null) response.put("message",errorMessage);
 		PrintWriter out=resp.getWriter();
 		out.println(JSON.toString(response));
@@ -320,7 +336,7 @@ public class DivanDB extends HttpServlet
 	protected void doPut(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException
 		{
-		List<String> ids=new ArrayList<String>();
+		Set<String> ids=new TreeSet<String>();
 		DatabaseEntry key=new DatabaseEntry();
 		DatabaseEntry data=new DatabaseEntry();
 		String errorMessage=null;
@@ -332,21 +348,21 @@ public class DivanDB extends HttpServlet
 			txn=storage.environment.beginTransaction(null, null);
 			String charset=req.getCharacterEncoding();
 			if(charset==null) charset="UTF-8";
-			Object o=JSON.parse(new InputStreamReader(in,charset));
-			if(o==null ) throw new IllegalArgumentException("nil object");
+			Object json = JSON.parse(new InputStreamReader(in,charset));
+			if(json==null ) throw new IllegalArgumentException("nil object");
 			List objects;
-			if(o.getClass().isArray())
+			if(json.getClass().isArray())
 				{
-				objects=Arrays.asList((Object[])o);
+				objects=Arrays.asList((Object[])json);
 				}
-			else if(o instanceof Map)
+			else if(json instanceof Map)
 				{
 				objects=new ArrayList();
-				objects.add(o);
+				objects.add(json);
 				}
-			else if(o instanceof List)
+			else if(json instanceof List)
 				{
-				objects=(List)o;
+				objects=(List)json;
 				}
 			else
 				{
@@ -414,18 +430,7 @@ public class DivanDB extends HttpServlet
 		resp.setStatus(errorMessage==null?HttpServletResponse.SC_CREATED:HttpServletResponse.SC_BAD_REQUEST);
 		Map<String,Object> response=new LinkedHashMap<String,Object>();
 		response.put("ok", (errorMessage==null?"true":"false"));
-		if(ids.isEmpty())
-			{
-			//response.put("id",ids);
-			}
-		else if(ids.size()==1)
-			{
-			response.put("id",ids.get(0));
-			}
-		else
-			{
-			response.put("id",ids);
-			}
+		response.put("id",ids.toArray());
 		if(errorMessage!=null) response.put("message",errorMessage);
 		PrintWriter out=resp.getWriter();
 		out.println(JSON.toString(response));
@@ -436,7 +441,6 @@ public class DivanDB extends HttpServlet
 	
 	public static void main(String[] args)
 		{
-		
 		File bdbDir=new File(System.getProperty("java.io.tmpdir"),"bdb");
 		try
 			{
@@ -461,6 +465,7 @@ public class DivanDB extends HttpServlet
 				   args[optind].equals("-help") ||
 				   args[optind].equals("--help"))
 					{
+					System.err.println("Pierre Lindenbaum PhD. 2011");
 					System.err.println("Options:");
 					System.err.println(" -h help; This screen.");
 					System.err.println(" -P <port> default:"+port);
@@ -491,7 +496,11 @@ public class DivanDB extends HttpServlet
 					}
 				++optind;
 				}
-			
+			if(args.length!=optind)
+				{
+				System.err.println("Illegal number of arguments.");
+				return;
+				}
 			SelectChannelConnector connector = new SelectChannelConnector();
 	        connector.setPort(port);
 	        connector.setName("main.connector");
