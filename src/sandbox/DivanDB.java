@@ -6,7 +6,7 @@
  * Contact:
  * 	plindenbaum@yahoo.fr
  * Reference:
- *   
+ *   http://plindenbaum.blogspot.com/2011/06/couchdb-like-application-using-apache.html
  * WWW:
  * 	http://plindenbaum.blogspot.com
  * Motivation:
