@@ -97,7 +97,6 @@ public class GimpClient
 	
 	public static void main(String[] args)
 		{
-		args=new String[]{"/home/lindenb/jeter.gmp"};
 		try {
 			GimpClient app=new GimpClient();
 			String script=null;
@@ -106,7 +105,7 @@ public class GimpClient
 				{
 				if(args[optind].equals("-h"))
 					{
-					System.out.println("Pierre Lindenbaum.");
+					System.out.println("GimpClient. Author:Pierre Lindenbaum PhD.");
 					System.out.println("Options:");
 					System.out.println("  -H <host> default:"+app.host);
 					System.out.println("  -P <port> default:"+app.port);

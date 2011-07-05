@@ -12,9 +12,9 @@
  * Motivation:
  * 		crypt XML
  * Compilation:
- *        cd jsandbox; ant xmlcypher
+ *        cd jsandbox; ant xmlcipher
  * Usage:
- *        java -jar dist/xmlcypher.jar
+ *        java -jar dist/xmlcipher.jar [options] (stdin|file|uri)
  */
 package sandbox;
 

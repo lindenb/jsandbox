@@ -1,0 +1,997 @@
+
+options {
+STATIC=false;
+}
+
+
+PARSER_BEGIN(JSONQuery)
+
+
+package sandbox;
+/**
+ * Author Pierre Lindenbaum
+ */
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.Reader;
+import java.util.zip.GZIPInputStream;
+import java.io.PrintStream;
+import java.io.StringReader;
+import java.math.BigDecimal;
+import java.net.URL;
+import java.util.Iterator;
+import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+
+
+
+/**
+ *
+ * JSONQuery
+ *
+ */
+@SuppressWarnings("unchecked")
+public class JSONQuery
+	{
+	/** node type */
+	private static enum NodeType {NIL,BOOL,NUMBER,STRING,ARRAY,OBJECT};
+	
+	
+	
+	
+	/** node */
+	static abstract class Node
+		implements Comparable<Node>
+		{
+		protected Node() {}
+		public abstract NodeType getNodeType();
+		public abstract void print(PrintStream out);
+		protected String quote(String s)
+			{
+			StringBuilder b=new StringBuilder("\"");
+			for(int i=0;i< s.length();++i)
+				{
+				switch(s.charAt(i))
+					{
+					case '\n': b.append("\\n"); break;
+					case '\r': b.append("\\r"); break;
+					case '\t': b.append("\\t"); break;
+					case '\\': b.append("\\\\"); break;
+					case '\'': b.append("\\\'"); break;
+					case '\"': b.append("\\\""); break;
+					default: b.append(s.charAt(i)); break;
+					}
+				}
+			b.append("\"");
+			return b.toString();
+			}
+		@Override
+		public abstract int compareTo(Node node);
+		@Override
+		public abstract int hashCode();
+		public boolean equals(Object obj)
+				{
+				if(obj==this) return true;
+				if(obj==null || obj.getClass()!=this.getClass()) return false;
+				return compareTo(Node.class.cast(obj))==0;
+				};
+		
+		public NilNode asNilNode() { return NilNode.class.cast(this);}
+		public BooleanNode asBooleanNode() { return BooleanNode.class.cast(this);}
+		public NumberNode asNumberNode() { return NumberNode.class.cast(this);}
+		public StringNode asStringNode() { return StringNode.class.cast(this);}
+		public ArrayNode asArrayNode() { return ArrayNode.class.cast(this);}
+		public ObjectNode asObjectNode() { return ObjectNode.class.cast(this);}
+		public boolean isA(NodeType t) { return getNodeType()==t;}
+		public boolean isNilNode() { return isA(NodeType.NIL);}
+		public boolean isBooleanNode() { return isA(NodeType.BOOL);}
+		public boolean isNumberNode() { return isA(NodeType.NUMBER);}
+		public boolean isStringNode() { return isA(NodeType.STRING);}
+		public boolean isArrayNode() { return isA(NodeType.ARRAY);}
+		public boolean isObjectNode() { return isA(NodeType.OBJECT);}
+		
+		@Override
+		public String toString()
+				{
+				ByteArrayOutputStream sw=new ByteArrayOutputStream();
+				PrintStream pw=new PrintStream(sw);
+				print(pw);
+				pw.flush();
+				return new String(sw.toByteArray());
+				}
+		}
+	
+	/** nil */
+	static class NilNode extends Node
+		{
+		public NilNode() {}
+		@Override
+		public NodeType getNodeType()
+			{
+			return NodeType.NIL;
+			}
+		
+		@Override
+		public int hashCode()
+			{
+			return -1;
+			}
+		
+		@Override
+		public void print(PrintStream out)
+			{
+			out.print("null");
+			}
+		@Override
+		public int compareTo(Node node)
+			{
+			if(!isA(node.getNodeType()))
+				{
+				return this.getNodeType().compareTo(node.getNodeType());
+				}
+			return 0;
+			}
+		}
+	
+	/** boolean */
+	static class BooleanNode extends Node
+		{
+		private boolean value;
+		public BooleanNode(boolean value)
+			{
+			this.value=value;
+			}
+		
+		@Override
+		public int hashCode()
+			{
+			return value?1:0;
+			}
+		
+		@Override
+		public NodeType getNodeType()
+			{
+			return NodeType.BOOL;
+			}
+		@Override
+		public void print(PrintStream out)
+			{
+			out.print(this.value);
+			}
+		@Override
+		public int compareTo(Node node)
+			{
+			if(!isA(node.getNodeType()))
+				{
+				return this.getNodeType().compareTo(node.getNodeType());
+				}
+			BooleanNode other=BooleanNode.class.cast(node);
+			return (value?1:0)-(other.value?1:0);
+			}
+		}
+	
+	
+	/** number */
+	static class NumberNode extends Node
+		{
+		private String literal;
+		private BigDecimal value;
+		public NumberNode(String literal )
+			{
+			this.literal=literal;
+			this.value=new BigDecimal(literal);
+			}
+		
+		@Override
+		public int hashCode()
+			{
+			return value.hashCode();
+			}
+		
+		@Override
+		public NodeType getNodeType()
+			{
+			return NodeType.NUMBER;
+			}
+		
+		public void print(PrintStream out)
+			{
+			out.print(this.literal);
+			}
+		
+		@Override
+		public int compareTo(Node node)
+			{
+			if(!isA(node.getNodeType()))
+				{
+				return this.getNodeType().compareTo(node.getNodeType());
+				}
+			NumberNode other=NumberNode.class.cast(node);
+			return this.value.compareTo(other.value);
+			}
+		}
+	
+	/** String */
+	static class StringNode extends Node
+		{
+		private String value;
+		public StringNode(String value)
+			{
+			this.value=value;
+			}
+		@Override
+		public NodeType getNodeType()
+			{
+			return NodeType.STRING;
+			}
+		@Override
+		public int compareTo(Node node)
+			{
+			if(!isA(node.getNodeType()))
+				{
+				return getNodeType().compareTo(node.getNodeType());
+				}
+			StringNode other=StringNode.class.cast(node);
+			return this.value.compareTo(other.value);
+			}
+		
+		@Override
+		public int hashCode()
+			{
+			return value.hashCode();
+			}
+	
+		@Override
+		public void print(PrintStream out)
+			{
+			out.print(quote(value));
+			}
+		}
+	
+	/** Array */
+	static class ArrayNode extends Node
+		{
+		private List<Node> array=new ArrayList<Node>();
+		public ArrayNode()
+			{
+			}
+		
+		public List<Node> getArray()
+			{
+			return this.array;
+			}
+		
+		@Override
+		public int hashCode()
+			{
+			return array.hashCode();
+			}
+		
+		@Override
+		public NodeType getNodeType()
+			{
+			return NodeType.ARRAY;
+			}
+		
+		public Node get(int i)
+			{
+			return array.get(i);
+			}
+		
+		public int size()
+			{
+			return this.array.size();
+			}
+		
+		@Override
+		public int compareTo(Node node)
+			{
+			if(!isA(node.getNodeType()))
+				{
+				return getNodeType().compareTo(node.getNodeType());
+				}
+			ArrayNode other=ArrayNode.class.cast(node);
+			int i=this.array.size() - other.array.size();
+			if(i!=0) return i;
+			for(int j=0;j< this.array.size();++j)
+				{
+				i= this.array.get(j).compareTo(other.array.get(j));
+				if(i!=0) return i;
+				}
+			return 0;
+			}
+		
+		@Override
+		public void print(PrintStream out)
+			{
+			out.print('[');
+			for(int i=0;i< array.size();++i)
+				{
+				if(i>0) out.print(',');
+				array.get(i).print(out);
+				}
+			out.print(']');
+			}
+		}
+	
+	/** ObjectNode */
+	static class ObjectNode extends Node
+		{
+		private Map<String,Node> map=new LinkedHashMap<String,Node>();
+		public ObjectNode()
+			{
+			}
+		@Override
+		public NodeType getNodeType()
+			{
+			return NodeType.OBJECT;
+			}
+		public  Map<String,Node> getMap()
+			{
+			return map;
+			}
+		
+		@Override
+		public int hashCode()
+			{
+			return map.hashCode();
+			}
+		
+		public Node get(String key)
+			{
+			return map.get(key);
+			}
+		
+		public int size()
+			{
+			return map.size();
+			}
+		
+		@Override
+		public int compareTo(Node node)
+			{
+			if(!isA(node.getNodeType()))
+				{
+				return getNodeType().compareTo(node.getNodeType());
+				}
+			ObjectNode other=node.asObjectNode();
+			int i=this.size() - other.size();
+			if(i!=0) return i;
+			Iterator<String> iter=other.map.keySet().iterator();
+			for(String s:this.map.keySet())
+				{
+				String s2=iter.next();
+				i= s.compareTo(s2);
+				if(i!=0) return i;
+				i= this.map.get(s).compareTo(other.map.get(s2));
+				if(i!=0) return i;
+				}
+			return 0;
+			}
+		
+		@Override
+		public void print(PrintStream out)
+			{
+			boolean first=true;
+			out.print('{');
+			for(String key:map.keySet())
+				{
+				if(!first) out.print(',');
+				first=false;
+				out.print(quote(key));
+				out.print(':');
+				get(key).print(out);
+				}
+			out.print('}');
+			}
+		
+		private FieldMatcher compile(String fieldName,Node expr)
+			{
+			if(expr.isObjectNode())
+				{
+				ObjectNode map=expr.asObjectNode();
+				if(map.size()==1)
+					{
+					String key=map.getMap().keySet().iterator().next();
+					Node node=map.get(key);
+					if(key.equals("$eq"))
+						{
+						return new ComparatorMatcher(fieldName,node,AtomicComparator.EQ);
+						}
+					else if(key.equals("$ne"))
+						{
+						return new ComparatorMatcher(fieldName,node,AtomicComparator.NE);
+						}
+					else if(key.equals("$lt"))
+						{
+						return new ComparatorMatcher(fieldName,node,AtomicComparator.LT);
+						}
+					else if(key.equals("$le") || key.equals("$lte"))
+						{
+						return new ComparatorMatcher(fieldName,node,AtomicComparator.LE);
+						}
+					}
+				}
+			return new ComparatorMatcher(fieldName,expr,AtomicComparator.EQ);
+			}
+		
+		
+		
+		public FieldMatcher compile()
+			{
+			AndMatcher m=new AndMatcher();
+			for(String key: getMap().keySet())
+				{
+				Node node= get(key);
+				FieldMatcher fm=compile(key,node);
+				m.matchers.add(fm);
+				}
+			return m;
+			}
+		}	
+	
+	
+	
+	private static interface FieldMatcher
+		{
+		public boolean accept(final ObjectNode map);
+		}
+	
+	private static enum AtomicComparator
+		{
+		EQ,NE,LT,LE,GT,GE
+		}
+	
+	private static class ComparatorMatcher
+		implements FieldMatcher
+		{
+		private String key;
+		private Node value;
+		private AtomicComparator op;
+		ComparatorMatcher(String key,Node value,AtomicComparator op)
+			{
+			this.key=key;
+			this.value=value;
+			this.op=op;
+			}
+		
+		@Override
+		public boolean accept(final ObjectNode map)
+			{
+			Node node=map.get(this.key);
+			if(node==null || !this.value.isA(node.getNodeType()))
+				{
+				return false;
+				}
+			int i= this.value.compareTo(node);
+			switch(op)
+				{
+				case EQ: return i==0;
+				case NE: return i!=0;
+				case LT: return i<0;
+				case LE: return i<=0;
+				case GT: return i>0;
+				case GE: return i>=0;
+				default:throw new IllegalStateException();
+				}
+			}
+		}
+
+	private static class AllMatcher
+	implements FieldMatcher
+		{
+		private String key;
+		Set<Node> values;
+		
+		public boolean accept(final ObjectNode map)
+			{
+			Node node=map.get(this.key);
+			if(node==null || !node.isArrayNode()) return false;
+			return node.asArrayNode().getArray().containsAll(this.values);
+			}
+		}
+	
+	private static class InMatcher
+	implements FieldMatcher
+		{
+		private String key;
+		Set<Node> values;
+		boolean inSet=true;
+		public boolean accept(final ObjectNode map)
+			{
+			Node node=map.get(this.key);
+			if(node==null) return false;
+			return this.values.contains(node)==this.inSet;
+			}
+		}
+	
+	private static class ExistMatcher
+	implements FieldMatcher
+		{
+		private String key;
+		boolean exists=true;
+		public boolean accept(final ObjectNode map)
+			{
+			return map.getMap().containsKey(this.key)==this.exists;
+			}
+		}
+	
+	private static class SizeMatcher
+		implements FieldMatcher
+		{
+		private String key;
+		int size;
+		public boolean accept(final ObjectNode map)
+			{
+			Node n= map.get(this.key);
+			if(n==null) return false;
+			if(n.isObjectNode() && n.asObjectNode().getMap().size()==this.size) return true;
+			if(n.isArrayNode() && n.asArrayNode().getArray().size()==this.size) return true;
+			return false;
+			}
+		}
+	
+	private static class TypeMatcher
+	implements FieldMatcher
+		{
+		private String key;
+		NodeType type;
+		public boolean accept(final ObjectNode map)
+			{
+			Node n= map.get(this.key);
+			if(n==null) return false;
+			return n.isA(this.type);
+			}
+		}
+	
+	private static class RegexMatcher
+	implements FieldMatcher
+		{
+		private String key;
+		Pattern pattern;
+		public boolean accept(final ObjectNode map)
+			{
+			Node n= map.get(this.key);
+			if(n==null || !n.isStringNode()) return false;
+			return pattern.matcher(n.asStringNode().value).matches();
+			}
+		}
+	
+	private static class ElementMatchMatcher
+	implements FieldMatcher
+		{
+		private String key;
+		FieldMatcher fieldMatcher;
+		public boolean accept(final ObjectNode map)
+			{
+			Node n= map.get(this.key);
+			if(n==null || !n.isArrayNode()) return false;
+			ArrayNode array=n.asArrayNode();
+			for(int i=0;i< array.size();++i)
+				{
+				Node item=array.get(i);
+				if(!item.isObjectNode()) continue;
+				if(this.fieldMatcher.accept(item.asObjectNode())) return true;
+				}
+			return false;
+			}
+		}
+	
+	private static class NotMatcher
+	implements FieldMatcher
+		{
+		FieldMatcher fieldMatcher;
+		@Override
+		public boolean accept(final ObjectNode map)
+			{
+			return !this.fieldMatcher.accept(map);
+			}
+		}
+	
+	
+	private static class ModuloMatcher
+	implements FieldMatcher
+		{
+		private String key;
+		BigDecimal div;
+		BigDecimal rest;
+		@Override
+		public boolean accept(final ObjectNode map)
+			{
+			Node n=map.get(key);
+			if(n==null || n.getNodeType()!=NodeType.NUMBER) return false;
+			NumberNode v=n.asNumberNode();
+			BigDecimal r=v.value.remainder(this.div);
+			return r.equals(this.rest);
+			}
+		}
+	
+	private static class OrMatcher
+		implements FieldMatcher
+		{
+		List<FieldMatcher> matchers=new ArrayList<FieldMatcher>();
+		public boolean accept(final ObjectNode map)
+			{
+			for(FieldMatcher fm:this.matchers)
+				{
+				if(fm.accept(map)) return true;
+				}
+			return false;
+			}
+		}
+	
+	
+	private static class AndMatcher
+	implements FieldMatcher
+		{
+		List<FieldMatcher> matchers=new ArrayList<FieldMatcher>();
+		public boolean accept(final ObjectNode map)
+			{
+			for(FieldMatcher fm:this.matchers)
+				{
+				if(!fm.accept(map)) return false;
+				}
+			return true;
+			}
+		}
+	
+	private boolean parsingQuery;
+	
+	private JSONQuery(InputStream in,boolean parsingQuery)
+		{
+		this(in);
+		this.parsingQuery=parsingQuery;
+		}
+	
+	private JSONQuery(Reader in,boolean parsingQuery)
+		{
+		this(in);
+		this.parsingQuery=parsingQuery;
+		}
+	
+	private String unquote(String s)
+		{
+		s=s.substring(1,s.length()-1);
+		StringBuilder b=new StringBuilder(s.length());
+		int i=0;
+		while(i<s.length())
+			{
+			if(s.charAt(i)=='\\' && i+1 < s.length() )
+				{
+				switch(s.charAt(i+1))
+					{
+					case 'n': b.append("\n");++i; break;
+					case 't': b.append("\t");++i; break;
+					case 'r': b.append("\r");++i; break;
+					case '\'': b.append("\'");++i; break;
+					case '\"': b.append("\"");++i; break;
+					case '\\': b.append("\\");++i; break;
+					default:break;
+					}
+				}
+			else
+				{
+				b.append(s.charAt(i));
+				}
+			++i;
+			}
+		return b.toString();
+		}	
+		
+	/** just a test */
+	public static void main(String args[])
+		{
+		try
+		        {
+		        FieldMatcher matcher=null;
+				int optind=0;
+				while(optind< args.length)
+					{
+					if(args[optind].equals("-h") ||
+					   args[optind].equals("-help") ||
+					   args[optind].equals("--help"))
+						{
+						System.err.println("Pierre Lindenbaum PhD 2010. http://plindenbaum.blogspot.com");
+						System.err.println("Options:");
+						System.err.println(" -h help; This screen.");
+						return;
+						}
+					else if(args[optind].equals("-q"))
+						{
+						StringReader r=new StringReader(args[++optind]);
+						JSONQuery query=new JSONQuery(r,true);
+						ObjectNode map=query.object();
+						query.eof();
+						r.close();
+						matcher=map.compile();
+						}
+					else if(args[optind].equals("--"))
+						{
+						optind++;
+						break;
+						}
+					else if(args[optind].startsWith("-"))
+						{
+						System.err.println("Unknown option "+args[optind]);
+						return;
+						}
+					else 
+						{
+						break;
+						}
+					++optind;
+					}
+		        
+		        
+		        InputStream in=null;
+		        JSONQuery scanner=null;
+			    if(optind==args.length)
+			    	{
+			    	scanner=new JSONQuery(System.in,false);
+			    	}
+			    else if(optind+1!=args.length)
+			    	{
+			    	String filename=args[optind++];
+			    	if(	filename.startsWith("http://") ||
+	                    filename.startsWith("https://") ||
+	                    filename.startsWith("ftp://"))
+	                    {
+	                    in=new URL(filename).openStream();
+	                    }
+			    	else
+			    		{
+			    		in=new FileInputStream(filename);
+			    		}
+	                if(filename.toLowerCase().endsWith(".gz"))
+	                	{
+	                	in=new GZIPInputStream(in);
+	                	}
+	                scanner=new JSONQuery(in,false);
+			    	}
+			    else
+			    	{
+			    	System.err.println("Illegal Number of Arguments.");
+			    	}
+			    if(in!=null) in.close();
+			    scanner.stream(matcher);
+		        }
+		catch(Exception err)
+		        {
+		        err.printStackTrace();
+		        }
+		}
+
+}
+
+PARSER_END(JSONQuery)
+
+SKIP :
+{
+" "
+| "\t"
+| "\n"
+| "\r"
+| <"//" (~["\n"])* "\n">
+| <"/*">: INSIDE_COMMENT
+}
+
+<INSIDE_COMMENT>
+SKIP:
+{
+        <"*/">: DEFAULT
+|       <~[]>
+}
+
+
+
+TOKEN : /* LITERALS */
+{
+  <TRUE: "true">
+| <FALSE: "false">
+| <NULL: "null">
+| <#LETTER: ["_","a"-"z","A"-"Z"] >
+| <#DIGIT: ["0"-"9"] >
+| <#SIGN: ["-","+"]>
+| <#EXPONENT: ("E"|"e") (<SIGN>)? (<DIGIT>)+ >
+| <FLOATING_NUMBER: (<DIGIT>)* "." (<DIGIT>)* (<EXPONENT>)?
+| (<DIGIT>)+ (<EXPONENT>) >
+| <INT_NUMBER: (<DIGIT>)+ >
+| <IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>|"-")* >
+| <#ESCAPE_CHAR: "\\" ["n","t","b","r","f","\\","'","\""] >
+| <SIMPLE_QUOTE_LITERAL:
+"\'"
+( (~["\'","\\","\n","\r"])
+| <ESCAPE_CHAR>
+)*
+"\'"
+>
+|
+<DOUBLE_QUOTE_LITERAL:
+"\""
+( (~["\"","\\","\n","\r"])
+| <ESCAPE_CHAR>
+)*
+"\""
+>
+| <ARRAY_OPEN: "[">
+| <ARRAY_CLOSE: "]">
+| <COMMA: ",">
+| <OBJECT_OPEN: "{">
+| <OBJECT_CLOSE: "}">
+| <PAR_OPEN: "(">
+| <PAR_CLOSE: ")">
+| <DOTDOT: ":">
+}
+
+private void stream(FieldMatcher matcher):{ObjectNode o;boolean first=true;}
+	{
+	startArray() { System.out.print("[");}
+	(o=object()	{
+				if(matcher==null || matcher.accept(o))
+						{
+						o.print(System.out); first=false;
+						}
+				}
+	(comma() o=object()
+			{
+			if(matcher==null || matcher.accept(o))
+				{
+				if(!first) System.out.print(',');
+				o.print(System.out);
+				first=false;
+				}
+			} )* )?
+	closeArray()
+	eof()  { System.out.println("]");}
+	}
+
+private Node any():
+	{Node o;}
+	{
+	(
+	o=array()
+	| o= object()
+	| o= identifier()
+	)
+	{return o;}
+	}
+
+private Node identifier():
+	{
+	Token t;
+	String s;
+	Boolean b;
+	Object o;
+	}
+	{
+	(
+	t=<FLOATING_NUMBER>
+		{
+		return new NumberNode(t.image);
+		}
+	| t=<INT_NUMBER>
+		{
+		return new NumberNode(t.image);
+		}
+	| <TRUE> { return new BooleanNode(true);}
+	| <FALSE> { return new BooleanNode(false);}
+	| <NULL> { return new NilNode(); }
+	| s=text() { return new StringNode(s);}
+	)
+	}
+
+private String text():{Token t;}
+	{
+	(
+	t=<SIMPLE_QUOTE_LITERAL>
+		{
+		return (unquote(t.image));
+		}
+	| t=<DOUBLE_QUOTE_LITERAL>
+		{
+		return (unquote(t.image));
+		}
+	| t=<IDENTIFIER>
+		{
+		return t.image;
+		}
+	)
+	}
+
+
+public ArrayNode array():
+	{ArrayNode vector= new ArrayNode(); Node o;}
+	{
+	startArray() ( o=any() {vector.getArray().add(o);} (comma() o=any() {vector.getArray().add(o);} ) * )? closeArray()
+		{
+		return vector;
+		}
+	}
+
+public ObjectNode object():
+	{ObjectNode map= new ObjectNode(); }
+	{
+	startObject() ( keyValue(map) (comma() keyValue(map))*)? closeObject()
+		{
+		return map;
+		}
+	}
+
+private void keyValue( ObjectNode map):
+{String k; Node v;}
+	{
+	(k=text() <DOTDOT> v=any())
+		{
+		if(map.getMap().containsKey(k)) throw new ParseException(k.toString()+" defined twice in object");
+		map.getMap().put(k,v);
+		}
+	}
+	
+/** function for streaming big object/array */
+public void startObject():{}
+	{
+	<OBJECT_OPEN>
+	}
+
+/** function for streaming big object/array */
+public void closeObject():{}
+	{
+	<OBJECT_CLOSE>
+	}
+
+/** function for streaming big object/array */
+public void startArray():{}
+	{
+	<ARRAY_OPEN>
+	}
+
+/** function for streaming big object/array */
+public void closeArray():{}
+	{
+	<ARRAY_CLOSE>
+	}
+
+/** function for streaming big object/array */
+public void comma():{}
+	{
+	<COMMA>
+	}
+
+/** function for streaming big object/array */
+public char commaOrCloseArray():{char c;}
+	{
+	( comma() {c=',';} | closeArray() { c=']';})
+		{
+		return c;
+		}
+	}
+
+/** function for streaming big object/array */
+public char commaOrCloseObject():{char c;}
+	{
+	( comma() {c=',';} | closeObject() { c='}';})
+		{
+		return c;
+		}
+	}
+/** function for streaming big object/array */
+public char startObjectOrArray():{char c;}
+	{
+	( startArray() {c='[';} | startObject() { c='{';})
+		{
+		return c;
+		}
+	}
+
+/** go to EOF, check that there are only some blanks chars */
+public void eof():{}
+	{
+	<EOF>
+	}	
+	

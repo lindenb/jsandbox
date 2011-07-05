@@ -30,10 +30,31 @@
 </path>
 
 
-<target name="all" depends="xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
+<target name="all" depends="jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
 </target>
 
+
+
+<target name="jsonquery">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<exec executable="javacc">
+		<arg value="-OUTPUT_DIRECTORY=src/sandbox"/>
+		<arg value="src/sandbox/JSONQuery.jj"/>
+	</exec>
+	<javac srcdir="src" destdir="tmp" debug="true">
+		<include name="**/JSONQuery.java" />
+	</javac>
+	
+	<jar destfile="dist/jsonquery.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.JSONQuery"/>
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
+</target>
 
 <target name="xmlcipher">
 	<mkdir dir="dist"/>
