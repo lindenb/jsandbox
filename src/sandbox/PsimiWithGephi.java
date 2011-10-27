@@ -6,11 +6,11 @@
  * Contact:
  * 	plindenbaum@yahoo.fr
  * Reference:
- *   
+ *
  * WWW:
  * 	http://plindenbaum.blogspot.com
  * Wiki
- *  
+ *
  * Motivation:
  * 	Paint a PSI-MI graph using the GEPHI library
  * Compilation:
@@ -76,7 +76,7 @@ public class PsimiWithGephi
 	static private final Logger LOG=Logger.getLogger("gephi.psi-mi");
 	private final static String PSI_NS="net:sf:psidev:mi";
 	private File outFile=null;
-	
+
 	private void run(InputStream xmlIn)
 		throws Exception
 		{
@@ -89,7 +89,7 @@ public class PsimiWithGephi
 		f.setIgnoringElementContentWhitespace(true);
 		DocumentBuilder docBuilder= f.newDocumentBuilder();
 		Document dom=docBuilder.parse(xmlIn);
-	
+
 		XPathFactory xpathFactory=XPathFactory.newInstance();
 		XPath xpath=xpathFactory.newXPath();
 		xpath.setNamespaceContext(new NamespaceContext()
@@ -99,7 +99,7 @@ public class PsimiWithGephi
 				{
 				return Arrays.asList("p").iterator();
 				}
-			
+
 			@Override
 			public String getPrefix(String namespaceURI)
 				{
@@ -107,7 +107,7 @@ public class PsimiWithGephi
 				System.err.println("?"+namespaceURI);
 				return null;
 				}
-			
+
 			@Override
 			public String getNamespaceURI(String prefix)
 				{
@@ -116,8 +116,8 @@ public class PsimiWithGephi
 				return null;
 				}
 			});
-		
-		
+
+
 		 //Init a project - and therefore a workspace
         ProjectController pc = Lookup.getDefault().lookup(ProjectController.class);
         pc.newProject();
@@ -126,15 +126,15 @@ public class PsimiWithGephi
         GraphModel graphModel = Lookup.getDefault().lookup(GraphController.class).getModel();
         AttributeModel attributeModel = Lookup.getDefault().lookup(AttributeController.class).getModel();
         RankingController rankingController = Lookup.getDefault().lookup(RankingController.class);
-        
+
         UndirectedGraph graph = graphModel.getUndirectedGraph();
-        
+
 
         AttributeColumn xtraNodeAtt = attributeModel.getNodeTable().addColumn("ACN", AttributeType.STRING);
         AttributeColumn xtraEdgeAtt = attributeModel.getEdgeTable().addColumn("STRING.SCORE", AttributeType.STRING);
-		
-        
-        
+
+
+
         //get the XML nodes
         NodeList nodes=(NodeList)xpath.evaluate("/p:entrySet/p:entry/p:interactorList/p:interactor", dom,XPathConstants.NODESET);
 		for(int i=0;i< nodes.getLength();++i)
@@ -147,8 +147,8 @@ public class PsimiWithGephi
 			Attributes atts=nodeData.getAttributes();
 			atts.setValue(xtraNodeAtt.getIndex(), label);
 			graph.addNode(gephiNode);
-			
-		
+
+
 			}
 		nodes=(NodeList)xpath.evaluate("/p:entrySet/p:entry/p:interactionList/p:interaction", dom,XPathConstants.NODESET);
 		for(int i=0;i< nodes.getLength();++i)
@@ -164,7 +164,7 @@ public class PsimiWithGephi
 				{
 				score=Float.parseFloat(xpath.evaluate("p:confidenceList/p:confidence[1]/p:value",e));
 				}catch(Exception err){score=1f;}
-			
+
 			Edge edge = graphModel.factory().newEdge(gephiNode1,gephiNode2,score,false);
 			EdgeData edgeData=edge.getEdgeData();
 			edgeData.setColor(1f, 0.6f, 0.2f);
@@ -174,7 +174,7 @@ public class PsimiWithGephi
 			}
 	    dom=null;
 	    nodes=null;
-	    
+
 	    YifanHuLayout layout = new YifanHuLayout(null, new StepDisplacement(1f));
         layout.setGraphModel(graphModel);
         layout.resetPropertiesValues();
@@ -191,11 +191,11 @@ public class PsimiWithGephi
 
         //Rank color by Degree
         NodeRanking<?> degreeRanking = rankingController.getRankingModel().getDegreeRanking();
-       
+
         ColorTransformer<?> colorTransformer = rankingController.getObjectColorTransformer(degreeRanking);
         colorTransformer.setColors(new Color[]{Color.GRAY, Color.DARK_GRAY});
         rankingController.transform(colorTransformer);
-        
+
         //Rank size by centrality
         AttributeColumn centralityColumn = attributeModel.getNodeTable().getColumn(GraphDistance.BETWEENNESS);
         NodeRanking<?> centralityRanking = rankingController.getRankingModel().getNodeAttributeRanking(centralityColumn);
@@ -204,7 +204,7 @@ public class PsimiWithGephi
         sizeTransformer.setMaxSize(100);//max node size
         rankingController.transform(sizeTransformer);
 
-        
+
         //Preview
         PreviewModel preview = Lookup.getDefault().lookup(PreviewController.class).getModel();
         ColorizerFactory colorizerFactory = Lookup.getDefault().lookup(ColorizerFactory.class);
@@ -214,18 +214,18 @@ public class PsimiWithGephi
         preview.getNodeSupervisor().setShowNodeLabelBorders(Boolean.TRUE);
         preview.getNodeSupervisor().setNodeLabelColorizer((NodeChildColorizer) colorizerFactory.createCustomColorMode(Color.GREEN));
         preview.getUndirectedEdgeSupervisor().setColorizer((EdgeColorizer) colorizerFactory.createCustomColorMode(Color.PINK));
-        
+
         preview.getNodeSupervisor().setBaseNodeLabelFont(preview.getNodeSupervisor().getBaseNodeLabelFont().deriveFont(8));
 
-       
-        
+
+
         ExportController ec = Lookup.getDefault().lookup(ExportController.class);
         ec.exportFile(outFile);
-      
+
 		}
-	
-	
-	
+
+
+
 	public static void main(String[] args)
 		{
 		PsimiWithGephi app=null;
@@ -259,19 +259,19 @@ public class PsimiWithGephi
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
 				++optind;
 				}
-			
+
 			if(app.outFile==null)
 				{
 				System.err.println("-o fileout missing");
 				return;
 				}
-			
+
 			if(args.length==optind)
 				{
 				app.run(System.in);
@@ -298,7 +298,7 @@ public class PsimiWithGephi
 				{
 				System.err.println("Illegal number of arguments.");
 				}
-			} 
+			}
 		catch(Throwable err)
 			{
 			err.printStackTrace();

@@ -1,9 +1,9 @@
-/* 
+/*
 	aksum.java
 
 	Title:			TestJava
 	Author:			Pierre Lindenbaum
-	Description:	
+	Description:
 */
 
 //package AksumPack;
@@ -29,7 +29,7 @@ class Angle
 		sens=1;
 		setBound(0,720);
 		}
-	
+
 	public void setBound(int m, int M)
 		{
 		minimal=m;
@@ -43,10 +43,10 @@ class Angle
 	public void compute()
 		{
 		int d=pas;
-		//d= 1+(int)Math.abs((int)( (double)pas* Math.sin(  (double)(value-minimal) / ((double)(maximal-minimal))*2.0 -1.0) ) ); 
-					
-		
-		
+		//d= 1+(int)Math.abs((int)( (double)pas* Math.sin(  (double)(value-minimal) / ((double)(maximal-minimal))*2.0 -1.0) ) );
+
+
+
 		value+=d*sens;
 		if(value<minimal)
 			{
@@ -65,7 +65,7 @@ class edge
 	{
 	//private members
 		private int[] T=new int[3];
-	
+
 	//constructor
 	public edge()
 		{
@@ -88,12 +88,12 @@ class edge
 		int i;
 		for(i=0;i<3;i++){T[i]=e.T[i];}
 		}
-	
+
 	public void set(double x,double y,double z)
 		{
 		T[0]=(int)x;T[1]=(int)y;T[2]=(int)z;
 		}
-	
+
 	public void scale(double d)
 		{
 		int i;
@@ -148,7 +148,7 @@ class face
 		indexSommet[2]=C;
 		indexSommet[3]=D;
 		}
-	
+
 	public void draw(Graphics g)
 		{
 		int i;
@@ -159,24 +159,24 @@ class face
 			}
 		xpt[4]=xpt[0];
 		ypt[4]=ypt[0];
-				
+
 		g.fillPolygon(xpt,ypt,5);
 		g.setColor(Color.black);
 		g.drawPolygon(xpt,ypt,5);
-		}	
-	
+		}
+
 	public double Z()
 		{
 		double z;
 		z=( sommets[ indexSommet[0] ].distance() + sommets[ indexSommet[2] ].distance()) /2.0;
 		return(z);
 		}
-	
+
 	public boolean isFarest(face cp)
 		{
 		return( Z() > cp.Z() ?true:false);
 		}
-	
+
 	}
 
 
@@ -193,42 +193,42 @@ public class aksum extends Applet  implements Runnable
 	int[]			orderOfApparition=new int[6];
 	double 			angle=(Math.PI/2)*Math.random(),dangle=Math.PI/100;
 	long 		when;
-	
+
 	int 			d;
 	int			wait=0;
-	
+
 	double[] lesCos=new double [360],lesSin=new double[360];
 	boolean isStandalone = false;
-	
+
 	public void init()
 		{
 		try {
 			initComponents();
 
-		
-			when= System.currentTimeMillis(); 
+
+			when= System.currentTimeMillis();
 			size=this.getSize();
 			buffer=this.createImage(size.width,size.height);
 			bufferGraphics= buffer.getGraphics();
 			d=(int)((double)size.height/6.0);
-			
-			
+
+
 			FaceDuCube[0]=new face(sommets,3,0,1,4);
 			FaceDuCube[1]=new face(sommets,7,2,3,8);
 			FaceDuCube[2]=new face(sommets,8,3,4,9);
 			FaceDuCube[3]=new face(sommets,9,4,5,10);
 			FaceDuCube[4]=new face(sommets,10,5,6,11);
 			FaceDuCube[5]=new face(sommets,12,8,9,13);
-			
+
 			anglesxyz[0]=new Angle();
 			anglesxyz[1]=new Angle();
 			anglesxyz[2]=new Angle();
-		
-			
+
+
 			anglesxyz[0].setBound(0, 712);
 			anglesxyz[1].setBound(0, 712);
 			anglesxyz[2].setBound(0, 712);
-			
+
 			for(int i=0;i<360;i++)
 				{
 				lesCos[i]=Math.cos( ((double)i/180.0)*Math.PI);
@@ -247,17 +247,17 @@ public class aksum extends Applet  implements Runnable
 		Color c;
 		int i;
 		double theCos,theSin,ouverture;
-		
+
 
 		for(i=0;i<3;i++)
 			{
 			anglesxyz[i].compute();
 			}
-		
-		
+
+
 		theCos=2*d*(Math.cos(angle));
 		theSin=2*d*(Math.sin(angle));
-		
+
 		sommets[0]=new edge(-d,	d + theCos,	/*-d+*/theSin);
 		sommets[1]=new edge(d,	d + theCos,	/*-d+*/theSin);
 		sommets[2]=new edge(-d -theCos,	d,	/*-d+*/theSin);
@@ -272,20 +272,20 @@ public class aksum extends Applet  implements Runnable
 		sommets[11]=new edge(d+ theCos - 2*d*Math.cos(Math.PI-2*angle),-d,/*-d+*/theSin+2*d*Math.sin(Math.PI-2*angle));
 		sommets[12]=new edge(-d,	- d - theCos,	/*-d+*/theSin);
 		sommets[13]=new edge(d,	- d - theCos,	/*-d+*/theSin);
-		
+
 		for(i=0;i<14;i++)
 			{
 			//sommets[i].scale(angle);
 			sommets[i].rotate(lesCos, lesSin, anglesxyz[0].getValue() ,anglesxyz[1].getValue(), anglesxyz[2].getValue());
 			sommets[i].decal(size.width/2,size.height/2,10*d);
 			}
-		
+
 		//ordre d'apparition
 		for(i=0;i<6;i++)
 			{
 			orderOfApparition[i]=i;
 			}
-		
+
 		//sort
 		boolean done=false;
 		int k;
@@ -304,13 +304,13 @@ public class aksum extends Applet  implements Runnable
 					}
 				}
 			}
-		
+
 		//draw
 		bufferGraphics.setColor(Color.white);
 		bufferGraphics.fillRect(0,0,size.width,size.height);
 		bufferGraphics.setColor(Color.blue);
 		bufferGraphics.drawString("lindenb.integragen.com",5,12);
-		
+
 
 		for(i=0;i<6;i++)
 			{
@@ -319,9 +319,9 @@ public class aksum extends Applet  implements Runnable
 			bufferGraphics.setColor(bckgcolor);
 			FaceDuCube[ orderOfApparition[i] ].draw(bufferGraphics);
 			}
-	
-		now=  System.currentTimeMillis(); 
-	
+
+		now=  System.currentTimeMillis();
+
 		if(now - when > 0)
 			{
 			when=now;
@@ -339,21 +339,21 @@ public class aksum extends Applet  implements Runnable
 			}
 		g.drawImage(buffer,0,0,this);
 		}
-	
+
 	public void paint(Graphics g)
 		{
 
 		drawCube(g);
 
 		}
-	
+
 	public void update(Graphics g)
 		{
 
 		paint(g);
 
 		}
-	
+
 	public void run()
 		{
 		while(true)
@@ -361,7 +361,7 @@ public class aksum extends Applet  implements Runnable
 			repaint(0,0,size.width,size.height);
 			}
 		}
-	
+
 	public void start()
 		{
 
@@ -372,29 +372,29 @@ public class aksum extends Applet  implements Runnable
 			animator.start();
 			}
 		}
-	
+
 	public void stop()
 		{
 		please_stop=true;
 		}
-	
+
 
 
 	// Retrieve the value of an applet parameter
-	public String getParameter(String key, String def) 
+	public String getParameter(String key, String def)
 	{
 		return isStandalone ? System.getProperty(key, def) :
 			(getParameter(key) != null ? getParameter(key) : def);
 	}
 
 	// Get info on the applet parameters
-	public String[][] getParameterInfo() 
+	public String[][] getParameterInfo()
 	{
 		return null;
 	}
 
 	// Get applet information
-	public String getAppletInfo() 
+	public String getAppletInfo()
 	{
 		return "Pierre Lindenbaum ©2000 lindenb@wanadoo.fr";
 	}
@@ -405,9 +405,9 @@ public class aksum extends Applet  implements Runnable
 
 
 	}
-	
+
 	// Main entry point when running standalone
-	public static void main(String[] args) 
+	public static void main(String[] args)
 	{
 
 		aksum applet = new aksum();

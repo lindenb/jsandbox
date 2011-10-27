@@ -37,7 +37,7 @@ import javax.xml.stream.XMLStreamWriter;
 
 public class MyWordle
 	{
-	
+
 	public static class Word
 		{
 		private String fontFamily=null;
@@ -50,85 +50,85 @@ public class MyWordle
 		private float lineHeight=1.0f;
 		private String title=null;
 		private String url=null;
-		
-		
+
+
 		public Word(String text,int weight)
 			{
 			this.text=text;
 			this.weight=weight;
 			if(this.weight<=0) throw new IllegalArgumentException("bad weight "+weight);
 			}
-		
+
 		public String getText()
 			{
 			return text;
 			}
-		
+
 		public int getWeight()
 			{
 			return weight;
 			}
-		
+
 		public void setFontFamily(String fontFamily)
 			{
 			this.fontFamily = fontFamily;
 			}
-		
+
 		public String getFontFamily()
 			{
 			return fontFamily;
 			}
-		
+
 		public void setFill(Color fill)
 			{
 			this.fill = fill;
 			}
-		
+
 		public Color getFill()
 			{
 			return fill;
 			}
-		
+
 		public void setStroke(Color stroke)
 			{
 			this.stroke = stroke;
 			}
-		
+
 		public Color getStroke()
 			{
 			return stroke;
 			}
-		
+
 		public float getLineHeight()
 			{
 			return lineHeight;
 			}
-		
+
 		public void setLineHeight(float lineHeight)
 			{
 			this.lineHeight = lineHeight;
 			}
-		
+
 		public void setTitle(String title)
 			{
 			this.title = title;
 			}
-		
+
 		public String getTitle()
 			{
 			return title;
 			}
-		
+
 		public void setUrl(String url)
 			{
 			this.url = url;
 			}
-		
+
 		public String getUrl()
 			{
 			return url;
 			}
-		
+
 		}
 	private int biggestSize=72;
 	private int smallestSize=10;
@@ -144,18 +144,18 @@ public class MyWordle
 	private int doSortType=-1;
 	private Integer outputWidth=null;
 	private boolean allowRotate=false;
-	
+
 	public MyWordle()
 		{
 		}
-	
-	
+
+
 	public void doLayout()
 		{
 		this.imageSize=new Rectangle2D.Double(0, 0, 0, 0);
 		if(this.words.isEmpty()) return;
 		/** sort from biggest to lowest */
-		
+
 		switch(doSortType)
 			{
 			case 1:
@@ -208,15 +208,15 @@ public class MyWordle
 			high= Math.max(high, w.getWeight());
 			low= Math.min(low, w.getWeight());
 			}
-		
-		
+
+
 		/* create small image */
 		BufferedImage img=new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
 	    /* get graphics from this image */
 		Graphics2D g=Graphics2D.class.cast(img.getGraphics());
 	    FontRenderContext frc = g.getFontRenderContext();
-	    
-	    
+
+
 		for(Word w:this.words)
 			{
 			String ff=w.getFontFamily();
@@ -239,14 +239,14 @@ public class MyWordle
 			w.bounds=w.shape.getBounds2D();
 			}
 		g.dispose();
-		
+
 		//first point
 		Point2D.Double center=new Point2D.Double(0,0);
-		
+
 		for(int i=1;i< this.words.size();++i)
 			{
 			Word current=this.words.get(i);
-			
+
 			//calculate current center
 			center.x=0;
 			center.y=0;
@@ -260,18 +260,18 @@ public class MyWordle
 				}
 			center.x/=(totalWeight);
 			center.y/=(totalWeight);
-			
+
 			//TODO
 			Shape shaveH=current.shape;
 			Rectangle2D bounds=current.bounds;
-			
-			
-			
+
+
+
 			boolean done=false;
 			double radius=0.5*Math.min(
 					first.bounds.getWidth(),
 					first.bounds.getHeight());
-			
+
 			while(!done)
 				{
 				System.err.println(""+i+"/"+words.size()+" rad:"+radius);
@@ -287,7 +287,7 @@ public class MyWordle
 					if(prev_x==cx && prev_y==cy) continue;
 					prev_x=cx;
 					prev_y=cy;
-					
+
 					AffineTransform moveTo=AffineTransform.getTranslateInstance(cx,cy);
 					Shape candidate=moveTo.createTransformedShape(current.shape);
 					Area area1=null;
@@ -335,7 +335,7 @@ public class MyWordle
 				radius+=this.dRadius;
 				}
 			}
-		
+
 		double minx=Integer.MAX_VALUE;
 		double miny=Integer.MAX_VALUE;
 		double maxx=-Integer.MAX_VALUE;
@@ -355,8 +355,8 @@ public class MyWordle
 			}
 		this.imageSize=new Rectangle2D.Double(0,0,maxx-minx,maxy-miny);
 		}
-	
-	
+
+
 	private void random()
 		{
 		for(int i=0;i< 500;++i)
@@ -377,24 +377,24 @@ public class MyWordle
 			w.setLineHeight(1+2*rand.nextFloat());
 			w.setFontFamily(rand.nextBoolean()?"Helvetica":"Courier");
 			words.add(w);
-			
+
 			}
 		}
-	
+
 	public void add(Word word)
 		{
 		this.words.add(word);
 		}
-	
+
 	public void saveAsPNG(File file)
 		throws IOException
 		{
 		AffineTransform scale=new AffineTransform();
 		Dimension dim=new Dimension(
 			(int)this.imageSize.getWidth(),
-			(int)this.imageSize.getHeight()	
+			(int)this.imageSize.getHeight()
 			);
-		
+
 		if(this.outputWidth!=null)
 			{
 			double ratio=this.outputWidth/dim.getWidth();
@@ -402,13 +402,13 @@ public class MyWordle
 			dim.height=(int)(dim.getHeight()*ratio);
 			scale=AffineTransform.getScaleInstance(ratio, ratio);
 			}
-		
+
 		BufferedImage img=new BufferedImage(
 			dim.width,
 			dim.height,
 			BufferedImage.TYPE_INT_ARGB
 			);
-		
+
 		Graphics2D g=(Graphics2D)img.getGraphics();
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setTransform(scale);
@@ -421,7 +421,7 @@ public class MyWordle
 				g.setColor(c);
 				g.fill(w.shape);
 				}
-			
+
 			c=w.getStroke();
 			if(c==null) c=this.stroke;
 			if(c!=null)
@@ -437,11 +437,11 @@ public class MyWordle
 				g.setStroke(old);
 				}
 			}
-		
+
 		g.dispose();
 		ImageIO.write(img, "png", file);
 		}
-	
+
 	public void saveAsSVG(File file)
 	throws IOException,XMLStreamException
 		{
@@ -459,7 +459,7 @@ public class MyWordle
 		w.writeStartElement("svg","title",SVG);
 		w.writeCharacters("made with MyWordle (c) Pierre Lindenbaum");
 		w.writeEndElement();
-		
+
 		for(Word word:this.words)
 			{
 
@@ -468,15 +468,15 @@ public class MyWordle
 				w.writeStartElement("svg","a",SVG);
 				w.writeAttribute("xlink",XLINK,"href",word.getUrl());
 				}
-			
+
 			w.writeEmptyElement("svg","path",SVG);
-			
-			
+
+
 			if(word.getTitle()!=null)
 				{
 				w.writeAttribute("title", word.getTitle());
 				}
-			
+
 			String style="";
 			Color c=word.getFill();
 			if(c==null) c=this.fill;
@@ -534,39 +534,39 @@ public class MyWordle
 				pathiterator.next();
 				}
 			w.writeAttribute("d", path.toString());
-			
-		
+
+
 			if(word.getUrl()!=null)
 				{
 				w.writeEndElement();
 				}
 			}
-		
-		
+
+
 		w.writeEndDocument();
 		w.flush();
 		w.close();
 		fout.flush();
 		fout.close();
 		}
-	
+
 	public void saveAsPostscript(File file)
 	throws IOException
 		{
-		
+
 		PrintWriter out= new PrintWriter(file);
 		out.println("%!PS-Adobe-2.0");
 		out.println("%%%BoundingBox: 0 0 "+(int)this.imageSize.getWidth()+" "+(int)this.imageSize.getHeight());
 		out.println("%%EndComments");
 
-		
+
 		for(Word word:this.words)
 			{
-			
+
 			out.print(""+word.getLineHeight()+" setlinewidth");
-			
+
 			out.print(" newpath");
-			
+
 			double mPenX=0;
 			double mPenY=0;
 			StringBuilder path=new StringBuilder();
@@ -642,7 +642,7 @@ public class MyWordle
 					}
 				pathiterator.next();
 				}
-			
+
 			if(word.getFill()!=null)
 				{
 				Color c=word.getStroke();
@@ -654,7 +654,7 @@ public class MyWordle
 				out.print(' ');
 				out.print(" setrgbcolor fill");
 				}
-			
+
 			if(word.getStroke()!=null)
 				{
 				Color c=word.getStroke();
@@ -667,53 +667,53 @@ public class MyWordle
 				out.print(" setrgbcolor stroke");
 				}
 			}
-		
+
 		out.println(" showpage");
 		out.flush();
 		out.close();
 		}
-	
 
 
 
-	
-	
+
+
+
 	private static String toRGB(Color c)
 		{
 		return "rgb("+c.getRed()+","+c.getGreen()+","+c.getBlue()+")";
 		}
-	
-	
+
+
 	public void setAllowRotate(boolean allowRotate)
 		{
 		this.allowRotate = allowRotate;
 		}
-	
+
 	public void setBiggestSize(int biggestSize)
 		{
 		this.biggestSize = biggestSize;
 		}
-	
+
 	public void setSmallestSize(int smallestSize)
 		{
 		this.smallestSize = smallestSize;
 		}
-	
+
 	public void setSortType(int doSortType)
 		{
 		this.doSortType = doSortType;
 		}
-	
+
 	public void setUseArea(boolean useArea)
 		{
 		this.useArea = useArea;
 		}
-	
+
 	private void read(BufferedReader in)throws IOException
 		{
-		
+
 		}
-	
+
 	public static void main(String[] args)
 		{
 		try
@@ -722,7 +722,7 @@ public class MyWordle
 			String format=null;
 			File fileOut=null;
 			int optind=0;
-			
+
 			while(optind< args.length)
 				{
 				if(args[optind].equals("-h") ||
@@ -763,25 +763,25 @@ public class MyWordle
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
 				++optind;
 				}
-			
+
 			if(fileOut==null)
 				{
 				System.err.println("file missing");
 				return;
 				}
-			
+
 			if(format==null)
 				{
 				System.err.println("format missing");
 				return;
 				}
-			
+
 	      	if(optind==args.length)
 	                {
 	                app.read(new BufferedReader(new InputStreamReader(System.in)));
@@ -796,10 +796,10 @@ public class MyWordle
 	                        r.close();
 	                        }
 	                }
-			
-			
+
+
 			app.doLayout();
-			
+
 			if(fileOut.getName().toLowerCase().endsWith(".svg") || (format!=null && format.equalsIgnoreCase("svg")))
 				{
 				app.saveAsSVG(fileOut);
@@ -816,7 +816,7 @@ public class MyWordle
 				{
 				System.err.println("undefined format");
 				}
-			} 
+			}
 		catch(Throwable err)
 			{
 			err.printStackTrace();

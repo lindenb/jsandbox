@@ -90,7 +90,7 @@ public class WirePeptide
 	private JPanel drawingArea;
 	/** root node */
 	private Node root;
-	
+
 	/** an amino acid */
 	private class Node
 		{
@@ -103,8 +103,8 @@ public class WirePeptide
 			{
 			return new Ellipse2D.Double(cx-RADIUS,cy-RADIUS,RADIUS*2,RADIUS*2);
 			}
-		
-		
+
+
 		private void dragPrev(double x0,double y0)
 			{
 			double d= Point2D.distance(cx, cy, x0, y0);
@@ -112,7 +112,7 @@ public class WirePeptide
 			cy=y0+(RADIUS*2)*(cy-y0)/d;
 			if(prev!=null) prev.dragPrev(cx,cy);
 			}
-		
+
 		private void dragNext(double x0,double y0)
 			{
 			double d= Point2D.distance(cx, cy, x0, y0);
@@ -120,7 +120,7 @@ public class WirePeptide
 			cy=y0+(RADIUS*2)*(cy-y0)/d;
 			if(next!=null) next.dragNext(cx,cy);
 			}
-		
+
 		void dragTo(double x,double y)
 			{
 			cx=x;
@@ -128,41 +128,41 @@ public class WirePeptide
 			if(prev!=null) prev.dragPrev(cx,cy);
 			if(next!=null) next.dragNext(cx,cy);
 			}
-		
+
 		private Color getFill()
 			{
 			return WirePeptide.this.getFill(this.aa);
 			}
-		
+
 		private Color getStroke()
 			{
 			return  WirePeptide.this.getStroke(this.aa);
 			}
-		
-		
-		
+
+
+
 		private void paint(Graphics2D g)
 			{
 			Stroke old=g.getStroke();
 			Shape s=getShape();
-			
+
 			g.setColor(getFill());
 			g.fill(s);
-			
+
 			g.setStroke(new BasicStroke(this==selected?3f:1f));
-			
+
 			g.setColor(getStroke());
 			g.draw(s);
-			
+
 			g.drawString(String.valueOf(this.aa), (int)cx-RADIUS/4, (int)cy+RADIUS/4);
 			g.setStroke(old);
 			}
 		}
 
-	
 
-	
-	
+
+
+
 	private WirePeptide(String peptide)
 		{
 		super("WirePeptide : Pierre Lindenbaum.");
@@ -218,7 +218,7 @@ public class WirePeptide
 						selected.cx+e.getX()-prevMouse.getX(),
 						selected.cy+e.getY()-prevMouse.getY()
 						);
-					
+
 					}
 				prevMouse=new Point(e.getX(),e.getY());
 				drawingArea.repaint();
@@ -227,7 +227,7 @@ public class WirePeptide
 		this.drawingArea.addMouseListener(m);
 		this.drawingArea.addMouseMotionListener(m);
 		setContentPane(main);
-		
+
 		List<Node> nodes=new ArrayList<Node>();
 		for(int i=0;i< peptide.length();++i)
 			{
@@ -253,7 +253,7 @@ public class WirePeptide
 			public void actionPerformed(ActionEvent e)
 				{
 				askPeptide(WirePeptide.this.drawingArea);
-				}	
+				}
 			});
 		menu.add(new AbstractAction("Save as PNG...")
 			{
@@ -272,14 +272,14 @@ public class WirePeptide
 					}
 				try {
 					toPNG(sel);
-					} 
+					}
 				catch (Exception e2)
 					{
 					JOptionPane.showMessageDialog(WirePeptide.this, e2.getMessage());
 					}
 				}
 			});
-		
+
 		menu.add(new AbstractAction("Save as Canvas...")
 			{
 			@Override
@@ -300,14 +300,14 @@ public class WirePeptide
 					toCanvas(p);
 					p.flush();
 					p.close();
-					} 
+					}
 				catch (Exception e2)
 					{
 					JOptionPane.showMessageDialog(WirePeptide.this, e2.getMessage());
 					}
 				}
 			});
-		
+
 		menu.add(new AbstractAction("Save as SVG...")
 			{
 			@Override
@@ -328,14 +328,14 @@ public class WirePeptide
 					toSVG(p);
 					p.flush();
 					p.close();
-					} 
+					}
 				catch (Exception e2)
 					{
 					JOptionPane.showMessageDialog(WirePeptide.this, e2.getMessage());
 					}
 				}
 			});
-		
+
 	    menu.add(new JSeparator());
 		menu.add(new AbstractAction("Quit")
 			{
@@ -358,7 +358,7 @@ public class WirePeptide
 					p.flush();
 					JTextArea area=new JTextArea(str.toString(), 40, 80);
 					JOptionPane.showMessageDialog(WirePeptide.this, new JScrollPane(area));
-					} 
+					}
 				catch (Exception e2)
 					{
 					JOptionPane.showMessageDialog(WirePeptide.this, e2.getMessage());
@@ -376,14 +376,14 @@ public class WirePeptide
 					p.flush();
 					JTextArea area=new JTextArea(str.toString(), 40, 80);
 					JOptionPane.showMessageDialog(WirePeptide.this, new JScrollPane(area));
-					} 
+					}
 				catch (Exception e2)
 					{
 					JOptionPane.showMessageDialog(WirePeptide.this, e2.getMessage());
 					}
 				}
 			});
-		
+
 		fillAction=new AbstractAction("Fill color...")
 			{
 			@Override
@@ -424,7 +424,7 @@ public class WirePeptide
 		strokeAction.setEnabled(false);
 		menu.add(this.fillAction);
 		menu.add(this.strokeAction);
-		
+
 		this.aa2fill.put('H', Color.BLUE);
 		this.aa2fill.put('K', Color.BLUE);
 		this.aa2fill.put('R', Color.BLUE);
@@ -450,13 +450,13 @@ public class WirePeptide
 		this.aa2fill.put('X', Color.GRAY);
 		this.aa2fill.put('-', Color.GRAY);
 		}
-	
-	
+
+
 	static private String toRgb(Color c)
 		{
 		return "rgb("+c.getRed()+","+c.getGreen()+","+c.getBlue()+")";
 		}
-	
+
 	private Color getFill(char aa)
 		{
 		Color c= aa2fill.get(aa);
@@ -469,7 +469,7 @@ public class WirePeptide
 		if(c==null) c=Color.BLACK;
 		return c;
 		}
-	
+
 	private void paintDrawingArea(Graphics2D g)
 		{
 		g.setFont(new Font("Courier",Font.PLAIN,RADIUS));
@@ -480,7 +480,7 @@ public class WirePeptide
 			n=n.next;
 			}
 		}
-	
+
 	private void toPNG(File file) throws IOException
 		{
 		int minx=Integer.MAX_VALUE;
@@ -493,10 +493,10 @@ public class WirePeptide
 			Rectangle shape=n.getShape().getBounds();
 			minx=Math.min(minx,(int)shape.getMinX());
 			miny=Math.min(miny,(int)shape.getMinY());
-			
+
 			maxx=Math.max(maxx,(int)shape.getMaxX());
 			maxy=Math.max(maxy,(int)shape.getMaxY());
-			
+
 			n=n.next;
 			}
 		minx--;
@@ -509,7 +509,7 @@ public class WirePeptide
 		paintDrawingArea(g);
 		ImageIO.write(img,"PNG",file);
 		}
-	
+
 	private void toCanvas(PrintWriter out)
 		{
 		int minx=Integer.MAX_VALUE;
@@ -522,10 +522,10 @@ public class WirePeptide
 			Rectangle shape=n.getShape().getBounds();
 			minx=Math.min(minx,(int)shape.getMinX());
 			miny=Math.min(miny,(int)shape.getMinY());
-			
+
 			maxx=Math.max(maxx,(int)shape.getMaxX());
 			maxy=Math.max(maxy,(int)shape.getMaxY());
-			
+
 			n=n.next;
 			}
 		minx--;
@@ -556,8 +556,8 @@ public class WirePeptide
 			"</html>");
 		out.flush();
 		}
-	
-	
+
+
 	private void toSVG(PrintWriter out)
 		{
 		Set<Character> aacids=new HashSet<Character>();
@@ -572,17 +572,17 @@ public class WirePeptide
 			Rectangle shape=n.getShape().getBounds();
 			minx=Math.min(minx,(int)shape.getMinX());
 			miny=Math.min(miny,(int)shape.getMinY());
-			
+
 			maxx=Math.max(maxx,(int)shape.getMaxX());
 			maxy=Math.max(maxy,(int)shape.getMaxY());
-			
+
 			n=n.next;
 			}
 		minx--;
 		maxx++;
 		miny--;
 		maxy++;
-		
+
 		out.printf("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"+
 				      "<svg "+
 				      " xmlns:svg=\"http://www.w3.org/2000/svg\" "+
@@ -622,9 +622,9 @@ public class WirePeptide
 			}
 	    out.print("</svg>\n");
 		}
-	
-	
-	
+
+
+
 	private static void askPeptide(JComponent owner)
 		{
 		Dimension dim=new Dimension(SCREEN_WIDTH,SCREEN_HEIGHT);
@@ -636,7 +636,7 @@ public class WirePeptide
 			if(peptide==null) return;
 			peptide=peptide.replaceAll("[^A-Za-z\\-]", "");
 			}
-		
+
 		try {
 			JFrame.setDefaultLookAndFeelDecorated(true);
 			final WirePeptide f=new WirePeptide(peptide);
@@ -653,15 +653,15 @@ public class WirePeptide
 					f.setVisible(true);
 				}
 				});
-			} 
+			}
 		catch (Exception e)
 			{
 			JOptionPane.showMessageDialog(owner,String.valueOf(e.getMessage()));
 			}
 		}
-	
 
-	
+
+
 	public static void main(String[] args) throws Exception
 		{
 		Dimension dim=new Dimension(SCREEN_WIDTH,SCREEN_HEIGHT);

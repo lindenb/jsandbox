@@ -12,14 +12,14 @@ import java.io.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-    
+
 @SuppressWarnings("unchecked")
 public class PojoGenerator
 {
 private static abstract class TypeDef
     {
     public String name;
-    
+
     public String getJavaName()
         {
         return name.substring(0,1).toUpperCase()+name.substring(1);
@@ -49,7 +49,7 @@ private static class CodeGenerator
 	String packageName="generated";
 	File fileout=null;
 	List<ClassDef> defs=new ArrayList<ClassDef>();
-	
+
 	/** print class */
     public void printClass(PrintWriter out,ClassDef clazz)
             {
@@ -71,12 +71,12 @@ private static class CodeGenerator
                  }
             	out.println("\tprivate java.beans.PropertyChangeSupport listener=null;");
             	}
-            	
+
             out.println("/** empty constructor */");
             out.println("public "+className+"()");
             out.println("	{");
             out.println("	}");
-            
+
             out.println("/** constructor */");
             out.print("public "+className+"(");
             for(int i=0;i< clazz.columns.size();++i)
@@ -92,7 +92,7 @@ private static class CodeGenerator
                 out.println("	this."+col.name+" = "+col.name+";");
                 }
             out.println("	}");
-            
+
             for(ColumnDef col: clazz.columns)
                     {
                     out.println("\tprivate\t"+col.type+"\t"+col.name+";");
@@ -105,7 +105,7 @@ private static class CodeGenerator
                  out.println("\t{");
                  out.println("\treturn this."+col.name+";");
                  out.println("\t}");
-                 
+
                  /** SETTER */
                  if(createInterface) out.println("@Override");
                  out.println("public void set"+col.getJavaName()+"("+col.type+" "+col.name+")");
@@ -119,11 +119,11 @@ private static class CodeGenerator
                  	{
                 	out.println("\tif(this.listener!=null) this.listener.firePropertyChange("+col.getPropertyName()+");");
                 	}
-                
+
                 }
             out.println("\t}");
             }
-    
+
 
     void printInterface(PrintWriter out,ClassDef clazz)
             {
@@ -135,10 +135,10 @@ private static class CodeGenerator
                     out.println("public void set"+col.getJavaName()+"("+col.type+" "+col.name+");");
                     out.println("public "+col.type+" get"+col.getJavaName()+"();");
                     }
-           
+
             out.println("\t}");
             }
-    
+
     public void printTupleBinding(PrintWriter out,ClassDef clazz)
         {
         out.println("package "+packageName+";");
@@ -148,15 +148,15 @@ private static class CodeGenerator
                 {
                 //col.printClass(out);
                 }
-       
+
         out.println("\t}");
         }
-	
+
 	private void run() throws Exception
 		{
 		if(fileout==null)
 			{
-			
+
 			}
 		else if(fileout.getName().toLowerCase().endsWith(".zip"))
 			{
@@ -193,14 +193,14 @@ private static class CodeGenerator
 			}
 		else if(fileout.isDirectory())
 			{
-			
+
 			}
 		else
 			{
-			
+
 			}
 		}
-	}	
+	}
 
 
 public static void main(String[] args)
@@ -240,7 +240,7 @@ public static void main(String[] args)
                 }
             ++optind;
             }
-        
+
         if(optind==args.length)
             {
             app.defs.addAll(new PojoGenerator(new InputStreamReader(System.in)).input());
@@ -256,7 +256,7 @@ public static void main(String[] args)
                 }
             }
         app.run();
-        } 
+        }
     catch (Exception e)
         {
         e.printStackTrace();

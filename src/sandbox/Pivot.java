@@ -49,7 +49,7 @@ public class Pivot
 	private Pattern delimiter=Pattern.compile("[\t]");
 	private String headers[]=null;
 	private List<Object[]> spreadsheet=new ArrayList<Object[]>();
-	
+
 	private Column aggregateColumn=null;
 	//
 	private List<Column> allColumns=new ArrayList<Pivot.Column>();
@@ -67,7 +67,7 @@ public class Pivot
 	    new AggregateSum()
 	    };
 	private Aggregate selectedAggregate=aggregates[0];
-	
+
 	private static interface Aggregate
 		{
 		public void reset();
@@ -76,7 +76,7 @@ public class Pivot
 		public void add(Object o);
 		public void write(XMLStreamWriter w) throws XMLStreamException;
 		}
-	
+
 	private static class AggregateCount implements Aggregate
 		{
 		int count=0;
@@ -110,8 +110,8 @@ public class Pivot
 			w.writeCharacters(String.valueOf(count));
 			}
 		}
-	
-	
+
+
 	private class AggregateMin implements Aggregate
 		{
 		Object value=null;
@@ -120,19 +120,19 @@ public class Pivot
 			{
 			value=null;
 			}
-	
+
 		@Override
 		public String getId()
 			{
 			return "min";
 			}
-	
+
 		@Override
 		public String getDescription()
 			{
 			return "minimum of non-null data";
 			}
-	
+
 		@Override
 		public void add(Object o)
 			{
@@ -143,14 +143,14 @@ public class Pivot
 		    	this.value=o;
 		    	}
 			}
-	
+
 		@Override
 		public void write(XMLStreamWriter w) throws XMLStreamException
 			{
 			w.writeCharacters(String.valueOf(this.value));
 			}
 		}
-	
+
 	private class AggregateMax implements Aggregate
 		{
 		Object value=null;
@@ -159,19 +159,19 @@ public class Pivot
 			{
 			value=null;
 			}
-	
+
 		@Override
 		public String getId()
 			{
 			return "max";
 			}
-	
+
 		@Override
 		public String getDescription()
 			{
 			return "maximum of non-null data";
 			}
-	
+
 		@Override
 		public void add(Object o)
 			{
@@ -182,15 +182,15 @@ public class Pivot
 		    	this.value=o;
 		    	}
 			}
-	
+
 		@Override
 		public void write(XMLStreamWriter w) throws XMLStreamException
 			{
 			w.writeCharacters(String.valueOf(this.value));
 			}
 		}
-	
-	
+
+
 	private class AggregateDistinct implements Aggregate
 		{
 		Set<Object> value=null;
@@ -199,26 +199,26 @@ public class Pivot
 			{
 			value=new TreeSet<Object>(aggregateColumn.comparator);
 			}
-	
+
 		@Override
 		public String getId()
 			{
 			return "distinct";
 			}
-	
+
 		@Override
 		public String getDescription()
 			{
 			return "distinct non-null data";
 			}
-	
+
 		@Override
 		public void add(Object o)
 			{
 		    if(o==null) return;
 		    this.value.add(o);
 			}
-	
+
 		@Override
 		public void write(XMLStreamWriter w) throws XMLStreamException
 			{
@@ -233,7 +233,7 @@ public class Pivot
 			w.writeEndElement();
 			}
 		}
-	
+
 	private class AggregateDistinctCount implements Aggregate
 		{
 		Set<Object> value=null;
@@ -242,33 +242,33 @@ public class Pivot
 			{
 			value=new TreeSet<Object>(aggregateColumn.comparator);
 			}
-	
+
 		@Override
 		public String getId()
 			{
 			return "count-distinct";
 			}
-	
+
 		@Override
 		public String getDescription()
 			{
 			return "count distinct non-null data";
 			}
-	
+
 		@Override
 		public void add(Object o)
 			{
 		    if(o==null) return;
 		    this.value.add(o);
 			}
-	
+
 		@Override
 		public void write(XMLStreamWriter w) throws XMLStreamException
 			{
-			w.writeCharacters(String.valueOf(this.value.size()));	
+			w.writeCharacters(String.valueOf(this.value.size()));
 			}
 		}
-	
+
 	private class AggregateSum implements Aggregate
 		{
 		BigDecimal value=null;
@@ -277,44 +277,44 @@ public class Pivot
 			{
 			value= new BigDecimal(0);
 			}
-	
+
 		@Override
 		public String getId()
 			{
 			return "sum";
 			}
-	
+
 		@Override
 		public String getDescription()
 			{
 			return "sum of numeric data";
 			}
-	
+
 		@Override
 		public void add(Object o)
 			{
 		    if(o==null || !(o instanceof Number)) return;
 		    this.value= this.value.add(new BigDecimal(Number.class.cast(o).doubleValue()));
 			}
-	
+
 		@Override
 		public void write(XMLStreamWriter w) throws XMLStreamException
 			{
-			w.writeCharacters(String.valueOf(this.value));	
+			w.writeCharacters(String.valueOf(this.value));
 			}
 		}
-	
-	
+
+
 	private static interface StringParser
 		{
 		public Object parse(String s);
 		}
-	
+
 	private class Column
 		{
 		int index=-1;
 		StringParser parser;
-		
+
 		Comparator comparator;
 		public String getLabel()
 			{
@@ -326,26 +326,26 @@ public class Pivot
 			return this.index;
 			}
 		}
-	
+
 	private class Token
 		implements Comparable<Token>
 		{
 		private int nLine=0;
 		private List<Column> columns;
-		
+
 		Token(int nLine,List<Column> columns)
 			{
 			this.nLine=nLine;
 			this.columns=columns;
 			}
-		
+
 		private Object get(Column c)
 			{
 			return getValueAt(this.nLine,c.getIndex());
 			}
-		
-		
-		
+
+
+
 		@Override
 		public int compareTo(Token o)
 				{
@@ -383,13 +383,13 @@ public class Pivot
 			return b.toString();
 			}
 		}
-	
+
 	private Object getValueAt(int rowIndex,int colIndex)
 		{
 		Object[] l=spreadsheet.get(rowIndex);
 		return (colIndex>=l.length  ? null : l[colIndex]);
 		}
-	
+
 	private List<Column> parseColumns(String s)
 		{
 		 List<Column> array=new ArrayList<Column>();
@@ -401,7 +401,7 @@ public class Pivot
 		 if(array.isEmpty()) throw new IllegalArgumentException("bad columns definitions: "+s);
 		 return array;
 		}
-	
+
 	private Column defaultColumn(int index0)
 		{
 		Column column=new Column();
@@ -424,7 +424,7 @@ public class Pivot
 			};
 		return column;
 		}
-	
+
 	private Column parseColumn(String s)
 		{
 		Column column=new Column();
@@ -440,7 +440,7 @@ public class Pivot
 		s=s.substring(i);
 		if(s.equals("i"))
 			{
-			
+
 			column.parser=new StringParser()
 				{
 				@Override
@@ -521,7 +521,7 @@ public class Pivot
 			}
 		return column;
 		}
-	
+
 	private boolean isNil(String s)
 		{
 		return 	s.isEmpty() ||
@@ -531,7 +531,7 @@ public class Pivot
 				s.equalsIgnoreCase("NA")
 				;
 		}
-	
+
 	private void readTable(BufferedReader in) throws IOException
 		{
 		if(firstRowIsHeader)
@@ -568,7 +568,7 @@ public class Pivot
 				this.leftTokens.put(token,lines);
 				}
 			lines.add(this.spreadsheet.size()-1);
-			
+
 			if(!topColumns.isEmpty())
 				{
 				token =new Token(this.spreadsheet.size()-1,topColumns);
@@ -580,7 +580,7 @@ public class Pivot
 					}
 				lines.add(this.spreadsheet.size()-1);
 				}
-			
+
 			}
 		}
 	private void aggregate(XMLStreamWriter out,Token left,Token top)
@@ -634,22 +634,22 @@ public class Pivot
 		this.selectedAggregate.write(out);
 		this.selectedAggregate.reset();
 		}
-	
-	
-	
+
+
+
 	private void printHTML(XMLStreamWriter out) throws XMLStreamException
 	    {
 		out.writeStartElement("html");
 		out.writeAttribute("xmlns","http://www.w3.org/1999/xhtml");
 		out.writeStartElement("head");
-		
+
 		out.writeStartElement("title");
 		out.writeCharacters("Pivot");
 		out.writeEndElement();
-		
-		
-		
-		
+
+
+
+
 		if(htmlStylsheet!=null)
 			{
 			out.writeStartElement("link");
@@ -683,27 +683,27 @@ public class Pivot
 					"\t}");
 			out.writeEndElement();//style
 			}
-		
-		
+
+
 		out.writeEndElement();//head
-	   
+
 		out.writeStartElement("body");
 		out.writeStartElement("table");
 		out.writeAttribute("class", "pivot-table");
 		out.writeStartElement("thead");
-		
-		
+
+
 	    /**********************************************
 	     *
 	     * Titles TOP
 	     *
 	     **********************************************/
-	
-	   
-	    
-	   
-	   
-	   
+
+
+
+
+
+
 	    for(int x=0;x< topColumns.size();++x)
 	        {
 	        Column topColumn = topColumns.get(x);
@@ -713,14 +713,14 @@ public class Pivot
 	            {
 	            out.writeEmptyElement("th");
 	            }
-	
+
 	        out.writeStartElement("th");
 	        out.writeAttribute("class", "top-label");
 	        out.writeCharacters(topColumn.getLabel());
 	        out.writeEndElement();//th
-	        
-	        
-	        
+
+
+
 	       for(Token topT: this.topTokens.keySet())
 	            {
 	            out.writeStartElement("th");
@@ -728,17 +728,17 @@ public class Pivot
 		        out.writeCharacters(String.valueOf(topT.get(topColumn)));
 		        out.writeEndElement();//th
 	            }
-	       
+
 	        out.writeEmptyElement("th");//add an extra column will be used for 'Total' on the right, fill with col name
 	        out.writeEndElement();//TR
 	        }
-	    
-	    
+
+
 	    /**********************************************
 	     *
 	     * add one extra line that will contains left header labels
 	     *
-	     **********************************************/    
+	     **********************************************/
 	    out.writeStartElement("tr");
 	    for(Column leftC: leftColumns)
 	        {
@@ -747,9 +747,9 @@ public class Pivot
 	        out.writeCharacters(leftC.getLabel());
 	        out.writeEndElement();
 	        }
-	   
+
 	    out.writeEmptyElement("th");
-	    
+
 	    for(long i=0;i< topTokens.size();++i)
 	        {
 	        out.writeStartElement("th");
@@ -766,15 +766,15 @@ public class Pivot
 			}
 	    out.writeEndElement();//tr
 	    out.writeEndElement();//thead
-	    
+
 	    out.writeStartElement("tbody");
-	    
+
 	    //loop over the distinct rows
 	    int nRows=0;
 	    for(Token leftToken:this.leftTokens.keySet())
 	        {
 	    	out.writeStartElement("tr");
-	       
+
 	        for(Column leftColumn:this.leftColumns)
 	            {
 	            out.writeStartElement("th");
@@ -786,25 +786,25 @@ public class Pivot
 	        out.writeAttribute("class", "left-row");
 	        out.writeCharacters(String.valueOf(++nRows));
 	        out.writeEndElement();//th
-	       
+
 	        for(Token topToken:this.topTokens.keySet())
 	            {
 	            out.writeStartElement("td");
 	            aggregate(out,leftToken,topToken);
 	            out.writeEndElement();//td
 	            }
-		        
+
 	        if(this.print_horizontal_total)
 		        {
 		        out.writeStartElement("td");
 	            aggregate(out,leftToken,null);
 	            out.writeEndElement();//td
 		        }
-		        
+
 		    out.writeEndElement();//tr
 	        }
 	    out.writeEndElement();//tbody
-	    
+
 	    //bottom total
 	    if(this.print_vertical_total)
 		    {
@@ -817,24 +817,24 @@ public class Pivot
 	        out.writeStartElement("th");
 	        out.writeCharacters("Total");
 	        out.writeEndElement();//th
-	        
+
 	        for(Token topToken: this.topTokens.keySet())
 	        	{
 	        	out.writeStartElement("td");
 	        	aggregate(out,null,topToken);
 	            out.writeEndElement();//td
 	            }
-	        
+
 	        out.writeStartElement("td");
 	        aggregate(out,null,null);
 	        out.writeEndElement();
-	        
+
 	        out.writeEndElement();//tr
 	        out.writeEndElement();//tfoot
 		    }
-	    
-	   
-	    
+
+
+
 	    out.writeEndElement();//table
 	    out.writeEndElement();//body
 	    out.writeEndElement();//html
@@ -848,7 +848,7 @@ public class Pivot
 		index--;
 		return index;
 		}
-	
+
 	private static List<Integer> parseColumnIndexes(String s)
 		{
 		List<Integer> listLeft=new ArrayList<Integer>();
@@ -859,7 +859,7 @@ public class Pivot
 			}
 		return listLeft;
 		}
-	
+
 	/**
 	 * Main method
 	 * @param args
@@ -871,7 +871,7 @@ public class Pivot
 		List<Integer> listTop=new ArrayList<Integer>();
 		Map<Integer,Column> index2col=new HashMap<Integer,Column>();
 		int aggregateIndex=-1;
-		
+
 		try
 			{
 			int optind=0;
@@ -886,7 +886,7 @@ public class Pivot
 	                System.out.println(" -L \'column1,column2,column3,...\' columns for left. (required)");
 	                System.out.println(" -T \'column1,column2,column3,...\' columns for top. (optional)");
 	                System.out.println(" -A \'column.\' aggregate column (optional)");
-	                
+
 	                System.out.println(" -C columns types: \'column1:type1,column2:type2,column3:type3,...\' with type in:");
 	                System.out.println(" -D <aggregate-id> for agregate.");
 	                for(Aggregate a:pivot.aggregates)
@@ -911,7 +911,7 @@ public class Pivot
 						{
 						index2col.put(c.getIndex(),c);
 						}
-					
+
 					}
 				else if(args[optind].equals("-L"))
 					{
@@ -964,31 +964,31 @@ public class Pivot
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
 				++optind;
 				}
-			
+
 			if(aggregateIndex==-1)
 				{
 				System.err.println("Aggregate column is undefined");
 				return;
 				}
-			
+
 			if(listLeft.isEmpty())
 				{
 				System.err.println("Left columns undefined");
 				return;
 				}
-			
-			
+
+
 			Set<Integer> usedIndexes=new HashSet<Integer>();
 			usedIndexes.addAll(listLeft);
 			usedIndexes.addAll(listTop);
 			usedIndexes.add(aggregateIndex);
-			
+
 			for(Integer i: usedIndexes)
 				{
 				while(pivot.allColumns.size()<=i)
@@ -997,7 +997,7 @@ public class Pivot
 					}
 				if(index2col.containsKey(i))
 					{
-					
+
 					pivot.allColumns.set(i,index2col.get(i));
 					}
 				else
@@ -1009,14 +1009,14 @@ public class Pivot
 				{
 				pivot.leftColumns.add(pivot.allColumns.get(i));
 				}
-			
+
 			for(Integer i:listTop)
 				{
 				pivot.topColumns.add(pivot.allColumns.get(i));
 				}
-			
+
 			pivot.aggregateColumn=pivot.allColumns.get(aggregateIndex);
-			
+
 			if(optind==args.length)
 		        {
 		        pivot.readTable(new BufferedReader(new InputStreamReader(System.in)));
@@ -1038,11 +1038,11 @@ public class Pivot
 			pivot.printHTML(w);
 			w.writeEndDocument();
 			w.flush();
-			} 
+			}
 	catch(Throwable err)
 		{
 		err.printStackTrace();
 		}
 	}
-	
+
 }

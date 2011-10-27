@@ -51,7 +51,7 @@ public class TwitterGraph
 	{
 	private static final Logger LOG=Logger.getLogger("sandbox.TwitterMosaic");
 	private XMLInputFactory xmlInputFactory;
-	
+
 	private static class User
 		{
 		BigInteger id;
@@ -66,7 +66,7 @@ public class TwitterGraph
 		int listed=-1;
 		int utc_offset=-1;
 		int statuses_count=-1;
-		
+
 		private void gexfAtt(XMLStreamWriter w,String key,String value)
 			throws XMLStreamException
 			{
@@ -76,14 +76,14 @@ public class TwitterGraph
 			w.writeAttribute("value", value);
 			w.writeEndElement();
 			}
-		
+
 		void toGexf(XMLStreamWriter w)
 			throws XMLStreamException
 			{
 			w.writeStartElement("node");
 			w.writeAttribute("id", String.valueOf(this.id));
 			w.writeAttribute("label", this.screenName);
-			
+
 			w.writeStartElement("attvalues");
 			gexfAtt(w,"name",this.name);
 			gexfAtt(w,"screenName",this.screenName);
@@ -96,9 +96,9 @@ public class TwitterGraph
 			gexfAtt(w,"listed",String.valueOf(listed));
 			gexfAtt(w,"utc_offset",String.valueOf(utc_offset));
 			gexfAtt(w,"statuses_count",String.valueOf(statuses_count));
-			
+
 			w.writeEndElement();
-			
+
 			w.writeEndElement();
 			}
 		}
@@ -112,7 +112,7 @@ public class TwitterGraph
 		BigInteger id2;
 		boolean one2two=false;
 		boolean two2one=false;
-		
+
 		Link(BigInteger id1,BigInteger id2)
 			{
 			if(id1.compareTo(id2)<0)
@@ -143,7 +143,7 @@ public class TwitterGraph
 			Link other = (Link) obj;
 			return id1.equals(other.id1) && id2.equals(other.id2);
 			}
-		
+
 		public void toGexf(int index,XMLStreamWriter w)
 		throws XMLStreamException
 			{
@@ -168,20 +168,20 @@ public class TwitterGraph
 				w.writeAttribute("target", String.valueOf(id1));
 				}
 			}
-		
+
 		@Override
 		public String toString()
 			{
 			return id1.toString()+" -> "+id2;
 			}
 		}
-	
+
 	private static class SocialGraph
 		{
 		BigInteger owner;
 		Map<BigInteger,User> id2user=new HashMap<BigInteger,User>();
 		List<Link> links=new ArrayList<Link>(1000);
-		
+
 		private int lower_bound(int first,int last,Link L)
 			{
             int len = last - first;
@@ -203,12 +203,12 @@ public class TwitterGraph
                     }
             return first;
 			}
-		
+
 		public int lowerBound(Link L)
 			{
 			return lower_bound(0,links.size(),L);
 			}
-		
+
 		public void toDot(PrintWriter out)
 			{
 			out.println("digraph G {");
@@ -222,7 +222,7 @@ public class TwitterGraph
 				}
 			out.println("}");
 			}
-		
+
 		public void toTSV(PrintWriter out)
 			{
 			for(Link L:this.links)
@@ -235,7 +235,7 @@ public class TwitterGraph
 				out.println();
 				}
 			}
-		
+
 		private void gexfAtt(XMLStreamWriter w,
 			String key,
 			String type,
@@ -250,33 +250,33 @@ public class TwitterGraph
 				{
 				w.writeStartElement("attribute");
 				}
-			
+
 			w.writeAttribute("id", key);
 			w.writeAttribute("title", key.replace('_', ' '));
 			w.writeAttribute("type", type);
-			
+
 			if(def!=null)
 				{
 				w.writeStartElement("default");
 				w.writeCharacters(def);
 				w.writeEndElement();
-				
+
 				w.writeEndElement();
 				}
 			}
-		
+
 		public void toGexf(OutputStream out)
 		throws XMLStreamException
 			{
 			XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
 			XMLStreamWriter w= xmlfactory.createXMLStreamWriter(out,"UTF-8");
-			
+
 			w.writeStartDocument("UTF-8","1.0");
 			w.writeStartElement("gexf");
 			w.writeAttribute("xmlns", "http://www.gexf.net/1.2draft");
 			w.writeAttribute("version", "1.2");
-			
-			
+
+
 			/* meta */
 			w.writeStartElement("meta");
 				w.writeStartElement("creator");
@@ -286,14 +286,14 @@ public class TwitterGraph
 				  w.writeCharacters("Graph of twitter user id. "+this.owner);
 				w.writeEndElement();
 			w.writeEndElement();
-			
+
 			/* graph */
 			w.writeStartElement("graph");
 			w.writeAttribute("mode", "static");
 			w.writeAttribute("defaultedgetype", "directed");
-			
-			
-			
+
+
+
 			/* attributes */
 			w.writeStartElement("attributes");
 			w.writeAttribute("class","node");
@@ -310,7 +310,7 @@ public class TwitterGraph
 			gexfAtt(w,"utc_offset","integer",null);
 			gexfAtt(w,"statuses_count","integer",null);
 			w.writeEndElement();//attributes
-			
+
 			/* nodes */
 			w.writeStartElement("nodes");
 			for(User u:id2user.values())
@@ -318,7 +318,7 @@ public class TwitterGraph
 				u.toGexf(w);
 				}
 			w.writeEndElement();//nodes
-			
+
 			/* edges */
 			w.writeStartElement("edges");
 			for(int i=0;i< links.size();++i)
@@ -326,16 +326,16 @@ public class TwitterGraph
 				links.get(i).toGexf(i,w);
 				}
 			w.writeEndElement();//edges
-	
+
 			w.writeEndElement();//graph
-			
+
 			w.writeEndElement();//gexf
 			w.writeEndDocument();
 			w.flush();
 			}
-		
+
 		}
-	
+
 	private TwitterGraph()
 		{
 		this.xmlInputFactory = XMLInputFactory.newInstance();
@@ -343,8 +343,8 @@ public class TwitterGraph
 		xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, Boolean.TRUE);
 		xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, Boolean.TRUE);
 		}
-	
-	
+
+
 	private static int parseInt(XMLEventReader r)
 		{
 		try
@@ -365,7 +365,7 @@ public class TwitterGraph
 			return -1;
 			}
 		}
-	
+
 	private User parseUser(XMLEventReader reader)throws XMLStreamException
 		{
 		int depth=1;
@@ -446,7 +446,7 @@ public class TwitterGraph
 				}
 			}
 		return u;
-		}	
+		}
 	private InputStream tryOpen(String uri) throws IOException
 		{
 		URLConnection con=null;
@@ -494,7 +494,7 @@ public class TwitterGraph
 			}
 		return null;
 		}
-	
+
 	private User getProfile(BigInteger userId)
 		throws Exception
 		{
@@ -527,10 +527,10 @@ public class TwitterGraph
 		in.close();
 		return user;
 		}
-	
+
 	private Set<BigInteger> listFriends(BigInteger userId)
 		throws Exception
-		{			
+		{
 		Set<BigInteger> friends=new HashSet<BigInteger>();
 		BigInteger cursor=BigInteger.ONE.negate();
 		for(;;)
@@ -561,7 +561,7 @@ public class TwitterGraph
 				}
 			reader.close();
 			in.close();
-			
+
 			if(next_cursor==null || next_cursor.isEmpty() || next_cursor.equals("0"))
 				{
 				break;
@@ -570,22 +570,22 @@ public class TwitterGraph
 			}
 		LOG.info("count friends: of "+userId+"="+friends.size());
 		return friends;
-		}	
-	
+		}
+
 	private SocialGraph run(BigInteger userId)
 		throws Exception
 		{
 		SocialGraph g=new SocialGraph();
 		g.owner=userId;
 		g.id2user.put(userId, getProfile(userId));
-		
+
 		Set<BigInteger> friendIds=listFriends(userId);
 		for(BigInteger id:friendIds)
 			{
 			g.links.add(new Link(userId,id));
 			}
 		Collections.sort(g.links);
-		
+
 		for(BigInteger id: friendIds)
 			{
 			g.id2user.put(id, getProfile(id));
@@ -612,10 +612,10 @@ public class TwitterGraph
 					}
 				}
 			}
-		
+
 		return g;
 		}
-	
+
 	public static void main(String[] args)
 		{
 		//id: 7431072
@@ -652,13 +652,13 @@ public class TwitterGraph
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
 				++optind;
 				}
-			
+
 			if(optind+1!=args.length)
 				{
 				System.err.println("Screen-Name missing");
@@ -669,7 +669,7 @@ public class TwitterGraph
 				System.err.println("option -o <fileout> missing");
 				System.exit(-1);
 				}
-			
+
 			BigInteger userId= new BigInteger(args[optind++]);
 			SocialGraph g=app.run(userId);
 			if(fileout.getName().toLowerCase().endsWith(".dot"))
@@ -697,7 +697,7 @@ public class TwitterGraph
 				{
 				System.err.println("Boum");
 				}
-			} 
+			}
 		catch(Throwable err)
 			{
 			err.printStackTrace();

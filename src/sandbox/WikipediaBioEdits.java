@@ -1,7 +1,7 @@
 /**
  * Author Pierre Lindenbaum PhD
  * http://plindenbaum.blogspot.com
- * 
+ *
  */
 package sandbox;
 import java.awt.Dimension;
@@ -30,7 +30,7 @@ import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 
 /**
- * 
+ *
  * WikipediaBioEdits
  *
  */
@@ -54,18 +54,18 @@ public class WikipediaBioEdits
 		{
 		String title=null;
 		Integer pageId=null;
-		
+
 		public Category(String title)
 			{
 			this(title,null);
 			}
-		
+
 		public Category(String title,Integer pageId)
 			{
 			this.title=title;
 			this.pageId=pageId;
 			}
-		
+
 		@Override
 		public int hashCode()
 			{
@@ -98,7 +98,7 @@ public class WikipediaBioEdits
 			return String.valueOf(title);
 			}
 		}
-	
+
 	private abstract class PersonListHandler
 		{
 		protected WikipediaBioEdits owner()
@@ -112,11 +112,11 @@ public class WikipediaBioEdits
 			XMLStreamWriter w= xmlfactory.createXMLStreamWriter(System.out);
 			return w;
 			}
-		
-		
+
+
 		public abstract void paint(List<Person> persons) throws Exception;
 		}
-	
+
 	private static class Person
 		{
 		String name=null;
@@ -128,8 +128,8 @@ public class WikipediaBioEdits
 		int countEdits=0;
 		Dimension thumbDim=null;
 		Rectangle viewRect=null;
-		
-		
+
+
 		@Override
 		public int hashCode()
 			{
@@ -139,8 +139,8 @@ public class WikipediaBioEdits
 		@Override
 		public boolean equals(Object obj)
 			{
-			if (this == obj)  return true; 
-			if (obj == null || getClass() != obj.getClass()) return false; 
+			if (this == obj)  return true;
+			if (obj == null || getClass() != obj.getClass()) return false;
 			return (pageid == Person.class.cast(obj).pageid);
 			}
 
@@ -148,14 +148,14 @@ public class WikipediaBioEdits
 			{
 			return String.valueOf(name)+" ("+birth+"/"+ death+ ")";
 			}
-		
+
 		@Override
 		public String toString()
 			{
 			return getCaption();
 			}
 		}
-	
+
 	private WikipediaBioEdits()
 		{
 		this.xmlInputFactory = XMLInputFactory.newInstance();
@@ -163,10 +163,10 @@ public class WikipediaBioEdits
 		xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, Boolean.TRUE);
 		xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, Boolean.TRUE);
 		}
-	
 
-	
-	
+
+
+
 	private XMLEventReader openXMLEventReader(URL url)
 		throws IOException
 		{
@@ -177,7 +177,7 @@ public class WikipediaBioEdits
 			try
 				{
 				InputStream in=url.openStream();
-				return xmlInputFactory.createXMLEventReader(in);	
+				return xmlInputFactory.createXMLEventReader(in);
 				}
 			catch(Exception err)
 				{
@@ -188,7 +188,7 @@ public class WikipediaBioEdits
 			}
 		throw error;
 		}
-	
+
 	private StringBuilder removeTemplates(StringBuilder content)
 		{
 		int level=0;
@@ -222,8 +222,8 @@ public class WikipediaBioEdits
 			}
 		return content;
 		}
-	
-	
+
+
 	private StringBuilder removeInternalLinks(StringBuilder content)
 		{
 		int pos=-1;
@@ -250,7 +250,7 @@ public class WikipediaBioEdits
 			}
 		return content;
 		}
-	
+
 	private StringBuilder getArticleContent(long articleId)
 		throws XMLStreamException,IOException
 		{
@@ -282,7 +282,7 @@ public class WikipediaBioEdits
 		r.close();
 		return sb;
 		}
-	
+
 	private String getArticleFirstLine(long articleId)
 		throws XMLStreamException,IOException
 		{
@@ -291,19 +291,19 @@ public class WikipediaBioEdits
 		if(i==-1) return content;
 		return content.substring(0,i);
 		}
-	
-	
+
+
 	private String getOneImage(Person person)
 		throws Exception
 		{
 		final QName titleAtt=new QName("title");
-		
+
 		String urlStr="http://en.wikipedia.org/w/api.php?format=xml&action=query&prop=images&pageids="+
 			person.pageid+
 			"&iilimit=100";
-		
+
 		URL url=new URL(urlStr);
-		
+
 		XMLEventReader r=openXMLEventReader(url);
 		url=null;
 		while(r.hasNext())
@@ -331,8 +331,8 @@ public class WikipediaBioEdits
 		r.close();
 		return null;
 		}
-	
-	
+
+
 	private Set<Category> findSubCategories(Category parent)
 		throws Exception
 		{
@@ -343,7 +343,7 @@ public class WikipediaBioEdits
 		String urlStr="http://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmnamespace=14&cmlimit=500&format=xml"+
 			"&cmtitle="+URLEncoder.encode(parent.title.replace(' ', '_'),"UTF-8")
 			;
-		
+
 		URL url=new URL(urlStr);
 		while(url!=null)
 			{
@@ -370,7 +370,7 @@ public class WikipediaBioEdits
 					Attribute att=start.getAttributeByName(cmcontinueAttr);
 					if(att!=null) cmcontinue=att.getValue();
 					}
-					
+
 				}
 			r.close();
 			if(cmcontinue!=null)
@@ -380,23 +380,23 @@ public class WikipediaBioEdits
 			}
 		return children;
 		}
-	
+
 	private void findImage(Person person)
 	throws Exception
 		{
 		String imageName=getOneImage(person);
 		if(imageName==null) return;
-		
-		
+
+
 		String urlStr="http://en.wikipedia.org/w/api.php?format=xml&action=query&prop=imageinfo&titles=" +
 				URLEncoder.encode(imageName,"UTF-8") +
 				"&iiurlwidth="+THUMB_WIDTH+
 				"&iiurlheight="+THUMB_WIDTH+
 				"&iiprop=url";
-		
-		
+
+
 		URL url=new URL(urlStr);
-		
+
 		XMLEventReader r=openXMLEventReader(url);
 		url=null;
 		while(r.hasNext())
@@ -421,17 +421,17 @@ public class WikipediaBioEdits
 			}
 		r.close();
 		}
-	
-	
+
+
 	private void countEdits(Person person)
 		throws Exception
 		{
 		final QName rvstartidAtt=new QName("rvstartid");
-		
+
 		String urlStr="http://en.wikipedia.org/w/api.php?format=xml&action=query&prop=revisions&pageids="+
 			person.pageid+
 			"&rvprop=size&rvlimit=500";
-		
+
 		URL url=new URL(urlStr);
 		while(url!=null)
 			{
@@ -463,7 +463,7 @@ public class WikipediaBioEdits
 				}
 			}
 		}
-	
+
 	private boolean addPerson(Person person)
 		throws Exception
 		{
@@ -471,9 +471,9 @@ public class WikipediaBioEdits
 			{
 			if(other.pageid==person.pageid) return false;
 			}
-		
+
 		if(!getYears(person)) return false;
-			
+
 		if(this.limitStartYear!=null && this.limitStartYear> person.death)
 			{
 			LOG.info("ignore (death) "+person);
@@ -490,7 +490,7 @@ public class WikipediaBioEdits
 			LOG.info("ignore (edit) "+person);
 			return false;
 			}
-		
+
 		if(  this.limitCountPersons!=null &&
              this.removeIfTooMany==false &&
              this.persons.size()>=this.limitCountPersons)
@@ -499,7 +499,7 @@ public class WikipediaBioEdits
                 }
 		this.persons.add(person);
 		LOG.info(person.toString()+"N:"+this.persons.size());
-		
+
 		if(  this.limitCountPersons!=null &&
              this.removeIfTooMany==true &&
              this.persons.size()>=this.limitCountPersons)
@@ -510,28 +510,28 @@ public class WikipediaBioEdits
                    if(this.persons.get(indexOf).countEdits > this.persons.get(i).countEdits )
                       {
                       indexOf=i;
-                      } 
+                      }
                    }
                 LOG.info("Removing "+this.persons.get(indexOf));
                 this.persons.remove(indexOf);
                 }
-		
-		
-		
-		return true;					
+
+
+
+		return true;
 		}
-	
+
 	private boolean getYears(Person person)
 		throws Exception
 		{
 		final QName titleAtt=new QName("title");
 		final QName clcontinueAtt=new QName("clcontinue");
-		
+
 		String urlStr="http://en.wikipedia.org/w/api.php?format=xml&action=query&prop=categories&pageids="+
 			person.pageid+
 			"&cllimit=500";
-		
-		
+
+
 		URL url=new URL(urlStr);
 		while(url!=null)
 			{
@@ -594,7 +594,7 @@ public class WikipediaBioEdits
 				person.birth < person.death
 				);
 		}
-	
+
 	private void havingInfobox(String template)
 		throws Exception
 		{
@@ -624,8 +624,8 @@ public class WikipediaBioEdits
 						person.pageid=Long.parseLong(att.getValue());
 						att=start.getAttributeByName(titleAtt);
 						person.name=att.getValue();
-						
-						
+
+
 						addPerson(person);
 						}
 					else if(localName.equals("embeddedin"))
@@ -641,10 +641,10 @@ public class WikipediaBioEdits
 				url=new URL(urlStr+"&eicontinue="+eicontinue);
 				}
 			}
-		
+
 		}
-	
-	
+
+
 	private void findInCategory(Category category)
 		throws Exception
 		{
@@ -656,7 +656,7 @@ public class WikipediaBioEdits
 		String urlStr="http://en.wikipedia.org/w/api.php?cmlimit=500&format=xml&action=query&list=categorymembers&cmnamespace=0&cmtitle="+
 			"&cmtitle="+URLEncoder.encode(category.title.replace(' ', '_'),"UTF-8")
 			;
-		
+
 		URL url=new URL(urlStr);
 		while(url!=null)
 			{
@@ -676,7 +676,7 @@ public class WikipediaBioEdits
 					person.pageid=Long.parseLong(att.getValue());
 					att=start.getAttributeByName(titleAttr);
 					person.name=att.getValue();
-					
+
 					addPerson(person);
 					}
 				else if(localName.equals("categorymembers"))
@@ -684,7 +684,7 @@ public class WikipediaBioEdits
 					Attribute att=start.getAttributeByName(cmcontinueAttr);
 					if(att!=null) cmcontinue=att.getValue();
 					}
-					
+
 				}
 			r.close();
 			if(cmcontinue!=null)
@@ -693,8 +693,8 @@ public class WikipediaBioEdits
 				}
 			}
 		}
-	
-	
+
+
 	private class RevisionHandler
 		extends PersonListHandler
 		{
@@ -706,8 +706,8 @@ public class WikipediaBioEdits
 			int maxYear=Integer.MIN_VALUE;
 			int maxRev=0;
 			int minRev=Integer.MAX_VALUE;
-			
-			
+
+
 			Collections.sort(persons,new Comparator<Person>()
 				{
 				@Override
@@ -716,8 +716,8 @@ public class WikipediaBioEdits
 					return o1.countEdits-o2.countEdits;
 					}
 				});
-			
-			
+
+
 			for(Person person: persons)
 				{
 				minYear= Math.min(minYear, person.birth-1);
@@ -727,16 +727,16 @@ public class WikipediaBioEdits
 				}
 			double duration=(maxYear-minYear);
 			int adjustedHeight=owner().imageHeight-(THUMB_WIDTH+4);
-			
+
 			XMLStreamWriter w= getXMLStreamWriter();
 			w.writeStartElement("html");
 			w.writeStartElement("body");
-			
+
 			w.writeStartElement("div");
 			w.writeAttribute("style",
 				//white-space:nowrap;
-				"position:relative;width:" + 
-				owner().imageWidth+	
+				"position:relative;width:" +
+				owner().imageWidth+
 				"px;height:" +
 				owner().imageHeight+
 				"px;background:-moz-linear-gradient(left,white,lightgray);"+
@@ -762,8 +762,8 @@ public class WikipediaBioEdits
 				w.writeCharacters(String.valueOf(year));
 				w.writeEndElement();
 				}
-			
-			
+
+
 			for(Person person:persons)
 				{
 				w.writeStartElement("div");
@@ -774,9 +774,9 @@ public class WikipediaBioEdits
 				person.viewRect.width=(int)(((person.death-person.birth)/duration)*owner().imageWidth);
 				person.viewRect.height=(int)(THUMB_WIDTH+4);
 				person.viewRect.y=adjustedHeight-(int)(((person.countEdits-minRev)/(float)(maxRev-minRev))*adjustedHeight);
-				
-				
-				
+
+
+
 				if(person.viewRect.width< THUMB_WIDTH*2)
 					{
 					person.viewRect.width=THUMB_WIDTH*2;
@@ -785,7 +785,7 @@ public class WikipediaBioEdits
 						person.viewRect.x=owner().imageWidth-person.viewRect.width;
 						}
 					}
-				
+
 				style.append("left:").append(person.viewRect.x).append("px;");
 				style.append("width:").append(person.viewRect.width).append("px;");
 				style.append("height:").append(person.viewRect.height).append("px;");
@@ -794,7 +794,7 @@ public class WikipediaBioEdits
 				style.append("background:-moz-linear-gradient(top,gray,lightgray);");
 				style.append("overflow:hidden;-moz-border-radius:3px;");
 				w.writeAttribute("style", style.toString());
-				
+
 				if(person.imageURL!=null)
 					{
 					w.writeStartElement("a");
@@ -813,27 +813,27 @@ public class WikipediaBioEdits
 					w.writeAttribute("src", person.imageURL);
 					w.writeEndElement();
 					}
-				
+
 				w.writeStartElement("a");
 				w.writeAttribute("href", "http://en.wikipedia.org/wiki/"+person.name);
 				w.writeAttribute("title",person.getCaption());
 				w.writeAttribute("target","_blank");
 				w.writeAttribute("style","color:black;");
-				
+
 				String textContent= "";//getArticleFirstLine(person.pageid);
 				if(textContent.isEmpty())
 					{
 					textContent=person.getCaption();
 					}
-				
+
 				w.writeCharacters(textContent);
 				w.writeEndElement();
-				
+
 				w.writeEndElement();
 				w.writeCharacters("\n");
 				}
 			w.writeEndElement();
-			
+
 			w.writeEndElement();
 			w.writeEndElement();
 			w.flush();
@@ -846,29 +846,29 @@ public class WikipediaBioEdits
 		{
 		int minYear=Integer.MAX_VALUE;
 		int maxYear=Integer.MIN_VALUE;
-		
+
 		PileupHandler() {}
-		
-		
+
+
 		private double convertDate2Pixel(int date)
 			{
 			return owner().imageWidth*((date-this.minYear)/(double)(this.maxYear-this.minYear));
 			}
-		
+
 		private double x1(Person person)
     		{
     		return convertDate2Pixel(person.birth);
     		}
-    	
+
 		private double x2(Person person)
     		{
     		return convertDate2Pixel(person.death);
     		}
-		
+
 		@Override
 		public void paint(List<Person> persons)
 			throws Exception
-			{			
+			{
 			Collections.sort(persons,new Comparator<Person>()
 				{
 				@Override
@@ -881,8 +881,8 @@ public class WikipediaBioEdits
 					return o1.name.compareTo(o2.name);
 					}
 				});
-			
-			
+
+
 			for(Person person: persons)
 				{
 				minYear= Math.min(minYear, person.birth-1);
@@ -898,7 +898,7 @@ public class WikipediaBioEdits
 				}
 			double duration=(maxYear-minYear);
 			int adjustedHeight=owner().imageHeight-(THUMB_WIDTH+4);
-			
+
 			List<Person> remains=new ArrayList<Person>(persons);
 			int nLine=-1;
 			while(!remains.isEmpty())
@@ -908,7 +908,7 @@ public class WikipediaBioEdits
 				remains.remove(0);
 				first.viewRect.y=nLine*THUMB_WIDTH;
 				first.viewRect.height=THUMB_WIDTH;
-				
+
 				while(true)
 					{
 					Person best=null;
@@ -930,23 +930,23 @@ public class WikipediaBioEdits
 					remains.remove(bestIndex);
 					}
 				}
-			
-			
+
+
 			XMLStreamWriter w= getXMLStreamWriter();
 			w.writeStartElement("html");
 			w.writeStartElement("body");
-			
+
 			w.writeStartElement("div");
 			w.writeAttribute("style",
 				//white-space:nowrap;
-				"position:relative;width:" + 
-				owner().imageWidth+	
+				"position:relative;width:" +
+				owner().imageWidth+
 				"px;height:" +
 				((nLine+1)*THUMB_WIDTH)+
 				"px;background:-moz-linear-gradient(left,white,lightgray);"+
 				"border: 1px solid;"
 				);
-			
+
 			//x axis
 			for(int i=1;i< 10;++i)
 				{
@@ -957,14 +957,14 @@ public class WikipediaBioEdits
 				w.writeCharacters(String.valueOf(year));
 				w.writeEndElement();
 				}
-			
-			
+
+
 			for(Person person:persons)
 				{
 				w.writeStartElement("div");
 				w.writeAttribute("id", "wp"+person.pageid);
 				StringBuilder style=new StringBuilder("position:absolute;opacity:.5;");
-				
+
 				if(person.viewRect.width< THUMB_WIDTH*2)
 					{
 					person.viewRect.width=THUMB_WIDTH*2;
@@ -973,7 +973,7 @@ public class WikipediaBioEdits
 						person.viewRect.x=owner().imageWidth-person.viewRect.width;
 						}
 					}
-				
+
 				style.append("left:").append(person.viewRect.x).append("px;");
 				style.append("width:").append(person.viewRect.width).append("px;");
 				style.append("height:").append(person.viewRect.height).append("px;");
@@ -982,7 +982,7 @@ public class WikipediaBioEdits
 				style.append("background:-moz-linear-gradient(top,gray,lightgray);");
 				style.append("overflow:hidden;-moz-border-radius:3px;");
 				w.writeAttribute("style", style.toString());
-				
+
 				if(person.imageURL!=null)
 					{
 					w.writeStartElement("a");
@@ -1001,36 +1001,36 @@ public class WikipediaBioEdits
 					w.writeAttribute("src", person.imageURL);
 					w.writeEndElement();
 					}
-				
+
 				w.writeStartElement("a");
 				w.writeAttribute("href", "http://en.wikipedia.org/wiki/"+person.name);
 				w.writeAttribute("title",person.getCaption());
 				w.writeAttribute("target","_blank");
 				w.writeAttribute("style","color:black;");
-				
+
 				String textContent= "";//getArticleFirstLine(person.pageid);
 				if(textContent.isEmpty())
 					{
 					textContent=person.getCaption();
 					}
-				
+
 				w.writeCharacters(textContent);
 				w.writeEndElement();
-				
+
 				w.writeEndElement();
 				w.writeCharacters("\n");
 				}
 			w.writeEndElement();
-			
+
 			w.writeEndElement();
 			w.writeEndElement();
 			w.flush();
 			w.close();
 			}
 		}
-	
-	
-	
+
+
+
 	private void paint()
 		throws Exception
 		{
@@ -1043,7 +1043,7 @@ public class WikipediaBioEdits
 			new RevisionHandler().paint(this.persons);
 			}
 		}
-	
+
 	private void recursiveCategory(
 		Set<Category> pool,
 		Set<Category> remains,
@@ -1069,7 +1069,7 @@ public class WikipediaBioEdits
 			recursiveCategory(pool,remains2,depth+1);
 			}
 		}
-	
+
 	private void findInCategories(Category cat)
 		throws Exception
 		{
@@ -1084,8 +1084,8 @@ public class WikipediaBioEdits
 			findInCategory(c1);
 			}
 		}
-	
-	
+
+
 	private void run()
 		throws Exception
 		{
@@ -1097,7 +1097,7 @@ public class WikipediaBioEdits
 			}
 		paint();
 		}
-	
+
 	public static void main(String[] args)
 		{
 		LOG.setLevel(Level.OFF);
@@ -1176,7 +1176,7 @@ public class WikipediaBioEdits
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
@@ -1184,7 +1184,7 @@ public class WikipediaBioEdits
 				}
 			app.run();
 			LOG.info("Done");
-			} 
+			}
 		catch(Throwable err)
 			{
 			err.printStackTrace();

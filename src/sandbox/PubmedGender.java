@@ -34,7 +34,7 @@ public class PubmedGender
 	private boolean ignoreUndefined=false;
 	private boolean html=true;
 	private boolean firstAuthor=false;
-	
+
 	private PubmedGender()
 		{
 		Collator collator= Collator.getInstance(Locale.US);
@@ -42,7 +42,7 @@ public class PubmedGender
 		this.males=new TreeMap<String, Float>(collator);
 		this.females=new TreeMap<String, Float>(collator);
 		}
-	
+
 	private void loadNames()
 		throws IOException
 		{
@@ -89,7 +89,7 @@ public class PubmedGender
 		XMLEventReader reader=f.createXMLEventReader(url.openStream());
 		return reader;
 		}
-	
+
 	private void run() throws Exception
 		{
 		int countMales=0;
@@ -98,9 +98,9 @@ public class PubmedGender
 		int countIgnored=0;
 		URL url= new URL(
 			"http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term="+
-			URLEncoder.encode(this.query, "UTF-8")+	
+			URLEncoder.encode(this.query, "UTF-8")+
 			"&retstart=0&retmax=0&usehistory=y&retmode=xml&email=plindenbaum_at_yahoo.fr&tool=gender");
-		
+
 		XMLEventReader reader= newReader(url);
 		XMLEvent evt;
 		String QueryKey=null;
@@ -109,7 +109,7 @@ public class PubmedGender
 
 		while(!(evt=reader.nextEvent()).isEndDocument())
 			{
-			if(!evt.isStartElement()) continue;	
+			if(!evt.isStartElement()) continue;
 			String tag= evt.asStartElement().getName().getLocalPart();
 			if(tag.equals("QueryKey"))
 				{
@@ -132,10 +132,10 @@ public class PubmedGender
 					URLEncoder.encode(WebEnv,"UTF-8")+
 					"&query_key="+URLEncoder.encode(QueryKey,"UTF-8")+
 					"&retmode=xml&retmax="+count+"&email=plindenbaum_at_yahoo.fr&tool=mail");
-			
+
 			reader= newReader(url);
 			int authorIndex=0;
-			
+
 			while(reader.hasNext())
 				{
 				evt=reader.nextEvent();
@@ -180,7 +180,7 @@ public class PubmedGender
 					countIgnored++;
 					continue;
 					}
-					
+
 				String tokens[]=firstName.split("[ ]+");
 				firstName="";
 				for(String s:tokens)
@@ -190,18 +190,18 @@ public class PubmedGender
 						firstName=s;
 						}
 					}
-				
-				
+
+
 				if(	firstName.length()==1 ||
 					firstName.equals(initials))
 					{
 					countIgnored++;
 					continue;
 					}
-				
+
 				Float male= this.males.get(firstName);
 				Float female= this.females.get(firstName);
-				
+
 				if(male==null && female==null)
 					{
 					//System.err.println("Undefined "+firstName+" / "+lastName);
@@ -233,9 +233,9 @@ public class PubmedGender
 			}
 		int originalUndef=countUnknown;
 		if(ignoreUndefined) countUnknown=0;
-		
+
 		float total= countMales+countFemales+countUnknown;
-		
+
 		double radMale=(countMales/total)*Math.PI*2.0;
 		double radFemale=(countFemales/total)*Math.PI*2.0;
 		int radius= (canvasSize-2)/2;
@@ -247,7 +247,7 @@ public class PubmedGender
 			w.writeStartElement("html");
 			w.writeStartElement("body");
 			}
-		
+
 		if(countMales+countFemales>0)
 			{
 			w.writeStartElement("div");
@@ -270,7 +270,7 @@ public class PubmedGender
 			);
 			w.writeEndElement();
 			w.writeEndElement();
-			
+
 			w.writeStartElement("span");
 			w.writeAttribute("style","color:pink;");
 			w.writeCharacters("Women: "+countFemales+" ("+(int)((countFemales/total)*100.0)+"%)");
@@ -280,10 +280,10 @@ public class PubmedGender
 			w.writeAttribute("style","color:blue;");
 			w.writeCharacters("Men: "+countMales+" ("+(int)((countMales/total)*100.0)+"%)");
 			w.writeEndElement();
-			
+
 			w.writeEmptyElement("br");
-			
-			
+
+
 			w.writeStartElement("span");
 			w.writeAttribute("style","color:gray;");
 			if(!this.ignoreUndefined)
@@ -297,20 +297,20 @@ public class PubmedGender
 				w.writeCharacters(" Ignored : "+countIgnored);
 				}
 			w.writeEndElement();
-			
-			
+
+
 			w.writeEmptyElement("br");
-			
+
 			w.writeStartElement("a");
 			w.writeAttribute("target","_blank");
 			w.writeAttribute("href","http://www.ncbi.nlm.nih.gov/sites/entrez?db=pubmed&amp;cmd=search&amp;term="+URLEncoder.encode(this.query,"UTF-8"));
 			w.writeCharacters(this.query);
 			w.writeEndElement();
-			
-			
+
+
 			w.writeEndElement();
 			}
-		
+
 		if(this.html)
 			{
 			w.writeEndElement();//body
@@ -319,13 +319,13 @@ public class PubmedGender
 		w.flush();
 		w.close();
 		}
-	
+
 	public static void main(String[] args)
 		{
 		try
 			{
 			PubmedGender app=new PubmedGender();
-			
+
 			int optind=0;
 			while(optind< args.length)
 				{
@@ -368,7 +368,7 @@ public class PubmedGender
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
@@ -392,13 +392,13 @@ public class PubmedGender
 				return;
 				}
 			app.loadNames();
-			
+
 			app.run();
-			
+
 			}
 		catch (Exception e)
 			{
 			e.printStackTrace();
 			}
-		}	
-	} 
+		}
+	}

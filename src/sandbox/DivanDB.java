@@ -59,7 +59,7 @@ import com.sleepycat.je.Transaction;
 public class DivanDB extends HttpServlet
 	{
 	private static final String STORAGE_ATTRIBUTE="divandb.storage";
-	
+
 	/** string compartor for ordering the keys in bdb */
 	public static class StringComparator
 		implements Comparator<byte[]>
@@ -72,14 +72,14 @@ public class DivanDB extends HttpServlet
 			return s1.compareTo(s2);
 			}
 		}
-	/** a berkeley-db String/String datastore */ 
+	/** a berkeley-db String/String datastore */
 	private static class BDBStorage
 		{
 		/** bdb environment */
 	    private Environment environment=null;
 	    /** string/string database */
 	    private Database database=null;
-	    
+
 	    private BDBStorage()
 	    	{
 	    	}
@@ -121,7 +121,7 @@ public class DivanDB extends HttpServlet
 			super.finalize();
 			}
 		}
-	
+
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -129,13 +129,13 @@ public class DivanDB extends HttpServlet
 		{
 		BDBStorage storage=(BDBStorage)this.getServletContext().getAttribute(STORAGE_ATTRIBUTE);
 		resp.setContentType("application/json");
-		
+
 		String id=req.getRequestURI().substring(1+req.getContextPath().length());
 		DatabaseEntry key=new DatabaseEntry();
 		DatabaseEntry data=new DatabaseEntry();
 		PrintWriter out=null;
-		
-		
+
+
 		/** no id ? we want to list everything */
 	    if(id.isEmpty())
 	    	{
@@ -165,13 +165,13 @@ public class DivanDB extends HttpServlet
 	    			}
 	    		for(;;)
 	    			{
-	    			
+
 	    			if(limit!=null && countPrinted>=limit)
 	    				{
 	    				break;
 	    				}
 	    			OperationStatus status;
-	    			/* first cursor call */ 
+	    			/* first cursor call */
 	    			if(first)
 	    				{
 	    				/* search start key if any */
@@ -192,7 +192,7 @@ public class DivanDB extends HttpServlet
 	    				}
 	    			/* eof met */
 	    			if(status!=OperationStatus.SUCCESS) break;
-	    		
+
 	    			/* check end key if any */
 	    			if(endkey!=null)
 	    				{
@@ -204,13 +204,13 @@ public class DivanDB extends HttpServlet
 	    				{
 	    				continue;
 	    				}
-	    			
-	    			
+
+
 	    			if(countPrinted>0) out.print(",");
 	    			out.print(StringBinding.entryToString(data));
 	    			countPrinted++;
 	    			}
-	    		
+
 	    		out.println("]");
 	    		c.close();
 	    		c=null;
@@ -251,7 +251,7 @@ public class DivanDB extends HttpServlet
 	    out.flush();
 	    out.close();
 	    }
-	
+
 	@Override
 	protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException
@@ -313,7 +313,7 @@ public class DivanDB extends HttpServlet
 				// fill the entry key
 				DatabaseEntry key=new DatabaseEntry();
 				StringBinding.stringToEntry(id, key);
-				//remove 
+				//remove
 				if(storage.database.delete(txn, key)==OperationStatus.SUCCESS)
 					{
 					ids.add(id);
@@ -343,7 +343,7 @@ public class DivanDB extends HttpServlet
 		out.flush();
 		out.close();
 		}
-	
+
 	@Override
 	protected void doPut(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException
@@ -401,10 +401,10 @@ public class DivanDB extends HttpServlet
 					ids.add(id);
 					}
 				//generate an id
-				else 
+				else
 					{
 					Random r=new Random(System.currentTimeMillis());
-					
+
 					for(;;)
 						{
 						String id=String.valueOf("id"+Math.abs(r.nextInt()));
@@ -422,7 +422,7 @@ public class DivanDB extends HttpServlet
 						ids.add(id);
 						break;
 						}
-						
+
 					}
 				}
 			txn.commit();
@@ -437,7 +437,7 @@ public class DivanDB extends HttpServlet
 		finally
 			{
 			if(in!=null) try{ in.close();} catch(Exception err){}
-			}		
+			}
 		resp.setContentType("application/json");
 		resp.setStatus(errorMessage==null?HttpServletResponse.SC_CREATED:HttpServletResponse.SC_BAD_REQUEST);
 		Map<String,Object> response=new LinkedHashMap<String,Object>();
@@ -449,8 +449,8 @@ public class DivanDB extends HttpServlet
 		out.flush();
 		out.close();
 		}
-	
-	
+
+
 	public static void main(String[] args)
 		{
 		File bdbDir=new File(System.getProperty("java.io.tmpdir"),"bdb");
@@ -468,8 +468,8 @@ public class DivanDB extends HttpServlet
 					storage.close();
 					}
 				});
-			
-			
+
+
 			int optind=0;
 			while(optind< args.length)
 				{
@@ -502,7 +502,7 @@ public class DivanDB extends HttpServlet
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
@@ -513,15 +513,15 @@ public class DivanDB extends HttpServlet
 				System.err.println("Illegal number of arguments.");
 				return;
 				}
-			
-			
+
+
 	        storage.open(bdbDir);
 	        ServletContextHandler context = new ServletContextHandler();
 	        context.setAttribute(
 	        		STORAGE_ATTRIBUTE,
 	        		storage
 	        		);
-	        
+
 	        context.addServlet(new ServletHolder(app),"/*");
 	        context.setContextPath("/divandb");
 	        context.setResourceBase(".");
@@ -530,7 +530,7 @@ public class DivanDB extends HttpServlet
 			Server server = new Server(port);
 			/* context */
 			server.setHandler(context);
-			
+
 			/* start server */
 			server.start();
 			/* loop forever */
@@ -542,7 +542,7 @@ public class DivanDB extends HttpServlet
 			}
 		finally
 			{
-			
+
 			}
 		}
 	}

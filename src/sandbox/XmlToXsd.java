@@ -13,7 +13,7 @@ import java.util.List;
  * Contact:
  * 	plindenbaum@yahoo.fr
  * Reference:
- *   
+ *
  * WWW:
  * 	http://plindenbaum.blogspot.com
  * Motivation:
@@ -44,7 +44,7 @@ public class XmlToXsd
 	private static final String JXB="http://java.sun.com/xml/ns/jaxb";
 	private boolean supportingJaxb=true;
 	private String packageName="generated";
-	
+
 	private static class XsdNode
 		{
 		/** parent node */
@@ -57,7 +57,7 @@ public class XmlToXsd
 		List<XsdNode> children=new ArrayList<XsdNode>();
 		/** all the attributes for the elements */
 		Map<String,List<Attr>> attributes=new HashMap<String,List<Attr> >();
-		
+
 		/** finds a node by is tagName */
 		XsdNode findNodeByName(String tagName)
 			{
@@ -70,7 +70,7 @@ public class XmlToXsd
 				}
 			return null;
 			}
-		
+
 		/** main recursive function */
 		void recurse(Element root)
 			{
@@ -87,14 +87,14 @@ public class XmlToXsd
 					}
 				L.add(att);
 				}
-			
-			
+
+
 			for(Node n1=root.getFirstChild();n1!=null;n1=n1.getNextSibling())
 				{
 				if(n1.getNodeType()!=Node.ELEMENT_NODE) continue;
 				Element e1=Element.class.cast(n1);
 				String tagName=e1.getTagName();
-				
+
 				XsdNode childNode=findNodeByName(tagName);
 				if(childNode==null)
 					{
@@ -125,7 +125,7 @@ public class XmlToXsd
 					{
 					try {
 						Double.parseDouble(text);
-						} 
+						}
 					catch (Exception e2) {
 						is_double=false;
 						}
@@ -134,7 +134,7 @@ public class XmlToXsd
 					{
 					try {
 						Float.parseFloat(text);
-						} 
+						}
 					catch (Exception e2) {
 						is_float=false;
 						}
@@ -143,7 +143,7 @@ public class XmlToXsd
 					{
 					try {
 						Long.parseLong(text);
-						} 
+						}
 					catch (Exception e2) {
 						is_long=false;
 						}
@@ -152,7 +152,7 @@ public class XmlToXsd
 					{
 					try {
 						Integer.parseInt(text);
-						} 
+						}
 					catch (Exception e2) {
 						is_int=false;
 						}
@@ -165,7 +165,7 @@ public class XmlToXsd
 					{
 					try {
 						new BigDecimal(text);
-						} 
+						}
 					catch (Exception e2) {
 						is_bigdecimal=false;
 						}
@@ -174,7 +174,7 @@ public class XmlToXsd
 					{
 					try {
 						new BigInteger(text);
-						} 
+						}
 					catch (Exception e2) {
 						is_biginteger=false;
 						}
@@ -189,8 +189,8 @@ public class XmlToXsd
 			if(is_boolean) return "xsd:bool";
 			return "xsd:string";
 			}
-		
-		
+
+
 		/** write to XSD */
 		public void write(XMLStreamWriter w) throws XMLStreamException
 			{
@@ -216,14 +216,14 @@ public class XmlToXsd
 				if(minOccur==0) w.writeAttribute("minOccurs", "0");
 				if(maxOccur!=1) w.writeAttribute("maxOccurs", "unbounded");
 				}
-			
+
 			if(this.children.isEmpty() && this.attributes.isEmpty())
 				{
 				w.writeAttribute("type", getXsdType(this.elements));
 				}
 			else
 				{
-				
+
 				w.writeStartElement("xsd","complexType",XSD);
 				if(!this.children.isEmpty())
 					{
@@ -234,8 +234,8 @@ public class XmlToXsd
 						}
 					w.writeEndElement();
 					}
-				
-				
+
+
 				for(String attName:this.attributes.keySet())
 					{
 					int required=1;
@@ -263,7 +263,7 @@ public class XmlToXsd
 
 	public void parse(Document dom) throws XMLStreamException
 		{
-		
+
 		XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
 		XMLStreamWriter w= xmlfactory.createXMLStreamWriter(System.out,"UTF-8");
 		w.writeStartDocument("UTF-8","1.0");
@@ -274,31 +274,31 @@ public class XmlToXsd
 			w.writeAttribute("xmlns", XMLConstants.XML_NS_URI, "jxb",JXB);
 			w.writeAttribute("jxb", JXB, "version","2.0");
 			}
-		
+
 		w.writeStartElement("xsd","annotation",XSD);
 		w.writeStartElement("xsd","appinfo",XSD);
-	    
+
 		if(supportingJaxb)
 			{
 			w.writeEmptyElement("jxb","globalBindings",JXB);
 			w.writeAttribute("collectionType", "java.util.ArrayList");
-	
+
 			w.writeStartElement("jxb","schemaBindings",JXB);
 			w.writeEmptyElement("jxb","package",JXB);
 			w.writeAttribute("name",this.packageName);
 			w.writeEndElement();
 			}
-		
+
 	    w.writeEndElement();
 	    w.writeEndElement();
-		
+
 		Element root=dom.getDocumentElement();
 		XsdNode node=new XsdNode();
 		node.name=root.getTagName();
 		node.elements.add(root);
 		node.recurse(root);
 		node.write(w);
-		
+
 		w.writeEndElement();
 		w.writeEndDocument();
 		w.flush();
@@ -340,14 +340,14 @@ public class XmlToXsd
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
 				++optind;
 				}
-			
-			
+
+
 			DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
 			factory.setCoalescing(true);
 			factory.setExpandEntityReferences(true);

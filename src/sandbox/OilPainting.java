@@ -1,4 +1,4 @@
-/* 
+/*
  * Author:
  * 	Pierre Lindenbaum PhD
  * Date:
@@ -12,7 +12,7 @@
  * Compilation:
  *        ant oilpainting
  * Usage:
- *        java -jar oilpainting.jar 
+ *        java -jar oilpainting.jar
  */
 package sandbox;
 
@@ -33,8 +33,8 @@ public class OilPainting
 	{
 	private int radius=10;
 	private int intensityLevels=24;
-	
-	
+
+
 	private BufferedImage run(BufferedImage sourceImage)
 		{
 		BufferedImage dest=new BufferedImage(
@@ -42,46 +42,46 @@ public class OilPainting
 			sourceImage.getHeight(),
 			sourceImage.getType()
 			);
-		
+
 		int averageR[] = new int[intensityLevels];
 		int averageG[]=new int[intensityLevels];
 		int averageB[]=new int[intensityLevels];
 		int intensityCount[]=new int[intensityLevels];
-		
+
 		for(int x=0;x< sourceImage.getWidth();++x)
 			{
 			int left = Math.max(0,x-radius);
 			int right = Math.min(x+radius,dest.getWidth()-1);
 			for(int y=0;y< sourceImage.getHeight();++y)
 				{
-				
+
 				int top = Math.max(0,y-radius);
 				int bottom = Math.min(y+radius,dest.getHeight()-1);
-				
+
 				Arrays.fill(averageR,0);
 				Arrays.fill(averageG,0);
 				Arrays.fill(averageB,0);
 				Arrays.fill(intensityCount,0);
 				int maxIndex=-1;
-				
+
 				for(int j=top;j<=bottom;++j)
 					{
 					for(int i=left;i<=right;++i)
 						{
 						if(!inRange(x,y,i, j)) continue;
-						
+
 						int rgb = sourceImage.getRGB(i,j);
-						
+
 						int red = (rgb >> 16)&0xFF;
 						int green = (rgb >>8)&0xFF;
 						int blue = (rgb )&0xFF;
 						int intensityIndex = (int)((((red+green+blue)/3.0)/256.0)*intensityLevels);
-						
+
 						intensityCount[intensityIndex]++;
 						averageR[intensityIndex] += red;
 						averageG[intensityIndex] += green;
 						averageB[intensityIndex] += blue;
-						
+
 						if( maxIndex==-1 ||
 							intensityCount[maxIndex]< intensityCount[intensityIndex]
 							)
@@ -90,21 +90,21 @@ public class OilPainting
 							}
 						}
 					}
-				
+
 				int curMax = intensityCount[maxIndex];
 				int r = averageR[maxIndex] / curMax;
 				int g = averageG[maxIndex] / curMax;
 				int b = averageB[maxIndex] / curMax;
-				
+
 				int rgb=((r << 16) | ((g << 8) | b));
 				dest.setRGB(x,y,rgb);
 				}
 			}
-		
-		
+
+
 		return dest;
 		}
-	
+
 	private boolean inRange(int cx,int cy,int i,int j)
 		{
 		double d;
@@ -112,7 +112,7 @@ public class OilPainting
 		d=Point2D.distance(i, j,cx,cy);
 		return d<radius;
 		}
-	
+
 	public static void main(String[] args)
 		{
 		File outFile=null;
@@ -167,7 +167,7 @@ public class OilPainting
 				System.err.println("File out missing");
 				return;
 				}
-			
+
 			String filename=args[optind];
 			BufferedImage sourceImage=null;
 			if( filename.startsWith("http://") ||
@@ -180,8 +180,8 @@ public class OilPainting
 				{
 				sourceImage=ImageIO.read(new File(filename));
 				}
-			
-			
+
+
 			String format="jpg";
 			String fname=outFile.getName().toLowerCase();
 			if(fname.endsWith(".jpg") || fname.endsWith(".jpeg"))

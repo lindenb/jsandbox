@@ -1,4 +1,4 @@
-/* 
+/*
  * Author:
  * 	Pierre Lindenbaum PhD
  * Date:
@@ -10,7 +10,7 @@
  * Compilation:
  *        ant geneticpainting
  * Usage:
- *        java -jar geneticpainting.jar 
+ *        java -jar geneticpainting.jar
  */
 package sandbox;
 
@@ -54,20 +54,20 @@ public class GeneticPainting
 	private int shape_max_size=20;
 	private char shape_type='c';
 	private int n_threads=3;
-	
+
 	private abstract class Figure implements Cloneable
 		{
 		int red;
 		int green;
 		int blue;
 		int alpha;
-		
+
 		String getSvgStyle()
 			{
 			return "fill:rgb("+red+","+green+","+blue+");fill-opacity:"+(alpha/255.0)+";";
 			}
 		public abstract void paint(Graphics2D g);
-		
+
 		private int rnd255(int n)
 			{
 			n+= plusMinus(3);
@@ -75,7 +75,7 @@ public class GeneticPainting
 			if(n>255) n=255;
 			return n;
 			}
-		
+
 		public void mute()
 			{
 			if(random.nextBoolean()) return;
@@ -87,14 +87,14 @@ public class GeneticPainting
 			}
 		public void html(PrintWriter out)
 			{
-			
+
 			}
 		public abstract Object clone() ;
 		public abstract double area();
 		public abstract void xml(XMLStreamWriter w) throws XMLStreamException;
 		}
-	
-	
+
+
 	private class Circle extends Figure
 		{
 		int cx;
@@ -106,15 +106,15 @@ public class GeneticPainting
 			this.cy=random.nextInt(sourceImage.getHeight());
 			this.radius= shape_min_size+random.nextInt(shape_max_size-shape_min_size);
 			this.alpha=1+random.nextInt(254);
-			
+
 			int rgb1= sourceImage.getRGB(cx, cy);
 			this.red = (rgb1 >> 16)&0xFF;
 			this.green = (rgb1 >>8)&0xFF;
 			this.blue = (rgb1 )&0xFF;
-			
+
 			}
-		
-		
+
+
 		@Override
 		public void html(PrintWriter out)
 			{
@@ -136,7 +136,7 @@ public class GeneticPainting
 				this.cx=random.nextInt(sourceImage.getWidth());
 				this.cy=random.nextInt(sourceImage.getHeight());
 				}
-			
+
 			}
 		public void paint(Graphics2D g)
 			{
@@ -149,7 +149,7 @@ public class GeneticPainting
 				));
 			}
 		@Override
-		public Object clone() 
+		public Object clone()
 			{
 			Circle cp=new Circle();
 			cp.alpha=alpha;
@@ -165,7 +165,7 @@ public class GeneticPainting
 		public double area() {
 			return radius;
 			}
-		
+
 		@Override
 		public void xml(XMLStreamWriter w) throws XMLStreamException
 			{
@@ -176,8 +176,8 @@ public class GeneticPainting
 			w.writeAttribute("style", getSvgStyle()+"stroke:none;");
 			}
 	}
-	
-	
+
+
 	private class Line extends Figure
 		{
 		int x1,x2,y1,y2;
@@ -195,7 +195,7 @@ public class GeneticPainting
 			this.green = (rgb1 >>8)&0xFF;
 			this.blue = (rgb1 )&0xFF;
 			}
-		
+
 		@Override
 		public void mute()
 			{
@@ -216,7 +216,7 @@ public class GeneticPainting
 				));
 			}
 		@Override
-		public Object clone() 
+		public Object clone()
 			{
 			Line cp=new Line();
 			cp.alpha=alpha;
@@ -234,7 +234,7 @@ public class GeneticPainting
 		public double area() {
 			return weight;
 			}
-		
+
 		@Override
 		String getSvgStyle() {
 			return "stroke:rgb("+red+","+green+","+blue+");stroke-opacity:"+(alpha/255.0)+";" +
@@ -242,7 +242,7 @@ public class GeneticPainting
 					"stroke-linejoin:round;" +
 					"fill:none;stroke-width:"+weight+"px;";
 			}
-		
+
 		@Override
 		public void xml(XMLStreamWriter w) throws XMLStreamException
 			{
@@ -254,8 +254,8 @@ public class GeneticPainting
 			w.writeAttribute("style", getSvgStyle());
 			}
 		}
-	
-	
+
+
 	private class Poly extends Figure
 		{
 		private List<Point2D.Double> points=new ArrayList<Point2D.Double>();
@@ -263,7 +263,7 @@ public class GeneticPainting
 			{
 			int n=shape_min_size+random.nextInt(shape_max_size-shape_min_size);
 			this.alpha=1+random.nextInt(254);
-			
+
 			Point2D.Double p1=new Point2D.Double(
 				random.nextInt(sourceImage.getWidth()),
 				random.nextInt(sourceImage.getHeight())
@@ -280,9 +280,9 @@ public class GeneticPainting
 				p1.getX(),
 				p1.getY()+n
 				);
-			
+
 			int rgb1= 0;
-			
+
 			if(	p3.getX()< sourceImage.getWidth() &&
 				p3.getY()< sourceImage.getHeight())
 				{
@@ -302,11 +302,11 @@ public class GeneticPainting
 			this.points.add(p2);
 			this.points.add(p3);
 			this.points.add(p4);
-			
+
 			}
 		Poly(int capacity)
 			{
-			
+
 			}
 		@Override
 		public void mute()
@@ -353,7 +353,7 @@ public class GeneticPainting
 					}
 				default:break;
 				}
-				
+
 			}
 		private GeneralPath getPath()
 			{
@@ -378,23 +378,23 @@ public class GeneticPainting
 			g.setColor(new Color(red, green, blue, alpha));
 			g.fill(getPath());
 			}
-		
+
 		@Override
-		public Object clone() 
+		public Object clone()
 			{
 			Poly cp=new Poly(this.points.size());
 			cp.alpha=alpha;
 			cp.red=red;
 			cp.green=green;
 			cp.blue=blue;
-			
+
 			for(Point2D.Double d:this.points)
 				{
 				cp.points.add(new Point2D.Double(d.getX(),d.getY()));
 				}
 			return cp;
 			}
-		
+
 		@Override
 		public double area() {
 			Rectangle r= getPath().getBounds();
@@ -417,13 +417,13 @@ public class GeneticPainting
 			w.writeAttribute("style",getSvgStyle()+"fill-rule:nonzero;");
 			}
 		}
-	
+
 	private class Solution implements Comparable<Solution>,Cloneable
 		{
 		long generation=0;
 		Long fitness=null;
 		List<Figure> shapes=new ArrayList<Figure>();
-		
+
 		public Solution mute()
 			{
 			for(Figure f:this.shapes)
@@ -443,7 +443,7 @@ public class GeneticPainting
 				}
 			return this;
 			}
-		
+
 		public void paint(Graphics2D g)
 			{
 			for(Figure f: this.shapes)
@@ -458,7 +458,7 @@ public class GeneticPainting
 			i= shapes.size() - o.shapes.size();
 			return i;
 			}
-		
+
 		@Override
 		public Object clone()
 			{
@@ -470,7 +470,7 @@ public class GeneticPainting
 				}
 			return s;
 			}
-		
+
 		public void html(PrintWriter out)
 			{
 			long id=System.currentTimeMillis();
@@ -479,7 +479,7 @@ public class GeneticPainting
 				"<head>\n"+
 				"<script type=\"text/javascript\">\n"
 				);
-			
+
 			out.print("var solution={width:"+
 					sourceImage.getWidth()+",height:" +
 					sourceImage.getHeight() +",shapes:["
@@ -490,7 +490,7 @@ public class GeneticPainting
                     shapes.get(j).html(out);
                     }
 			 out.print("]};");
-			
+
 			out.print("function paint"+id+"(param)\n"+
 			"\t{\n"+
 			"\tparam.ctx=param.circle.getContext(\"2d\");\n"+
@@ -548,7 +548,7 @@ public class GeneticPainting
 			"<body onload=\"init"+id+"();\"><canvas id=\"canvas"+id+"\"/></body>\n"+
 			"</html>");
 			}
-		
+
 		public void xml(XMLStreamWriter w) throws XMLStreamException
 			{
 			w.writeStartDocument("UTF-8", "1.0");
@@ -560,45 +560,45 @@ public class GeneticPainting
 			w.writeStartElement("title");
 			w.writeCharacters("Fitness:"+fitness+" Generation:"+generation);
 			w.writeEndElement();
-			
+
 			w.writeEmptyElement("rect");
 			w.writeAttribute("style", "fill:none;stroke:black;");
 			w.writeAttribute("x", "0");
 			w.writeAttribute("y", "0");
 			w.writeAttribute("width", String.valueOf(sourceImage.getWidth()-1));
 			w.writeAttribute("height", String.valueOf(sourceImage.getHeight()-1));
-			
+
 			w.writeStartElement("g");
 			for(Figure f:this.shapes)
 				{
 				f.xml(w);
 				}
 			w.writeEndElement();
-			
+
 			w.writeEmptyElement("rect");
 			w.writeAttribute("style", "fill:none;stroke:black;");
 			w.writeAttribute("x", "0");
 			w.writeAttribute("y", "0");
 			w.writeAttribute("width", String.valueOf(sourceImage.getWidth()-1));
 			w.writeAttribute("height", String.valueOf(sourceImage.getHeight()-1));
-			
+
 			w.writeEndElement();
 			}
 		}
-	
+
 	private int parent_count=5;
 	private int max_shape_per_solution=3000;
 	private int min_shape_per_solution=100;
-	
+
 	private int plusMinus(int n)
 		{
 		return n-random.nextInt(2*n+1);
 		}
-	
-	
-	
-	
-	
+
+
+
+
+
 	private Figure makeFigure()
 		{
 		switch(shape_type)
@@ -608,9 +608,9 @@ public class GeneticPainting
 			default: return new Circle();
 			}
 		}
-	
+
 	private Solution makeSolution()
-		{	
+		{
 		Solution s=new Solution();
 		int n=min_shape_per_solution+ random.nextInt(max_shape_per_solution-min_shape_per_solution);
 		while(s.shapes.size()<n)
@@ -631,11 +631,11 @@ public class GeneticPainting
 			}
 		return s;
 		}
-	
+
 	private Solution mate(final Solution s1,final Solution s2)
 		{
-		
-		
+
+
 		Solution s=new Solution();
 		boolean side1=random.nextBoolean();
 		Solution sx= (side1?s1:s2);
@@ -649,51 +649,51 @@ public class GeneticPainting
 			{
 			s.shapes.add((Figure)sx.shapes.get(i).clone());
 			}
-		
-		
+
+
 		while(s.shapes.size()>max_shape_per_solution)
 			{
 			s.shapes.remove(s.shapes.size()-1);
 			}
-		
+
 		//s.mute();
-		
-		
-		
+
+
+
 		return s;
 		}
-	
+
 	private class Fitness
 		implements Callable<Long>
 		{
 		int rowStart;
 		int rowEnd;
 		BufferedImage tmpImage;
-		
+
 		Fitness()
 			{
-			
+
 			}
-		
+
 		private int deltaRgb(int rgb1,int rgb2)
 			{
 			int r1 = (rgb1)&0xFF;
 			int g1 = (rgb1>>8)&0xFF;
 			int b1 = (rgb1>>16)&0xFF;
 			int a1 = (rgb1>>24)&0xFF;
-		
+
 			int r2 = (rgb2)&0xFF;
 			int g2 = (rgb2>>8)&0xFF;
 			int b2 = (rgb2>>16)&0xFF;
 			int a2 = (rgb2>>24)&0xFF;
-			
+
 			return 	pow2(r1-r2)+
 					pow2(g1-g2)+
 					pow2(b1-b2)+
 					pow2(a1-a2)
 					;
 			}
-		
+
 		@Override
 		public Long call() throws Exception
 			{
@@ -710,7 +710,7 @@ public class GeneticPainting
 			return fitness;
 			}
 		}
-	
+
 	private void run() throws Exception
 		{
 		long now=System.currentTimeMillis();
@@ -721,13 +721,13 @@ public class GeneticPainting
 				this.sourceImage.getHeight(),
 				BufferedImage.TYPE_INT_ARGB
 				);
-		
+
 		BufferedImage mosaicImage=new BufferedImage(
 				this.sourceImage.getWidth(),
 				this.sourceImage.getHeight(),
 				this.sourceImage.getType()
 				);
-		
+
 		int nThreads=this.n_threads;
 		int rowsPerThreads=this.sourceImage.getHeight()/nThreads;
 		if(rowsPerThreads<=0)
@@ -747,15 +747,15 @@ public class GeneticPainting
 			calls[i]=f;
 			}
 
-		
+
 		for(;;)
 			{
 			++n_generation;
 			List<Solution> parents=new ArrayList<Solution>();
-			
-			
-			
-			
+
+
+
+
 			while(parents.size()< parent_count)
 				{
 				if(best==null || parents.isEmpty())
@@ -771,10 +771,10 @@ public class GeneticPainting
 					parents.add(Solution.class.cast(best.clone()).mute());
 					}
 				}
-			
+
 			List<Solution> children=new ArrayList<Solution>(parents.size()*parents.size());
-			
-			
+
+
 			for(int i=0;i< parents.size();++i)
 				{
 				for(int j=0;j< parents.size();++j)
@@ -807,21 +807,21 @@ public class GeneticPainting
 				g2.fillRect(0, 0, tmpImage.getWidth(), tmpImage.getHeight());
 				c.paint(g2);
 				g2.dispose();
-				
+
 				g3.drawImage(tmpImage,
 						x*iconW,y*iconH,
 						iconW,iconH,null
 						);
 				g3.setColor(Color.BLACK);
 				g3.drawRect(x*iconW,y*iconH, iconW,iconH);
-				
+
 				x++;
 				if(x==cols)
 					{
 					x=0;
 					y++;
 					}
-				
+
 				if(calls.length==1)
 					{
 					c.fitness=calls[0].call();
@@ -845,15 +845,15 @@ public class GeneticPainting
 						}
 					}
 				}
-			
+
 			g3.dispose();
-			
-			
+
+
 			Collections.sort(children);
-			
-			
-			
-			
+
+
+
+
 			if( !children.isEmpty() &&
 				(best==null || children.get(0).compareTo(best)<0)
 				)
@@ -869,14 +869,14 @@ public class GeneticPainting
 				best.paint(g2);
 				g2.dispose();
 				ImageIO.write(tmpImage, "PNG", new File(this.fileout+".png"));
-				
+
 				XMLOutputFactory factory=XMLOutputFactory.newFactory();
 				FileOutputStream fout=new FileOutputStream(this.fileout+".svg");
 				XMLStreamWriter w=factory.createXMLStreamWriter(fout, "UTF-8");
 				best.xml(w);
 				fout.flush();
 				fout.close();
-				
+
 				if(this.shape_type=='c')
 					{
 					PrintWriter o=new PrintWriter(new File(this.fileout+".html"));
@@ -884,31 +884,31 @@ public class GeneticPainting
 					o.flush();
 					o.close();
 					}
-				
+
 				}
 			else if(!children.isEmpty())
 				{
 				System.out.println("best(Generation="+n_generation+")="+children.get(0).fitness);
-				ImageIO.write(mosaicImage, "PNG", new File(this.fileout+"-mosaic.png"));	
+				ImageIO.write(mosaicImage, "PNG", new File(this.fileout+"-mosaic.png"));
 				}
 			/*
 			while(children.size()>parent_count)
 				{
 				children.remove(children.size()-1);
 				}
-			parents=children;*/ 
+			parents=children;*/
 			}
-		
+
 		}
-	
+
 	private static int pow2(int a)
 		{
 		if(a<0) a=-a;
 		return a*a;
 		}
-	
-	
-	
+
+
+
 	public static void main(String[] args)
 		{
 		GeneticPainting app=new GeneticPainting();
@@ -993,7 +993,7 @@ public class GeneticPainting
 				{
 				app.sourceImage=ImageIO.read(new File(filename));
 				}
-			
+
 			app.run();
 			}
 		catch (Exception e)
