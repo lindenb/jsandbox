@@ -13,6 +13,13 @@
 	</fileset>
 </path>
 
+<path id="velocity.jars" description="All jars for apache velocity">
+   <pathelement location="${velocity.jar}"/>
+   <pathelement location="${common.collection.jar}"/>
+   <pathelement location="${common.lang.jar}"/>
+</path>
+
+
 <path id="httpclient.jars" description="ALl Jars for the Apache HttpClient library">
    <fileset  dir="${httpclient.dir}">
       <include name="org.apache.commons.codec*.jar"/>
@@ -30,11 +37,34 @@
 </path>
 
 
-<target name="all" depends="jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
+<target name="all" depends="velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
 </target>
 
-
+<target name="velocityjson">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<mkdir dir="tmp/sandbox"/>
+	<exec executable="javacc">
+		<arg value="-OUTPUT_DIRECTORY=tmp/sandbox"/>
+		<arg value="src/sandbox/VelocityJson.jj"/>
+	</exec>
+	<javac srcdir="tmp" destdir="tmp" debug="true" includeantruntime="no">
+		<classpath refid="velocity.jars"/>
+		<include name="**/VelocityJson.java" />
+	</javac>
+	<pathconvert property="velocity.claspath" pathsep=" ">
+		<path refid="velocity.jars" />
+	</pathconvert>	
+	<jar destfile="dist/velocityjson.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.VelocityJson"/>
+		 	<attribute name="Class-Path" value="${velocity.claspath}" />
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
+</target>
 
 <target name="jsonquery">
 	<mkdir dir="dist"/>
@@ -44,6 +74,7 @@
 		<arg value="src/sandbox/JSONQuery.jj"/>
 	</exec>
 	<javac srcdir="src" destdir="tmp" debug="true">
+
 		<include name="**/JSONQuery.java" />
 	</javac>
 	
