@@ -101,9 +101,10 @@ private static class Main
 				System.err.println("Pierre Lindenbaum PhD 2011");
 				System.err.println("Options:");
 				System.err.println(" -h help; This screen.");
-				System.err.println(" -s (key) (string) add this string to the context.");
-				System.err.println(" -e (key) (json-expr) add this json to the context.");
-				System.err.println(" -f (key) (json-file) add this json to the context.");
+				System.err.println(" -s (key) (string) add this string into the context.");
+				System.err.println(" -e (key) (json-expr) add this json into the context.");
+				System.err.println(" -c (key) (class) add a new instance of the class into context.");
+				System.err.println(" -f (key) (json-file) add this json into the context.");
 				System.err.println(" -i (key) and read stdin-json to the context.");
 				System.err.println(" -g use primitives int and double instead of java.math.Big*");
 				return;
@@ -115,6 +116,12 @@ private static class Main
 			else if(args[optind].equals("-i"))
 				{
 				readstdin=args[++optind];
+				}
+			else if(args[optind].equals("-c"))
+				{
+				String key=args[++optind];
+				Object value=Class.forName(args[++optind]).newInstance();
+				put(key,value);
 				}
 			else if(args[optind].equals("-s"))
 				{
