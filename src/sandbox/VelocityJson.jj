@@ -32,6 +32,7 @@ import org.apache.velocity.app.VelocityEngine;
 @SuppressWarnings("unchecked")
 public class VelocityJson
 {
+private boolean use_primitive=false;
 
 private String unescape(String s) throws ParseException
 	{
@@ -65,11 +66,20 @@ private String unescape(String s) throws ParseException
 
 private static class Main
 	{
-	VelocityContext context=null;
+	private VelocityContext context=null;
+	private boolean use_primitives=false;
 	Main()
 		{
 		context = new VelocityContext();
 		}
+	
+	VelocityJson makeParser(Reader r)
+		{
+		VelocityJson parser=new VelocityJson(r);
+		parser.use_primitive=use_primitives;
+		return parser;
+		}
+	
 	private void put(String key,Object o)
 		{
 		if(context.containsKey(key))
@@ -95,7 +105,12 @@ private static class Main
 				System.err.println(" -e (key) (json-expr) add this json to the context.");
 				System.err.println(" -f (key) (json-file) add this json to the context.");
 				System.err.println(" -i (key) and read stdin-json to the context.");
+				System.err.println(" -g use primitives int and double instead of java.math.Big*");
 				return;
+				}
+			else if(args[optind].equals("-g"))
+				{
+				use_primitives=true;
 				}
 			else if(args[optind].equals("-i"))
 				{
@@ -110,14 +125,14 @@ private static class Main
 			else if(args[optind].equals("-e"))
 				{
 				String key=args[++optind];
-				Object value=new VelocityJson(new StringReader(args[++optind])).parse();
+				Object value=makeParser(new StringReader(args[++optind])).parse();
 				put(key,value);
 				}
 			else if(args[optind].equals("-f"))
 				{
 				String key=args[++optind];
 				FileReader r=new FileReader(args[++optind]);
-				Object value=new VelocityJson(r).parse();
+				Object value=makeParser(r).parse();
 				put(key,value);
 				r.close();
 				}
@@ -140,24 +155,27 @@ private static class Main
 		
 		if(readstdin!=null)
 			{
-			Object o=new VelocityJson(System.in).parse();
+			Object o=makeParser(new InputStreamReader(System.in)).parse();
 			put(readstdin,o);
 			}
-		if(optind+1!=args.length)
+		if(optind==args.length)
 			{
-			System.err.println("Illegal number of arguments. Expected one Velocity Template.\n");
+			System.err.println("Illegal number of arguments. Expected at least one Velocity Template.\n");
 			return;
 			}
-		File file=new File(args[optind]);
-		VelocityEngine ve = new VelocityEngine();
-		ve.setProperty("resource.loader", "file");
-		ve.setProperty("file.resource.loader.class","org.apache.velocity.runtime.resource.loader.FileResourceLoader");
-		ve.setProperty("file.resource.loader.path",file.getParent());
-        	ve.init();
-		Template template = ve.getTemplate(file.getName());
-		PrintWriter w=new PrintWriter( System.out);
-		template.merge( this.context, w);
-		w.flush();
+		while(optind<args.length)
+			{
+			File file=new File(args[optind++]);
+			VelocityEngine ve = new VelocityEngine();
+			ve.setProperty("resource.loader", "file");
+			ve.setProperty("file.resource.loader.class","org.apache.velocity.runtime.resource.loader.FileResourceLoader");
+			ve.setProperty("file.resource.loader.path",file.getParent());
+	        	ve.init();
+			Template template = ve.getTemplate(file.getName());
+			PrintWriter w=new PrintWriter( System.out);
+			template.merge( this.context, w);
+			w.flush();
+			}
 		}
 	}
 
@@ -284,14 +302,14 @@ public Boolean boolNode():{}
 	)
 	}
 
-public BigInteger intNode():{	Token t;}
+public Number intNode():{	Token t;}
 	{
-	t=<INT_NUMBER> { return new BigInteger(t.image); }
+	t=<INT_NUMBER> { if(use_primitive) return new Integer(t.image); return new BigInteger(t.image); }
 	}
 
-public BigDecimal decimalNode():{	Token t;}
+public Number decimalNode():{	Token t;}
 	{
-	t=<FLOATING_NUMBER> { return new BigDecimal(t.image); }
+	t=<FLOATING_NUMBER> { if(use_primitive) return new Double(t.image); return new BigDecimal(t.image); }
 	}
 
 public String stringNode():{	String s;}
@@ -331,7 +349,7 @@ public List<Object> arrayNode():
 	}
 
 public Map<String,Object> objectNode():
-	{Map<String,Object> map= new HashMap<String,Object>(); }
+	{Map<String,Object> map= new LinkedHashMap<String,Object>(); }
 	{
 	openObject() ( keyValue(map) (comma() keyValue(map))*)? closeObject()
 		{
