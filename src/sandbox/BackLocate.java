@@ -6,11 +6,11 @@
  * Contact:
  * 	plindenbaum@yahoo.fr
  * Reference:
- *   
+ *
  * WWW:
  * 	http://plindenbaum.blogspot.com
  * Wiki
- *  
+ *
  * Motivation:
  * 	map a mutation on a protein back to the genome
  * Compilation:
@@ -79,17 +79,17 @@ public class BackLocate
 			}
 		};
 	/**
-	 *  
+	 *
 	 * Genetic Code
 	 *
 	 */
 	abstract static class GeneticCode
 		{
 		/** the standard genetic code */
-		
-		/** get the genetic-code table (NCBI data) */ 
+
+		/** get the genetic-code table (NCBI data) */
 		protected abstract String getNCBITable();
-		
+
 		/** convert a base to index */
 		private int base2index(char c)
 			{
@@ -117,20 +117,20 @@ public class BackLocate
 				return getNCBITable().charAt(base1*16+base2*4+base3);
 				}
 			}
-		
+
 		/** get the standard genetic code */
 		public static GeneticCode getStandard()
 			{
 			return STANDARD;
 			}
-		
+
 		/** get the mitochondrial genetic code */
 		public static GeneticCode getMitochondrial()
 			{
 			return MITOCHONDRIAL;
 			}
-		
-		
+
+
 		}
 
 	/** get a genetic code from a chromosome name (either std or mitochondrial */
@@ -140,7 +140,7 @@ public class BackLocate
 		return STANDARD;
 		}
 
-	
+
 	/** CharSeq a simple string impl */
 	static private interface CharSeq
 		{
@@ -156,20 +156,20 @@ public class BackLocate
 		AbstractCharSeq()
 			{
 			}
-		
+
 		@Override
 		public int hashCode()
 			{
 			return getString().hashCode();
 			}
-		
+
 		public String getString()
 			{
 			StringBuilder b=new StringBuilder(length());
 			for(int i=0;i< length();++i) b.append(charAt(i));
 			return b.toString();
 			}
-		
+
 		@Override
 		public String toString()
 			{
@@ -179,7 +179,7 @@ public class BackLocate
 
 
 	/**
-	 * 
+	 *
 	 * A GenomicSequence
 	 *
 	 */
@@ -189,14 +189,14 @@ public class BackLocate
 		private String chrom;
 		private byte array[];
 		private int chromStart0;
-		
+
 		public GenomicSequence(byte array[],String chrom,int chromStart0)
-			{	
+			{
 			this.chrom=chrom;
 			this.array=array;
 			this.chromStart0=chromStart0;
 			}
-		
+
 		public String getChrom()
 			{
 			return chrom;
@@ -209,13 +209,13 @@ public class BackLocate
 			{
 			return getChromStart()+array.length;
 			}
-		
+
 		@Override
 		public int length()
 			{
 			return getChromEnd();
 			}
-		
+
 		@Override
 		public char charAt(int index0)
 			{
@@ -246,7 +246,7 @@ public class BackLocate
 			}
 		}
 
-	
+
 	static private class RNASequence extends AbstractCharSeq
 		{
 		List<Integer> genomicPositions=new ArrayList<Integer>();
@@ -279,7 +279,7 @@ static private class ProteinCharSequence extends AbstractCharSeq
 		this.geneticCode=geneticCode;
 		this.cDNA=cDNA;
 		}
-	
+
 	@Override
 	public char charAt(int i)
 		{
@@ -287,8 +287,8 @@ static private class ProteinCharSequence extends AbstractCharSeq
 			cDNA.charAt(i*3+0),
 			cDNA.charAt(i*3+1),
 			cDNA.charAt(i*3+2));
-		}	
-	
+		}
+
 	@Override
 	public int length()
 		{
@@ -321,18 +321,18 @@ static private class ProteinCharSequence extends AbstractCharSeq
 				throw new RuntimeException(err);
 				}
 			}
-		
+
 		 @Override
 		public void startDocument() throws SAXException
 			{
 			baos=null;
 			}
-		
+
 		 public InputSource resolveEntity (String publicId, String systemId)
 	         {
 	         return new InputSource(new StringReader(""));
 	         }
-		
+
 		@Override
 	    public void startElement(String uri, String localName, String name,
 	            Attributes attributes) throws SAXException
@@ -342,7 +342,7 @@ static private class ProteinCharSequence extends AbstractCharSeq
 	            this.baos=new ByteArrayOutputStream(this.reserve);
 	            }
 	        }
-		
+
 	    @Override
 	    public void characters(char[] ch, int start, int length)
 	            throws SAXException
@@ -355,8 +355,8 @@ static private class ProteinCharSequence extends AbstractCharSeq
 	            this.baos.write((byte)c);
 	            }
 	        }
-	
-	
+
+
 		public GenomicSequence getSequence(String chrom, int chromStart0, int chromEnd0)
 				throws IOException
 			{
@@ -389,13 +389,13 @@ static private class ProteinCharSequence extends AbstractCharSeq
 				{
 				throw new IOException(err);
 				}
-			
+
 			}
-		
+
 		}
 
 /**
- * 
+ *
  * KnownGene
  *
  */
@@ -411,14 +411,14 @@ private class KnownGene
 		private int cdsEnd;
 		private int exonStarts[];
 		private int exonEnds[];
-		
-		
-		
-		
+
+
+
+
 			/**
-			 * 
-			 * KnownGene 
-			 * 
+			 *
+			 * KnownGene
+			 *
 			 */
 			public KnownGene(ResultSet row)
 				throws SQLException
@@ -433,8 +433,8 @@ private class KnownGene
 		        int exonCount=row.getInt("exonCount");
 		        this.exonStarts = new int[exonCount];
 		        this.exonEnds = new int[exonCount];
-		            
-	            
+
+
 	            int index=0;
 	            for(String s: row.getString("exonStarts").split("[,]"))
 	            	{
@@ -446,19 +446,19 @@ private class KnownGene
 	            	this.exonEnds[index++]=Integer.parseInt(s);
 	            	}
 				}
-			
+
 			/** returns knownGene ID */
 			public String getName()
 				{
 				return this.name;
 				}
-			
+
 			/** returns chromosome name */
 			public String getChromosome()
 				{
 				return this.chrom;
 				}
-			
+
 			/** returns the strand */
 			public char getStrand()
 				{
@@ -468,48 +468,48 @@ private class KnownGene
 	        	{
 	        	return getStrand()=='+';
 	        	}
-	
+
 			public int getTxStart()
 				{
 				return this.txStart;
 				}
-	
+
 			public int getTxEnd()
 				{
 				return this.txEnd;
 				}
-			
-	
+
+
 			public int getCdsStart()
 				{
 				return this.cdsStart;
 				}
-			
-	
+
+
 			public int getCdsEnd()
 				{
 				return this.cdsEnd;
 				}
-			
-	
+
+
 			public int getExonStart(int index)
 				{
 				return this.exonStarts[index];
 				}
-			
-	
+
+
 			public int getExonEnd(int index)
 				{
 				return this.exonEnds[index];
 				}
-			
-	
-			
+
+
+
 			public int getExonCount()
 				{
 				return this.exonStarts.length;
 				}
-			
+
 			public String getExonNameFromGenomicIndex(int genome)
 				{
 				for(int i=0;i< getExonCount();++i)
@@ -528,20 +528,20 @@ private class KnownGene
 					}
 				throw new IndexOutOfBoundsException();
 				}
-			
+
 			}
 
 
-	
-	
 
-	
 
-		
-		
-	
 
-	
+
+
+
+
+
+
+
 	private void backLocate(
 		KnownGene gene,
 		String geneName,
@@ -550,13 +550,13 @@ private class KnownGene
 		) throws IOException
 		{
 		final int extra=1000;
-		
+
 		GeneticCode geneticCode=getGeneticCodeByChromosome(gene.getChromosome());
 		RNASequence wildRNA=null;
 		ProteinCharSequence wildProt=null;
-		
-	        		
-	        		
+
+
+
 		if(genomicSeq==null ||
 	               !gene.getChromosome().equals(genomicSeq.getChrom()) ||
 	               !(genomicSeq.getChromStart()<=gene.getTxStart() && gene.getTxEnd()<= genomicSeq.getChromEnd())
@@ -569,12 +569,12 @@ private class KnownGene
     	            		gene.getTxEnd()+extra
     	            		);
         	}
-        	
-	        		
-	        		
-	        		
+
+
+
+
 	     if(gene.isForward())
-    		{    		
+    		{
     		int exon_index=0;
     		while(exon_index< gene.getExonCount())
     			{
@@ -584,16 +584,16 @@ private class KnownGene
     				{
     				if(i< gene.getCdsStart()) continue;
     				if(i>=gene.getCdsEnd()) break;
-					
+
 					if(wildRNA==null)
 						{
 						wildRNA=new RNASequence(genomicSeq,'+');
 						}
 
     				wildRNA.genomicPositions.add(i);
-    				
-    				
-    				
+
+
+
     				if(wildRNA.length()%3==0 && wildRNA.length()>0 && wildProt==null)
         				{
         				wildProt=new ProteinCharSequence(geneticCode,wildRNA);
@@ -601,9 +601,9 @@ private class KnownGene
     				}
     			++exon_index;
     			}
-    		
-    		
-    		
+
+
+
     		}
 	   else // reverse orientation
     		{
@@ -616,14 +616,14 @@ private class KnownGene
     				{
     				if(i>= gene.getCdsEnd()) continue;
     				if(i<  gene.getCdsStart()) break;
-    				
+
     				if(wildRNA==null)
 						{
 						wildRNA=new RNASequence(genomicSeq,'-');
 						}
-    				
-    				
-    				
+
+
+
     				wildRNA.genomicPositions.add(i);
     				if( wildRNA.length()%3==0 &&
     					wildRNA.length()>0 &&
@@ -631,13 +631,13 @@ private class KnownGene
         				{
         				wildProt=new ProteinCharSequence(geneticCode,wildRNA);
         				}
-    				
+
     				}
     			--exon_index;
     			}
 
     		}//end of if reverse
-	        		
+
 	     if(wildProt==null)
 	    	 {
 	    	 System.err.println("#no protein found for transcript:"+gene.getName());
@@ -649,7 +649,7 @@ private class KnownGene
         	System.err.println("#index out of range for :"+gene.getName()+" petide length="+wildProt.length());
 	    	return;
         	}
-    
+
         if(wildProt.charAt(peptideIndex0)!=aa1)
         	{
         	System.out.println("##Warning ref aminod acid for "+gene.getName() +"  ["+peptidePos1+"] is not the same ("+wildProt.charAt(peptideIndex0)+"/"+aa1+")");
@@ -668,7 +668,7 @@ private class KnownGene
         		+ wildRNA.charAt(indexesInRNA[1])
         		+ wildRNA.charAt(indexesInRNA[2])
         		;
-        		
+
         for(int indexInRna: indexesInRNA)
         	{
         	System.out.print(geneName);
@@ -709,10 +709,10 @@ private class KnownGene
         	}
 		}
 
-	private BackLocate() 
+	private BackLocate()
 		{
 		}
-	
+
 	private static char complement(char c)
 		{
 		switch(c)
@@ -724,7 +724,7 @@ private class KnownGene
 			default:throw new IllegalArgumentException(""+c);
 			}
 		}
-	
+
 	private void run(BufferedReader in) throws IOException,SQLException
 		{
 		String line;
@@ -771,14 +771,14 @@ private class KnownGene
 			pstmt.close();
 			}
 		}
-	
+
 	public static void main(String[] args)
 		{
 		BackLocate app=new BackLocate();
 		try {
 			String proxyHost=null;
 			String proxyPort=null;
-			
+
 			LOG.setLevel(Level.OFF);
 			int optind=0;
 			while(optind<args.length)
@@ -796,7 +796,7 @@ private class KnownGene
 					System.out.println("e.g:  echo -e \"NOTCH2\\tM1I\" | java -jar dist/backlocate.jar");
 					return;
 					}
-				
+
 				else if(args[optind].equals("-b"))
 					{
 					app.genomeVersion=args[++optind];
@@ -806,7 +806,7 @@ private class KnownGene
 					app.printSequences=true;
 					}
 				else if(args[optind].equals("-log") ||
-						args[optind].equals("--log") || 
+						args[optind].equals("--log") ||
 						args[optind].equals("-debug"))
 					{
 					LOG.setLevel(Level.parse(args[++optind]));
@@ -835,7 +835,7 @@ private class KnownGene
 					}
 				++optind;
 				}
-			
+
 			if(proxyHost!=null)
 				{
 				LOG.info("setting proxy host");
@@ -846,7 +846,7 @@ private class KnownGene
 				LOG.info("setting proxy port");
 				System.setProperty("http.proxyPort", proxyPort);
 				}
-			
+
 			Class.forName("com.mysql.jdbc.Driver");
 			app.connection=DriverManager.getConnection(
 				"jdbc:mysql://genome-mysql.cse.ucsc.edu/"+
@@ -913,6 +913,6 @@ private class KnownGene
 				try {app.connection.close();}
 				catch(SQLException err){}
 				}
-			}	
+			}
 		}
 	}

@@ -21,22 +21,22 @@ public class PubmedDump
 	{
 	private String email=null;
 	private String tool=null;
-	
+
 	private PubmedDump()
 		{
-		
+
 		}
-	
-	
-	
+
+
+
 	public void run(String query,OutputStream out) throws Exception
 		{
-		
+
 		URL url= new URL(
 			"http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term="+
-			URLEncoder.encode(query, "UTF-8")+	
+			URLEncoder.encode(query, "UTF-8")+
 			"&retstart=0&retmax=0&usehistory=y&retmode=xml&email=plindenbaum_at_yahoo.fr&tool=gender");
-		
+
 		XMLInputFactory f= XMLInputFactory.newInstance();
 		f.setProperty(XMLInputFactory.IS_COALESCING, Boolean.TRUE);
 		f.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE,Boolean.FALSE);
@@ -51,7 +51,7 @@ public class PubmedDump
 
 		while(!(evt=reader.nextEvent()).isEndDocument())
 			{
-			if(!evt.isStartElement()) continue;	
+			if(!evt.isStartElement()) continue;
 			String tag= evt.asStartElement().getName().getLocalPart();
 			if(tag.equals("QueryKey"))
 				{
@@ -68,7 +68,7 @@ public class PubmedDump
 			}
 		reader.close();
 
-		
+
 		url= new URL("http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&WebEnv="+
 				URLEncoder.encode(WebEnv,"UTF-8")+
 				"&query_key="+URLEncoder.encode(QueryKey,"UTF-8")+
@@ -77,7 +77,7 @@ public class PubmedDump
 				(tool==null?"":"&tool="+URLEncoder.encode(tool,"UTF-8"))
 				)
 				;
-		
+
 		byte buff[]=new byte[2048];
 		int nRead;
 		InputStream in=url.openStream();
@@ -88,13 +88,13 @@ public class PubmedDump
 		in.close();
 		System.out.flush();
 		}
-	
+
 	public static void main(String[] args)
 		{
 		try
 			{
 			PubmedDump app=new PubmedDump();
-			
+
 			int optind=0;
 			while(optind< args.length)
 				{
@@ -127,7 +127,7 @@ public class PubmedDump
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
@@ -150,12 +150,12 @@ public class PubmedDump
 				System.err.println("Query is empty");
 				return;
 				}
-			
+
 			app.run(query,System.out);
 			}
 		catch (Exception e)
 			{
 			e.printStackTrace();
 			}
-		}	
-	} 
+		}
+	}

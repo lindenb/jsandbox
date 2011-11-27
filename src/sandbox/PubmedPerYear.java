@@ -8,7 +8,7 @@
  	javac PubmedPerYear.java
  * Execute:
  	java PubmedPerYear "Wikipedia"
- 	
+
 	2005    1
 	2006    3
 	2007    9
@@ -40,7 +40,7 @@ public class PubmedPerYear
 		{
 		this.endYear=new GregorianCalendar().get(Calendar.YEAR);
 		}
-	
+
 	private void run() throws Exception
 		{
 		XMLInputFactory f= XMLInputFactory.newInstance();
@@ -49,25 +49,25 @@ public class PubmedPerYear
 		f.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES,Boolean.TRUE);
 		f.setProperty(XMLInputFactory.IS_VALIDATING,Boolean.FALSE);
 		f.setProperty(XMLInputFactory.SUPPORT_DTD,Boolean.FALSE);
-		
+
 		int year=this.startYear;
-		
+
 		while(year <=this.endYear)
 			{
 			URL url= new URL(
 				"http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?" +
 				"db=pubmed&term="+
-				URLEncoder.encode("("+this.query+")  "+year+"[PDAT]", "UTF-8")+	
+				URLEncoder.encode("("+this.query+")  "+year+"[PDAT]", "UTF-8")+
 				"&retmode=xml&rettype=count&email=plindenbaum_at_yahoo.fr&tool=peryear");
-			
+
 			XMLEventReader reader= f.createXMLEventReader(url.openStream());
 			XMLEvent evt;
-			
+
 			int count=-1;
-			
+
 			while(!(evt=reader.nextEvent()).isEndDocument())
 				{
-				if(!evt.isStartElement()) continue;	
+				if(!evt.isStartElement()) continue;
 				String tag= evt.asStartElement().getName().getLocalPart();
 				if(tag.equals("Count") && count==-1)
 					{
@@ -83,13 +83,13 @@ public class PubmedPerYear
 			++year;
 			}
 		}
-		
+
 	public static void main(String[] args)
 		{
 		try
 			{
 			PubmedPerYear app=new PubmedPerYear();
-			
+
 			int optind=0;
 			while(optind< args.length)
 				{
@@ -120,13 +120,13 @@ public class PubmedPerYear
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
 				++optind;
 				}
-			
+
 			app.query="";
 			while(optind< args.length)
 				{
@@ -144,13 +144,13 @@ public class PubmedPerYear
 				System.err.println("start year > end year");
 				return;
 				}
-			
+
 			app.run();
-			
+
 			}
 		catch (Exception e)
 			{
 			e.printStackTrace();
 			}
-		}	
-	} 
+		}
+	}

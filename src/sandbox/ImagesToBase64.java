@@ -6,11 +6,11 @@
  * Contact:
  * 	plindenbaum@yahoo.fr
  * Reference:
- *   
+ *
  * WWW:
  * 	http://plindenbaum.blogspot.com
  * Wiki
- *  
+ *
  * Motivation:
  * 		Encodes some images to base64 embedded in html
  * Compilation:
@@ -35,7 +35,7 @@ import javax.xml.stream.XMLStreamWriter;
 
 
 /**
- * 
+ *
  * ImagesToBase64
  *
  */
@@ -43,8 +43,8 @@ public class ImagesToBase64
 	{
 	private final static String BASE64 =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	
-	
+
+
 	private static void encode(InputStream dataIn,StringBuilder out)
 		throws IOException
 		{
@@ -54,14 +54,14 @@ public class ImagesToBase64
 		 int chunks = 0;
 		int c;
 		int nFill=0;
-		
+
 		while((c=dataIn.read())!=-1)
 			{
 			int ic = ( c >= 0 ? c : (c & 0x7F) + 128);
 			//array3[nFill]=(byte)ic;
-		   
+
 		    switch (nFill)
-		        {	
+		        {
 		        case 0:
 		        	{
 		        	output[nFill] = BASE64.charAt(ic >>> 2);
@@ -88,7 +88,7 @@ public class ImagesToBase64
 		    	   	}
 		        }
 			} // for
-		
+
 			/* final */
 			switch (nFill)
 			{    case 1:
@@ -104,7 +104,7 @@ public class ImagesToBase64
 			}
 
 		}
-	
+
 	public static void main(String[] args)
 		{
 		try
@@ -137,7 +137,7 @@ public class ImagesToBase64
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
@@ -150,11 +150,11 @@ public class ImagesToBase64
 			w.writeStartElement("body");
 			 w.writeCharacters("\n");
 			w.writeStartElement("div");
-			                      
+
             while(optind< args.length)
                     {
-                    
-                   
+
+
                     String filename=args[optind++];
                     BufferedImage img=null;
                     boolean is_url=false;
@@ -209,11 +209,11 @@ public class ImagesToBase64
                 	ByteArrayInputStream bais=new ByteArrayInputStream(baos.toByteArray());
                 	encode(bais,encoded);
                 	bais.close();
-                	
-                	
+
+
                 	w.writeAttribute("src",encoded.toString());
-                	
-                	
+
+
                   	if(is_url)
                   		{
                   		 w.writeEndElement();
@@ -221,7 +221,7 @@ public class ImagesToBase64
                     w.writeEndElement();
                     w.writeCharacters("\n");
                     }
-                                
+
 			w.writeEndElement();//div
 			 w.writeCharacters("\n");
 			w.writeEndElement();//body
@@ -229,11 +229,11 @@ public class ImagesToBase64
 			w.writeEndDocument();
 			w.flush();
 			w.close();
-			} 
+			}
 		catch(Throwable err)
 			{
 			err.printStackTrace();
 			}
-		
+
 		}
 	}

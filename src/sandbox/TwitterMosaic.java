@@ -43,7 +43,7 @@ public class TwitterMosaic
 	private static final int ICON_SIZE=48;
 	private static final Logger LOG=Logger.getLogger("sandbox.TwitterMosaic");
 	private String what="friends";
-	
+
 	private static class User
 		{
 		@SuppressWarnings("unused")
@@ -58,14 +58,14 @@ public class TwitterMosaic
 			return screenName;
 			}
 		}
-	
+
 	private List<User> users=new ArrayList<User>();
-	
+
 	private TwitterMosaic()
 		{
-		
+
 		}
-	
+
 	private BufferedImage createImage()
 		throws IOException
 		{
@@ -94,7 +94,7 @@ public class TwitterMosaic
 				{
 				LOG.severe(err.getMessage());
 				}
-			
+
 			x++;
 			if(x==cols)
 				{
@@ -105,10 +105,10 @@ public class TwitterMosaic
 		g.dispose();
 		return img;
 		}
-	
+
 	private void run(BigInteger userId)
 		throws Exception
-		{			
+		{
 		DocumentBuilderFactory f=DocumentBuilderFactory.newInstance();
 		f.setCoalescing(true);
 		f.setNamespaceAware(false);
@@ -139,7 +139,7 @@ public class TwitterMosaic
 				user.name=xpath.evaluate("name", e1);
 				user.screenName=xpath.evaluate("screen_name", e1);
 				user.imageUrl=xpath.evaluate("profile_image_url", e1);
-				
+
 				this.users.add(user);
 				LOG.info(user.screenName+"("+this.users.size()+")");
 				}
@@ -151,7 +151,7 @@ public class TwitterMosaic
 			cursor=new BigInteger(s);
 			}
 		}
-	
+
 	public static void main(String[] args)
 		{
 		try
@@ -195,13 +195,13 @@ public class TwitterMosaic
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
 				++optind;
 				}
-			
+
 			if(optind+1!=args.length)
 				{
 				System.err.println("User ID missing");
@@ -212,10 +212,10 @@ public class TwitterMosaic
 				System.err.println("option -o <fileout> missing");
 				System.exit(-1);
 				}
-			
+
 			BigInteger userId=new BigInteger(args[optind++]);
 			app.run(userId);
-			
+
 			if(fileout.getName().toLowerCase().endsWith(".png"))
 				{
 				ImageIO.write(app.createImage(), "PNG", fileout);
@@ -229,7 +229,7 @@ public class TwitterMosaic
 				{
 				System.err.println("Unknown file format");
 				}
-			} 
+			}
 		catch(Throwable err)
 			{
 			err.printStackTrace();

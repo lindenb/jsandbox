@@ -6,11 +6,11 @@
  * Contact:
  * 	plindenbaum@yahoo.fr
  * Reference:
- *   
+ *
  * WWW:
  * 	http://plindenbaum.blogspot.com
  * Wiki
- *  
+ *
  * Motivation:
  * 	Sort Pubmed records by number of citations
  * Compilation:
@@ -51,7 +51,7 @@ import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 /**
- * 
+ *
  * PubmedSortByCitations
  *
  */
@@ -73,7 +73,7 @@ public class PubmedSortByCitations
 			return o.cited.size()-this.cited.size();
 			}
 		}
-	
+
 	private PubmedSortByCitations() throws Exception
 		{
 		XPathFactory xpathFactory=XPathFactory.newInstance();
@@ -97,13 +97,13 @@ public class PubmedSortByCitations
 
 
 		}
-	
+
 	private void countCitations(ArticleNode article)  throws Exception
 		{
 		String pmid=(String)this.xpath.evaluate("MedlineCitation/PMID",article.node,XPathConstants.STRING);
 		if(pmid==null || pmid.isEmpty()) throw new IllegalArgumentException("Cannot find <PMID> in "+article.node);
 		String uri="http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?" +
-			"retmode=xml"+ 
+			"retmode=xml"+
 			"&dbfrom=pubmed"+
 			"&tool="+URLEncoder.encode(this.getClass().getSimpleName(), "UTF-8")+
 			"&id="+URLEncoder.encode(pmid, "UTF-8")+
@@ -112,7 +112,7 @@ public class PubmedSortByCitations
 		LOG.info("parsing "+uri);
 		Document dom=this.builder.parse(uri);
 		NodeList L=(NodeList)this.xpath.evaluate("/eLinkResult/LinkSet/LinkSetDb[LinkName='pubmed_pubmed_citedin' and DbTo='pubmed']/Link/Id", dom, XPathConstants.NODESET);
-		
+
 		for(int i=0;i< L.getLength();++i)
 			{
 			article.cited.add(Integer.parseInt(L.item(i).getTextContent()));
@@ -122,7 +122,7 @@ public class PubmedSortByCitations
 			LOG.info(pmid+" cited in "+article.cited);
 			}
 		}
-	
+
 	private void run(Document dom) throws Exception
 		{
 		if(dom==null) throw new NullPointerException("no dom");
@@ -164,7 +164,7 @@ public class PubmedSortByCitations
 			root.appendChild(article.node);
 			}
 		//echo result
-		
+
 		TransformerFactory factory=TransformerFactory.newInstance();
 		Transformer transformer=factory.newTransformer();
 		transformer.setOutputProperty(OutputKeys.INDENT,"yes");
@@ -219,7 +219,7 @@ public class PubmedSortByCitations
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
@@ -228,7 +228,7 @@ public class PubmedSortByCitations
 			if(args.length==optind && query!=null)
 				{
 				String uri="http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term="+
-					URLEncoder.encode(query, "UTF-8")+	
+					URLEncoder.encode(query, "UTF-8")+
 					"&retstart=0" +
 					"&retmax=0" +
 					"&usehistory=y" +
@@ -241,7 +241,7 @@ public class PubmedSortByCitations
 				String QueryKey=app.xpath.evaluate("/eSearchResult/QueryKey", dom);
 				String WebEnv=app.xpath.evaluate("/eSearchResult/WebEnv", dom);
 				int count=Integer.parseInt(app.xpath.evaluate("/eSearchResult/Count", dom));
-				
+
 				uri="http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed" +
 					"&WebEnv="+URLEncoder.encode(WebEnv,"UTF-8")+
 					"&query_key="+URLEncoder.encode(QueryKey,"UTF-8")+
@@ -279,7 +279,7 @@ public class PubmedSortByCitations
 				{
 				System.err.println("Illegal number of arguments.");
 				}
-			} 
+			}
 		catch(Throwable err)
 			{
 			err.printStackTrace();

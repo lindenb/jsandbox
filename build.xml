@@ -6,7 +6,7 @@
            <include name="**/*.jar"/>
 	</fileset>
 </path>
-	
+
 <path id="jetty.jars" description="ALl Jars for Jetty">
 	<fileset  dir="${jetty.dir}">
            <include name="**/lib/*.jar"/>
@@ -95,7 +95,7 @@
 
 		<include name="**/JSONQuery.java" />
 	</javac>
-	
+
 	<jar destfile="dist/jsonquery.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -111,7 +111,7 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/XmlCipher.java" />
 	</javac>
-	
+
 	<jar destfile="dist/xmlcipher.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -129,13 +129,13 @@
 		<classpath refid="bdb.je.jars"/>
 		<include name="**/DivanDB.java" />
 	</javac>
-	
+
 	<pathconvert property="jetty.claspath" pathsep=" ">
 		<path refid="jetty.jars" />
 		<path refid="bdb.je.jars" />
-	</pathconvert>	
-	
-	
+	</pathconvert>
+
+
 	<jar destfile="dist/divandb.jar" basedir="tmp">
 	      <manifest>
 		 <attribute name="Built-By" value="${user.name}"/>
@@ -153,7 +153,7 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/ImagesToBase64.java" />
 	</javac>
-	
+
 	<jar destfile="dist/images2base64.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -169,7 +169,7 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/PubmedSortByCitations.java" />
 	</javac>
-	
+
 	<jar destfile="dist/pubmedsortbycitations.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -185,7 +185,7 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/GimpClient.java" />
 	</javac>
-	
+
 	<jar destfile="dist/gimpclient.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -201,7 +201,7 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/Convolution.java" />
 	</javac>
-	
+
 	<jar destfile="dist/convolution.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -217,7 +217,7 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/RasterToOpenRaster.java" />
 	</javac>
-	
+
 	<jar destfile="dist/raster2ora.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -233,7 +233,7 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/Pivot.java" />
 	</javac>
-	
+
 	<jar destfile="dist/pivot.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -249,7 +249,7 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/OilPainting.java" />
 	</javac>
-	
+
 	<jar destfile="dist/oilpainting.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -265,7 +265,7 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/GeneticPainting.java" />
 	</javac>
-	
+
 	<jar destfile="dist/geneticpainting.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -281,7 +281,7 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/TwitterToKML.java" />
 	</javac>
-	
+
 	<jar destfile="dist/twitterkml.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -297,8 +297,8 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/NucleicAcidsResearch404.java" />
 	</javac>
-	
-	
+
+
 	<jar destfile="dist/nar404.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -315,11 +315,11 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/BackLocate.java" />
 	</javac>
-	
+
 	<pathconvert property="mysql.classpath" pathsep=" ">
 		<path refid="mysql.jdbc.jar" />
-   	</pathconvert>	
-	
+   	</pathconvert>
+
 	<jar destfile="dist/backlocate.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -336,7 +336,7 @@
 	<javac srcdir="src" destdir="tmp" debug="true">
 		<include name="**/XmlToXsd.java" />
 	</javac>
-	
+
 	<jar destfile="dist/xml2xsd.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -352,7 +352,7 @@
    <javac srcdir="src" destdir="tmp" debug="true">
       <include name="**/GrepMysqlDatabase.java" />
    </javac>
-   
+
    <jar destfile="dist/grepmysql.jar" basedir="tmp">
       <manifest>
          <attribute name="Built-By" value="${user.name}"/>
@@ -360,7 +360,7 @@
       </manifest>
    </jar>
    <delete dir="tmp"/>
-</target>	
+</target>
 
 <target name="twittergraph">
    <mkdir dir="dist"/>
@@ -368,7 +368,7 @@
    <javac srcdir="src" destdir="tmp" debug="true">
       <include name="**/TwitterGraph.java" />
    </javac>
-   
+
    <jar destfile="dist/twittergraph.jar" basedir="tmp">
       <manifest>
          <attribute name="Built-By" value="${user.name}"/>
@@ -376,7 +376,7 @@
       </manifest>
    </jar>
    <delete dir="tmp"/>
-</target>	
+</target>
 
 
 <target name="twittermosaic">
@@ -385,7 +385,7 @@
    <javac srcdir="src" destdir="tmp">
       <include name="**/TwitterMosaic.java" />
    </javac>
-   
+
    <jar destfile="dist/twittermosaic.jar" basedir="tmp">
       <manifest>
          <attribute name="Built-By" value="${user.name}"/>
@@ -393,7 +393,7 @@
       </manifest>
    </jar>
    <delete dir="tmp"/>
-</target>	
+</target>
 
 
 
@@ -403,7 +403,7 @@
    <javac srcdir="src" destdir="tmp">
       <include name="**/WikipediaBioEdits.java" />
    </javac>
-   
+
    <jar destfile="dist/wptimeline.jar" basedir="tmp">
       <manifest>
          <attribute name="Built-By" value="${user.name}"/>
@@ -411,7 +411,7 @@
       </manifest>
    </jar>
    <delete dir="tmp"/>
-</target>	
+</target>
 
 
 <target name="timelinemaker">
@@ -421,12 +421,12 @@
    	  <classpath refid="jena.jars"/>
       <include name="**/TimeLineMaker.java" />
    </javac>
-   
+
 	<pathconvert property="jena.claspath" pathsep=" ">
 		<path refid="jena.jars" />
-	</pathconvert>	
-	
-	
+	</pathconvert>
+
+
    <jar destfile="dist/timelinemaker.jar" basedir="tmp">
       <manifest>
          <attribute name="Built-By" value="${user.name}"/>
@@ -443,7 +443,7 @@
 			<arg value="${user.home}/src/mystructureddata/data/history.rdf"/>
 		</java>
 </target>
-	
+
 
 <target name="mywordle">
          <mkdir dir="dist"/>
@@ -451,7 +451,7 @@
          <javac srcdir="src" destdir="tmp">
                <include name="**/MyWordle.java" />
          </javac>
-               
+
          <jar destfile="dist/mywordle.jar" basedir="tmp">
                <manifest>
                <attribute name="Built-By" value="${user.name}"/>
@@ -459,15 +459,15 @@
                </manifest>
          </jar>
          <delete dir="tmp"/>
-</target>		
-	
+</target>
+
 <target name="pubmeddump">
 	<mkdir dir="dist"/>
 	<mkdir dir="tmp"/>
 	<javac srcdir="src" destdir="tmp">
 		<include name="**/PubmedDump.java" />
 	</javac>
-		
+
 	<jar destfile="dist/pubmeddump.jar" basedir="tmp">
 		<manifest>
 	        <attribute name="Built-By" value="${user.name}"/>
@@ -475,15 +475,15 @@
 		</manifest>
 	</jar>
 	<delete dir="tmp"/>
-</target>	
-	
+</target>
+
 <target name="pubmed2gender">
 	<mkdir dir="dist"/>
 	<mkdir dir="tmp"/>
 	<javac srcdir="src" destdir="tmp">
 		<include name="**/PubmedGender.java" />
 	</javac>
-		
+
 	<jar destfile="dist/pubmed2gender.jar" basedir="tmp">
 		<manifest>
 	        <attribute name="Built-By" value="${user.name}"/>
@@ -499,7 +499,7 @@
 	<javac srcdir="src" destdir="tmp">
 		<include name="**/PubmedPerYear.java" />
 	</javac>
-	
+
 	<jar destfile="dist/pubmedperyear.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
@@ -516,7 +516,7 @@
 		<arg value="-L"/><arg value="100"/>
 		<arg value="Rotavirus"/>
 	</java>
-</target>	
+</target>
 
 <target name="blastannot" depends="ncbi.api">
    <mkdir dir="dist"/>
@@ -526,7 +526,7 @@
       <include name="**/blast/ObjectFactory.java" />
       <include name="**/gbc/ObjectFactory.java" />
    </javac>
-   
+
    <jar destfile="dist/blastannot.jar" basedir="tmp">
       <manifest>
          <attribute name="Built-By" value="${user.name}"/>
@@ -534,7 +534,7 @@
       </manifest>
    </jar>
    <delete dir="tmp"/>
-</target>	
+</target>
 
 <target name="vcfannotator" >
    <mkdir dir="dist"/>
@@ -542,7 +542,7 @@
    <javac srcdir="src" destdir="tmp" debug="true">
       <include name="**/VCFAnnotator.java" />
    </javac>
-   
+
    <jar destfile="dist/vcfannotator.jar" basedir="tmp">
       <manifest>
          <attribute name="Built-By" value="${user.name}"/>
@@ -558,7 +558,7 @@
    <javac srcdir="src" destdir="tmp" debug="true">
       <include name="**/WirePeptide.java" />
    </javac>
-   
+
    <jar destfile="dist/wirepeptide.jar" basedir="tmp">
       <manifest>
          <attribute name="Built-By" value="${user.name}"/>
@@ -598,12 +598,12 @@
       <classpath refid="httpclient.jars"/>
       <include name="**/VariantEffectPredictorRobot.java" />
    </javac>
-   
+
    <pathconvert property="httpclient.claspath" pathsep=" ">
       <path refid="httpclient.jars" />
-   </pathconvert>	
-   
-   
+   </pathconvert>
+
+
    <jar destfile="dist/variantpredictor.jar" basedir="tmp">
       <manifest>
          <attribute name="Built-By" value="${user.name}"/>

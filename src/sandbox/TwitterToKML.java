@@ -108,7 +108,7 @@ public class TwitterToKML
 					}
 				}
 			}
-		
+
 		/*private String escapeXML(String s)
 			{
 			StringBuilder b=new StringBuilder(s.length());
@@ -122,7 +122,7 @@ public class TwitterToKML
 					case '\'': b.append("&apos;"); break;
 					case '\"': b.append("&quote;"); break;
 					default:b.append(s.charAt(i));break;
-					}	
+					}
 				}
 			return b.toString();
 			}*/
@@ -130,11 +130,11 @@ public class TwitterToKML
 		throws XMLStreamException
 			{
 			w.writeStartElement("Placemark");
-			
+
 			w.writeStartElement("name");
 			w.writeCharacters(String.valueOf(this.toponymName));
 			w.writeEndElement();//
-			
+
 			StringWriter description=new StringWriter();
 			XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
 			XMLStreamWriter w2= xmlfactory.createXMLStreamWriter(description);
@@ -150,17 +150,17 @@ public class TwitterToKML
 			w2.writeEndElement();
 			w2.writeEndElement();
 			w2.flush();
-			
+
 			w.writeStartElement("description");
 			w.writeCData(description.toString());
 			w.writeEndElement();//
-			
+
 			w.writeStartElement("Point");
 			w.writeStartElement("coordinates");
 			w.writeCharacters(String.valueOf(this.longitude)+","+this.latitude);
 			w.writeEndElement();//coordinates
 			w.writeEndElement();//Point
-			
+
 			w.writeEndElement();//Placemark
 			}
 
@@ -172,20 +172,20 @@ public class TwitterToKML
 			if (obj == null) { return false; }
 			if (getClass() != obj.getClass()) { return false; }
 			GeoLocation other = (GeoLocation) obj;
-			
+
 			return 	latitude.equals(other.latitude) &&
 					longitude.equals(other.longitude);
 			}
 
-		
-		
-		
+
+
+
 		}
 	@SuppressWarnings("unused")
 	private static class User
 		{
 		BigInteger id;
-		
+
 		String name=null;
 		String screenName=null;
 		String imageUrl=null;
@@ -197,7 +197,7 @@ public class TwitterToKML
 		int listed=-1;
 		int utc_offset=-1;
 		int statuses_count=-1;
-		
+
 		void toKML(XMLStreamWriter w)
 		throws XMLStreamException
 			{
@@ -214,7 +214,7 @@ public class TwitterToKML
 			w.writeAttribute("href", "http://twitter.com/#!/"+screenName);
 			w.writeCharacters("@"+String.valueOf(screenName));
 			w.writeEndElement();
-			
+
 			if(name!=null && !name.isEmpty())
 				{
 				w.writeEmptyElement("br");
@@ -252,43 +252,43 @@ public class TwitterToKML
 			User other = (User) obj;
 			return id.equals(other.id);
 			}
-		
-		
-		
-		}
-	
-	
 
-		
+
+
+		}
+
+
+
+
 		public void toKML(OutputStream out)
 		throws XMLStreamException
 			{
 			XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
 			XMLStreamWriter w= xmlfactory.createXMLStreamWriter(out,"UTF-8");
-			
+
 			w.writeStartDocument("UTF-8","1.0");
 			w.writeStartElement("kml");
 			w.writeAttribute("xmlns", "http://www.opengis.net/kml/2.2");
-			
+
 			w.writeStartElement("Document");
 			w.writeStartElement("name");
 			w.writeCharacters("Twitter: 'following' for user_id: "+this.owner+" date:"+new java.sql.Timestamp(System.currentTimeMillis()));
 			w.writeEndElement();//name
-			
+
 			for(GeoLocation loc: this.geoLocations)
 				{
 				loc.toKML(w);
 				}
-			
+
 			w.writeEndElement();//
-			
+
 			w.writeEndElement();//kml
 			w.writeEndDocument();
 			w.flush();
 			}
-		
-	
-	
+
+
+
 	private TwitterToKML()
 		{
 		this.xmlInputFactory = XMLInputFactory.newInstance();
@@ -296,8 +296,8 @@ public class TwitterToKML
 		xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, Boolean.TRUE);
 		xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, Boolean.TRUE);
 		}
-	
-	
+
+
 	private static int parseInt(XMLEventReader r)
 		{
 		try
@@ -318,7 +318,7 @@ public class TwitterToKML
 			return -1;
 			}
 		}
-	
+
 	private User parseUser(XMLEventReader reader)throws XMLStreamException
 		{
 		int depth=1;
@@ -399,7 +399,7 @@ public class TwitterToKML
 				}
 			}
 		return u;
-		}	
+		}
 	private InputStream tryOpen(String uri) throws IOException
 		{
 		URLConnection con=null;
@@ -447,11 +447,11 @@ public class TwitterToKML
 			}
 		return null;
 		}
-	
+
 	private GeoLocation getGeolocation(String location)
 		throws Exception
 		{
-		
+
 		if(location==null || location.trim().isEmpty()) return null;
 		for(GeoLocation loc: this.geoLocations)
 			{
@@ -465,12 +465,12 @@ public class TwitterToKML
 		try
 			{
 			in=tryOpen(uri);
-			
+
 			XMLEventReader reader= xmlInputFactory.createXMLEventReader(in);
 			while(reader.hasNext())
 				{
 				XMLEvent evt=reader.nextEvent();
-				
+
 				if(!evt.isStartElement()) continue;
 				StartElement e=evt.asStartElement();
 				String localName=e.getName().getLocalPart();
@@ -480,7 +480,7 @@ public class TwitterToKML
 					loc.location=location;
 					loc.parse(reader);
 					if(loc.latitude==null || loc.longitude==null) return null;
-					
+
 					for(GeoLocation loc2: this.geoLocations)
 						{
 						if(loc2.equals(loc)) return loc2;
@@ -502,7 +502,7 @@ public class TwitterToKML
 			}
 		return null;
 		}
-	
+
 	private User getProfile(BigInteger userId)
 		throws Exception
 		{
@@ -535,10 +535,10 @@ public class TwitterToKML
 		in.close();
 		return user;
 		}
-	
+
 	private Set<BigInteger> listFriends(BigInteger userId)
 		throws Exception
-		{			
+		{
 		Set<BigInteger> friends=new HashSet<BigInteger>();
 		BigInteger cursor=BigInteger.ONE.negate();
 		for(;;)
@@ -569,7 +569,7 @@ public class TwitterToKML
 				}
 			reader.close();
 			in.close();
-			
+
 			if(next_cursor==null || next_cursor.isEmpty() || next_cursor.equals("0"))
 				{
 				break;
@@ -578,16 +578,16 @@ public class TwitterToKML
 			}
 		LOG.info("count friends: of "+userId+"="+friends.size());
 		return friends;
-		}	
-	
+		}
+
 	private void run()
 		throws Exception
 		{
 		this.id2user.put(owner, getProfile(owner));
-		
+
 		Set<BigInteger> friendIds=listFriends(owner);
-		
-		
+
+
 		for(BigInteger id: friendIds)
 			{
 			User user=getProfile(id);
@@ -609,11 +609,11 @@ public class TwitterToKML
 				continue;
 				}
 			geoloc.users.add(u);
-			
+
 			}
-		
+
 		}
-	
+
 	public static void main(String[] args)
 		{
 		//id: 7431072
@@ -660,7 +660,7 @@ public class TwitterToKML
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
@@ -676,24 +676,24 @@ public class TwitterToKML
 				System.err.println("Screen-Name missing");
 				System.exit(-1);
 				}
-			
-			
+
+
 			if(fileout==null)
 				{
 				System.err.println("option -o <fileout> missing");
 				System.exit(-1);
 				}
-			
+
 			app.owner=new BigInteger(args[optind++]);
 			app.run();
-			
-			
+
+
 			FileOutputStream p=new FileOutputStream(fileout);
 			app.toKML(p);
 			p.flush();
 			p.close();
-				
-			} 
+
+			}
 		catch(Throwable err)
 			{
 			err.printStackTrace();

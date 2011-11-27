@@ -93,7 +93,7 @@ public class Cartoonist
 	private Point mousePrev=null;
 	private JMenu menuImageSource;
 	private DefaultModel model;
-	
+
 	/**
 	 * Graphic Context
 	 */
@@ -101,13 +101,13 @@ public class Cartoonist
 		{
 		Graphics2D g;
 		}
-	
+
 	private static class BorderStyle
 		{
 		float lineHeight=1;
 		Color color=Color.BLACK;
 		float opacity=1f;
-		
+
 		void paint(GC gc,Shape shape)
 			{
 			if(this.color==null || lineHeight==0) return;
@@ -120,33 +120,33 @@ public class Cartoonist
 			gc.g.setComposite(oldComposite);
 			gc.g.setStroke(oldstroke);
 			}
-		
+
 		void write(XMLStreamWriter w) throws XMLStreamException
 			{
 			w.writeStartElement("border");
-			
+
 			w.writeStartElement("height");
 			w.writeCharacters(String.valueOf(lineHeight));
 			w.writeEndElement();
-			
+
 			w.writeStartElement("color");
 			w.writeCharacters(ColorUtils.toRGB(color));
 			w.writeEndElement();
-			
+
 			w.writeStartElement("opacity");
 			w.writeCharacters(String.valueOf(opacity));
 			w.writeEndElement();
-			
+
 			w.writeEndElement();
 			}
-		
+
 		void read(StartElement e,XMLEventReader reader)
 			throws XMLStreamException,IOException
 			{
 			while(reader.hasNext())
 				{
 				XMLEvent evt=reader.nextEvent();
-				
+
 				if(evt.isStartElement())
 					{
 					String localName=evt.asStartElement().getName().getLocalPart();
@@ -170,9 +170,9 @@ public class Cartoonist
 					}
 				}
 			}
-		
+
 		}
-	
+
 	private static class ColorButton
 		extends JButton
 		{
@@ -204,7 +204,7 @@ public class Cartoonist
 			{
 			return this.color;
 			}
-		
+
 		private void makeIcon()
 			{
 			this.setIcon(new Icon()
@@ -215,13 +215,13 @@ public class Cartoonist
 					g.setColor(getSelectedColor());
 					g.fillRect(x, y, getIconWidth(), getIconHeight());
 					}
-				
+
 				@Override
 				public int getIconWidth()
 					{
 					return 32;
 					}
-				
+
 				@Override
 				public int getIconHeight()
 					{
@@ -230,8 +230,8 @@ public class Cartoonist
 				});
 			}
 		}
-	
-	
+
+
 	/**
 	 * ImageInstanceEditor
 	 *
@@ -240,7 +240,7 @@ public class Cartoonist
 		extends JDialog
 		{
 		/**
-		 * 
+		 *
 		 * HotSpot
 		 *
 		 */
@@ -248,13 +248,13 @@ public class Cartoonist
 			{
 			private double x;
 			private double y;
-			
+
 			HotSpot(double x,double y)
 				{
 				this.x=x;
 				this.y=y;
 				}
-			
+
 			private int getIndex()
 				{
 				for(int i=0;i< getEditor().hotspots.size();++i)
@@ -271,7 +271,7 @@ public class Cartoonist
 				{
 				return this.y*getEditor().zoom;
 				}
-			
+
 			public ImageInstanceEditor getEditor()
 				{
 				return ImageInstanceEditor.this;
@@ -292,17 +292,17 @@ public class Cartoonist
 		private ImageInstance instance;
 		private JScrollPane scrollPane=null;
 		private int exitStatus=JOptionPane.CANCEL_OPTION;
-		
+
 		public ImageInstanceEditor(ImageSource	source)
 			{
 			this(source,null);
 			}
-		
+
 		public ImageInstanceEditor(ImageInstance instance)
 			{
 			this(instance.source,instance);
 			}
-			
+
 		private ImageInstanceEditor(
 				ImageSource	source,
 				ImageInstance instance
@@ -332,16 +332,16 @@ public class Cartoonist
 					this.hotspots.add(new HotSpot(pt.getX(),pt.getY()));
 					}
 				}
-			
+
 			JMenuBar bar=new JMenuBar();
 			this.setJMenuBar(bar);
 			JMenu menu=new JMenu("File");
 			bar.add(menu);
-			
+
 			JPanel panel=new JPanel(new BorderLayout());
 			panel.setBorder(new EmptyBorder(5, 5, 5, 5));
 			this.setContentPane(panel);
-			
+
 			JToolBar toolBar=new JToolBar();
 			panel.add(toolBar,BorderLayout.NORTH);
 			AbstractAction action=new AbstractAction("[+]")
@@ -381,12 +381,12 @@ public class Cartoonist
 					g.setClip(oldclip);
 					g.setColor(Color.BLACK);
 					g.draw(shape2);
-					
+
 					JOptionPane.showMessageDialog(null, new JLabel(new ImageIcon(img)));
 					}
 				};
 			toolBar.add(action);
-				
+
 			this.paintArea=new JPanel(null,true)
 				{
 				@Override
@@ -415,7 +415,7 @@ public class Cartoonist
 				@Override
 				public void mouseDragged(MouseEvent e)
 					{
-					if(selectedSpot==null ) return;	
+					if(selectedSpot==null ) return;
 					if(mousePrev!=null)
 						{
 						double dx=(e.getX()-mousePrev.getX())/zoom;
@@ -424,9 +424,9 @@ public class Cartoonist
 						selectedSpot.y=trim(selectedSpot.y+dy,ImageInstanceEditor.this.source.image.getHeight(paintArea));
 						paintArea.repaint();
 						}
-					mousePrev=new Point(e.getX(),e.getY());	
+					mousePrev=new Point(e.getX(),e.getY());
 					}
-				
+
 				@Override
 				public void mouseReleased(MouseEvent e)
 					{
@@ -446,7 +446,7 @@ public class Cartoonist
 			this.paintArea.setPreferredSize(dim);
 			this.paintArea.setMinimumSize(dim);
 			panel.add(this.scrollPane,BorderLayout.CENTER);
-			
+
 			JPanel bot=new JPanel(new FlowLayout(FlowLayout.TRAILING));
 			panel.add(bot,BorderLayout.SOUTH);
 			action=new AbstractAction("OK")
@@ -467,7 +467,7 @@ public class Cartoonist
 					}
 				};
 			bot.add(new JButton(action));
-			
+
 			action=new AbstractAction("Cancel")
 				{
 				@Override
@@ -480,20 +480,20 @@ public class Cartoonist
 				};
 			bot.add(new JButton(action));
 			}
-		
+
 		private void doZoom(double newzoom)
 			{
 			if(this.zoom==newzoom) return;
 			this.zoom=newzoom;
-			
+
 			Dimension d=new Dimension(
 					(int)(this.source.image.getWidth(this.paintArea)*newzoom),
 					(int)(this.source.image.getHeight(this.paintArea)*newzoom)
 					);
-			
+
 			this.scaledImage=this.source.image.getScaledInstance(
 				d.width,d.height,0);
-			
+
 			this.paintArea.setSize(d);
 			this.paintArea.setPreferredSize(d);
 
@@ -501,16 +501,16 @@ public class Cartoonist
 			this.scrollPane.revalidate();
 			this.paintArea.repaint();
 			}
-		
-		
+
+
 		private double trim(double v,int max)
 			{
 			return Math.max(Math.min(v, max), 0);
 			}
-		
+
 		private void paintArea(Graphics2D g)
 			{
-			
+
 			g.drawImage(
 				this.scaledImage,
 				0,
@@ -524,12 +524,12 @@ public class Cartoonist
 			g.setPaintMode();
 			for(HotSpot spot:this.hotspots)
 				{
-				g.setColor(spot==selectedSpot?Color.BLUE:Color.RED); 
+				g.setColor(spot==selectedSpot?Color.BLUE:Color.RED);
 				g.drawRect((int)spot.getX()-3, (int)spot.getY()-3, 7, 7);
 				}
 			g.setStroke(stroke);
 			}
-		
+
 		private HotSpot findHotSpotAt(int x,int y)
 			{
 			for(HotSpot h:this.hotspots)
@@ -541,7 +541,7 @@ public class Cartoonist
 				}
 			return null;
 			}
-		
+
 		private Shape getPath(double scaled)
 			{
 			GeneralPath path=new GeneralPath();
@@ -560,9 +560,9 @@ public class Cartoonist
 			path.closePath();
 			return path;
 			}
-		
+
 		}
-	
+
 	/**
 	 * Drawable
 	 */
@@ -583,37 +583,37 @@ public class Cartoonist
 		{
 		private Rectangle2D.Double viewRect=new Rectangle2D.Double();
 		private String text="";
-		
-		
+
+
 		public double getWidth()
 			{
 			return this.viewRect.getWidth();
 			}
-		
+
 		public double getHeight()
 			{
 			return this.viewRect.getHeight();
 			}
-		
+
 		public double getX()
 			{
 			return this.viewRect.getX();
 			}
-		
+
 		public double getY()
 			{
 			return this.viewRect.getY();
 			}
-		
+
 		void read(StartElement e,XMLEventReader reader)
 		throws XMLStreamException,IOException
 			{
 			this.id=Integer.parseInt(e.getAttributeByName(new QName("id")).getValue());
-			
+
 			while(reader.hasNext())
 				{
 				XMLEvent evt=reader.nextEvent();
-				
+
 				if(evt.isStartElement())
 					{
 					String localName=evt.asStartElement().getName().getLocalPart();
@@ -645,34 +645,34 @@ public class Cartoonist
 					}
 				}
 			}
-		
+
 		@Override
 		void write(XMLStreamWriter w) throws XMLStreamException
 			{
 			w.writeStartElement("TextBox");
 			w.writeAttribute("id", String.valueOf(getId()));
-			
+
 			w.writeStartElement("text");
 			w.writeCharacters(this.text);
 			w.writeEndElement();
-			
+
 			w.writeStartElement("x");
 			w.writeCharacters(String.valueOf(getX()));
 			w.writeEndElement();
-			
+
 			w.writeStartElement("y");
 			w.writeCharacters(String.valueOf(getY()));
 			w.writeEndElement();
-			
+
 			w.writeStartElement("width");
 			w.writeCharacters(String.valueOf(getWidth()));
 			w.writeEndElement();
-			
+
 			w.writeStartElement("height");
 			w.writeCharacters(String.valueOf(getHeight()));
 			w.writeEndElement();
 
-			
+
 			w.writeEndElement();
 			}
 		}
@@ -687,11 +687,11 @@ public class Cartoonist
 		ImageSource source=null;
 		List<Point2D> polygon=new ArrayList<Point2D>();
 		private Rectangle2D.Double viewRect=new Rectangle2D.Double();
-		
+
 		ImageInstance()
 			{
 			}
-		
+
 		private Shape getShape()
 			{
 			GeneralPath path=new GeneralPath();
@@ -710,41 +710,41 @@ public class Cartoonist
 			path.closePath();
 			return path;
 			}
-		
+
 		public ImageSource getImageSource()
 			{
 			return source;
 			}
-		
-		
-		
-		
-		
+
+
+
+
+
 		public double getWidth()
 			{
 			return this.viewRect.getWidth();
 			}
-		
+
 		public double getHeight()
 			{
 			return this.viewRect.getHeight();
 			}
-		
+
 		public double getX()
 			{
 			return this.viewRect.getX();
 			}
-		
+
 		public double getY()
 			{
 			return this.viewRect.getY();
 			}
-		
+
 		public double getWHRatio()
 			{
 			return getWidth()/getHeight();
 			}
-		
+
 		@Override
 		void write(XMLStreamWriter w)
 		throws XMLStreamException
@@ -752,7 +752,7 @@ public class Cartoonist
 			w.writeStartElement("ImageInstance");
 			w.writeAttribute("id", String.valueOf(getId()));
 			w.writeAttribute("source", String.valueOf(getImageSource().getId()));
-			
+
 			w.writeStartElement("points");
 			w.writeAttribute("width", String.valueOf(getShape().getBounds2D().getWidth()));
 			w.writeAttribute("height", String.valueOf(getShape().getBounds2D().getHeight()));
@@ -764,38 +764,38 @@ public class Cartoonist
 				w.writeCharacters(String.valueOf(polygon.get(i).getY()));
 				}
 			w.writeEndElement();
-			
+
 			w.writeStartElement("x");
 			w.writeCharacters(String.valueOf(getX()));
 			w.writeEndElement();
-			
+
 			w.writeStartElement("y");
 			w.writeCharacters(String.valueOf(getY()));
 			w.writeEndElement();
-			
+
 			w.writeStartElement("width");
 			w.writeCharacters(String.valueOf(getWidth()));
 			w.writeEndElement();
-			
+
 			w.writeStartElement("height");
 			w.writeCharacters(String.valueOf(getHeight()));
 			w.writeEndElement();
-			
+
 			this.border.write(w);
-			
+
 			w.writeEndElement();
 			}
-	
+
 		void read(StartElement e,XMLEventReader reader)
 			throws XMLStreamException,IOException
 			{
 			this.id=Integer.parseInt(e.getAttributeByName(new QName("id")).getValue());
 			this.imageSourceId= Integer.parseInt(e.getAttributeByName(new QName("source")).getValue());
-			
+
 			while(reader.hasNext())
 				{
 				XMLEvent evt=reader.nextEvent();
-				
+
 				if(evt.isStartElement())
 					{
 					String localName=evt.asStartElement().getName().getLocalPart();
@@ -838,9 +838,9 @@ public class Cartoonist
 					}
 				}
 			}
-		
+
 		}
-	
+
 	/**
 	 * Image Source
 	 *
@@ -854,13 +854,13 @@ public class Cartoonist
 		URL imagePage;
 		int width=-1;
 		int height=-1;
-		
-		
+
+
 		public Image getImage()
 			{
 			return image;
 			}
-		
+
 		public URL getImageUrl()
 			{
 			return imageUrl;
@@ -869,12 +869,12 @@ public class Cartoonist
 			{
 			return imagePage;
 			}
-		
+
 		public int getWidth()
 			{
 			return this.width;
 			}
-		
+
 		public int getHeight()
 			{
 			return this.width;
@@ -883,17 +883,17 @@ public class Cartoonist
 			{
 			return id;
 			}
-		
+
 		void write(XMLStreamWriter w)
 			throws XMLStreamException
 			{
 			w.writeStartElement("ImageSource");
 			w.writeAttribute("id", String.valueOf(getId()));
-			
+
 			w.writeStartElement("url");
 			w.writeCharacters(String.valueOf(getImageUrl()));
 			w.writeEndElement();
-			
+
 			if(getImagePage()!=null)
 				{
 				w.writeStartElement("pageSrc");
@@ -903,14 +903,14 @@ public class Cartoonist
 			w.writeStartElement("height");
 			w.writeCharacters(String.valueOf(getHeight()));
 			w.writeEndElement();
-			
+
 			w.writeStartElement("width");
 			w.writeCharacters(String.valueOf(getWidth()));
 			w.writeEndElement();
-			
+
 			w.writeEndElement();
 			}
-		
+
 		void read(StartElement e,XMLEventReader reader)
 			throws XMLStreamException,IOException
 			{
@@ -918,7 +918,7 @@ public class Cartoonist
 			while(reader.hasNext())
 				{
 				XMLEvent evt=reader.nextEvent();
-				
+
 				if(evt.isStartElement())
 					{
 					String localName=evt.asStartElement().getName().getLocalPart();
@@ -947,8 +947,8 @@ public class Cartoonist
 				}
 			}
 		}
-	
-	
+
+
 	/**
 	 * Model
 	 */
@@ -960,11 +960,11 @@ public class Cartoonist
 			{
 			return this.parent;
 			}
-		
+
 		public Model()
 			{
 			}
-		
+
 		public List<Figure> getFigures()
 			{
 			return this.figures;
@@ -987,7 +987,7 @@ public class Cartoonist
 				}
 			return null;
 			}
-		
+
 		protected Drag findDragAt(int x,int y)
 			{
 			for(int i=this.getFigures().size()-1;
@@ -1004,7 +1004,7 @@ public class Cartoonist
 				}
 			return null;
 			}
-		
+
 		void paint(GC gc)
 			{
 			for(Figure thumb: this.figures)
@@ -1013,9 +1013,9 @@ public class Cartoonist
 				}
 			}
 		}
-	
+
 	/**
-	 * 
+	 *
 	 * DefaultModel
 	 *
 	 */
@@ -1025,7 +1025,7 @@ public class Cartoonist
 		private boolean documentModified=false;
 		private List<ImageSource> imageSources=new Vector<ImageSource>();
 		private List<Drawable> drawables=new Vector<Drawable>();
-		
+
 		public DefaultModel()
 			{
 			}
@@ -1033,7 +1033,7 @@ public class Cartoonist
 			{
 			return fileSaveAs==null?"Untitled Document":fileSaveAs.getName();
 			}
-		
+
 		void read(File file) throws IOException,XMLStreamException
 			{
 			XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
@@ -1070,14 +1070,14 @@ public class Cartoonist
 					}
 				else if(evt.isEndElement())
 					{
-					
+
 					}
 				}
 			reader.close();
-			
+
 			Component observer=new JPanel();
 			MediaTracker mediaTracker=new MediaTracker(observer);
-		
+
 			for(ImageSource img: imageSources)
 				{
 				img.image=Toolkit.getDefaultToolkit().getImage(img.getImageUrl());
@@ -1092,14 +1092,14 @@ public class Cartoonist
 						}
 					}
 				}
-			
+
 			for(Drawable drawable: drawables)
 				{
 				if(!(drawable instanceof ImageInstance)) continue;
 				ImageInstance instance=ImageInstance.class.cast(drawable);
 				if(instance.source==null) throw new IOException("cannot find image-id");
 				}
-			
+
 			try
 				{
 				mediaTracker.waitForAll();
@@ -1117,7 +1117,7 @@ public class Cartoonist
 			this.fileSaveAs=file;
 			this.documentModified=false;
 			}
-		
+
 		void write(XMLStreamWriter w)
 			throws XMLStreamException
 			{
@@ -1126,7 +1126,7 @@ public class Cartoonist
 			for(Drawable d: this.drawables) d.write(w);
 			w.writeEndElement();
 			}
-		
+
 		void write(File file)
 			throws XMLStreamException,IOException
 			{
@@ -1138,7 +1138,7 @@ public class Cartoonist
 			w.flush();
 			w.close();
 			}
-		
+
 		public int newId()
 			{
 			int id=1;
@@ -1158,11 +1158,11 @@ public class Cartoonist
 				}
 			return id;
 			}
-		
-		}	
-	
+
+		}
+
 	/**
-	 * 
+	 *
 	 * ImageSourceEditorDialog
 	 *
 	 */
@@ -1179,11 +1179,11 @@ public class Cartoonist
 				{
 				protected void paintComponent(Graphics g)
 						{
-						
+
 						};
 				};
-			
-			
+
+
 			JScrollPane scroll=new JScrollPane(label);
 			scroll.setPreferredSize(new Dimension(400,400));
 			add(scroll,BorderLayout.CENTER);
@@ -1201,13 +1201,13 @@ public class Cartoonist
 			JButton button=new JButton(action);
 			}
 		}
-	
+
 	/**
 	 * Drag
 	 */
 	abstract class Drag
 		{
-		public abstract double getX(); 
+		public abstract double getX();
 		public abstract double getY();
 		public abstract Figure getFigure();
 		public abstract void moveTo(int x,int y);
@@ -1216,11 +1216,11 @@ public class Cartoonist
 			return new Rectangle2D.Double(getX()-3,getY()-3,7,7);
 			}
 		}
-	
-	
-	
+
+
+
 	/**
-	 * 
+	 *
 	 * Figure
 	 *
 	 */
@@ -1229,7 +1229,7 @@ public class Cartoonist
 		//private Rectangle2D.Double bounds=null;
 		private Drag drags[];
 		private Double ratiowh=null;
-		
+
 		/** My drag */
 		private abstract class MyDrag
 			extends Drag
@@ -1265,9 +1265,9 @@ public class Cartoonist
 				if(getFigure().getRatioWH()!=null)
 					{
 					dy=dx/getFigure().getRatioWH();
-					} 
+					}
 				Rectangle2D bounds= getFigure().getSrcBounds();
-				
+
 				if( bounds.getWidth()-dx>0 &&
 					bounds.getHeight()-dy>0)
 					{
@@ -1280,7 +1280,7 @@ public class Cartoonist
 					}
 				}
 			}
-		
+
 		/** BottomLeftDrag */
 		private class BottomLeftDrag
 			extends MyDrag
@@ -1305,7 +1305,7 @@ public class Cartoonist
 					dy=-dx/getFigure().getRatioWH();
 					}
 				Rectangle2D bounds= getFigure().getSrcBounds();
-				
+
 				if( bounds.getWidth()-dx>0 &&
 					bounds.getHeight()+dy>0)
 					{
@@ -1318,7 +1318,7 @@ public class Cartoonist
 					}
 				}
 			}
-		
+
 		/** TopRightDrag */
 		private class TopRightDrag
 			extends MyDrag
@@ -1338,27 +1338,27 @@ public class Cartoonist
 				{
 				double dx=(x-getX())/zoom;
 				double dy=(y-getY())/zoom;
-				
+
 				if(getFigure().getRatioWH()!=null)
 					{
 					dy=-dx/getFigure().getRatioWH();
 					}
-				
+
 				Rectangle2D bounds= getFigure().getSrcBounds();
-				
+
 				if( bounds.getWidth()+dx>0 &&
 					bounds.getHeight()-dy>0)
 					{
 					setSrcBounds(
-							bounds.getX(),	
+							bounds.getX(),
 							bounds.getY()+dy,
 							bounds.getWidth()+dx,
 							bounds.getHeight()-dy
 							);
 					}
 				}
-			}		
-		
+			}
+
 		/** BottomRightDrag */
 		private class BottomRightDrag
 			extends MyDrag
@@ -1378,19 +1378,19 @@ public class Cartoonist
 				{
 				double dx=(x-getX())/zoom;
 				double dy=(y-getY())/zoom;
-				
+
 				if(getFigure().getRatioWH()!=null)
 					{
 					dy=dx/getFigure().getRatioWH();
 					}
-				
+
 				Rectangle2D bounds= getFigure().getSrcBounds();
-				
+
 				if( bounds.getWidth()+dx>0 &&
 					bounds.getHeight()+dy>0)
 					{
 					setSrcBounds(
-							bounds.getX(),	
+							bounds.getX(),
 							bounds.getY(),
 							bounds.getWidth()+dx,
 							bounds.getHeight()+dy
@@ -1398,7 +1398,7 @@ public class Cartoonist
 					}
 				}
 			}
-		
+
 		protected Figure()
 			{
 			this.drags=new Drag[]{
@@ -1408,7 +1408,7 @@ public class Cartoonist
 					new TopRightDrag()
 					};
 			}
-		
+
 		public void fillPopup(JPopupMenu menu)
 			{
 			AbstractAction action=new AbstractAction("Lock")
@@ -1416,10 +1416,10 @@ public class Cartoonist
 				@Override
 				public void actionPerformed(ActionEvent e)
 					{
-					
+
 					}
 				};
-			
+
 			menu.add(action);
 			action=new AbstractAction("Move Back")
 				{
@@ -1427,7 +1427,7 @@ public class Cartoonist
 				public void actionPerformed(ActionEvent e)
 					{
 					int index= getModel().getIndexOf(Figure.this);
-					if(index<=0 && getModel().getFigures().size()<2) return;	
+					if(index<=0 && getModel().getFigures().size()<2) return;
 					getModel().getFigures().remove(index);
 					getModel().getFigures().add(0, Figure.this);
 					drawingArea.repaint();
@@ -1448,8 +1448,8 @@ public class Cartoonist
 					drawingArea.repaint();
 					}
 				};
-			menu.add(action);			
-			
+			menu.add(action);
+
 			action=new AbstractAction("Move Forward")
 				{
 				@Override
@@ -1464,14 +1464,14 @@ public class Cartoonist
 					}
 				};
 			menu.add(action);
-			
+
 			action=new AbstractAction("Move Front")
 				{
 				@Override
 				public void actionPerformed(ActionEvent e)
 					{
 					int index= getModel().getIndexOf(Figure.this);
-					if(getModel().getFigures().size()<2) return;	
+					if(getModel().getFigures().size()<2) return;
 					getModel().getFigures().remove(index);
 					getModel().getFigures().add(Figure.this);
 					drawingArea.repaint();
@@ -1479,40 +1479,40 @@ public class Cartoonist
 				};
 			menu.add(action);
 			}
-		
+
 		public abstract Drawable getDrawable();
-		
+
 		public Double getRatioWH()
 			{
 			return this.ratiowh;
 			}
-		
+
 		public Drag[] getDrags()
 			{
 			return this.drags;
 			}
-		
-		
+
+
 		public double getX()
 			{
 			return (getSrcBounds().getX()*Cartoonist.this.zoom);
 			}
-		
+
 		public double getY()
 			{
 			return (getSrcBounds().getY()*Cartoonist.this.zoom);
 			}
-		
+
 		public double getWidth()
 			{
 			return (getSrcBounds().getWidth()*Cartoonist.this.zoom);
 			}
-		
+
 		public double getHeight()
 			{
 			return (getSrcBounds().getHeight()*Cartoonist.this.zoom);
 			}
-		
+
 		public Rectangle2D getViewRect()
 			{
 			return new Rectangle2D.Double(
@@ -1521,20 +1521,20 @@ public class Cartoonist
 				getHeight()
 				);
 			}
-		
+
 		public boolean contains(int x,int y)
 			{
 			return getViewRect().contains(x,y);
 			}
-		
+
 		public abstract void setSrcBounds(double x,double y,double width,double height);
 		public abstract Rectangle2D getSrcBounds();
-			
-			
+
+
 		public abstract void paint(GC gc);
-		
+
 		}
-	
+
 	class DefaultFigure
 		extends Figure
 		{
@@ -1543,13 +1543,13 @@ public class Cartoonist
 			{
 			this.rect=rect;
 			}
-		
+
 		@Override
 		public Rectangle2D getSrcBounds()
 			{
 			return this.rect;
 			}
-		
+
 		@Override
 		public void setSrcBounds(double x,double y,double width,double height)
 			{
@@ -1567,15 +1567,15 @@ public class Cartoonist
 			gc.g.setColor(Color.BLACK);
 			gc.g.draw(r);
 			}
-		
+
 		@Override
 		public Drawable getDrawable()
 			{
 			return null;
 			}
-		
+
 		}
-	
+
 	 /**
 	  * ImageInstanceFigure
 	  */
@@ -1592,7 +1592,7 @@ public class Cartoonist
 			{
 			return this.tbox;
 			}
-		
+
 		@Override
 		public Rectangle2D getSrcBounds()
 			{
@@ -1603,7 +1603,7 @@ public class Cartoonist
 				this.tbox.getHeight()
 				);
 			}
-		
+
 		@Override
 		public void setSrcBounds(double x, double y, double width, double height)
 			{
@@ -1612,7 +1612,7 @@ public class Cartoonist
 			tbox.viewRect.width=width;
 			tbox.viewRect.height=height;
 			}
-		
+
 		@Override
 		public void paint(GC gc)
 			{
@@ -1622,11 +1622,11 @@ public class Cartoonist
 			gc.g.setColor(Color.BLUE);
 			gc.g.draw(r);
 			gc.g.drawString(tbox.text, (int)r.getX()+1, (int)r.getY()+12);
-			
-			
+
+
 			}
 		}
-	
+
 	 /**
 	  * ImageInstanceFigure
 	  */
@@ -1638,18 +1638,18 @@ public class Cartoonist
 			{
 			this.imageInstance=imageInstance;
 			}
-		
+
 		public ImageInstance getImageInstance()
 			{
 			return imageInstance;
 			}
-		
+
 		@Override
 		public Double getRatioWH()
 			{
 			return getImageInstance().getWHRatio();
 			}
-		
+
 		@Override
 		public Rectangle2D getSrcBounds()
 			{
@@ -1663,15 +1663,15 @@ public class Cartoonist
 			imageInstance.viewRect.width=width;
 			imageInstance.viewRect.height=height;
 			}
-		
+
 		public Shape getViewShape()
 			{
 			Shape shape=getImageInstance().getShape();
 			Rectangle2D bounds=shape.getBounds2D();
-			
+
 			double ratioW=((imageInstance.getWidth()/bounds.getWidth()));
 			double ratioH=((imageInstance.getHeight()/bounds.getHeight()));
-		
+
 			AffineTransform transforms[]=
 				{
 				AffineTransform.getScaleInstance(zoom, zoom),
@@ -1679,18 +1679,18 @@ public class Cartoonist
 				AffineTransform.getScaleInstance(ratioW, ratioH),
 				AffineTransform.getTranslateInstance(-bounds.getX(),-bounds.getY())
 				};
-			
-			
-			
+
+
+
 			AffineTransform tr=new AffineTransform();
 			for(int i=0;i< transforms.length;++i)
 				{
 				tr.concatenate(transforms[i]);
 				}
-			
+
 			return tr.createTransformedShape(shape);
 			}
-		
+
 		@Override
 		public void paint(GC gc)
 			{
@@ -1699,10 +1699,10 @@ public class Cartoonist
 			gc.g.setColor(Color.BLUE);
 			gc.g.draw(r);
 			gc.g.setPaintMode();
-			
+
 			Rectangle2D srcRec=getImageInstance().getShape().getBounds2D();
 			Shape viewShape=getViewShape();
-			
+
 			Shape oldClip= gc.g.getClip();
 			Area newClip= new Area(viewShape);
 			newClip.intersect(new Area(oldClip));
@@ -1720,20 +1720,20 @@ public class Cartoonist
 				null
 				);
 			//gc.g.fill(r);
-			
+
 			gc.g.setClip(oldClip);
-			
+
 			getImageInstance().border.paint(gc, viewShape);
-			
+
 			}
-		
+
 		@Override
 		public Drawable getDrawable()
 			{
 			return getImageInstance();
 			}
 		}
-	
+
 	/**
 	 * Constructor
 	 * @param model
@@ -1759,8 +1759,8 @@ public class Cartoonist
 				throw new UnsupportedOperationException(d.getClass().getName());
 				}
 			}
-		
-		
+
+
 		this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 		this.addWindowListener(new WindowAdapter()
 			{
@@ -1776,7 +1776,7 @@ public class Cartoonist
 				doMenuQuit();
 				}
 			});
-		
+
 		JPanel contentPane=new JPanel(new BorderLayout());
 		setContentPane(contentPane);
 		this.drawingArea=new JPanel(null,false)
@@ -1806,7 +1806,7 @@ public class Cartoonist
 					if(t!=null) editFigure(t);
 					}
 				}
-			
+
 			@Override
 			public void mousePressed(MouseEvent e)
 				{
@@ -1827,7 +1827,7 @@ public class Cartoonist
 					}
 				mousePrev=null;
 				}
-			
+
 			@Override
 			public void mouseDragged(MouseEvent e)
 				{
@@ -1855,7 +1855,7 @@ public class Cartoonist
 					}
 				mousePrev=new Point(e.getX(), e.getY());
 				}
-			
+
 			@Override
 			public void mouseReleased(MouseEvent e)
 				{
@@ -1868,7 +1868,7 @@ public class Cartoonist
 			};
 		this.drawingArea.addMouseListener(mouse);
 		this.drawingArea.addMouseMotionListener(mouse);
-		
+
 		JToolBar toolbar=new JToolBar();
 		contentPane.add(toolbar,BorderLayout.NORTH);
 		JMenuBar bar=new JMenuBar();
@@ -1884,7 +1884,7 @@ public class Cartoonist
 				}
 			};
 		menu.add(action);
-		
+
 		action=new AbstractAction("Save As...")
 			{
 			@Override
@@ -1894,7 +1894,7 @@ public class Cartoonist
 				}
 			};
 		menu.add(action);
-		
+
 		action=new AbstractAction("Save")
 			{
 			@Override
@@ -1904,7 +1904,7 @@ public class Cartoonist
 				}
 			};
 		menu.add(action);
-		
+
 		action=new AbstractAction("Open")
 			{
 			@Override
@@ -1914,11 +1914,11 @@ public class Cartoonist
 			};
 		menu.add(action);
 		toolbar.add(action);
-		
+
 		JMenu subMenu=new JMenu("Export");
 		menu.add(subMenu);
-		
-		
+
+
 		action=new AbstractAction("As SVG")
 			{
 			@Override
@@ -1937,13 +1937,13 @@ public class Cartoonist
 				}
 			};
 		subMenu.add(action);
-		
-		
-		
+
+
+
 		menu=new JMenu("Images Source");
 		this.menuImageSource=menu;
 		bar.add(menu);
-		
+
 		menu=new JMenu("Icons");
 		bar.add(menu);
 		action=new AbstractAction("New")
@@ -1976,7 +1976,7 @@ public class Cartoonist
 			};
 		menu.add(action);
 		toolbar.add(action);
-		
+
 		action=new AbstractAction("Add Image Source")
 			{
 			@Override
@@ -1987,7 +1987,7 @@ public class Cartoonist
 			};
 		menu.add(action);
 		toolbar.add(action);
-		
+
 		action=new AbstractAction("TextBox")
 			{
 			@Override
@@ -1999,28 +1999,28 @@ public class Cartoonist
 		menu.add(action);
 		toolbar.add(action);
 		}
-	
+
 	private void doMenuCreateNew()
 		{
 		int midX= drawingArea.getWidth()/2;
 		int midY= drawingArea.getHeight()/2;
-		
+
 		Figure figure=new DefaultFigure(new Rectangle2D.Double(100,100,50,50));
 		Rectangle r=drawingArea.getVisibleRect();
-		
+
 		//figure.bounds.x=(int)r.getCenterX()-midX;
 		//figure.bounds.y=(int)r.getCenterY()-midY;
 		getModel().getFigures().add(figure);
 		getModel().documentModified=true;
 		adjustSize();
 		}
-	
+
 	private void setZoom(double value)
 		{
 		this.zoom=value;
 		adjustSize();
 		}
-	
+
 	private void editFigure(Figure figure)
 		{
 		JButton button=new JButton();
@@ -2034,13 +2034,13 @@ public class Cartoonist
 				JOptionPane.showConfirmDialog(null, dlg);
 				} catch (Exception err)
 					{
-				
+
 					}
 				}
 			});
-		
-		
-		
+
+
+
 		JPanel pane=new JPanel(new BorderLayout(5,5));
 		Dimension d=new Dimension(64,64);
 		button.setPreferredSize(d);
@@ -2048,30 +2048,30 @@ public class Cartoonist
 		JPanel pane2=new JPanel(new InputLayout());
 		pane.add(pane2,BorderLayout.CENTER);
 		pane2.setPreferredSize(new Dimension(300,100));
-		
+
 		JLabel label=new JLabel("Title");
 		pane2.add(label);
 		JTextField tfTitle=new JTextField(10);
 		pane2.add(tfTitle);
 		label.setLabelFor(tfTitle);
-		
+
 		label=new JLabel("Year");
 		pane2.add(label);
 		JTextField tfYear=new JTextField(10);
 		pane2.add(tfYear);
 		label.setLabelFor(tfYear);
-		
+
 		label=new JLabel("Year");
 		pane2.add(label);
 		JTextField tfCountry=new JTextField(10);
 		pane2.add(tfCountry);
 		label.setLabelFor(tfCountry);
-		
+
 		if(JOptionPane.showConfirmDialog(this, pane,"Edit",JOptionPane.OK_CANCEL_OPTION)!=JOptionPane.OK_OPTION)
 			{
 			return;
 			}
-		
+
 		}
 
 	private static File assureExtension(File f,String suffix)
@@ -2081,8 +2081,8 @@ public class Cartoonist
 		if(!suffix.startsWith(".")) suffix="."+suffix;
 		if(s.toLowerCase().endsWith(suffix.toLowerCase())) return f;
 		return new File(f.getParentFile(),s+suffix);
-		}	
-	
+		}
+
 	private boolean doMenuSaveAs()
 		{
 		File f=askFileSaveAs(".svg");
@@ -2094,12 +2094,12 @@ public class Cartoonist
 			}
 		return b;
 		}
-	
+
 	public DefaultModel getModel()
 		{
 		return model;
 		}
-	
+
 	private boolean doMenuSave(File filename)
 		{
 		if(filename==null)
@@ -2128,7 +2128,7 @@ public class Cartoonist
 		if( selFile.exists() &&
 			JOptionPane.showConfirmDialog(this, "File exists. Overwrite ?", "Overwitre",
 					JOptionPane.WARNING_MESSAGE,
-					JOptionPane.OK_CANCEL_OPTION, 
+					JOptionPane.OK_CANCEL_OPTION,
 					null)!=JOptionPane.OK_OPTION)
 			{
 			return null;
@@ -2136,13 +2136,13 @@ public class Cartoonist
 		PreferredDirectory.setPreferredDirectory(selFile);
 		return selFile;
 		}
-	
+
 	private void save(File file)
 		throws IOException,XMLStreamException
 		{
 		getModel().write(file);
 		}
-	
+
 	private void adjustSize()
 		{
 		/*int minX=0;
@@ -2164,7 +2164,7 @@ public class Cartoonist
 		this.drawingArea.revalidate();
 		this.drawingArea.repaint();
 		}
-	
+
 	private void paintDrawingArea(GC gc)
 		{
 		getModel().paint(gc);
@@ -2177,7 +2177,7 @@ public class Cartoonist
 				}
 			}
 		}
-	
+
 	private void doMenuQuit()
 		{
 		if(getModel().documentModified)
@@ -2202,7 +2202,7 @@ public class Cartoonist
 		this.setVisible(false);
 		this.dispose();
 		}
-	
+
 	private void doMenuOpen()
 		{
 		JFileChooser chooser=new JFileChooser();
@@ -2225,37 +2225,37 @@ public class Cartoonist
 			ThrowablePane.show(this, err);
 			}
 		}
-	
-	
+
+
 	private void doMenuAddImageSource()
 		{
 		JPanel pane=new JPanel(new InputLayout());
 		JLabel label;
-		
-		
+
+
 		label=new JLabel("URL:",JLabel.RIGHT);
 		JTextField tfURL=new JTextField(20);
 		label.setLabelFor(tfURL);
 		pane.add(label);
 		pane.add(tfURL);
-		
+
 		label=new JLabel("Source URL:",JLabel.RIGHT);
 		JTextField tfSource=new JTextField(20);
 		label.setLabelFor(tfSource);
 		pane.add(label);
 		pane.add(tfSource);
-		
+
 		label=new JLabel("Title",JLabel.RIGHT);
 		JTextField tfTitle=new JTextField(20);
 		label.setLabelFor(tfTitle);
 		pane.add(label);
 		pane.add(tfTitle);
-		
+
 		pane.setPreferredSize(new Dimension(400,50));
 		URL url=null;
 		URL urlSrc=null;
 		String title=null;
-		
+
 		while(url==null)
 			{
 			if(JOptionPane.showConfirmDialog(this, pane,"URL",JOptionPane.PLAIN_MESSAGE,JOptionPane.OK_CANCEL_OPTION,null)!=JOptionPane.OK_OPTION)
@@ -2287,10 +2287,10 @@ public class Cartoonist
 				title=tfURL.getText().trim();
 				}
 			}
-		
+
 		ImageSource src=new ImageSource();
-		
-		
+
+
 		try
 			{
 			src.image=ImageIO.read(url);
@@ -2308,14 +2308,14 @@ public class Cartoonist
 			}
 		finally
 			{
-			
+
 			}
 		if(JOptionPane.showConfirmDialog(null, new JLabel(src.icon64),"Image",JOptionPane.OK_CANCEL_OPTION,JOptionPane.PLAIN_MESSAGE,null)!=JOptionPane.OK_OPTION)
 			{
 			return;
 			}
-		
-		
+
+
 		boolean found=false;
 		src.id=1;
 		//search a new Id
@@ -2332,13 +2332,13 @@ public class Cartoonist
 					}
 				}
 			}
-		
+
 		getModel().imageSources.add(src);
 		getModel().documentModified=true;
 		reloadImageSrcMenu();
 		}
-	
-	
+
+
 	private void doMenuAddTextBox()
 		{
 		TextBox tbox=new TextBox();
@@ -2354,7 +2354,7 @@ public class Cartoonist
 		reloadImageSrcMenu();
 		drawingArea.repaint();
 		}
-	
+
 	private void reloadImageSrcMenu()
 		{
 		this.menuImageSource.removeAll();
@@ -2374,7 +2374,7 @@ public class Cartoonist
 			this.menuImageSource.add(action);
 			}
 		}
-	
+
 	private void createImageInstance(ImageSource is)
 		{
 		ImageInstanceEditor ed=new ImageInstanceEditor(is);
@@ -2389,20 +2389,20 @@ public class Cartoonist
 		getModel().documentModified=true;
 		adjustSize();
 		}
-	
+
 	private void doMenuExportAsSVG()
 		{
 		File file=askFileSaveAs(".svg");
 		if(file==null) return;
 		}
-	
+
 	private void doMenuExportAsHTML()
 		{
 		File file=askFileSaveAs(".html");
 		if(file==null) return;
 		}
-	
-	
+
+
 	/**
 	 * main
 	 */

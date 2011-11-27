@@ -57,7 +57,7 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 /**
- * 
+ *
  * VariantEffectPredictorRobot
  *
  */
@@ -71,11 +71,11 @@ public class VariantEffectPredictorRobot
 	private XPath xpath=null;
 	private String proxyHost=null;
 	private String proxyPort=null;
-	
+
 	/** id generator */
 	private long id_generator=System.currentTimeMillis();
 	private boolean printEnst=false;
-	
+
 	private static class Mutation
 		{
 		boolean flag=false;
@@ -84,7 +84,7 @@ public class VariantEffectPredictorRobot
 		Set<String> transcripts=new HashSet<String>();
 		Set<String> consequences=new HashSet<String>();
 		Set<String> ids=new HashSet<String>();
-		
+
 		Mutation(String tokens[])
 			{
 			this.tokens=tokens;
@@ -96,29 +96,29 @@ public class VariantEffectPredictorRobot
 					}
 				}
 			}
-		
+
 		public String getChrom()
 			{
 			String s=tokens[0];
 			if(s.startsWith("chr")) s=s.substring(3);
 			return s;
 			}
-		
+
 		private Object[] compute()
 			{
 			String ref=tokens[3].toUpperCase();
 			String alt=tokens[4].toUpperCase();
-			
+
 			int comma=alt.indexOf(",");
 			if(comma!=-1)
 				{
 				LOG.info("FIX THIS");
 				alt=alt.substring(0,comma);
 				}
-			
+
 			boolean is_indel=false;
 			if( alt.startsWith("D") ||
-				alt.startsWith("I") ||	
+				alt.startsWith("I") ||
 				ref.length()!=alt.length())
 				{
 				is_indel=true;
@@ -126,7 +126,7 @@ public class VariantEffectPredictorRobot
 			int start=Integer.parseInt(tokens[1]);
 			int end=start;
 			end+= (ref.length()-1);
-	        
+
 			if(is_indel)
 				{
 				alt=alt.substring(1);
@@ -140,11 +140,11 @@ public class VariantEffectPredictorRobot
 					{
 					ref="-";
 					}
-				
+
 				}
 			return new Object[]{start,end,ref,alt};
 			}
-		
+
 		public int getStart()
 			{
 			return (Integer)compute()[0];
@@ -161,7 +161,7 @@ public class VariantEffectPredictorRobot
 			{
 			return (String)compute()[3];
 			}
-		
+
 		public String getSubmit()
 			{
 			return new StringBuilder(getChrom()).
@@ -178,7 +178,7 @@ public class VariantEffectPredictorRobot
 					toString()
 					;
 			}
-		
+
 		public String getSignature()
 			{
 			StringBuilder b=new StringBuilder(getChrom()).append('_');
@@ -201,9 +201,9 @@ public class VariantEffectPredictorRobot
 			return b.toString();
 			}
 		}
-	
 
-	
+
+
 	private VariantEffectPredictorRobot() throws Exception
 		{
 		DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
@@ -224,11 +224,11 @@ public class VariantEffectPredictorRobot
 				return new InputSource(new StringReader(""));
 				}
 			});
-		
+
 		this.xpath=XPathFactory.newInstance().newXPath();
-		
+
 		}
-	
+
 	/** submit data to ensembl */
 	private void submitList(List<Mutation> mutations) throws Exception
 		{
@@ -238,7 +238,7 @@ public class VariantEffectPredictorRobot
 			{
 			httpClient.getHostConfiguration().setProxy(proxyHost, Integer.parseInt(proxyPort));
 			}
-		
+
 		StringBuilder lines=new StringBuilder();
 		for(Mutation m:mutations)
 			{
@@ -320,7 +320,7 @@ public class VariantEffectPredictorRobot
 			if(postMethod!=null) postMethod.releaseConnection();
 			postMethod=null;
 			}
-		
+
 		if(location==null)
 			{
 			throw new HttpException("location is null");
@@ -357,7 +357,7 @@ public class VariantEffectPredictorRobot
 			if(methodGet!=null) methodGet.releaseConnection();
 			methodGet=null;
 			}
-		
+
 		if(location==null)
 			{
 			throw new HttpException("location is null");
@@ -378,7 +378,7 @@ public class VariantEffectPredictorRobot
 			InputStream in=methodGet.getResponseBodyAsStream();
 			Document dom=builder.parse(in);
 			in.close();
-			
+
 			Element anchor=(Element)xpath.evaluate("//a[@class='modal_link'][@href][text()='Text']", dom, XPathConstants.NODE);
 			if(anchor==null)
 				{
@@ -394,7 +394,7 @@ public class VariantEffectPredictorRobot
 			if(methodGet!=null) methodGet.releaseConnection();
 			methodGet=null;
 			}
-		
+
 		if(location==null)
 			{
 			throw new HttpException("location is null");
@@ -415,14 +415,14 @@ public class VariantEffectPredictorRobot
 			InputStream in=methodGet.getResponseBodyAsStream();
 			Document dom=builder.parse(in);
 			in.close();
-			
+
 			Element anchor=(Element)xpath.evaluate("//a[@href][text()='DataSet"+request_id+".txt']", dom, XPathConstants.NODE);
 			if(anchor==null)
 				{
 				TransformerFactory factory=TransformerFactory.newInstance();
 				Transformer transformer=factory.newTransformer();
 				transformer.transform(new DOMSource(dom), new StreamResult(System.err));
-				
+
 				throw new HttpException("anchor2 is null in "+url);
 				}
 			location=anchor.getAttribute("href");
@@ -432,12 +432,12 @@ public class VariantEffectPredictorRobot
 			if(methodGet!=null) methodGet.releaseConnection();
 			methodGet=null;
 			}
-		
+
 		if(location==null)
 			{
 			throw new HttpException("location is null");
 			}
-		
+
 		try
 			{
 			URL url=new URL(BASE,location);
@@ -477,14 +477,14 @@ public class VariantEffectPredictorRobot
 						if(!tokens[4].isEmpty()) mut.consequences.add(tokens[4]);
 						if(!tokens[8].isEmpty()) mut.ids.add(tokens[8]);
 						LOG.info(mut.genes.toString());
-						
+
 						}
 					}
 				if(!found)
 					{
 					LOG.info("No mutation was found for "+line);
 					}
-				
+
 				}
 			in.close();
 			}
@@ -493,7 +493,7 @@ public class VariantEffectPredictorRobot
 			if(methodGet!=null) methodGet.releaseConnection();
 			methodGet=null;
 			}
-		
+
 		//cleanup
 		Set<String> deleteURLS=new HashSet<String>();
 		try
@@ -529,9 +529,9 @@ public class VariantEffectPredictorRobot
 			if(methodGet!=null) methodGet.releaseConnection();
 			methodGet=null;
 			}
-		
+
 		LOG.info(deleteURLS.toString());
-		
+
 		for(String deleteURL: deleteURLS)
 			{
 			try{
@@ -551,20 +551,20 @@ public class VariantEffectPredictorRobot
 				methodGet=null;
 				}
 			}
-		
+
 		}
-	
+
 	private void wait(int seconds)
 		{
 		LOG.info("wait "+seconds+" secs");
 		try{
-		Thread.sleep(1000*seconds);//wait 
+		Thread.sleep(1000*seconds);//wait
 		} catch(Throwable err) {}
 		}
-	
-	
-	
-	
+
+
+
+
 	private void submit(List<Mutation> mutations)
 		throws Exception
 		{
@@ -588,7 +588,7 @@ public class VariantEffectPredictorRobot
 				wait((i+1)*30);
 				}
 			}
-		
+
 		if(lastException!=null)
 			{
 			//submit 1 after 1 , ignore the errors
@@ -599,15 +599,15 @@ public class VariantEffectPredictorRobot
 					List<Mutation> anotherList=new ArrayList<Mutation>(1);
 					anotherList.add(m);
 					submitList(anotherList);
-					} 
+					}
 				catch (Exception e)
 					{
 					LOG.info("Ignore Error "+e.getMessage());
 					}
 				}
 			}
-		
-		
+
+
 		for(Mutation m:mutations)
 			{
 			System.out.print(m.tokens[0]);
@@ -679,7 +679,7 @@ public class VariantEffectPredictorRobot
 			System.out.println();
 			}
 		}
-	
+
 	private void runVCF(BufferedReader in) throws Exception
 		{
 		LOG.info("run...");
@@ -691,7 +691,7 @@ public class VariantEffectPredictorRobot
 				{
 				if(line.startsWith("#CHROM"))
 					{
-					
+
 					}
 				System.out.println(line);
 				continue;
@@ -699,7 +699,7 @@ public class VariantEffectPredictorRobot
 			LOG.info(line);
 			Mutation mutation=new Mutation(line.split("\t"));
 			mutations.add(mutation);
-			
+
 			if(mutations.size()==BATCH_SIZE)
 				{
 				submit(mutations);
@@ -712,12 +712,12 @@ public class VariantEffectPredictorRobot
 			}
 		LOG.info("end run...");
 		}
-	
+
 	public static void main(String[] args)
 		{
 		LOG.setLevel(Level.OFF);
 		try {
-			
+
 			VariantEffectPredictorRobot app=new VariantEffectPredictorRobot();
 			int optind=0;
 			while(optind<args.length)
@@ -788,12 +788,12 @@ public class VariantEffectPredictorRobot
 				System.err.println("Illegal number of arguments.");
 				return;
 				}
-		} 
+		}
 	catch (Exception e)
 		{
 		e.printStackTrace();
 		}
 		}
-	
+
 
 	}

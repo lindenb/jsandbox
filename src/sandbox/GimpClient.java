@@ -10,9 +10,9 @@
  * WWW:
  * 	http://plindenbaum.blogspot.com
  * Wiki
- *  
+ *
  * Motivation:
- * 		sends a scheme script to a 
+ * 		sends a scheme script to a
  * Compilation:
  *        cd jsandbox; ant gimpclient
  * Usage:
@@ -29,7 +29,7 @@ import java.io.StringReader;
 import java.net.Socket;
 
 /**
- * 
+ *
  * GimpClient
  *
  */
@@ -37,7 +37,7 @@ public class GimpClient
 	{
 	private String host="localhost";
 	private int port=10008;
-	
+
 	private GimpClient()
 		{
 		}
@@ -59,20 +59,20 @@ public class GimpClient
 			out=socket.getOutputStream();
 			in=socket.getInputStream();
 			out.write('G');
-			
-			
+
+
 			short queryLength=(short)input.length;
 			out.write(queryLength/256);
 			out.write(queryLength%256);
 			out.write(input);
 			out.flush();
-			
+
 			int G=in.read();
 			if(G!='G') throw new IOException("Expected first byte as G");
 			int code=in.read();
 			if(code!=0)  throw new IOException("Error code:"+code);
 			int contentLength= in.read()*255 + in.read();
-			
+
 			byte array[]=new byte[contentLength];
 			int nRead=0;
 			int n=0;
@@ -94,7 +94,7 @@ public class GimpClient
 			if(socket!=null) socket.close();
 			}
 		}
-	
+
 	public static void main(String[] args)
 		{
 		try {
@@ -146,7 +146,7 @@ public class GimpClient
 				System.err.println("Illegal number of arguments");
 				return;
 				}
-			
+
 			if(script!=null)
 				{
 				StringReader r=new StringReader(script);
@@ -167,10 +167,10 @@ public class GimpClient
 					in.close();
 					}
 				}
-			} 
+			}
 		catch (Exception err)
 			{
 			err.printStackTrace();
 			}
 		}
-}	
+}

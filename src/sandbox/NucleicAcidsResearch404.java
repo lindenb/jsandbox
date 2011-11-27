@@ -12,7 +12,7 @@
  * Compilation:
  *        ant nar404
  * Usage:
- *        java -jar nar404.jar 
+ *        java -jar nar404.jar
  */
 package sandbox;
 
@@ -50,7 +50,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 /**
- * 
+ *
  * NucleicAcidsResearch404
  *
  */
@@ -62,7 +62,7 @@ public class NucleicAcidsResearch404
 	private static final String DC="http://purl.org/dc/elements/1.1/";
 	private static final String HTML="http://www.w3.org/1999/xhtml";
 	private static final String BIB="http://purl.org/ontology/bibo/";
-	
+
 	private String email="plindenbaum at yahoo fr";
 	private String tool=NucleicAcidsResearch404.class.getSimpleName();
 	private int timeout_milliseconds=10*1000;
@@ -73,36 +73,36 @@ public class NucleicAcidsResearch404
 	private Pattern hrefPattern=Pattern.compile("((https?:\\/\\/|www.)([-\\w.]+)+(:\\d+)?(\\/([\\-\\w\\/_.]*(\\?\\S+)?)?)?)");
 	private Map<String,Database> url2databases=new  TreeMap<String,Database>(String.CASE_INSENSITIVE_ORDER);
 	private int limit=-1;
-	
+
 	private static class Article
 		implements Comparable<Article>
 		{
 		long pmid;
 		String title;
 		String year;
-		
+
 		public String getUri()
 			{
 			return "http://www.ncbi.nlm.nih.gov/pubmed/"+pmid;
 			}
-		
+
 		void writeRDF(XMLStreamWriter w) throws XMLStreamException
 			{
 			w.writeStartElement("bib","Article",BIB);
 			w.writeAttribute("rdf", "RDF", "about", getUri());
-			
+
 			w.writeStartElement("dc","title",DC);
 			w.writeCharacters(title);
 			w.writeEndElement();
-			
+
 			w.writeStartElement("dc","date",DC);
 			w.writeCharacters(year);
 			w.writeEndElement();
-			
+
 			w.writeStartElement("bib","pmid",BIB);
 			w.writeCharacters(String.valueOf(pmid));
 			w.writeEndElement();
-			
+
 			w.writeEndElement();
 			}
 
@@ -111,7 +111,7 @@ public class NucleicAcidsResearch404
 			{
 			return (this.pmid< o.pmid?-1:(this.pmid>o.pmid?1:0));
 			}
-		
+
 		@Override
 		public int hashCode()
 			{
@@ -134,14 +134,14 @@ public class NucleicAcidsResearch404
 			return getUri();
 			}
 		}
-	
+
 	private static class Database
 		{
 		String url;
 		int httpStatus=200;
 		String error=null;
 		Set<Article> articles=new LinkedHashSet<Article>();
-		
+
 		void writeRDF(XMLStreamWriter w) throws XMLStreamException
 			{
 			boolean validURL=true;
@@ -153,7 +153,7 @@ public class NucleicAcidsResearch404
 				{
 				validURL=false;
 				}
-			
+
 			w.writeStartElement("j","WebResource",NS);
 			if(validURL)
 				{
@@ -162,8 +162,8 @@ public class NucleicAcidsResearch404
 			w.writeStartElement("j","hyperlink",NS);
 			w.writeCharacters(url);
 			w.writeEndElement();
-			
-			
+
+
 			if(this.error!=null)
 				{
 				w.writeStartElement("j","error",NS);
@@ -176,27 +176,27 @@ public class NucleicAcidsResearch404
 				w.writeCharacters(String.valueOf(httpStatus));
 				w.writeEndElement();
 				}
-			
+
 			w.writeEmptyElement("rdf","type",RDF);
 			w.writeAttribute("rdf", "RDF", "resource",NS+(isValid()?"Alive":"Dead"));
-			
-			
+
+
 			for(Article article:articles)
 				{
 				w.writeEmptyElement("j","article",NS);
 				w.writeAttribute("rdf", RDF, "resource", article.getUri());
 				}
-			
+
 			w.writeEndElement();
 			}
-		
+
 		boolean isValid()
 			{
-			return (httpStatus==200 || httpStatus==301 || httpStatus==302) && error==null; 
+			return (httpStatus==200 || httpStatus==301 || httpStatus==302) && error==null;
 			}
-		
-		}	
-	
+
+		}
+
 	private NucleicAcidsResearch404() throws Exception
 		{
 		XPathFactory f=XPathFactory.newInstance();
@@ -208,7 +208,7 @@ public class NucleicAcidsResearch404
 		Article article=new Article();
 		article.pmid=Long.parseLong(xpath.evaluate("MedlineCitation/PMID", root));
 		article.title=xpath.evaluate("MedlineCitation/Article/ArticleTitle", root);
-		
+
 		article.year=xpath.evaluate("MedlineCitation/Article/Journal/JournalIssue/PubDate/Year", root);
 		NodeList list=(NodeList)xpath.evaluate("MedlineCitation/Article/Abstract/AbstractText", root,XPathConstants.NODESET);
 		Set<String> urls=new HashSet<String>();
@@ -217,9 +217,9 @@ public class NucleicAcidsResearch404
 			{
 			String abstractText=list.item(i).getTextContent();
 			if(abstractText==null || abstractText.trim().isEmpty()) continue;
-			
+
 			Matcher matcher=hrefPattern.matcher(abstractText);
-			
+
 			int pos=0;
 			while(pos<abstractText.length() &&  matcher.find(pos))
 				{
@@ -242,7 +242,7 @@ public class NucleicAcidsResearch404
 				if(!ok) continue;
 				urls.add(url);
 				}
-			
+
 			}
 		if(urls.isEmpty()) return;
 		for(String url:urls)
@@ -272,7 +272,7 @@ public class NucleicAcidsResearch404
 			{
 			URL url= new URL(
 				"http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term="+
-				URLEncoder.encode(query, "UTF-8")+	
+				URLEncoder.encode(query, "UTF-8")+
 				"&retstart=0&retmax=0&usehistory=y&retmode=xml&email=plindenbaum_at_yahoo.fr&tool=gender");
 			LOG.info(url.toString());
 			XMLInputFactory f= XMLInputFactory.newInstance();
@@ -287,10 +287,10 @@ public class NucleicAcidsResearch404
 			String QueryKey=null;
 			String WebEnv=null;
 			int count=-1;
-	
+
 			while(!(evt=reader.nextEvent()).isEndDocument())
 				{
-				if(!evt.isStartElement()) continue;	
+				if(!evt.isStartElement()) continue;
 				String tag= evt.asStartElement().getName().getLocalPart();
 				if(tag.equals("QueryKey"))
 					{
@@ -307,7 +307,7 @@ public class NucleicAcidsResearch404
 				}
 			reader.close();
 			in.close();
-			
+
 			final int retmax=5000;
 			for(int retstart=0;retstart<count;retstart+=retmax)
 				{
@@ -320,7 +320,7 @@ public class NucleicAcidsResearch404
 						)
 						;
 				LOG.info(url.toString());
-						
+
 				DocumentBuilderFactory domF=DocumentBuilderFactory.newInstance();
 				domF.setCoalescing(true);
 				domF.setNamespaceAware(false);
@@ -330,8 +330,8 @@ public class NucleicAcidsResearch404
 				domF.setIgnoringElementContentWhitespace(true);
 				DocumentBuilder docBuilder= domF.newDocumentBuilder();
 				Document dom=docBuilder.newDocument();
-				
-				
+
+
 				in=url.openStream();
 				reader=f.createXMLEventReader(in);
 				while(reader.hasNext())
@@ -353,7 +353,7 @@ public class NucleicAcidsResearch404
 					dom.appendChild(root);
 					analyse(dom);
 					dom.removeChild(root);
-				
+
 					}
 				reader.close();
 				in.close();
@@ -407,16 +407,16 @@ public class NucleicAcidsResearch404
 			w.writeNamespace("bib", BIB);
 			w.writeNamespace("foaf", FOAF);
 			w.writeNamespace("h", HTML);
-			
-			
+
+
 			Set<Article> allArticles=new TreeSet<Article>();
-			
+
 			for(Database database:this.url2databases.values())
 				{
 				for(Article a:database.articles)
 					{
 					allArticles.add(a);
-					
+
 					int[] array=  year2count.get(a.year);
 					if(array==null)
 						{
@@ -430,40 +430,40 @@ public class NucleicAcidsResearch404
 						}
 					}
 				}
-			
+
 			w.writeStartElement("rdf","Statement",RDF);
 			w.writeAttribute("rdf",RDF,"about","");
-			
+
 				w.writeStartElement("foaf","maker",FOAF);
-				
+
 				  w.writeStartElement("foaf","Person",FOAF);
 				    w.writeAttribute("rdf",RDF,"about","http://plindenbaum.blogspot.com");
 				  	w.writeStartElement("foaf","name",FOAF);
 				  		w.writeCharacters("Pierre Lindenbaum");
 				    w.writeEndElement();
 				  w.writeEndElement();//foaf Person
-				  w.writeEndElement();//maker 
-				  
-				  
+				  w.writeEndElement();//maker
+
+
 				  w.writeStartElement("dc","date",DC);
 				    w.writeCharacters(new java.sql.Date(System.currentTimeMillis()).toString());
 				  w.writeEndElement();
-				  
+
 				  w.writeStartElement("j","query",NS);
 				    w.writeCharacters(this.query);
 				  w.writeEndElement();
-				  
+
 				  w.writeStartElement("j","articles",NS);
 				    w.writeCharacters(String.valueOf(count));
 				  w.writeEndElement();
-				  
+
 				  w.writeStartElement("j","timeout",NS);
 				    w.writeCharacters(String.valueOf(this.timeout_milliseconds));
 				  w.writeEndElement();
-				
+
 				  w.writeStartElement("j","table",NS);
 				  w.writeAttribute("rdf",RDF,"parseType","Literal");
-				  
+
 				  //begin table
 				  w.writeStartElement("h","table",HTML);
 					w.writeAttribute("h",HTML,"border","1");
@@ -501,30 +501,30 @@ public class NucleicAcidsResearch404
 						}
 					w.writeEndElement();//table
 				  //end table
-				  
-				 
-				  
+
+
+
 				w.writeEndElement();//maker
 			w.writeEndElement();
-				
-				
+
+
 			for(Database database:this.url2databases.values())
 				{
 				database.writeRDF(w);
 				}
-			
+
 			for(Article a:allArticles)
 				{
 				a.writeRDF(w);
 				}
-			
-			
+
+
 			w.writeEndElement();//RDF
-			
+
 			w.writeEndDocument();
 			w.flush();
 			}
-	
+
 		private Element parseDom(XMLEventReader reader,StartElement start,Document dom) throws XMLStreamException
 			{
 			Element root=dom.createElement(start.getName().getLocalPart());
@@ -565,7 +565,7 @@ public class NucleicAcidsResearch404
 				}
 			return root;
 			}
-	
+
 		public static void main(String[] args)
 			{
 			try
@@ -603,7 +603,7 @@ public class NucleicAcidsResearch404
 						System.err.println("Unknown option "+args[optind]);
 						return;
 						}
-					else 
+					else
 						{
 						break;
 						}
@@ -615,7 +615,7 @@ public class NucleicAcidsResearch404
 					return;
 					}
 				app.run();
-				} 
+				}
 			catch(Throwable err)
 				{
 				err.printStackTrace();

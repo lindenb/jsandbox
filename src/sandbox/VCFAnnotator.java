@@ -63,7 +63,7 @@ class IOUtils
 		try
 			{
 			InputStream in=null;
-			if(	uri.startsWith("http://") || 
+			if(	uri.startsWith("http://") ||
 				uri.startsWith("https://") ||
 				uri.startsWith("ftp://")
 				)
@@ -91,17 +91,17 @@ class IOUtils
 				in=new FileInputStream(uri);
 				}
 			if(in==null) return null;
-			
+
 			if(in!=null)
 				{
 				in=new BufferedInputStream(in,BUFSIZ);
 				}
-			
+
 			if(uri.toLowerCase().endsWith(".gz"))
 				{
 				in=new GZIPInputStream(in);
 				}
-			
+
 			return in;
 			}
 		catch (IOException e)
@@ -109,9 +109,9 @@ class IOUtils
 			LOG.info("error "+e.getMessage());
 			return null;
 			}
-		
+
 		}
-	
+
 	private static BufferedReader _open(String uri)
 		{
 		InputStream in=_openStream(uri);
@@ -121,8 +121,8 @@ class IOUtils
 			}
 		return null;
 		}
-	
-	
+
+
 	public static BufferedReader tryOpen(String uri)
 		{
 		LOG.info("try open "+uri);
@@ -134,7 +134,7 @@ class IOUtils
 			}
 		return r;
 		}
-	
+
 	public static InputStream mustOpenStream(String url)
 	throws IOException
 		{
@@ -143,7 +143,7 @@ class IOUtils
 		if(r==null) throw new IOException("Cannot open \""+url+"\"");
 		return r;
 		}
-	
+
 	public static BufferedReader mustOpen(String url)
 		throws IOException
 		{
@@ -155,7 +155,7 @@ class IOUtils
 	}
 
 /**
- * 
+ *
  * Genetic Code
  *
  */
@@ -179,9 +179,9 @@ abstract class GeneticCode
 			return "FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIMMTTTTNNKKSS**VVVVAAAADDEEGGGG";
 			}
 		};
-	/** get the genetic-code table (NCBI data) */ 
+	/** get the genetic-code table (NCBI data) */
 	protected abstract String getNCBITable();
-	
+
 	/** convert a base to index */
 	private static int base2index(char c)
 		{
@@ -209,19 +209,19 @@ abstract class GeneticCode
 			return getNCBITable().charAt(base1*16+base2*4+base3);
 			}
 		}
-	
+
 	/** get the standard genetic code */
 	public static GeneticCode getStandard()
 		{
 		return STANDARD;
 		}
-	
+
 	/** get the mitochondrial genetic code */
 	public static GeneticCode getMitochondrial()
 		{
 		return MITOCHONDRIAL;
 		}
-	
+
 	/** get a genetic code from a chromosome name (either std or mitochondrial */
 	public static GeneticCode getByChromosome(String chr)
 		{
@@ -241,17 +241,17 @@ class ChromPosition
 		this.chromosome=chromosome;
 		this.position=position;
 		}
-	
+
 	public String getChromosome()
 		{
 		return chromosome;
 		}
-	
+
 	public int getPosition()
 		{
 		return position;
 		}
-	
+
 	@Override
 	public boolean equals(Object obj)
 		{
@@ -263,7 +263,7 @@ class ChromPosition
 		if (!chromosome.equalsIgnoreCase(other.chromosome)) { return false; }
 		return true;
 		}
-	
+
 	@Override
 	public int hashCode()
 		{
@@ -273,7 +273,7 @@ class ChromPosition
 		result = prime * result + position;
 		return result;
 		}
-	
+
 	@Override
 	public int compareTo(ChromPosition o)
 		{
@@ -300,7 +300,7 @@ class VCFCall
 	private ChromPosition chromPosition;
 	/** columns in the VCF */
 	private String columns[];
-	
+
 	/** cstor */
 	VCFCall(String columns[])
 		{
@@ -311,13 +311,13 @@ class VCFCall
 			}
 		this.chromPosition=new ChromPosition(columns[0], Integer.parseInt(columns[1]));
 		}
-	
+
 	/** get the columns from the VCF line */
 	public String[] getColumns()
 		{
 		return columns;
 		}
-	
+
 	/** get the position */
 	public ChromPosition getChromPosition()
 		{
@@ -340,14 +340,14 @@ class VCFCall
 			}
 		return line.toString();
 		}
-	
-	
+
+
 	@Override
 	public String toString()
 		{
 		return getLine();
 		}
-	
+
 	public void addProperties(String opcode,Map<String, String> map)
 		{
 		StringBuilder b=new StringBuilder();
@@ -362,20 +362,20 @@ class VCFCall
 			}
 		addProperty(opcode, b.toString());
 		}
-	
+
 	public void addProperty(String key,String value)
 		{
-		if(columns[7].equals(".")) columns[7]="";	
+		if(columns[7].equals(".")) columns[7]="";
 		if(!columns[7].isEmpty()) this.columns[7]+=";";
 		columns[7]+=(key+"="+value);
 		}
-	
+
 	public void addId(String newId)
 		{
 		String rsId= this.getColumns()[2];
 		if(rsId.equals(".")) rsId="";
 		Set<String> set=new HashSet<String>(Arrays.asList(rsId.split("[;]")));
-		
+
 		set.remove("");
 		set.add(newId);
 		rsId="";
@@ -399,22 +399,22 @@ class VCFFile
 	//private static final String DEFAULT_HEADER="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSample";
 	private List<String> headers=new ArrayList<String>();
 	private List<VCFCall> calls=new ArrayList<VCFCall>(10000);
-	
+
 	public VCFFile()
 		{
-		
+
 		}
-	
+
 	public List<String> getHeaders()
 		{
 		return headers;
 		}
-	
+
 	public List<VCFCall> getCalls()
 		{
 		return calls;
 		}
-	
+
 	public  int lowerBound( ChromPosition position)
 		{
 		return lowerBound(0, getCalls().size(), position);
@@ -441,7 +441,7 @@ class VCFFile
                         len = half;
                         }
                 }
-   
+
         return first;
         }
     /** get the calls at given position */
@@ -458,7 +458,7 @@ class VCFFile
     		}
     	return array;
     	}
-	
+
 	/** prints the VCF line */
 	public void print(PrintWriter out)
 		{
@@ -472,7 +472,7 @@ class VCFFile
 			}
 		out.flush();
 		}
-	
+
 	/** read VCF file */
 	private void read(BufferedReader in)
 	throws IOException
@@ -485,17 +485,17 @@ class VCFFile
 			if(!line.startsWith("#")) break;
 			this.headers.add(line);
 			}
-		
+
 		if(!headers.isEmpty())
 			{
 			final String fmt="##fileformat=VCFv";
 			String first= headers.get(0);
-			
+
 			if(first.startsWith("##format"))
 				{
 				first="##file"+first.substring(2);
 				}
-			
+
 			if(!(first.startsWith(fmt)))
 				{
 				throw new IOException("firt line should starts with "+fmt);
@@ -512,7 +512,7 @@ class VCFFile
 			this.headers.add("##fileformat=VCFv4.0");
 			this.headers.add("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSample");
 			}
-		
+
 		while(line!=null)
 			{
 			//LOG.info(line);
@@ -522,11 +522,11 @@ class VCFFile
 			getCalls().add(new VCFCall(tokens));
 			line=in.readLine();
 			}
-		
+
 		Collections.sort(getCalls());
 		LOG.info("vcf:"+getCalls().size()+" calls");
 		}
-	
+
 	public Set<String> getChromosomes()
 		{
 		Set<String> set=new HashSet<String>();
@@ -537,7 +537,7 @@ class VCFFile
 		LOG.info(set.toString());
 		return set;
 		}
-	
+
 	public void addHeader(String key,String value)
 		{
 		while(!key.startsWith("##")) key="#"+key;
@@ -545,7 +545,7 @@ class VCFFile
 		if(this.headers.contains(line)) return;
 		this.headers.add(this.headers.size()-1,line);
 		}
-	
+
 	public void addInfo(
 		String id,Integer number,String type,String desc)
 		{
@@ -566,9 +566,9 @@ class VCFFile
 			}
 		addHeader("##INFO",line);
 		}
-	
-	
-	
+
+
+
 	public static VCFFile parse(BufferedReader in)
 	throws IOException
 		{
@@ -594,20 +594,20 @@ abstract class AbstractCharSeq implements CharSeq
 	AbstractCharSeq()
 		{
 		}
-	
+
 	@Override
 	public int hashCode()
 		{
 		return getString().hashCode();
 		}
-	
+
 	public String getString()
 		{
 		StringBuilder b=new StringBuilder(length());
 		for(int i=0;i< length();++i) b.append(charAt(i));
 		return b.toString();
 		}
-	
+
 	@Override
 	public String toString()
 		{
@@ -619,7 +619,7 @@ abstract class AbstractCharSeq implements CharSeq
 
 
 /**
- * 
+ *
  * A GenomicSequence
  *
  */
@@ -629,14 +629,14 @@ class GenomicSequence
 	private String chrom;
 	private byte array[];
 	private int chromStart0;
-	
+
 	public GenomicSequence(byte array[],String chrom,int chromStart0)
-		{	
+		{
 		this.chrom=chrom;
 		this.array=array;
 		this.chromStart0=chromStart0;
 		}
-	
+
 	public String getChrom()
 		{
 		return chrom;
@@ -649,13 +649,13 @@ class GenomicSequence
 		{
 		return getChromStart()+array.length;
 		}
-	
+
 	@Override
 	public int length()
 		{
 		return getChromEnd();
 		}
-	
+
 	@Override
 	public char charAt(int index0)
 		{
@@ -694,19 +694,19 @@ class MutedSequence extends AbstractCharSeq
 		{
 		this.wild=wild;
 		}
-	
+
 	void put(int pos,char c)
 		{
 		this.pos2char.put(pos, c);
 		}
-	
+
 	@Override
 	public char charAt(int i)
 		{
 		Character c= pos2char.get(i);
 		return c==null?wild.charAt(i):c;
 		}
-	
+
 	@Override
 	public int length()
 		{
@@ -724,7 +724,7 @@ class ProteinCharSequence extends AbstractCharSeq
 		this.geneticCode=geneticCode;
 		this.cDNA=cDNA;
 		}
-	
+
 	@Override
 	public char charAt(int i)
 		{
@@ -732,8 +732,8 @@ class ProteinCharSequence extends AbstractCharSeq
 			cDNA.charAt(i*3+0),
 			cDNA.charAt(i*3+1),
 			cDNA.charAt(i*3+2));
-		}	
-	
+		}
+
 	@Override
 	public int length()
 		{
@@ -769,18 +769,18 @@ class DasSequenceProvider
 			throw new RuntimeException(err);
 			}
 		}
-	
+
 	 @Override
 	public void startDocument() throws SAXException
 		{
 		baos=null;
 		}
-	
+
 	 public InputSource resolveEntity (String publicId, String systemId)
          {
          return new InputSource(new StringReader(""));
          }
-	
+
 	@Override
     public void startElement(String uri, String localName, String name,
             Attributes attributes) throws SAXException
@@ -790,7 +790,7 @@ class DasSequenceProvider
             this.baos=new ByteArrayOutputStream(this.reserve);
             }
         }
-	
+
     @Override
     public void characters(char[] ch, int start, int length)
             throws SAXException
@@ -837,9 +837,9 @@ class DasSequenceProvider
 			{
 			throw new IOException(err);
 			}
-		
+
 		}
-	
+
 	public GenomicSequence getSequence(String chrom)
 	throws IOException
 		{
@@ -864,13 +864,13 @@ class DasSequenceProvider
 			{
 			throw new IOException(err);
 			}
-		
+
 		}
-	
+
 	}
 
 /**
- * 
+ *
  * KnownGene
  *
  */
@@ -887,7 +887,7 @@ class KnownGene
 	private int exonStarts[];
 	private int exonEnds[];
 	private String geneSymbol;
-	
+
 	abstract class Segment
 		{
 		private int index;
@@ -895,17 +895,17 @@ class KnownGene
 			{
 			this.index=index;
 			}
-		
+
 		public int getIndex()
 			{
 			return index;
 			}
-		
+
 		public KnownGene getGene()
 			{
 			return KnownGene.this;
 			}
-		
+
 		public boolean contains(int position)
 			{
 			return getStart()<=position && position< getEnd();
@@ -916,19 +916,19 @@ class KnownGene
 			{
 			return isSplicingAcceptor(position) || isSplicingDonor(position);
 			}
-		
+
 		public abstract String getName();
 		public abstract int getStart();
 		public abstract int getEnd();
 		}
-	
+
 	class Exon extends Segment
 		{
 		private Exon(int index)
 			{
 			super(index);
 			}
-		
+
 		@Override
 		public String getName()
 			{
@@ -941,26 +941,26 @@ class KnownGene
 				return "Exon "+(getGene().getExonCount()-getIndex());
 				}
 			}
-		
+
 		@Override
 		public int getStart()
 			{
 			return getGene().getExonStart(getIndex());
 			}
-		
+
 		@Override
 		public int getEnd()
 			{
 			return getGene().getExonEnd(getIndex());
 			}
-		
+
 		@Override
 		public String toString()
 			{
 			return getName();
 			}
-		
-		
+
+
 		public Intron getNextIntron()
 			{
 			if(getIndex()+1>=getGene().getExonCount()) return null;
@@ -971,7 +971,7 @@ class KnownGene
 			if(getIndex()<=0) return null;
 			return getGene().getIntron(getIndex()-1);
 			}
-		
+
 		@Override
 		public boolean isSplicingAcceptor(int position)
 			{
@@ -987,7 +987,7 @@ class KnownGene
 				return position==getEnd()-1;
 				}
 			}
-		
+
 		@Override
 		public boolean isSplicingDonor(int position)
 			{
@@ -1007,28 +1007,28 @@ class KnownGene
 						(position==getStart()+2) ;
 				}
 			}
-		
+
 		}
-		
+
 	class Intron extends Segment
 			{
 			Intron(int index)
 				{
 				super(index);
 				}
-			
+
 			@Override
 			public int getStart()
 				{
 				return getGene().getExonEnd(getIndex());
 				}
-			
+
 			@Override
 			public int getEnd()
 				{
 				return getGene().getExonStart(getIndex()+1);
 				}
-			
+
 			@Override
 			public String getName() {
 				if(getGene().isForward())
@@ -1055,7 +1055,7 @@ class KnownGene
 							position==getStart()+1;
 					}
 				}
-			
+
 
 			public boolean isSplicingDonor(int position)
 				{
@@ -1064,7 +1064,7 @@ class KnownGene
 					{
 					return	position==getStart() ||
 							position==getStart()+1;
-							
+
 					}
 				else
 					{
@@ -1072,13 +1072,13 @@ class KnownGene
 							(position==getEnd()-2);
 					}
 				}
-			
+
 			}
-	
+
 		/**
-		 * 
-		 * KnownGene 
-		 * 
+		 *
+		 * KnownGene
+		 *
 		 */
 		public KnownGene(String tokens[])
 			throws IOException
@@ -1094,8 +1094,8 @@ class KnownGene
 	        int exonCount=Integer.parseInt(tokens[7]);
 	        this.exonStarts = new int[exonCount];
 	        this.exonEnds = new int[exonCount];
-	            
-            
+
+
             int index=0;
             for(String s: tokens[8].split("[,]"))
             	{
@@ -1107,19 +1107,19 @@ class KnownGene
             	this.exonEnds[index++]=Integer.parseInt(s);
             	}
 			}
-		
+
 		/** returns knownGene ID */
 		public String getName()
 			{
 			return this.name;
 			}
-		
+
 		/** returns chromosome name */
 		public String getChromosome()
 			{
 			return this.chrom;
 			}
-		
+
 		/** returns the strand */
 		public char getStrand()
 			{
@@ -1139,31 +1139,31 @@ class KnownGene
 			{
 			return this.txEnd;
 			}
-		
+
 
 		public int getCdsStart()
 			{
 			return this.cdsStart;
 			}
-		
+
 
 		public int getCdsEnd()
 			{
 			return this.cdsEnd;
 			}
-		
+
 
 		public int getExonStart(int index)
 			{
 			return this.exonStarts[index];
 			}
-		
+
 
 		public int getExonEnd(int index)
 			{
 			return this.exonEnds[index];
 			}
-		
+
 
 		public Exon getExon(int index)
 			{
@@ -1181,12 +1181,12 @@ class KnownGene
 			{
 			return geneSymbol;
 			}
-		
+
 		public void setGeneSymbol(String geneSymbol)
 			{
 			this.geneSymbol = geneSymbol;
 			}
-		
+
 		}
 
 
@@ -1199,12 +1199,12 @@ abstract class AbstractWigAnalysis
 	protected int currSpan=1;
 	protected int variation_index=-1;
 	private VCFFile vcfFile=null;
-	
+
 	protected AbstractWigAnalysis()
 		{
-		
+
 		}
-	
+
 	public void setVcfFile(VCFFile vcfFile)
 		{
 		this.vcfFile = vcfFile;
@@ -1213,7 +1213,7 @@ abstract class AbstractWigAnalysis
 		{
 		return vcfFile;
 		}
-	
+
 	protected void fixedStep(String line)
 		{
 		LOG.info(line);
@@ -1245,7 +1245,7 @@ abstract class AbstractWigAnalysis
 				currSpan=Integer.parseInt(s.substring(i+1));
 				}
 			}
-		
+
 		variation_index= vcfFile.lowerBound(
 			new ChromPosition(currChrom, 0)
 			);
@@ -1258,12 +1258,12 @@ abstract class AbstractWigAnalysis
 				}
 			}
 		}
-	
+
 	protected void scanWig(BufferedReader r)
 		throws IOException
 		{
 		String line;
-		
+
 		while((line=r.readLine())!=null)
 			{
 			if(line.startsWith("fixedStep"))
@@ -1271,23 +1271,23 @@ abstract class AbstractWigAnalysis
 				fixedStep(line);
 				continue;
 				}
-			
-			
+
+
 			//advance variation_index
 			while(variation_index<  vcfFile.getCalls().size())
 				{
 				ChromPosition pos=vcfFile.getCalls().get(variation_index).getChromPosition();
-				
+
 				if(!( (pos.getPosition() -1 ) < currPosition &&
 					  (pos.getChromosome().equalsIgnoreCase(currChrom))
 					))
 					{
 					break;
 					}
-				
+
 				variation_index++;
 				}
-			
+
 			int n2=variation_index;
 			while(n2 < vcfFile.getCalls().size())
 					{
@@ -1308,28 +1308,28 @@ abstract class AbstractWigAnalysis
 			}
 		r.close();
 		}
-	
+
 	protected abstract void found(VCFCall call,String line);
-	
+
 	}
 
 /**
- * 
+ *
  * Annotation for Mapability
- * 
+ *
  */
 class MapabilityAnnotator
 	extends AbstractWigAnalysis
 	{
 	private String table;
 	private String genomeVersion;
-	
+
 	public MapabilityAnnotator(String genomeVersion)
 		{
 		this.genomeVersion=genomeVersion;
 		}
 	/**
-	 * The Broad alignability track displays whether a region is made up of mostly unique or mostly non-unique sequence. 
+	 * The Broad alignability track displays whether a region is made up of mostly unique or mostly non-unique sequence.
 	 * @throws Exception
 	 */
 	public void run() throws Exception
@@ -1342,17 +1342,17 @@ class MapabilityAnnotator
 					"wgEncodeDukeUniqueness"+i);
 			}
 		}
-	
+
 	@Override
 	protected void found(VCFCall call,String line)
 		{
 		call.addProperty("MAPABILITY_"+table.toUpperCase(), line);
 		}
-	
+
 	private void scanWig(String path,String table) throws Exception
 		{
 		this.table=table;
-		
+
 		BufferedReader r=IOUtils.tryOpen(
 			"http://hgdownload.cse.ucsc.edu/goldenPath/"+ this.genomeVersion+
 			"/encodeDCC/wgEncodeMapability/"+path);
@@ -1363,13 +1363,13 @@ class MapabilityAnnotator
 		scanWig(r);
 		r.close();
 		}
-		
+
 	}
 
 /**
- * 
+ *
  * Annotation for PhastCons
- * 
+ *
  */
 class PhastConsAnnotator
 	extends AbstractWigAnalysis
@@ -1379,11 +1379,11 @@ class PhastConsAnnotator
 		{
 		this.genomeVersion=genomeVersion;
 		}
-	
+
 	public void run() throws Exception
 		{
         for(String c:getVcfFile().getChromosomes())
-                {        	
+                {
         		BufferedReader r=IOUtils.tryOpen("http://hgdownload.cse.ucsc.edu/goldenPath/"+genomeVersion+"/phastCons44way/vertebrate/"+c+".phastCons44way.wigFix.gz");
         		if(r==null) return ;
         		getVcfFile().addInfo("phastCons44way", 1, "Float", "phastCons scores for multiple alignments of 44 vertebrate genomes to the human genome");
@@ -1391,14 +1391,14 @@ class PhastConsAnnotator
                 r.close();
                 }
 		}
-	
+
 	@Override
 	protected void found(VCFCall call,String line)
 		{
 		call.addProperty("phastCons44way", line);
 		//LOG.info(table+" "+call+" "+line+" "+this.currChrom+" "+this.currPosition);
-		}	
-		
+		}
+
 	}
 
 /**
@@ -1414,17 +1414,17 @@ class PersonalGenomeAnnotator
 	PersonalGenomeAnnotator()
 		{
 		}
-	
+
 	PersonalGenomeAnnotator(String name)
 		{
 		this.name=name;
 		}
-	
+
 	public void setName(String name)
 		{
 		this.name = name;
 		}
-	
+
 	public String getName()
 		{
 		return name;
@@ -1433,17 +1433,17 @@ class PersonalGenomeAnnotator
 		{
 		return "pg"+getName();
 		}
-	
+
 	public void setGenomeVersion(String genomeVersion)
 		{
 		this.genomeVersion = genomeVersion;
 		}
-	
+
 	public String getGenomeVersion()
 		{
 		return genomeVersion;
 		}
-	
+
 	public void run()
 		throws IOException
 		{
@@ -1455,31 +1455,31 @@ class PersonalGenomeAnnotator
 		run(in);
 		in.close();
 		}
-	
+
 	@Override
 	protected int getSplitMax()
 		{
 		return 6;
 		}
-	
+
 	@Override
 	protected int getChromosomeColumn()
 		{
 		return 1;
 		}
-	
+
 	@Override
 	protected int getChromStartColumn()
 		{
 		return 2;
 		}
-	
+
 	@Override
 	protected int getChromEndColumn()
 		{
 		return 3;
 		}
-	
+
 	@Override
 	public void annotate(VCFCall call, String[] tokens)
 		{
@@ -1497,14 +1497,14 @@ class GenomicSuperDupAnnotator
 	extends AbstractRangeAnnotator
 	{
 	private String genomeVersion;
-	
+
 	GenomicSuperDupAnnotator(String genomeVersion)
 		{
 		this.genomeVersion=genomeVersion;
 		}
-	
-	
-	
+
+
+
 	public void run()
 		throws IOException
 		{
@@ -1514,31 +1514,31 @@ class GenomicSuperDupAnnotator
 		run(in);
 		in.close();
 		}
-	
+
 	@Override
 	protected int getSplitMax()
 		{
 		return 6;
 		}
-	
+
 	@Override
 	protected int getChromosomeColumn()
 		{
 		return 1;
 		}
-	
+
 	@Override
 	protected int getChromStartColumn()
 		{
 		return 2;
 		}
-	
+
 	@Override
 	protected int getChromEndColumn()
 		{
 		return 3;
 		}
-	
+
 	@Override
 	public void annotate(VCFCall call, String[] tokens)
 		{
@@ -1555,27 +1555,27 @@ abstract class AbstractRangeAnnotator
 	{
 	static protected Logger LOG=Logger.getLogger("vcf.annotator");
 	private VCFFile vcfFile;
-	
-	
+
+
 	protected AbstractRangeAnnotator()
 		{
 		}
-	
+
 	public void setVcfFile(VCFFile vcfFile)
 		{
 		this.vcfFile = vcfFile;
 		}
-	
+
 	public VCFFile getVcfFile()
 		{
 		return vcfFile;
 		}
-	
+
 	abstract protected int getSplitMax();
 	abstract protected int getChromStartColumn();
 	abstract protected int getChromEndColumn();
 	abstract protected int getChromosomeColumn();
-	
+
 	public void run(BufferedReader in)
 		throws IOException
 		{
@@ -1613,16 +1613,16 @@ abstract class AbstractRangeAnnotator
 						}
 					}
 				}
-			
+
 			int chromStart=Integer.parseInt(tokens[chromstart_col_index]);
 			int chromEnd=Integer.parseInt(tokens[chromend_col_index]);
-			
+
 			if(chromStart< prev_chromStart)
 				{
 				throw new IOException("exected sorted data chrom/chromStart");
 				}
 			prev_chromStart=chromStart;
-			
+
 			//advance variation_index
 			while(currentIndex<  vcfFile.getCalls().size())
 				{
@@ -1633,7 +1633,7 @@ abstract class AbstractRangeAnnotator
 					{
 					break;
 					}
-				currentIndex++;	
+				currentIndex++;
 				}
 			int n2=currentIndex;
 			while(n2 < vcfFile.getCalls().size())
@@ -1654,7 +1654,7 @@ abstract class AbstractRangeAnnotator
 				}
 			}
 		}
-	
+
 	public abstract void annotate(VCFCall c,final String tokens[]);
 	}
 
@@ -1670,7 +1670,7 @@ extends AbstractRangeAnnotator
 		{
 		this.genomeVersion=genomeVersion;
 		}
-	
+
 	public void run()
 	throws IOException
 		{
@@ -1681,7 +1681,7 @@ extends AbstractRangeAnnotator
 		run(in);
 		in.close();
 		}
-	
+
 	@Override
 	protected int getSplitMax()
 		{
@@ -1721,7 +1721,7 @@ class RepeatMaskerAnnotator
 		{
 		this.genomeVersion=genomeVersion;
 		}
-	
+
 	public void run()
 	throws IOException
 		{
@@ -1738,7 +1738,7 @@ class RepeatMaskerAnnotator
 			}
 		getVcfFile().addInfo("RMSK", null, "String","Repeating Elements by RepeatMasker version 3.2.7");
 		}
-	
+
 	@Override
 	protected int getSplitMax()
 		{
@@ -1779,7 +1779,7 @@ class SnpAnnotator extends AbstractRangeAnnotator
 		this.genomeVersion=genomeVersion;
 		this.table=table;
 		}
-	
+
 	public void run()
 		throws IOException
 		{
@@ -1787,17 +1787,17 @@ class SnpAnnotator extends AbstractRangeAnnotator
 			"http://hgdownload.cse.ucsc.edu/goldenPath/"+genomeVersion+"/database/"+table+".txt.gz");
 		if(in==null) return;
 		getVcfFile().addHeader("##"+table.toUpperCase(),"table "+table+" from UCSC");
-		
+
 		run(in);
 		in.close();
 		}
-	
+
 	@Override
 	protected int getSplitMax()
 		{
 		return 6;
 		}
-	
+
 	@Override
 	protected int getChromosomeColumn()
 		{
@@ -1809,19 +1809,19 @@ class SnpAnnotator extends AbstractRangeAnnotator
 		{
 		return 2;
 		}
-	
+
 	@Override
 	protected int getChromEndColumn()
 		{
 		return 3;
 		}
-	
-	
+
+
 	@Override
 	public void annotate(VCFCall call, String[] tokens)
 		{
 		call.addId(tokens[4]);
-		}	
+		}
 	}
 
 /*************************************************************************************/
@@ -1832,7 +1832,7 @@ class PolyXAnnotator
 	static Logger LOG=Logger.getLogger("vcf.annotator");
 	private VCFFile vcfFile;
 	boolean loadWholeSegment=false;
-	
+
 	//private String genomeVersion;
 	private DasSequenceProvider dasServer;
 	PolyXAnnotator(String genomeVersion) throws Exception
@@ -1840,34 +1840,34 @@ class PolyXAnnotator
 		//this.genomeVersion=genomeVersion;
 		this.dasServer=new DasSequenceProvider(genomeVersion);
 		}
-	
-	
+
+
 	public void setVcfFile(VCFFile vcfFile)
 		{
 		this.vcfFile = vcfFile;
 		}
-	
+
 	public void run() throws IOException
 		{
 		GenomicSequence genomicSeq=null;
-	
+
 		this.vcfFile.addInfo("POLYX",
 				null,
 				"Integer",
 				"Number of repeated bases"
 				);
-		
-		
+
+
 	    for(VCFCall call:this.vcfFile.getCalls())
 		        {
 		        LOG.info(call.toString());
 		        String ref=call.getColumns()[3].toUpperCase();
 		    	if(ref.length()!=1) continue;
-		    	
-		    	
+
+
 		    	ChromPosition pos=call.getChromPosition();
 		    	final int position0=pos.getPosition()-1;
-		    	
+
         		if(genomicSeq==null ||
         	               !pos.getChromosome().equals(genomicSeq.getChrom()) ||
         	               !(genomicSeq.getChromStart()<=(position0-EXTEND) && (position0+EXTEND) <= genomicSeq.getChromEnd())
@@ -1910,7 +1910,7 @@ class PolyXAnnotator
 	            		throw new IOException("Cannot get DAS-DNA");
 	            		}
 	            	}
-        		
+
         		char theBase=genomicSeq.charAt(position0);
         		if(!String.valueOf(theBase).equalsIgnoreCase(ref))
         			{
@@ -1918,7 +1918,7 @@ class PolyXAnnotator
         			return;
         			}
         		int count=1;
-        		
+
         		int index= position0 -1;
         		while(index> position0-EXTEND && index>=0)
         			{
@@ -1929,7 +1929,7 @@ class PolyXAnnotator
         			++count;
         			--index;
         			}
-        		
+
         		index= position0 +1;
         		while(index< position0+EXTEND && index < genomicSeq.length())
         			{
@@ -1942,8 +1942,8 @@ class PolyXAnnotator
         			}
 		        call.addProperty("POLYX", String.valueOf(count));
 		      	}
-			}	
-	
+			}
+
 	}
 
 /*************************************************************************************/
@@ -1962,19 +1962,19 @@ class PredictionAnnotator
 	private DasSequenceProvider dasServer;
 	private String genomeVersion;
 	boolean loadWholeSegment=false;
-	
+
 	PredictionAnnotator(String genomeVersion) throws Exception
 		{
 		this.genomeVersion=genomeVersion;
 		this.dasServer=new DasSequenceProvider(genomeVersion);
 		}
-	
-	
+
+
 	public void setVcfFile(VCFFile vcfFile)
 		{
 		this.vcfFile = vcfFile;
 		}
-	
+
 	private static char complement(char c)
 		{
 		switch(c)
@@ -1986,7 +1986,7 @@ class PredictionAnnotator
 			default:throw new IllegalArgumentException(""+c);
 			}
 		}
-	
+
 	public void preLoadUcsc() throws IOException
 		{
 		Map<String, KnownGene> kgId2gene=new HashMap<String, KnownGene>();
@@ -2009,7 +2009,7 @@ class PredictionAnnotator
 			kgId2gene.put(g.getName(),g);
 			}
 		in.close();
-		
+
 		for(String chr:this.chrom2genes.keySet())
 			{
 			List<KnownGene> L=this.chrom2genes.get(chr);
@@ -2024,7 +2024,7 @@ class PredictionAnnotator
 						}
 					});
 			}
-		
+
 
 		in=IOUtils.mustOpen("http://hgdownload.cse.ucsc.edu/goldenPath/"+genomeVersion+"/database/kgXref.txt.gz");
 		while((line=in.readLine())!=null)
@@ -2036,8 +2036,8 @@ class PredictionAnnotator
 			}
 		in.close();
 		}
-	
-	
+
+
 	private List<KnownGene> getGenes(ChromPosition pos)
 		{
 		List<KnownGene> array = new ArrayList<KnownGene>();
@@ -2046,9 +2046,9 @@ class PredictionAnnotator
 			{
 			return array;
 			}
-		
+
 		int first=0;
-	   
+
 	    while(first< genes.size())
 	    	{
 	    	KnownGene gene= genes.get(first);
@@ -2061,7 +2061,7 @@ class PredictionAnnotator
 	    	}
 		return array;
 		}
-	
+
 	public void run() throws IOException
 		{
 		final int extra=10000;
@@ -2072,15 +2072,15 @@ class PredictionAnnotator
 				"String",
 				"Basic predictions from UCSC knownGenes"
 				);
-		
-		
+
+
 	    for(VCFCall call:this.vcfFile.getCalls())
             {
             LOG.info(call.toString());
             int position= call.getChromPosition().getPosition()-1;
             String ref=call.getColumns()[3].toUpperCase();
         	String alt=call.getColumns()[4].toUpperCase();
-        	
+
             if(ref.equals("A"))
     			{
     				 if(alt.equals("W")) { alt="T"; }
@@ -2105,25 +2105,25 @@ class PredictionAnnotator
     			else if(alt.equals("K")) { alt="G"; }
     			else if(alt.equals("Y")) { alt="C"; }
     			}
-    		
+
     		LOG.info(ref+" "+alt);
             List<KnownGene> genes= getGenes(call.getChromPosition());
-            
+
             if(genes.isEmpty())
             	{
             	LOG.info("GENOMIC");
             	continue;
             	}
-            
+
             for(KnownGene gene:genes)
             	{
             	LOG.info(gene.getName());
-            	
+
             	//switch to 0 based coordinate
-        		
+
             	Map<String, String> annotations=new HashMap<String, String>();
-        		
-        		
+
+
             	if( (ref.equals("A") || ref.equals("T") || ref.equals("G") || ref.equals("C")) &&
             		(alt.equals("A") || alt.equals("T") || alt.equals("G") || alt.equals("C"))
             		)
@@ -2135,8 +2135,8 @@ class PredictionAnnotator
 	        		ProteinCharSequence mutProt=null;
 	        		MutedSequence mutRNA=null;
 	        		int position_in_cdna=-1;
-	        		
-	        		
+
+
 	        		if(genomicSeq==null ||
 	        	               !gene.getChromosome().equals(genomicSeq.getChrom()) ||
 	        	               !(genomicSeq.getChromStart()<=gene.getTxStart() && gene.getTxEnd()<= genomicSeq.getChromEnd())
@@ -2177,13 +2177,13 @@ class PredictionAnnotator
     	            		throw new IOException("Cannot get DAS-DNA");
     	            		}
     	            	}
-	        		
+
 	        		if(!String.valueOf(genomicSeq.charAt(position)).equalsIgnoreCase(ref))
 	        			{
 	        			System.err.println("Warning REF!=GENOMIC SEQ!!! at "+genomicSeq.charAt(position)+"/"+ref);
 	        			return;
 	        			}
-	        		
+
 	        		if(gene.isForward())
 	            		{
 	            		if(position < gene.getCdsStart())
@@ -2194,7 +2194,7 @@ class PredictionAnnotator
 	            			{
 	            			annotations.put("type", "UTR3");
 	            			}
-	            		
+
 	            		int exon_index=0;
 	            		while(exon_index< gene.getExonCount())
 	            			{
@@ -2209,13 +2209,13 @@ class PredictionAnnotator
 	        						}
 	            				if(i< gene.getCdsStart()) continue;
 	            				if(i>=gene.getCdsEnd()) break;
-	        					
+
 	        					if(wildRNA==null)
 	        						{
 	        						wildRNA=new StringBuilder();
 	        						mutRNA=new MutedSequence(wildRNA);
 	        						}
-	        					
+
 	        					if(i==position)
 	        						{
 	        						annotations.put("type", "EXON");
@@ -2226,7 +2226,7 @@ class PredictionAnnotator
 	        						if(exon.isSplicing(position))
 	        							{
 	        							annotations.put(KEY_SPLICING, "SPLICING");
-	        							
+
 	        							if(exon.isSplicingAcceptor(position))
 	        								{
 	        								annotations.put(KEY_SPLICING, "SPLICING_ACCEPTOR");
@@ -2237,9 +2237,9 @@ class PredictionAnnotator
 	        								}
 	        							}
 	        						}
-	        					
+
 	            				wildRNA.append(genomicSeq.charAt(i));
-	            				
+
 	            				if(i==position)
 	            					{
 	            					mutRNA.put(
@@ -2247,7 +2247,7 @@ class PredictionAnnotator
 	            							alt.charAt(0)
 	            							);
 	            					}
-	            				
+
 	            				if(wildRNA.length()%3==0 && wildRNA.length()>0 && wildProt==null)
 		            				{
 		            				wildProt=new ProteinCharSequence(geneticCode,new DefaultCharSeq(wildRNA));
@@ -2259,7 +2259,7 @@ class PredictionAnnotator
 	            				{
 	            				annotations.put("intron.name",intron.getName());
 	            				annotations.put("type", "INTRON");
-	            				
+
 	            				if(intron.isSplicing(position))
 	        						{
 	            					annotations.put(KEY_SPLICING, "INTRON_SPLICING");
@@ -2275,13 +2275,13 @@ class PredictionAnnotator
 	            				}
 	            			++exon_index;
 	            			}
-	            		
-	            		
-	            		
+
+
+
 	            		}
 	            	else // reverse orientation
 	            		{
-	            	
+
 	            		if(position < gene.getCdsStart())
 	            			{
 	            			annotations.put(KEY_TYPE, "UTR3");
@@ -2290,8 +2290,8 @@ class PredictionAnnotator
 	            			{
 	            			annotations.put(KEY_TYPE, "UTR5");
 	            			}
-	            	
-	            		
+
+
 	            		int exon_index = gene.getExonCount()-1;
 	            		while(exon_index >=0)
 	            			{
@@ -2306,13 +2306,13 @@ class PredictionAnnotator
 	        						}
 	            				if(i>= gene.getCdsEnd()) continue;
 	            				if(i<  gene.getCdsStart()) break;
-	            				
+
 	            				if(wildRNA==null)
 	        						{
 	        						wildRNA=new StringBuilder();
 	        						mutRNA=new MutedSequence(wildRNA);
 	        						}
-	            				
+
 	            				if(i==position)
 	        						{
 	            					annotations.put(KEY_TYPE, "EXON");
@@ -2322,7 +2322,7 @@ class PredictionAnnotator
 	        						if(exon.isSplicing(position))
 	        							{
 	        							annotations.put(KEY_SPLICING, "INTRON_SPLICING");
-	        							
+
 	        							if(exon.isSplicingAcceptor(position))
 	        								{
 	        								annotations.put(KEY_SPLICING, "INTRON_SPLICING_ACCEPTOR");
@@ -2332,14 +2332,14 @@ class PredictionAnnotator
 	        								annotations.put(KEY_SPLICING, "INTRON_SPLICING_DONOR");
 	        								}
 	        							}
-	        						
-	        						
+
+
 	        						mutRNA.put(
 	        								position_in_cdna,
 	        								complement(alt.charAt(0))
 	        								);
 	        						}
-	            				
+
 	            				wildRNA.append(complement(genomicSeq.charAt(i)));
 	            				if( wildRNA.length()%3==0 &&
 	            					wildRNA.length()>0 &&
@@ -2348,16 +2348,16 @@ class PredictionAnnotator
 		            				wildProt=new ProteinCharSequence(geneticCode,new DefaultCharSeq(wildRNA));
 		            				mutProt=new ProteinCharSequence(geneticCode,mutRNA);
 		            				}
-	            				
+
 	            				}
-	            			
+
 	            			KnownGene.Intron intron= exon.getPrevIntron();
 	            			if(intron!=null &&
 	            				intron.contains(position))
 	            				{
 	            				annotations.put("intron.name",intron.getName());
 	            				annotations.put(KEY_TYPE, "INTRON");
-	            				
+
 	            				if(intron.isSplicing(position))
 	        						{
 	            					annotations.put(KEY_SPLICING, "INTRON_SPLICING");
@@ -2376,7 +2376,7 @@ class PredictionAnnotator
 
 	            		}//end of if reverse
 	        		if( wildProt!=null &&
-	        			mutProt!=null && 
+	        			mutProt!=null &&
 	        			position_in_cdna>=0)
 		    			{
 	            		int pos_aa=position_in_cdna/3;
@@ -2418,9 +2418,9 @@ class PredictionAnnotator
             		{
 	        		Integer wildrna=null;
 	        		int position_in_cdna=-1;
-	        		
-	        		
-	        		
+
+
+
 	        		if(gene.isForward())
 	            		{
 	            		if(position < gene.getCdsStart())
@@ -2431,7 +2431,7 @@ class PredictionAnnotator
 	            			{
 	            			annotations.put("type", "UTR3");
 	            			}
-	            		
+
 	            		int exon_index=0;
 	            		while(exon_index< gene.getExonCount())
 	            			{
@@ -2446,12 +2446,12 @@ class PredictionAnnotator
 	        						}
 	            				if(i< gene.getCdsStart()) continue;
 	            				if(i>=gene.getCdsEnd()) break;
-	        					
+
 	        					if(wildrna==null)
 	        						{
 	        						wildrna=0;
 	        						}
-	        					
+
 	        					if(i==position)
 	        						{
 	        						annotations.put(KEY_TYPE, "EXON");
@@ -2462,7 +2462,7 @@ class PredictionAnnotator
 	        						if(exon.isSplicing(position))
 	        							{
 	        							annotations.put(KEY_SPLICING, "SPLICING");
-	        							
+
 	        							if(exon.isSplicingAcceptor(position))
 	        								{
 	        								annotations.put(KEY_SPLICING, "SPLICING_ACCEPTOR");
@@ -2473,7 +2473,7 @@ class PredictionAnnotator
 	        								}
 	        							}
 	        						}
-	        					
+
 	        					wildrna++;
 	            				}
 	            			KnownGene.Intron intron= exon.getNextIntron();
@@ -2481,7 +2481,7 @@ class PredictionAnnotator
 	            				{
 	            				annotations.put("intron.name",intron.getName());
 	            				annotations.put("type", "INTRON");
-	            				
+
 	            				if(intron.isSplicing(position))
 	        						{
 	            					annotations.put(KEY_SPLICING, "INTRON_SPLICING");
@@ -2500,7 +2500,7 @@ class PredictionAnnotator
 	            		}
 	            	else // reverse orientation
 	            		{
-	            	
+
 	            		if(position < gene.getCdsStart())
 	            			{
 	            			annotations.put(KEY_TYPE, "UTR3");
@@ -2509,8 +2509,8 @@ class PredictionAnnotator
 	            			{
 	            			annotations.put(KEY_TYPE, "UTR5");
 	            			}
-	            	
-	            		
+
+
 	            		int exon_index = gene.getExonCount()-1;
 	            		while(exon_index >=0)
 	            			{
@@ -2525,12 +2525,12 @@ class PredictionAnnotator
 	        						}
 	            				if(i>= gene.getCdsEnd()) continue;
 	            				if(i<  gene.getCdsStart()) break;
-	            				
+
 	            				if(wildrna==null)
 	        						{
 	        						wildrna=0;
 	        						}
-	            				
+
 	            				if(i==position)
 	        						{
 	            					annotations.put(KEY_TYPE, "EXON");
@@ -2540,7 +2540,7 @@ class PredictionAnnotator
 	        						if(exon.isSplicing(position))
 	        							{
 	        							annotations.put(KEY_SPLICING, "INTRON_SPLICING");
-	        							
+
 	        							if(exon.isSplicingAcceptor(position))
 	        								{
 	        								annotations.put(KEY_SPLICING, "INTRON_SPLICING_ACCEPTOR");
@@ -2551,17 +2551,17 @@ class PredictionAnnotator
 	        								}
 	        							}
 	        						}
-	            				
+
 	            				wildrna++;
 	            				}
-	            			
+
 	            			KnownGene.Intron intron= exon.getPrevIntron();
 	            			if(intron!=null &&
 	            				intron.contains(position))
 	            				{
 	            				annotations.put("intron.name",intron.getName());
 	            				annotations.put(KEY_TYPE, "INTRON");
-	            				
+
 	            				if(intron.isSplicing(position))
 	        						{
 	            					annotations.put(KEY_SPLICING, "INTRON_SPLICING");
@@ -2592,16 +2592,16 @@ class PredictionAnnotator
             	call.addProperties("PREDICTION", annotations);
             	}
             }
-	   
+
 		}
-	
-	
+
+
 	private boolean isStop(char aa)
 		{
 		return aa=='*';
 		}
-	
-	
+
+
 	}
 
 /**
@@ -2723,7 +2723,7 @@ public class VCFAnnotator
 					personalGenomes.add(new PersonalGenomeAnnotator("Yoruban3"));
 					}
 				else if(args[optind].equals("-log") ||
-						args[optind].equals("--log") || 
+						args[optind].equals("--log") ||
 						args[optind].equals("-debug"))
 					{
 					LOG.setLevel(Level.parse(args[++optind]));
@@ -2752,7 +2752,7 @@ public class VCFAnnotator
 					}
 				++optind;
 				}
-			
+
 			if(proxyHost!=null)
 				{
 				LOG.info("setting proxy host");
@@ -2763,7 +2763,7 @@ public class VCFAnnotator
 				LOG.info("setting proxy port");
 				System.setProperty("http.proxyPort", proxyPort);
 				}
-			
+
 			VCFFile vcf=null;
 			if(optind==args.length)
 				{
@@ -2783,49 +2783,49 @@ public class VCFAnnotator
 				System.err.println("Illegal Number of arguments");
 				return;
 				}
-			
+
 			for(String table: dbsnpID)
 				{
 				SnpAnnotator an2=new SnpAnnotator(genomeVersion,table);
 				an2.setVcfFile(vcf);
 				an2.run();
 				}
-			
+
 			for(PersonalGenomeAnnotator pg:personalGenomes)
 				{
 				pg.setGenomeVersion(genomeVersion);
 				pg.setVcfFile(vcf);
 				pg.run();
 				}
-			
+
 			if(mapability)
 				{
 				MapabilityAnnotator an4=new MapabilityAnnotator(genomeVersion);
 				an4.setVcfFile(vcf);
 				an4.run();
 				}
-			
+
 			if(phastcons)
 				{
 				PhastConsAnnotator an4=new PhastConsAnnotator(genomeVersion);
 				an4.setVcfFile(vcf);
 				an4.run();
 				}
-			
+
 			if(transfac)
 				{
 				TranscriptionBindingSitesAnnotator an=new TranscriptionBindingSitesAnnotator(genomeVersion);
 				an.setVcfFile(vcf);
 				an.run();
 				}
-			
+
 			if(genomicSuperDups)
 				{
 				GenomicSuperDupAnnotator an1=new GenomicSuperDupAnnotator(genomeVersion);
 				an1.setVcfFile(vcf);
 				an1.run();
 				}
-			
+
 			if(basicPrediction)
 				{
 				PredictionAnnotator predictor=new PredictionAnnotator(genomeVersion);
@@ -2847,11 +2847,11 @@ public class VCFAnnotator
 				predictor.setVcfFile(vcf);
 				predictor.run();
 				}
-			
+
 			PrintWriter out=new PrintWriter(System.out);
 			vcf.print(out);
 			out.flush();
-			
+
 			}
 		catch (Exception e) {
 			e.printStackTrace();

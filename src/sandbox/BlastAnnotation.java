@@ -8,7 +8,7 @@
  * Motivation:
  * 		displays the annotation for a blast alignement.
  * 		annotations are fetched from the NCBI if sequence def starts with 'gi|...'
- * 
+ *
  */
 package sandbox;
 import java.io.File;
@@ -51,7 +51,7 @@ public class BlastAnnotation
 	private DocumentBuilder docBuilder;
 	/** transforms XML/DOM to GBC entry */
 	private Unmarshaller gbcUnmarshaller;
-	
+
 	/** abstract class writing the line of an alignment */
 	private abstract class AbstractHspPrinter
 		{
@@ -69,19 +69,19 @@ public class BlastAnnotation
 		protected Hsp hsp;
 		/** features to be printed */
 		private List<INSDFeature> features;
-		
+
 		/** get sequence to be displayed */
 		public abstract String getSequence();
 		/** get starting index of the sequence */
 		public abstract int getSeqFrom();
 		/** get end index of the sequence */
 		public abstract int getSeqTo();
-		
+
 		protected AbstractHspPrinter( Hsp hsp, List<INSDFeature> features)
 			{
 			this.hsp=hsp;
 			this.features=features;
-			
+
 			this.sign= (getSeqFrom()< getSeqTo()?1:-1);
 			this.seqStart=getSeqFrom();
 			this.seqEnd=this.seqStart;
@@ -106,7 +106,7 @@ public class BlastAnnotation
 				}
 			return true;
 			}
-		
+
 		/** print the  line */
 		void print()
 			{
@@ -152,7 +152,7 @@ public class BlastAnnotation
 					intervalFrom=Math.max(this.seqStart,intervalFrom);
 					intervalTo=Math.min(this.seqEnd,intervalTo);
 					int genome=this.seqStart;
-					
+
 					//loop over the line
 					for(	int i=0;i< fastaLineLength &&
 							this.stringStart+i< this.stringEnd;
@@ -187,13 +187,13 @@ public class BlastAnnotation
 						System.out.print(":");
 						System.out.print(qual.getINSDQualifierValue());
 						}
-					
+
 					System.out.println();
 					}
 				}
 			}
 		}
-	
+
 	/** specialized AbstractHspPrinter for the QUERY */
 	private	class QPrinter
 		extends AbstractHspPrinter
@@ -217,7 +217,7 @@ public class BlastAnnotation
 			return this.hsp.getHspQseq();
 			}
 		}
-	
+
 	/** specialized AbstractHspPrinter for the HIT */
 	private	class HPrinter
 	extends AbstractHspPrinter
@@ -226,25 +226,25 @@ public class BlastAnnotation
 			{
 			super(hsp,features);
 			}
-		
+
 		@Override
 		public int getSeqFrom()
 			{
 			return Integer.parseInt(this.hsp.getHspHitFrom());
 			}
-		
+
 		@Override
 		public int getSeqTo()
 			{
 			return Integer.parseInt(this.hsp.getHspHitTo());
 			}
-		
+
 		public String getSequence()
 			{
 			return this.hsp.getHspHseq();
 			}
 		}
-	
+
 	/** constructor */
 	private BlastAnnotation() throws Exception
 		{
@@ -270,8 +270,8 @@ public class BlastAnnotation
 		JAXBContext jc = JAXBContext.newInstance("sandbox.ncbi.gbc");
 		this.gbcUnmarshaller=jc.createUnmarshaller();
 		}
-	
-	
+
+
 	/** fetches the annotation for a given entry if the name starts with gi|.... */
 	private List<INSDFeature> fetchAnnotations(String name)
 		throws Exception
@@ -294,7 +294,7 @@ public class BlastAnnotation
 		//not found, return empty table
 		return new ArrayList<INSDFeature>();
 		}
-	
+
 	/** parses BLAST output */
 	private void parseBlast(BlastOutput blast)  throws Exception
 		{
@@ -318,7 +318,7 @@ public class BlastAnnotation
 					//create the Printer for the Query and the Hit
 					QPrinter qPrinter=new QPrinter(hsp,qFeatures);
 					HPrinter hPrinter=new HPrinter(hsp,hFeatures);
-					
+
 					//loop over the lines
 					while(qPrinter.next() && hPrinter.next())
 						{
@@ -338,11 +338,11 @@ public class BlastAnnotation
 						System.out.println();
 						}
 					}
-				
+
 				}
 			}
-		
-		
+
+
 		//System.err.println("OK");
 		}
 	public static void main(String[] args)

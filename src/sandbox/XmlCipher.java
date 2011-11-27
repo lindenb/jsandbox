@@ -52,7 +52,7 @@ public class XmlCipher
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 
-	
+
 	// 8-byte Salt
     private static final byte[] SALT =
 		{
@@ -67,9 +67,9 @@ public class XmlCipher
         KeySpec keySpec = new PBEKeySpec(passPhrase, SALT, ITERATION_COUNT);
         SecretKey key = SecretKeyFactory.getInstance(
             "PBEWithMD5AndDES").generateSecret(keySpec);
-      
+
         theCipher = Cipher.getInstance(key.getAlgorithm());
-       
+
 
         // Prepare the parameter to the ciphers
         AlgorithmParameterSpec paramSpec = new PBEParameterSpec(SALT, ITERATION_COUNT);
@@ -82,8 +82,8 @@ public class XmlCipher
         	theCipher.init(Cipher.DECRYPT_MODE, key, paramSpec);
         	}
 	 	}
-   
-   
+
+
   private String encrypt(String str) throws Exception
 	  	{
        // Encode the string into bytes using utf-8
@@ -106,18 +106,18 @@ public class XmlCipher
       // Decode using utf-8
       return new String(utf8, "UTF8");
   	}
-  
+
 
 	/***
 	*  Decodes BASE64 encoded string.
 	*/
-	private static byte[] decodeBase64(String dataIn) throws IOException 
+	private static byte[] decodeBase64(String dataIn) throws IOException
 		{
 		ByteArrayOutputStream out=new ByteArrayOutputStream();
 		byte output[] = new byte[3];
 		int state=0;
 		 char alpha='\0';
-		
+
 		for(int i=0;i<dataIn.length();++i)
 			{
 		    byte c;
@@ -154,8 +154,8 @@ public class XmlCipher
 				{
 				throw new IOException("Illegal character for Base64 \'"+alpha+"\' in "+dataIn); // error
 				}
-		   
-		
+
+
 		    switch(state)
 		        {   case 0: output[0] = (byte)(c << 2);
 		        			state++;
@@ -174,10 +174,10 @@ public class XmlCipher
 		                    break;
 		        }
 			} // for
-		
+
 		if (alpha=='=') /* then '=' found, but the end of string */
 		    switch(state)
-		    {   
+		    {
 		    case 2: out.write(output,0,1); break;
 			case 3: out.write(output,0,2); break;
 			default: break;
@@ -199,15 +199,15 @@ public class XmlCipher
 			 int chunks = 0;
 			int c;
 			int nFill=0;
-			
+
 			for(int i=0;i< dataIn.length;++i)
 				{
 				c=dataIn[i];
 				int ic = ( c >= 0 ? c : (c & 0x7F) + 128);
 				//array3[nFill]=(byte)ic;
-			   
+
 			    switch (nFill)
-			        {	
+			        {
 			        case 0:
 			        	{
 			        	output[nFill] = BASE64.charAt(ic >>> 2);
@@ -234,7 +234,7 @@ public class XmlCipher
 			    	   	}
 			        }
 				} // for
-			
+
 				/* final */
 				switch (nFill)
 				{    case 1:
@@ -248,10 +248,10 @@ public class XmlCipher
 			             out.append(output);
 			             break;
 				}
-			
+
 		return out.toString();
-		} // encode()	
-	
+		} // encode()
+
 	private String process(String s,boolean encode) throws Exception
 		{
 		if(encode)
@@ -263,7 +263,7 @@ public class XmlCipher
 			return decrypt(s);
 			}
 		}
-	
+
 	private void process(Node root,boolean encode) throws Exception
 		{
 		for(Node n1=root.getFirstChild(); n1!=null; n1=n1.getNextSibling())
@@ -317,8 +317,8 @@ public class XmlCipher
 			process(n1, encode);
 			}
 		}
-	
-	
+
+
 	public static void main(String[] args)
 		{
 		try
@@ -378,7 +378,7 @@ public class XmlCipher
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
@@ -398,8 +398,8 @@ public class XmlCipher
 					return;
 					}
 				}
-			
-					
+
+
 				DocumentBuilderFactory f=DocumentBuilderFactory.newInstance();
 				f.setCoalescing(true);
 				f.setNamespaceAware(true);
@@ -407,8 +407,8 @@ public class XmlCipher
 				f.setIgnoringComments(false);
 				DocumentBuilder docBuilder= f.newDocumentBuilder();
 				Document dom=null;
-				
-				
+
+
 			    if(optind==args.length)
                     {
                     dom=docBuilder.parse(System.in);
@@ -447,7 +447,7 @@ public class XmlCipher
 			    	XmlCipher app=new XmlCipher(password,encode);
 			    	app.process(dom,false);
 			    	}
-			
+
 			TransformerFactory factory=TransformerFactory.newInstance();
 			Transformer transformer=factory.newTransformer();
 			if(fileout!=null)
@@ -458,12 +458,11 @@ public class XmlCipher
 				{
 				transformer.transform(new DOMSource(dom), new StreamResult(System.out));
 				}
-			} 
+			}
 		catch(Throwable err)
 			{
 			err.printStackTrace();
 			}
 		}
-	
+
 	}
-  

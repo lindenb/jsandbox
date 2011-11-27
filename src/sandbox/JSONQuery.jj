@@ -41,10 +41,10 @@ public class JSONQuery
 	{
 	/** node type */
 	private static enum NodeType {NIL,BOOL,NUMBER,STRING,ARRAY,OBJECT};
-	
-	
-	
-	
+
+
+
+
 	/** node */
 	static abstract class Node
 		implements Comparable<Node>
@@ -81,7 +81,7 @@ public class JSONQuery
 				if(obj==null || obj.getClass()!=this.getClass()) return false;
 				return compareTo(Node.class.cast(obj))==0;
 				};
-		
+
 		public NilNode asNilNode() { return NilNode.class.cast(this);}
 		public BooleanNode asBooleanNode() { return BooleanNode.class.cast(this);}
 		public NumberNode asNumberNode() { return NumberNode.class.cast(this);}
@@ -95,7 +95,7 @@ public class JSONQuery
 		public boolean isStringNode() { return isA(NodeType.STRING);}
 		public boolean isArrayNode() { return isA(NodeType.ARRAY);}
 		public boolean isObjectNode() { return isA(NodeType.OBJECT);}
-		
+
 		@Override
 		public String toString()
 				{
@@ -106,7 +106,7 @@ public class JSONQuery
 				return new String(sw.toByteArray());
 				}
 		}
-	
+
 	/** nil */
 	static class NilNode extends Node
 		{
@@ -116,13 +116,13 @@ public class JSONQuery
 			{
 			return NodeType.NIL;
 			}
-		
+
 		@Override
 		public int hashCode()
 			{
 			return -1;
 			}
-		
+
 		@Override
 		public void print(PrintStream out)
 			{
@@ -138,7 +138,7 @@ public class JSONQuery
 			return 0;
 			}
 		}
-	
+
 	/** boolean */
 	static class BooleanNode extends Node
 		{
@@ -147,13 +147,13 @@ public class JSONQuery
 			{
 			this.value=value;
 			}
-		
+
 		@Override
 		public int hashCode()
 			{
 			return value?1:0;
 			}
-		
+
 		@Override
 		public NodeType getNodeType()
 			{
@@ -175,8 +175,8 @@ public class JSONQuery
 			return (value?1:0)-(other.value?1:0);
 			}
 		}
-	
-	
+
+
 	/** number */
 	static class NumberNode extends Node
 		{
@@ -187,24 +187,24 @@ public class JSONQuery
 			this.literal=literal;
 			this.value=new BigDecimal(literal);
 			}
-		
+
 		@Override
 		public int hashCode()
 			{
 			return value.hashCode();
 			}
-		
+
 		@Override
 		public NodeType getNodeType()
 			{
 			return NodeType.NUMBER;
 			}
-		
+
 		public void print(PrintStream out)
 			{
 			out.print(this.literal);
 			}
-		
+
 		@Override
 		public int compareTo(Node node)
 			{
@@ -216,7 +216,7 @@ public class JSONQuery
 			return this.value.compareTo(other.value);
 			}
 		}
-	
+
 	/** String */
 	static class StringNode extends Node
 		{
@@ -240,20 +240,20 @@ public class JSONQuery
 			StringNode other=StringNode.class.cast(node);
 			return this.value.compareTo(other.value);
 			}
-		
+
 		@Override
 		public int hashCode()
 			{
 			return value.hashCode();
 			}
-	
+
 		@Override
 		public void print(PrintStream out)
 			{
 			out.print(quote(value));
 			}
 		}
-	
+
 	/** Array */
 	static class ArrayNode extends Node
 		{
@@ -261,34 +261,34 @@ public class JSONQuery
 		public ArrayNode()
 			{
 			}
-		
+
 		public List<Node> getArray()
 			{
 			return this.array;
 			}
-		
+
 		@Override
 		public int hashCode()
 			{
 			return array.hashCode();
 			}
-		
+
 		@Override
 		public NodeType getNodeType()
 			{
 			return NodeType.ARRAY;
 			}
-		
+
 		public Node get(int i)
 			{
 			return array.get(i);
 			}
-		
+
 		public int size()
 			{
 			return this.array.size();
 			}
-		
+
 		@Override
 		public int compareTo(Node node)
 			{
@@ -306,7 +306,7 @@ public class JSONQuery
 				}
 			return 0;
 			}
-		
+
 		@Override
 		public void print(PrintStream out)
 			{
@@ -319,7 +319,7 @@ public class JSONQuery
 			out.print(']');
 			}
 		}
-	
+
 	/** ObjectNode */
 	static class ObjectNode extends Node
 		{
@@ -336,23 +336,23 @@ public class JSONQuery
 			{
 			return map;
 			}
-		
+
 		@Override
 		public int hashCode()
 			{
 			return map.hashCode();
 			}
-		
+
 		public Node get(String key)
 			{
 			return map.get(key);
 			}
-		
+
 		public int size()
 			{
 			return map.size();
 			}
-		
+
 		@Override
 		public int compareTo(Node node)
 			{
@@ -374,7 +374,7 @@ public class JSONQuery
 				}
 			return 0;
 			}
-		
+
 		@Override
 		public void print(PrintStream out)
 			{
@@ -390,7 +390,7 @@ public class JSONQuery
 				}
 			out.print('}');
 			}
-		
+
 		private FieldMatcher compile(String fieldName,Node expr)
 			{
 			if(expr.isObjectNode())
@@ -420,9 +420,9 @@ public class JSONQuery
 				}
 			return new ComparatorMatcher(fieldName,expr,AtomicComparator.EQ);
 			}
-		
-		
-		
+
+
+
 		public FieldMatcher compile()
 			{
 			AndMatcher m=new AndMatcher();
@@ -434,20 +434,20 @@ public class JSONQuery
 				}
 			return m;
 			}
-		}	
-	
-	
-	
+		}
+
+
+
 	private static interface FieldMatcher
 		{
 		public boolean accept(final ObjectNode map);
 		}
-	
+
 	private static enum AtomicComparator
 		{
 		EQ,NE,LT,LE,GT,GE
 		}
-	
+
 	private static class ComparatorMatcher
 		implements FieldMatcher
 		{
@@ -460,7 +460,7 @@ public class JSONQuery
 			this.value=value;
 			this.op=op;
 			}
-		
+
 		@Override
 		public boolean accept(final ObjectNode map)
 			{
@@ -488,7 +488,7 @@ public class JSONQuery
 		{
 		private String key;
 		Set<Node> values;
-		
+
 		public boolean accept(final ObjectNode map)
 			{
 			Node node=map.get(this.key);
@@ -496,7 +496,7 @@ public class JSONQuery
 			return node.asArrayNode().getArray().containsAll(this.values);
 			}
 		}
-	
+
 	private static class InMatcher
 	implements FieldMatcher
 		{
@@ -510,7 +510,7 @@ public class JSONQuery
 			return this.values.contains(node)==this.inSet;
 			}
 		}
-	
+
 	private static class ExistMatcher
 	implements FieldMatcher
 		{
@@ -521,7 +521,7 @@ public class JSONQuery
 			return map.getMap().containsKey(this.key)==this.exists;
 			}
 		}
-	
+
 	private static class SizeMatcher
 		implements FieldMatcher
 		{
@@ -536,7 +536,7 @@ public class JSONQuery
 			return false;
 			}
 		}
-	
+
 	private static class TypeMatcher
 	implements FieldMatcher
 		{
@@ -549,7 +549,7 @@ public class JSONQuery
 			return n.isA(this.type);
 			}
 		}
-	
+
 	private static class RegexMatcher
 	implements FieldMatcher
 		{
@@ -562,7 +562,7 @@ public class JSONQuery
 			return pattern.matcher(n.asStringNode().value).matches();
 			}
 		}
-	
+
 	private static class ElementMatchMatcher
 	implements FieldMatcher
 		{
@@ -582,7 +582,7 @@ public class JSONQuery
 			return false;
 			}
 		}
-	
+
 	private static class NotMatcher
 	implements FieldMatcher
 		{
@@ -593,8 +593,8 @@ public class JSONQuery
 			return !this.fieldMatcher.accept(map);
 			}
 		}
-	
-	
+
+
 	private static class ModuloMatcher
 	implements FieldMatcher
 		{
@@ -611,7 +611,7 @@ public class JSONQuery
 			return r.equals(this.rest);
 			}
 		}
-	
+
 	private static class OrMatcher
 		implements FieldMatcher
 		{
@@ -625,8 +625,8 @@ public class JSONQuery
 			return false;
 			}
 		}
-	
-	
+
+
 	private static class AndMatcher
 	implements FieldMatcher
 		{
@@ -640,21 +640,21 @@ public class JSONQuery
 			return true;
 			}
 		}
-	
+
 	private boolean parsingQuery;
-	
+
 	private JSONQuery(InputStream in,boolean parsingQuery)
 		{
 		this(in);
 		this.parsingQuery=parsingQuery;
 		}
-	
+
 	private JSONQuery(Reader in,boolean parsingQuery)
 		{
 		this(in);
 		this.parsingQuery=parsingQuery;
 		}
-	
+
 	private String unquote(String s)
 		{
 		s=s.substring(1,s.length()-1);
@@ -682,8 +682,8 @@ public class JSONQuery
 			++i;
 			}
 		return b.toString();
-		}	
-		
+		}
+
 	/** just a test */
 	public static void main(String args[])
 		{
@@ -721,14 +721,14 @@ public class JSONQuery
 						System.err.println("Unknown option "+args[optind]);
 						return;
 						}
-					else 
+					else
 						{
 						break;
 						}
 					++optind;
 					}
-		        
-		        
+
+
 		        InputStream in=null;
 		        JSONQuery scanner=null;
 			    if(optind==args.length)
@@ -932,7 +932,7 @@ private void keyValue( ObjectNode map):
 		map.getMap().put(k,v);
 		}
 	}
-	
+
 /** function for streaming big object/array */
 public void startObject():{}
 	{
@@ -993,5 +993,5 @@ public char startObjectOrArray():{char c;}
 public void eof():{}
 	{
 	<EOF>
-	}	
-	
+	}
+

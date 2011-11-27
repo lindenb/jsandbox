@@ -245,17 +245,17 @@ abstract class AbstractOntNode
 	private String uri;
 	private String label;
 	private String description;
-	
+
 	protected AbstractOntNode()
 		{
 		}
-	
+
 	@Override
 	public String getUri()
 		{
 		return uri;
 		}
-	
+
 	void setUri(String uri)
 		{
 		this.uri = uri;
@@ -264,36 +264,36 @@ abstract class AbstractOntNode
 		{
 		this.label = label;
 		}
-	
+
 	@Override
 	public String getLabel()
 		{
 		return label==null?getLocalName():this.label;
 		}
-	
+
 	public void setDescription(String description)
 		{
 		this.description = description;
 		}
-	
+
 	@Override
 	public String getDescription()
 		{
 		return description==null?getLabel():description;
 		}
-	
+
 	@Override
 	public String getQName()
 		{
 		return getPrefix()+":"+getLocalName();
 		}
-	
+
 	@Override
 	public String getPrefix()
 		{
 		return getModel().getNamespaceContext().getPrefix(getNamespaceUri());
 		}
-	
+
 	private int split()
 		{
 		int i=getUri().lastIndexOf('#');
@@ -302,19 +302,19 @@ abstract class AbstractOntNode
 		if(i==-1) throw new IllegalArgumentException("bad URI "+getUri());
 		return i;
 		}
-	
+
 	@Override
 	public String getLocalName()
 		{
 		return getUri().substring(split()+1);
 		}
-	
+
 	@Override
 	public String getNamespaceUri()
 		{
 		return getUri().substring(0,split()+1);
 		}
-	
+
 	@Override
 	public boolean equals(Object obj)
 		{
@@ -327,7 +327,7 @@ abstract class AbstractOntNode
 		{
 		return getUri().hashCode();
 		}
-	
+
 	@Override
 	public String toString()
 		{
@@ -342,11 +342,11 @@ class OntClassImpl
 	{
 	private OntModel ontModel;
 	private List<OntProperty> ontProperties=new ArrayList<OntProperty>();
-	
+
 	public OntClassImpl()
 		{
 		}
-	
+
 	@Override
 	public OntModel getModel()
 		{
@@ -357,12 +357,12 @@ class OntClassImpl
 		{
 		this.ontModel=ontModel;
 		}
-	
+
 	void add(OntProperty prop)
 		{
 		this.ontProperties.add(prop);
 		}
-	
+
 	@Override
 	public List<OntProperty> getProperties()
 		{
@@ -382,7 +382,7 @@ abstract class OntPropertyImpl
 	public OntPropertyImpl()
 		{
 		}
-	
+
 	@Override
 	public OntModel getModel()
 		{
@@ -411,13 +411,13 @@ abstract class OntPropertyImpl
 		{
 		this.minCardinality = minCardinality;
 		}
-	
+
 	@Override
 	public Integer getMaxCardinality()
 		{
 		return this.maxCardinality;
 		}
-	
+
 	public void setMaxCardinality(Integer maxCardinality)
 		{
 		this.maxCardinality = maxCardinality;
@@ -452,13 +452,13 @@ class OntStringPropertyImpl
 		{
 		return this.enumeration;
 		}
-	
+
 	@Override
 	public boolean isMultiline()
 		{
 		return multiline;
 		}
-	
+
 	public void setMultiline(boolean multiline)
 		{
 		this.multiline = multiline;
@@ -469,7 +469,7 @@ class OntStringPropertyImpl
 		this.enumeration.clear();
 		this.enumeration.addAll(enumeration);
 		}
-	
+
 	@Override
 	public PropertyType getPropertyType()
 		{
@@ -498,7 +498,7 @@ implements OntLongProperty
 		{
 		this.maxInclusive = maxInclusive;
 		}
-	
+
 	void setMinInclusive(Long minInclusive)
 		{
 		this.minInclusive = minInclusive;
@@ -538,7 +538,7 @@ implements OntDoubleProperty
 		{
 		this.maxInclusive = maxInclusive;
 		}
-	
+
 	void setMinInclusive(Double minInclusive)
 		{
 		this.minInclusive = minInclusive;
@@ -571,7 +571,7 @@ implements OntObjectProperty
 		this.range.clear();
 		this.range.addAll(range);
 		}
-	
+
 	@Override
 	public PropertyType getPropertyType()
 		{
@@ -589,12 +589,12 @@ class NamespaceContextImpl
 		uri2prefix.put(RDF.NS, "rdf");
 		uri2prefix.put(RDFS.NS, "rdfs");
 		}
-	
+
 	public Set<String> getPrefixes()
 		{
 		return new HashSet<String>(this.uri2prefix.values());
 		}
-	
+
 	public void setPrefixNs(String prefix,String ns)
 		{
 		String oldP=this.uri2prefix.get(ns);
@@ -605,7 +605,7 @@ class NamespaceContextImpl
 			}
 		this.uri2prefix.put(ns, prefix);
 		}
-	
+
 	@Override
 	public String getNamespaceURI(String prefix)
 		{
@@ -620,7 +620,7 @@ class NamespaceContextImpl
 		{
 		return this.uri2prefix.get(namespaceURI);
 		}
-	
+
 	@Override
 	public Iterator<String> getPrefixes(String namespaceURI)
 		{
@@ -635,20 +635,20 @@ class OntModelImpl
 	{
 	private List<OntClass> ontClasses=new Vector<OntClass>();
 	private NamespaceContextImpl nsCtx=new NamespaceContextImpl();
-	
+
 	public OntModelImpl()
 		{
 		this.nsCtx.setPrefixNs("my", MY.NS);
 		this.nsCtx.setPrefixNs("owl", OWL.NS);
 		this.nsCtx.setPrefixNs("xsd", XSD.NS);
 		}
-	
+
 	@Override
 	public NamespaceContext getNamespaceContext()
 		{
 		return nsCtx;
 		}
-	
+
 	@Override
 	public OntClass getOntClassByUri(String uri)
 		{
@@ -663,7 +663,7 @@ class OntModelImpl
 		{
 		return ontClasses;
 		}
-	
+
 	public void read(File file)
 		throws IOException,SAXException
 		{
@@ -672,7 +672,7 @@ class OntModelImpl
 			XPathFactory xPathFactory=XPathFactory.newInstance();
 			XPath xpath=xPathFactory.newXPath();
 			xpath.setNamespaceContext(this.nsCtx);
-			
+
 			DocumentBuilderFactory f=DocumentBuilderFactory.newInstance();
 			f.setCoalescing(true);
 			f.setNamespaceAware(true);
@@ -685,41 +685,41 @@ class OntModelImpl
 			Element root=dom.getDocumentElement();
 			if(!(	root.getNamespaceURI().equals(RDF.NS) &&
 					root.getLocalName().equals("RDF"))) throw new IOException("not rdf:RDF root");
-			
+
 			NodeList list=(NodeList)xpath.evaluate("//namespace::*",root,XPathConstants.NODESET);
-			
+
 			for(int i=0;i< list.getLength();++i)
 				{
 				Attr attr=(Attr)list.item(i);
 				this.nsCtx.setPrefixNs(attr.getLocalName(),attr.getValue());
 				}
 			list=(NodeList)xpath.evaluate("rdfs:Class[@rdf:about]",root,XPathConstants.NODESET);
-			
+
 			for(int i=0;i< list.getLength();++i)
-				{	
+				{
 				Element e1=Element.class.cast(list.item(i));
 				OntClassImpl ontclass=new OntClassImpl();
 				Attr  att=e1.getAttributeNodeNS(RDF.NS, "about");
-				
+
 				ontclass.setUri(att.getValue());
 				ontclass.setModel(this);
 				if(this.getOntClassByUri(ontclass.getUri())!=null)  throw new IOException("class defined twice id="+ontclass.getUri());
 				this.ontClasses.add(ontclass);
-				
+
 				Element e2=(Element)xpath.evaluate("rdfs:label",e1,XPathConstants.NODE);
 				if(e2!=null) ontclass.setLabel(e2.getTextContent());
 				e2=(Element)xpath.evaluate("rdfs:comment",e1,XPathConstants.NODE);
 				if(e2!=null) ontclass.setDescription(e2.getTextContent());
 				}
-			
+
 			list=(NodeList)xpath.evaluate("rdf:Property[@rdf:about]",root,XPathConstants.NODESET);
 			for(int i=0;i< list.getLength();++i)
 				{
 				Element e1=Element.class.cast(list.item(i));
-				
+
 				//ontClass Domain
 				Set<OntClassImpl> domains=new HashSet<OntClassImpl>();
-				
+
 				//get all the domains
 				NodeList list2=(NodeList)xpath.evaluate("rdfs:domain/@rdf:resource",e1,XPathConstants.NODESET);
 				for(int j=0;j< list2.getLength();++j)
@@ -727,14 +727,14 @@ class OntModelImpl
 					Attr att=Attr.class.cast(list2.item(j));
 					OntClassImpl c=OntClassImpl.class.cast(getOntClassByUri(att.getValue()));
 					if(c==null) throw new IOException("cannot get OntClass "+att.getValue());
-					domains.add(c);	
+					domains.add(c);
 					}
-				
+
 				//create a property for each domain
 				for(OntClassImpl domain:domains)
 					{
 					OntPropertyImpl ontProperty=null;
-					
+
 					String range=(String)xpath.evaluate("rdfs:domain[1]/@rdf:resource",e1,XPathConstants.STRING);
 					if(range==null || range.isEmpty()) range=XSD.NS+"string";
 					/* RANGE IS STRING */
@@ -799,7 +799,7 @@ class OntModelImpl
 							}
 						}
 					/* RANGE IS OBJECT */
-					else 
+					else
 						{
 						OntObjectPropertyImpl property=new OntObjectPropertyImpl();
 						ontProperty=property;
@@ -815,7 +815,7 @@ class OntModelImpl
 						if(set.isEmpty()) throw new IOException("no range");
 						property.setRange(set);
 						}
-					
+
 					Element e2=(Element)xpath.evaluate("rdfs:label",e1,XPathConstants.NODE);
 					if(e2!=null) ontProperty.setLabel(e2.getTextContent());
 					e2=(Element)xpath.evaluate("rdfs:comment",e1,XPathConstants.NODE);
@@ -847,7 +847,7 @@ class OntModelImpl
 			throw new IOException(err);
 			}
 		}
-	
+
 	public void write(OutputStream out) throws XMLStreamException
 		{
 		XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
@@ -864,58 +864,58 @@ class OntModelImpl
 			w.writeStartElement("rdfs", "Class",RDFS.NS);
 			w.writeAttribute("rdf", RDF.NS, "about", ontClass.getUri());
 			w.writeCharacters("\n");
-			
+
 			w.writeStartElement("rdfs", "label",RDFS.NS);
 			w.writeCharacters(ontClass.getLabel());
 			w.writeEndElement();
-			
+
 			w.writeStartElement("rdfs", "comment",RDFS.NS);
 			w.writeCharacters(ontClass.getDescription());
 			w.writeEndElement();
-			
+
 			w.writeEndElement();
-			
+
 			for(OntProperty prop:ontClass.getProperties())
 				{
 				w.writeStartElement("rdf", "Property",RDF.NS);
 				w.writeAttribute("rdf", RDF.NS, "about", prop.getUri());
-				
+
 				w.writeStartElement("rdfs", "label",RDFS.NS);
 				w.writeCharacters(prop.getLabel());
 				w.writeEndElement();
-				
+
 				w.writeStartElement("rdfs", "comment",RDFS.NS);
 				w.writeCharacters(prop.getDescription());
 				w.writeEndElement();
-				
+
 				if(prop.getMinCardinality()!=null)
 					{
 					w.writeStartElement("owl", "minCardinality",OWL.NS);
 					w.writeCharacters(String.valueOf(prop.getMinCardinality()));
 					w.writeEndElement();
 					}
-				
+
 				if(prop.getMaxCardinality()!=null)
 					{
 					w.writeStartElement("owl", "maxCardinality",OWL.NS);
 					w.writeCharacters(String.valueOf(prop.getMaxCardinality()));
 					w.writeEndElement();
 					}
-				
+
 				if(prop instanceof OntStringProperty)
 					{
 					OntStringProperty property=(OntStringProperty)prop;
-					
+
 					w.writeEmptyElement("rdfs","domain",RDFS.NS);
 					w.writeAttribute("rdf", RDF.NS, "resource", XSD.NS+"string");
-					
+
 					if(property.getPattern()!=null)
 						{
 						w.writeStartElement("my", "pattern",MY.NS);
 						w.writeCharacters(property.getPattern().pattern());
 						w.writeEndElement();
 						}
-					
+
 					for(String e: ((OntStringProperty) prop).getEnum())
 						{
 						w.writeStartElement("my", "enum",MY.NS);
@@ -926,10 +926,10 @@ class OntModelImpl
 				else if(prop instanceof OntLongProperty)
 					{
 					OntLongProperty property=(OntLongProperty)prop;
-					
+
 					w.writeEmptyElement("rdfs", "domain",RDFS.NS);
 					w.writeAttribute("rdf", RDF.NS, "resource", XSD.NS+"int");
-					
+
 					if(property.getMinInclusive()!=null)
 						{
 						w.writeStartElement("xsd", "minInclusive",XSD.NS);
@@ -972,15 +972,15 @@ class OntModelImpl
 					}
 				w.writeEndElement();
 				}
-			
+
 			w.writeCharacters("\n");
 			}
-		
+
 		w.writeEndElement();
 		w.writeEndDocument();
 		w.flush();
 		}
-	
+
 	}
 
 /** DataStoreImpl */
@@ -989,7 +989,7 @@ class DataStoreImpl
 	{
 	private OntModel model;
 	private List<InstanceOfClass> instances=new Vector<InstanceOfClass>();
-	
+
 	private class IterorImpl
 		implements CloseableIterator<InstanceOfClass>
 		{
@@ -1013,26 +1013,26 @@ class DataStoreImpl
 			{
 			throw new UnsupportedOperationException();
 			}
-		
+
 		@Override
 		public void close()
 			{
-			
+
 			}
 		}
-	
+
 	public DataStoreImpl(OntModel model)
 		{
 		this.model=model;
 		}
-	
+
 	@Override
 	public CloseableIterator<InstanceOfClass> listInstances()
 		{
 		return new IterorImpl(this.instances.iterator());
 		}
-	
-	
+
+
 	@Override
 	public InstanceOfClass getInstanceById(String id)
 		{
@@ -1056,7 +1056,7 @@ class DataStoreImpl
 			}
 		return null;
 		}
-	
+
 	@Override
 	public OntModel getOntModel()
 		{
@@ -1069,12 +1069,12 @@ class DataStoreImpl
 		write(out);
 		out.close();
 		}
-	
+
 	public void write(Writer out)
 		throws XMLStreamException
 		{
 		XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
-		
+
 		XMLStreamWriter w= xmlfactory.createXMLStreamWriter(out);
 		w.writeStartDocument("UTF-8","1.0");
 		w.writeStartElement("rdf","RDF",RDF.NS);
@@ -1100,7 +1100,7 @@ class DataStoreImpl
 		w.writeEndDocument();
 		w.flush();
 		}
-	
+
 	private void writeInstance(InstanceOfClass ioc,XMLStreamWriter w)
 	throws XMLStreamException
 		{
@@ -1116,8 +1116,8 @@ class DataStoreImpl
 			}
 		w.writeEndElement();
 		}
-	
-	
+
+
 	private void skip(XMLEventReader reader) throws XMLStreamException
 		{
 		int depth=1;
@@ -1152,11 +1152,11 @@ class DataStoreImpl
 				}
 			matcher=b;
 			} */
-		
+
 		File xmlOut=null;
 		XMLOutputFactory xmlOutputFactory=XMLOutputFactory.newFactory();
 		XMLStreamWriter writer=xmlOutputFactory.createXMLStreamWriter(new FileWriter(xmlOut));
-		
+
 		boolean nodeInserted=false;
 		boolean ignoreNextCloseElement=false;
 		XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
@@ -1207,7 +1207,7 @@ class DataStoreImpl
 						writer.writeAttribute(attName.getPrefix(),attName.getNamespaceURI(),attName.getLocalPart(),att.getValue());
 						}
 					}
-				
+
 				}
 			else if(evt.isEndElement())
 				{
@@ -1235,7 +1235,7 @@ class DataStoreImpl
 		writer.flush();
 		writer.close();
 		}
-	
+
 	}
 
 /** InstanceOfPropertyImpl */
@@ -1255,13 +1255,13 @@ class InstanceOfPropertyImpl
 		{
 		return ontProperty;
 		}
-	
+
 	@Override
 	public String getValue()
 		{
 		return value;
 		}
-	
+
 	@Override
 	public boolean match(Pattern regex)
 		{
@@ -1277,7 +1277,7 @@ class InstanceOfClassImpl
 	private List<InstanceOfProperty> properties=new Vector<InstanceOfProperty>();
 	private OntClass ontClass;
 	private Store dataStore;
-	
+
 	public InstanceOfClassImpl(
 		Store dataStore,
 		OntClass ontClass
@@ -1286,7 +1286,7 @@ class InstanceOfClassImpl
 		this.dataStore=dataStore;
 		this.ontClass=ontClass;
 		}
-	
+
 	@Override
 	public boolean match(Pattern regex)
 		{
@@ -1316,7 +1316,7 @@ class InstanceOfClassImpl
 		{
 		return properties;
 		}
-	
+
 	@Override
 	public List<InstanceOfProperty> getProperties(OntProperty ontProp)
 		{
@@ -1349,18 +1349,18 @@ class InstanceTable
 	extends AbstractTableModel
 	{
 	private Vector<InstanceOfClass> instances=new Vector<InstanceOfClass>();
-	
+
 	public InstanceOfClass getInstanceAt(int rowIndex)
 		{
 		return this.instances.get(rowIndex);
 		}
-	
+
 	@Override
 	public int getColumnCount()
 		{
 		return 2;
 		}
-	
+
 	@Override
 	public Object getValueAt(int rowIndex, int columnIndex)
 		{
@@ -1372,7 +1372,7 @@ class InstanceTable
 			}
 		return null;
 		}
-	
+
 	@Override
 	public int getRowCount()
 		{
@@ -1518,13 +1518,13 @@ class OnePropertyEditor
 				}
 			}
 		}
-	
-	
+
+
 	public String getValue()
 		{
 		return this.extractor.getValue();
 		}
-	
+
 	public OntProperty getOntProperty()
 		{
 		return ontProperty;
@@ -1541,7 +1541,7 @@ class InstanceEd
 	private int exitStatus;
 	private JPanel mainPane;
 	private Vector<PropertyPart> propParts=new Vector<InstanceEd.PropertyPart>();
-	
+
 	/**
 	 * MyLayout
 	 *
@@ -1570,7 +1570,7 @@ class InstanceEd
 				int y=0;
 				for(PropertyPart p: propParts)
 					{
-					
+
 					}
 				return dim;
 				}
@@ -1584,7 +1584,7 @@ class InstanceEd
 				Dimension dim=new Dimension(0,0);
 				for(PropertyPart p: propParts)
 					{
-					
+
 					}
 				return dim;
 				}
@@ -1597,16 +1597,16 @@ class InstanceEd
 				{
 				for(PropertyPart p: propParts)
 					{
-					
+
 					}
 
 				}
 			}
-		
+
 		}
-	
+
 	/**
-	 * 
+	 *
 	 * PropertyPart
 	 *
 	 */
@@ -1615,11 +1615,11 @@ class InstanceEd
 		private OntProperty ontProperty;
 		private JLabel label;
 		private List<OneProperty> propertyValues=new Vector<OneProperty>();
-		
+
 		private abstract class OneProperty
 			{
 			protected JButton removeMe;
-			
+
 			protected OneProperty()
 				{
 				AbstractAction action=new AbstractAction("[-]")
@@ -1632,12 +1632,12 @@ class InstanceEd
 					};
 				this.removeMe=new JButton(action);
 				}
-			
+
 			public PropertyPart getPropertyPart()
 				{
 				return PropertyPart.this;
 				}
-			
+
 			public OntProperty getOntProperty()
 				{
 				return getPropertyPart().getOntProperty();
@@ -1655,7 +1655,7 @@ class InstanceEd
 				InstanceEd.this.mainPane.add(this.removeMe);
 				}
 			}
-		
+
 		private class OneDataProperty
 		extends OneProperty
 			{
@@ -1669,9 +1669,9 @@ class InstanceEd
 				{
 				return this.textComponent.getText();
 				}
-			
+
 			}
-		
+
 		private class OneLongProperty
 			extends OneDataProperty
 			{
@@ -1679,14 +1679,14 @@ class InstanceEd
 				{
 				super.textComponent=new JTextField(20);
 				}
-			
+
 			@Override
 			public void removeMe()
 				{
 				super.removeMe();
 				InstanceEd.this.mainPane.remove(this.textComponent);
 				}
-			
+
 			@Override
 			public void addComponents()
 				{
@@ -1694,7 +1694,7 @@ class InstanceEd
 				InstanceEd.this.mainPane.add(this.textComponent);
 				}
 			}
-		
+
 		private class OneDoubleProperty
 			extends OneDataProperty
 				{
@@ -1702,14 +1702,14 @@ class InstanceEd
 					{
 					super.textComponent=new JTextField(20);
 					}
-				
+
 				@Override
 				public void removeMe()
 					{
 					super.removeMe();
 					InstanceEd.this.mainPane.remove(this.textComponent);
 					}
-				
+
 				@Override
 				public void addComponents()
 					{
@@ -1717,7 +1717,7 @@ class InstanceEd
 					InstanceEd.this.mainPane.add(this.textComponent);
 					}
 				}
-		
+
 		private class OneStringProperty
 			extends OneDataProperty
 				{
@@ -1730,7 +1730,7 @@ class InstanceEd
 						{
 						super.textComponent=null;
 						this.comboBox=new JComboBox(
-							new Vector<String>(pp.getEnum())	
+							new Vector<String>(pp.getEnum())
 							);
 						}
 					else if(pp.isMultiline())
@@ -1743,7 +1743,7 @@ class InstanceEd
 						super.textComponent=new JTextField(20);
 						}
 					}
-				
+
 				@Override
 				public String getValue()
 					{
@@ -1759,7 +1759,7 @@ class InstanceEd
 						}
 					return s;
 					}
-				
+
 				@Override
 				public void removeMe()
 					{
@@ -1777,7 +1777,7 @@ class InstanceEd
 						InstanceEd.this.mainPane.remove(this.textComponent);
 						}
 					}
-				
+
 				@Override
 				public void addComponents()
 					{
@@ -1795,18 +1795,18 @@ class InstanceEd
 						InstanceEd.this.mainPane.add(this.textComponent);
 						}
 					}
-				
+
 				}
-		
+
 		private class OneObjectProperty
 		extends OneProperty
 			{
 			private JTextField textField=new JTextField(20);
 			OneObjectProperty()
 				{
-				
+
 				}
-			
+
 			@Override
 			public String getValue()
 				{
@@ -1818,41 +1818,41 @@ class InstanceEd
 				textField.setText(text);
 				textField.setCaretPosition(0);
 				}
-			
+
 			@Override
 			public void removeMe()
 				{
 				super.removeMe();
 				InstanceEd.this.mainPane.remove(this.textField);
 				}
-			
+
 			@Override
 			public void addComponents()
 				{
 				super.addComponents();
 				InstanceEd.this.mainPane.add(this.textField);
 				}
-			
+
 			}
-		
-		
+
+
 		PropertyPart(OntProperty ontProperty)
 			{
 			this.ontProperty=ontProperty;
 			this.label=new JLabel(ontProperty.getLabel());
 			this.label.setToolTipText(ontProperty.getDescription());
 			}
-		
+
 		public OntProperty getOntProperty()
 			{
 			return ontProperty;
 			}
-		
+
 		void addToContainer(JComponent c)
 			{
 			c.add(label);
 			}
-		
+
 		OneProperty createOnePropertyForValue(String content)
 			{
 			OneProperty oneProp=null;
@@ -1866,7 +1866,7 @@ class InstanceEd
 				}
 			return oneProp;
 			}
-		
+
 		void fromInstance(InstanceOfClass instance)
 			{
 			for(InstanceOfProperty iop:instance.getProperties(this.getOntProperty()))
@@ -1878,18 +1878,18 @@ class InstanceEd
 				}
 			}
 		}
-	
+
 	public InstanceEd(Window w,Store store,InstanceOfClass instance)
 		{
 		this(w,store,instance.getOntClass(),instance);
 		}
-	
-	
+
+
 	public InstanceEd(Window w,Store store,OntClass ontClass)
 		{
 		this(w,store,ontClass,null);
 		}
-	
+
 	private InstanceEd(Window w,Store store,OntClass ontClass,InstanceOfClass instance)
 		{
 		super(w,ontClass.getLabel(),ModalityType.APPLICATION_MODAL);
@@ -1902,7 +1902,7 @@ class InstanceEd
 			instanceIsNew=true;
 			this.instance=new InstanceOfClassImpl(store,ontClass);
 			}
-		
+
 		this.addWindowListener(
 			new WindowAdapter()
 				{
@@ -1921,27 +1921,27 @@ class InstanceEd
 			);
 		JPanel pane=new JPanel(new BorderLayout(5,5));
 		pane.setBorder(new EmptyBorder(5,5,5,5));
-		
+
 		this.mainPane=new JPanel(new MyLayout());
 		pane.add(new JScrollPane(this.mainPane));
-		
+
 		for(OntProperty ontProperty:ontClass.getProperties())
 			{
 			PropertyPart part=new PropertyPart(ontProperty);
 			part.addToContainer(this.mainPane);
 			if(instanceIsNew)
 				{
-				
+
 				}
 			else
 				{
-				
+
 				}
 			}
-		
+
 		JPanel bot=new JPanel(new FlowLayout(FlowLayout.TRAILING));
 		pane.add(bot,BorderLayout.SOUTH);
-		
+
 		AbstractAction action=new AbstractAction("OK")
 			{
 			@Override
@@ -1951,7 +1951,7 @@ class InstanceEd
 				}
 			};
 		bot.add(new JButton(action));
-		
+
 		action=new AbstractAction("Cancel")
 			{
 			@Override
@@ -1961,23 +1961,23 @@ class InstanceEd
 				}
 			};
 		bot.add(new JButton(action));
-		
-		
-		
+
+
+
 		this.setContentPane(pane);
 		}
-	
+
 	public void setInstance(InstanceOfClass instance)
 		{
 		this.instance = instance;
 		setOntClass(instance.getOntClass());
 		}
-	
+
 	public void setOntClass(OntClass ontClass)
 		{
 		this.ontClass = ontClass;
 		}
-	
+
 	private void closeWithStatus(int status)
 		{
 		this.exitStatus=status;
@@ -1988,12 +1988,12 @@ class InstanceEd
 		{
 		return exitStatus;
 		}
-	
+
 	public InstanceOfClass getInstance()
 		{
 		return instance;
 		}
-	
+
 	}
 
 
@@ -2002,7 +2002,7 @@ class PropertyPane
 	{
 	private OntProperty ontProperty;
 	private Box mainPane;
-	
+
 	abstract class ValuePane
 		extends JPanel
 		{
@@ -2014,16 +2014,16 @@ class PropertyPane
 			this.add(but,BorderLayout.EAST);
 			}
 		}
-	
+
 	class AbstractTextPane
 		extends ValuePane
 			{
 			protected AbstractTextPane()
 				{
-				
+
 				}
 			}
-	
+
 	class TextPane
 	extends AbstractTextPane
 		{
@@ -2034,7 +2034,7 @@ class PropertyPane
 			super.add(this.textField,BorderLayout.CENTER)
 ;			}
 		}
-	
+
 	class TextAreaPane
 	extends AbstractTextPane
 		{
@@ -2045,12 +2045,12 @@ class PropertyPane
 			super.add(new JScrollPane(this.textArea),BorderLayout.CENTER)
 ;			}
 		}
-	
-	
+
+
 	PropertyPane(OntProperty ontProperty)
 		{
 		this(null,ontProperty);
-		
+
 		}
 	PropertyPane(InstanceOfProperty property)
 		{
@@ -2065,7 +2065,7 @@ class PropertyPane
 		top.add(label,BorderLayout.CENTER);
 		label.setToolTipText(ontProperty.getDescription());
 		top.add(new JButton("[+]"),BorderLayout.EAST);
-		
+
 		this.mainPane=Box.createVerticalBox();
 		this.add(mainPane,BorderLayout.CENTER);
 		for(int i=0;i< 50;i++)
@@ -2088,12 +2088,12 @@ class InstancePane
 		{
 		this(store,ontClass,null);
 		}
-	
+
 	InstancePane(InstanceOfClass instance)
 		{
 		this(instance.getDataStore(),null,instance);
 		}
-	
+
 	private InstancePane( Store store,OntClass ontClass,InstanceOfClass instance)
 		{
 		super(new BorderLayout(5, 5));
@@ -2123,15 +2123,15 @@ class Frame
 	class LabelPane
 		{
 		OntProperty property;
-		
+
 		LabelPane(OntProperty property)
 			{
 			this.property=property;
 			}
-		
+
 		}
-	
-	
+
+
 	Frame(Store dataStore)
 		{
 		super("Structured");
@@ -2141,7 +2141,7 @@ class Frame
 			{
 			this.showOntClasses.put(ontClass,Boolean.TRUE);
 			}
-		
+
 		this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 		this.addWindowListener(new WindowAdapter()
 			{
@@ -2152,15 +2152,15 @@ class Frame
 				e.getWindow().setBounds(50, 50, d.width-100, d.height-100);
 				reloadInstanceList();
 				}
-			
+
 			@Override
 			public void windowClosing(WindowEvent e)
 				{
 				doMenuClose();
 				}
 			});
-		
-		
+
+
 		this.cardPane=new JPanel(new CardLayout(5,5));
 		this.cardPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(this.cardPane);
@@ -2169,7 +2169,7 @@ class Frame
 		JMenu menu=new JMenu("File");
 		bar.add(menu);
 		AbstractAction action;
-		
+
 		action=new AbstractAction("Quit")
 			{
 			@Override
@@ -2181,16 +2181,16 @@ class Frame
 		menu.add(action);
 		JPanel contentPane=new JPanel(new BorderLayout());
 		this.cardPane.add(contentPane,"MAIN");
-		
+
 		contentPane.add(new JScrollPane(
 			this.instanceList=new JList(new DefaultListModel()))
 			);
-		
+
 		Box top=Box.createVerticalBox();
 		contentPane.add(top,BorderLayout.NORTH);
 		JPanel hbox=new JPanel(new FlowLayout(FlowLayout.LEADING));
 		top.add(hbox);
-		
+
 		JLabel label=new JLabel("Filter:",JLabel.RIGHT);
 		hbox.add(label);
 		JTextField tfRegex=new JTextField(20);
@@ -2203,10 +2203,10 @@ class Frame
 				reloadInstanceList();
 				}
 			};
-		tfRegex.addActionListener(action);	
+		tfRegex.addActionListener(action);
 		hbox.add(new JButton(action));
 		hbox.add(new JSeparator(JSeparator.VERTICAL));
-		
+
 		action=new AbstractAction("Edit")
 			{
 			@Override
@@ -2219,13 +2219,13 @@ class Frame
 				}
 			};
 		hbox.add(new JButton(action));
-		
-		
-		
+
+
+
 		hbox=new JPanel(new FlowLayout(FlowLayout.LEADING));
 		top.add(hbox);
 		hbox.setBorder(new TitledBorder("Classes"));
-		
+
 		for(OntClass clazz: dataStore.getOntModel().getOntClasses())
 			{
 			JToggleButton but=new JToggleButton(clazz.getLabel());
@@ -2245,7 +2245,7 @@ class Frame
 			action.putValue("ontClass",clazz);
 			but.addActionListener(action);
 			}
-		
+
 		JMenu subMenu=new JMenu("Create");
 		menu.add(subMenu);
 		for(OntClass ontClass: getSchema().getOntClasses())
@@ -2264,9 +2264,9 @@ class Frame
 			subMenu.add(action);
 			}
 		}
-	
-	
-	
+
+
+
 	private void createOntClass(OntClass clazz)
 		{
 		InstanceEd editor=new InstanceEd(
@@ -2276,13 +2276,13 @@ class Frame
 		editor.setVisible(true);
 		documentModified=true;
 		}
-	
+
 	private void editInstance(InstanceOfClass instance)
 		{
-		
+
 		}
-	
-	
+
+
 	private void reloadInstanceList()
 		{
 		DefaultListModel lm=DefaultListModel.class.cast(this.instanceList.getModel());
@@ -2308,18 +2308,18 @@ class Frame
 			if(iter!=null) iter.close();
 			}
 		}
-	
+
 	private void doMenuClose()
 		{
 		this.setVisible(false);
 		this.dispose();
 		}
-	
+
 	public Store getDataStore()
 		{
 		return dataStore;
 		}
-	
+
 	public OntModel getSchema()
 		{
 		return getDataStore().getOntModel();
@@ -2333,7 +2333,7 @@ class OntClassChooser
 	private OntClass selected=null;
 	public OntClassChooser(
 		Window owner,
-		List<OntClass> ontClasses	
+		List<OntClass> ontClasses
 		)
 		{
 		super(owner,"Class chooser",ModalityType.TOOLKIT_MODAL);
@@ -2368,8 +2368,8 @@ class OntClassChooser
 			group.add(button);
 			vbox.add(button);
 			}
-		
-		
+
+
 		JPanel bot=new JPanel(new FlowLayout(FlowLayout.TRAILING));
 		pane.add(bot,BorderLayout.SOUTH);
 		bot.add(new JButton(new AbstractAction("Cancel")
@@ -2383,7 +2383,7 @@ class OntClassChooser
 				}
 			}));
 		}
-	
+
 	public OntClass getSelected()
 		{
 		return this.selected;
@@ -2401,8 +2401,8 @@ public class Structured
 			{
 			JFrame.setDefaultLookAndFeelDecorated(true);
 			JDialog.setDefaultLookAndFeelDecorated(true);
-			
-			
+
+
 			int optind=0;
 			while(optind< args.length)
 				{
@@ -2428,7 +2428,7 @@ public class Structured
 					System.err.println("Unknown option "+args[optind]);
 					return;
 					}
-				else 
+				else
 					{
 					break;
 					}
@@ -2437,7 +2437,7 @@ public class Structured
 			OntModelImpl model=new OntModelImpl();
 			model.read(new File("/home/pierre/jeter.rdf"));
 			//model.write(System.out);
-			
+
 			if("1".equals("2"))
 				{
 				OntClassChooser f=new OntClassChooser(null, model.getOntClasses());
@@ -2445,7 +2445,7 @@ public class Structured
 				f.setVisible(true);
 				return;
 				}
-			
+
 			if("1".equals("2"))
 				{
 				InstancePane x=null;//new InstancePane(model.getOntClasses().get(0));
@@ -2456,7 +2456,7 @@ public class Structured
 				d.setVisible(true);
 				return;
 				}
-			
+
 			DataStoreImpl dataStore=new DataStoreImpl(model);
 			final Frame f=new Frame(dataStore);
 			SwingUtilities.invokeAndWait(new Runnable()
@@ -2465,10 +2465,10 @@ public class Structured
 				public void run()
 					{
 					f.setVisible(true);
-					
+
 					}
 				});
-			} 
+			}
 		catch(Throwable err)
 			{
 			err.printStackTrace();
