@@ -37,9 +37,27 @@
 </path>
 
 
-<target name="all" depends="velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
+<target name="all" depends="treemap,velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
 </target>
+
+<target name="treemap">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<javac srcdir="src" destdir="tmp" debug="true">
+		<include name="**/TreeMapMaker.java" />
+	</javac>
+	
+	<jar destfile="dist/treemap.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.TreeMapMaker"/>
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
+</target>
+
+
 
 <target name="velocityjson">
 	<mkdir dir="dist"/>
