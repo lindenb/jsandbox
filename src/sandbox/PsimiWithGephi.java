@@ -12,7 +12,7 @@
  * Wiki
  *  
  * Motivation:
- * 	Paint a PSI-MI graph using the GEPHI library
+ * 	Paints a PSI-MI graph using the GEPHI library
  * Compilation:
  *       TODO
  */

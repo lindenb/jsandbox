@@ -1,6 +1,7 @@
-
+package sandbox;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -8,10 +9,14 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.LayoutManager;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ContainerAdapter;
+import java.awt.event.ContainerEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -735,7 +740,7 @@ class OntModelImpl
 					{
 					OntPropertyImpl ontProperty=null;
 					
-					String range=(String)xpath.evaluate("rdfs:domain[1]/@rdf:resource",e1,XPathConstants.STRING);
+					String range=(String)xpath.evaluate("rdfs:range[1]/@rdf:resource",e1,XPathConstants.STRING);
 					if(range==null || range.isEmpty()) range=XSD.NS+"string";
 					/* RANGE IS STRING */
 					if(range.equals(XSD.NS+"string"))
@@ -1535,75 +1540,13 @@ class OnePropertyEditor
 class InstanceEd
 	extends JDialog
 	{
+	private static final int EDITOR_WIDTH=600;
 	private Store store;
 	private InstanceOfClass instance;
 	private OntClass ontClass;
 	private int exitStatus;
 	private JPanel mainPane;
-	private Vector<PropertyPart> propParts=new Vector<InstanceEd.PropertyPart>();
-	
-	/**
-	 * MyLayout
-	 *
-	 */
-	private class MyLayout
-		implements LayoutManager
-		{
-		@Override
-		public void addLayoutComponent(String name, Component comp)
-			{
-			//
-			}
-
-		@Override
-		public void removeLayoutComponent(Component comp)
-			{
-			//
-			}
-
-		@Override
-		public Dimension preferredLayoutSize(Container target)
-			{
-			synchronized (target.getTreeLock())
-				{
-				Dimension dim=new Dimension(0,0);
-				int y=0;
-				for(PropertyPart p: propParts)
-					{
-					
-					}
-				return dim;
-				}
-			}
-
-		@Override
-		public Dimension minimumLayoutSize(Container target)
-			{
-			synchronized (target.getTreeLock())
-				{
-				Dimension dim=new Dimension(0,0);
-				for(PropertyPart p: propParts)
-					{
-					
-					}
-				return dim;
-				}
-			}
-
-		@Override
-		public void layoutContainer(Container target)
-			{
-			synchronized (target.getTreeLock())
-				{
-				for(PropertyPart p: propParts)
-					{
-					
-					}
-
-				}
-			}
-		
-		}
+	private JScrollPane scrollPane;
 	
 	/**
 	 * 
@@ -1611,26 +1554,39 @@ class InstanceEd
 	 *
 	 */
 	private class PropertyPart
+		extends JPanel
 		{
 		private OntProperty ontProperty;
-		private JLabel label;
-		private List<OneProperty> propertyValues=new Vector<OneProperty>();
+		private Box verticalBox;
+		//private List<OneProperty> propertyValues=new Vector<OneProperty>();
 		
+		/**
+		 * OneProperty
+		 *
+		 */
 		private abstract class OneProperty
+			extends JPanel
 			{
-			protected JButton removeMe;
 			
 			protected OneProperty()
 				{
-				AbstractAction action=new AbstractAction("[-]")
+				super(new BorderLayout());
+				Box right=Box.createVerticalBox();
+				this.add(right,BorderLayout.EAST);
+				AbstractAction action=new AbstractAction("\u292B")
 					{
 					@Override
 					public void actionPerformed(ActionEvent e)
 						{
-						removeMe();
+						getPropertyPart().remove(OneProperty.this);
+						getPropertyPart().validate();
 						}
 					};
-				this.removeMe=new JButton(action);
+				
+				JButton button=new JButton(action);
+				button.setPreferredSize(new Dimension(16,16));
+				right.add(button);
+				button.setForeground(Color.RED);
 				}
 			
 			public PropertyPart getPropertyPart()
@@ -1644,22 +1600,13 @@ class InstanceEd
 				}
 			public abstract void setValue(String text);
 			public abstract String getValue();
-			public void removeMe()
-				{
-				InstanceEd.this.mainPane.remove(this.removeMe);
-				getPropertyPart().propertyValues.remove(this);
-				}
-			public void addComponents()
-				{
-				getPropertyPart().propertyValues.add(this);
-				InstanceEd.this.mainPane.add(this.removeMe);
-				}
 			}
 		
-		private class OneDataProperty
+		private abstract class OneDataProperty
 		extends OneProperty
 			{
 			protected JTextComponent textComponent;
+			
 			public void setValue(String text)
 				{
 				this.textComponent.setText(text);
@@ -1678,20 +1625,7 @@ class InstanceEd
 			OneLongProperty()
 				{
 				super.textComponent=new JTextField(20);
-				}
-			
-			@Override
-			public void removeMe()
-				{
-				super.removeMe();
-				InstanceEd.this.mainPane.remove(this.textComponent);
-				}
-			
-			@Override
-			public void addComponents()
-				{
-				super.addComponents();
-				InstanceEd.this.mainPane.add(this.textComponent);
+				this.add(super.textComponent,BorderLayout.CENTER);
 				}
 			}
 		
@@ -1701,20 +1635,7 @@ class InstanceEd
 				OneDoubleProperty()
 					{
 					super.textComponent=new JTextField(20);
-					}
-				
-				@Override
-				public void removeMe()
-					{
-					super.removeMe();
-					InstanceEd.this.mainPane.remove(this.textComponent);
-					}
-				
-				@Override
-				public void addComponents()
-					{
-					super.addComponents();
-					InstanceEd.this.mainPane.add(this.textComponent);
+					this.add(super.textComponent,BorderLayout.CENTER);
 					}
 				}
 		
@@ -1725,22 +1646,32 @@ class InstanceEd
 				private JScrollPane scrollPane=null;
 				OneStringProperty()
 					{
+					super();
+					System.err.println("OK1");
+					
 					OntStringProperty pp=OntStringProperty.class.cast(getOntProperty());
 					if(!pp.getEnum().isEmpty())
-						{
+						{System.err.println("OK2");
+						
 						super.textComponent=null;
 						this.comboBox=new JComboBox(
 							new Vector<String>(pp.getEnum())	
 							);
+						this.add(this.comboBox,BorderLayout.CENTER);
 						}
 					else if(pp.isMultiline())
 						{
+						System.err.println("OK2");
+						
 						super.textComponent=new JTextArea(5,20);
 						this.scrollPane=new JScrollPane(this.textComponent);
+						this.add(this.scrollPane,BorderLayout.CENTER);
 						}
 					else
 						{
+						System.err.println("OK3");
 						super.textComponent=new JTextField(20);
+						this.add(this.textComponent,BorderLayout.CENTER);
 						}
 					}
 				
@@ -1760,51 +1691,18 @@ class InstanceEd
 					return s;
 					}
 				
-				@Override
-				public void removeMe()
-					{
-					super.removeMe();
-					if(this.comboBox!=null)
-						{
-						InstanceEd.this.mainPane.remove(this.comboBox);
-						}
-					else if(this.scrollPane!=null)
-						{
-						InstanceEd.this.mainPane.remove(this.scrollPane);
-						}
-					else
-						{
-						InstanceEd.this.mainPane.remove(this.textComponent);
-						}
-					}
-				
-				@Override
-				public void addComponents()
-					{
-					super.addComponents();
-					if(this.comboBox!=null)
-						{
-						InstanceEd.this.mainPane.add(this.comboBox);
-						}
-					else if(this.scrollPane!=null)
-						{
-						InstanceEd.this.mainPane.add(this.scrollPane);
-						}
-					else
-						{
-						InstanceEd.this.mainPane.add(this.textComponent);
-						}
-					}
-				
 				}
 		
 		private class OneObjectProperty
 		extends OneProperty
 			{
-			private JTextField textField=new JTextField(20);
+			private JTextField textField;
 			OneObjectProperty()
 				{
-				
+				this.textField=new JTextField(20);
+				this.textField.setEditable(false);
+				this.textField.setText("XXXXXXXXXX");
+				this.add(this.textField,BorderLayout.CENTER);
 				}
 			
 			@Override
@@ -1819,28 +1717,36 @@ class InstanceEd
 				textField.setCaretPosition(0);
 				}
 			
-			@Override
-			public void removeMe()
-				{
-				super.removeMe();
-				InstanceEd.this.mainPane.remove(this.textField);
-				}
-			
-			@Override
-			public void addComponents()
-				{
-				super.addComponents();
-				InstanceEd.this.mainPane.add(this.textField);
-				}
-			
 			}
 		
 		
 		PropertyPart(OntProperty ontProperty)
 			{
+			super(new BorderLayout(2,2));
+			setBorder(new EmptyBorder(2,2,2,2));
+			JPanel top=new JPanel(new FlowLayout(FlowLayout.LEADING));
+			this.add(top,BorderLayout.NORTH);
 			this.ontProperty=ontProperty;
-			this.label=new JLabel(ontProperty.getLabel());
-			this.label.setToolTipText(ontProperty.getDescription());
+			JLabel label=new JLabel(ontProperty.getLabel());
+			label.setToolTipText(ontProperty.getDescription());
+			top.add(label);
+			
+			AbstractAction action=new AbstractAction("\u2295")
+				{
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					addNewValue();
+					}
+				};
+			action.putValue(AbstractAction.SHORT_DESCRIPTION,"Add a new "+ontProperty.getLabel());
+			JButton button=new JButton(action);
+			button.setForeground(Color.GREEN);
+			button.setPreferredSize(new Dimension(16,16));
+			top.add(button);
+			
+			this.verticalBox = Box.createVerticalBox();
+			this.add(this.verticalBox,BorderLayout.CENTER);
 			}
 		
 		public OntProperty getOntProperty()
@@ -1848,12 +1754,14 @@ class InstanceEd
 			return ontProperty;
 			}
 		
-		void addToContainer(JComponent c)
+		public void addNewValue()
 			{
-			c.add(label);
+			OneProperty one=createOneProperty();
+			this.verticalBox.add(one);
+			this.verticalBox.validate();
 			}
 		
-		OneProperty createOnePropertyForValue(String content)
+		private OneProperty createOneProperty()
 			{
 			OneProperty oneProp=null;
 			switch(this.getOntProperty().getPropertyType())
@@ -1864,6 +1772,7 @@ class InstanceEd
 				case OBJECT: oneProp=new OneObjectProperty();break;
 				default: throw new IllegalArgumentException("?");
 				}
+			System.err.println(oneProp.getClass());
 			return oneProp;
 			}
 		
@@ -1873,10 +1782,13 @@ class InstanceEd
 				{
 				String s=iop.getValue();
 				if(s==null || s.trim().length()==0) continue;
-				OneProperty oneProp=createOnePropertyForValue(s);
-				oneProp.addComponents();
+				OneProperty oneProp=createOneProperty();
+				oneProp.setValue(s);
+				this.verticalBox.add(oneProp);
 				}
 			}
+		
+	
 		}
 	
 	public InstanceEd(Window w,Store store,InstanceOfClass instance)
@@ -1922,13 +1834,15 @@ class InstanceEd
 		JPanel pane=new JPanel(new BorderLayout(5,5));
 		pane.setBorder(new EmptyBorder(5,5,5,5));
 		
-		this.mainPane=new JPanel(new MyLayout());
-		pane.add(new JScrollPane(this.mainPane));
+		this.mainPane=new JPanel();
+		this.mainPane.setLayout(new BoxLayout(this.mainPane, BoxLayout.Y_AXIS));
+		pane.add(this.scrollPane=new JScrollPane(this.mainPane));
+		
 		
 		for(OntProperty ontProperty:ontClass.getProperties())
 			{
 			PropertyPart part=new PropertyPart(ontProperty);
-			part.addToContainer(this.mainPane);
+			this.mainPane.add(part);
 			if(instanceIsNew)
 				{
 				
@@ -1947,6 +1861,12 @@ class InstanceEd
 			@Override
 			public void actionPerformed(ActionEvent e)
 				{
+				int n=mainPane.getComponentCount();
+				for(int i=0;i<n;++i)
+					{
+					Component c=mainPane.getComponent(i);
+					if(!(c instanceof PropertyPart)) continue;
+					}
 				closeWithStatus(JOptionPane.OK_OPTION);
 				}
 			};
@@ -2274,6 +2194,8 @@ class Frame
 			clazz);
 		editor.pack();
 		editor.setVisible(true);
+		if(editor.getExitStatus()!=JOptionPane.OK_OPTION) return;
+		InstanceOfClass instance=editor.getInstance();
 		documentModified=true;
 		}
 	

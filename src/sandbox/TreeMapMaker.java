@@ -43,10 +43,6 @@ public class TreeMapMaker
 		{
 		Element node;
 		Frame parent=null;
-		String label;
-		String description;
-		String url;
-		String style="";
 		Rectangle2D.Double bounds=new Rectangle2D.Double();
 		Frame(Element node)
 			{
@@ -117,12 +113,29 @@ public class TreeMapMaker
 				r.x+=MARGIN;
 				r.width-=(MARGIN*2);
 				}
+			else
+				{
+				double L=r.getWidth()*0.05;
+				r.x+=L;
+				r.width-=(L*2.0);
+				}
 			if(r.height>4*MARGIN)
 				{
 				r.y+=MARGIN;
 				r.height-=(MARGIN*2);
 				}
+			else
+				{
+				double L=r.getHeight()*0.05;
+				r.y+=L;
+				r.height-=(L*2.0);
+				}
+			
 			return r;
+			}
+		int getDepth()
+			{
+			return parent==null?0:1+parent.getDepth();
 			}
 		public abstract double getWeight();
 		public abstract boolean isLeaf();
@@ -131,7 +144,6 @@ public class TreeMapMaker
 	
 	static class Leaf extends Frame
 		{
-		double weight=1.0;
 		Leaf(Element root) { super(root);}
 		@Override
 		public double getWeight()
@@ -410,7 +422,6 @@ public class TreeMapMaker
 	   else
 		   {
 		   Leaf leaf=new Leaf(root);
-		   leaf.weight=Double.parseDouble(root.getAttribute("weight"));
 		   frame=leaf;
 		   }
 	   if(hasChildren)
@@ -424,13 +435,12 @@ public class TreeMapMaker
 			   Branch.class.cast(frame).children.add(c);
 			   }
 		   }
-	   frame.label=root.getAttribute("label");
-	   frame.description=root.getAttribute("description");
-	   frame.url=root.getAttribute("url");
+	  
 	   return frame;
 	   }
    
-   private String fitText(String text,
+   private String fitText(
+		   String text,
 		   Font font,
 		   Rectangle2D.Double bounds)
 	   {
@@ -471,18 +481,26 @@ public class TreeMapMaker
    
    private void svg(XMLStreamWriter w,Frame f)throws Exception
 	   {
-	   if(!f.isLeaf()) w.writeStartElement("svg","g",SVG);
+	   String textPath=null;
+	   String selector=null;
 	   Font font=new Font(f.getFontFamily(),Font.BOLD,1+(int)Math.max(f.bounds.width,f.bounds.height));
+	   w.writeStartElement("svg","g",SVG);
+	   selector=f.getStyle("stroke",null);
+	   if(selector!=null)  w.writeAttribute("stroke",selector);
+	   selector=f.getStyle("fill",null);
+	   if(selector!=null)  w.writeAttribute("fill",selector);
+	   selector=f.getStyle("stroke-width",String.valueOf(Math.max(0.2,2/(f.getDepth()+1.0))));
+	   w.writeAttribute("stroke-width",selector);
+	   
 	   
 	   w.writeEmptyElement("svg", "rect", SVG);
-	   if(f.getLabel()!=null) w.writeAttribute("title",f.getLabel());
-	 
+	   if(f.getDescription()!=null) w.writeAttribute("title",f.getDescription());
+	  
 	   w.writeAttribute("x",String.valueOf(f.bounds.getX()));
 	   w.writeAttribute("y",String.valueOf(f.bounds.getY()));
 	   w.writeAttribute("width",String.valueOf(f.bounds.getWidth()));
 	   w.writeAttribute("height",String.valueOf(f.bounds.getHeight()));
-	   w.writeAttribute("stroke",f.getStyle("stroke", "black"));
-	   w.writeAttribute("fill",f.getStyle("fill", "none"));
+	 
 	   if(!f.isLeaf())
 		   {
 		   Branch branch=(Branch)f;
@@ -492,7 +510,6 @@ public class TreeMapMaker
 			   }
 		   if(f.getLabel()!=null)
 			   {
-			   String path=null;
 			   Rectangle2D.Double bbox=f.getInnerRect();
 			   if(bbox.getMaxY()+6 < f.bounds.getMaxY())
 				   {
@@ -501,30 +518,35 @@ public class TreeMapMaker
 						   f.bounds.width,
 						   (f.bounds.getMaxY()-bbox.getMaxY())-4
 						   );
-				   path=fitText(f.getLabel(), font, bbox);
+				   textPath=fitText(f.getLabel(), font, bbox);
 				   }
 			   else if(bbox.getMaxX()+6 < f.bounds.getMaxX())
 				   {
 				   bbox=new Rectangle2D.Double(bbox.getMaxX(),f.bounds.y,(f.bounds.getMaxX()-bbox.getMaxX()),f.bounds.height);
-				   path=fitText(f.getLabel(), font, bbox);
-				   }
-			   if(path!=null)
-				   {
-				   w.writeEmptyElement("svg", "path", SVG);
-				   w.writeAttribute("d",path);
+				   textPath=fitText(f.getLabel(), font, bbox);
 				   }
 			   }
-		   w.writeEndElement();//g
+		   
 		   }
 	   else
 		   {
 		   if(f.getLabel()!=null)
 			   {
-			    String p=fitText(f.getLabel(), font, f.getInnerRect());
-				w.writeEmptyElement("svg", "path", SVG);
-				w.writeAttribute("d",p);
+			   textPath=fitText(f.getLabel(), font, f.getInnerRect());
 			   }
 		   }
+	   
+	   if(textPath!=null)
+		   {
+		   w.writeEmptyElement("svg", "path", SVG);
+		   w.writeAttribute("d",textPath);
+		   selector=f.getStyle("font-stroke",null);
+		   if(selector!=null) w.writeAttribute("font-stroke","none");
+		   selector=f.getStyle("font-fill",null);
+		   if(selector!=null) w.writeAttribute("font-fill",selector);
+		   }
+	   
+	   w.writeEndElement();//g
 	   }
    
     private void svg(Frame f) throws Exception
@@ -563,11 +585,11 @@ public class TreeMapMaker
 					System.err.println(" -h help; This screen.");
 					return;
 					}
-				else if(args[optind].equals("-w"))
+				else if(args[optind].equals("-W"))
 					{
 					app.viewRect.width=Integer.parseInt(args[++optind]);
 					}
-				else if(args[optind].equals("-h"))
+				else if(args[optind].equals("-H"))
 					{
 					app.viewRect.height=Integer.parseInt(args[++optind]);
 					}
