@@ -32,6 +32,56 @@ import javax.xml.stream.XMLStreamWriter;
 public class GimpProcParser
 {
 private XMLStreamWriter out;
+private List<Procedure> procedures=new ArrayList<Procedure>();
+
+private static class Procedure
+	{
+	String funName;
+	String shortDesc;
+	String longDesc;
+	String type;
+	String date;
+	List<Param> params;
+	List<Param> ret;
+	void write(XMLStreamWriter out) throws XMLStreamException
+		{
+		out.writeStartElement("procedure");
+		out.writeAttribute("name",funName);
+		out.writeAttribute("type",type);
+
+		out.writeStartElement("short-desc");
+		out.writeCharacters(shortDesc);
+		out.writeEndElement();
+
+		out.writeStartElement("long-desc");
+		out.writeCharacters(longDesc);
+		out.writeEndElement();
+
+		out.writeStartElement("date");
+		out.writeCharacters(date);
+		out.writeEndElement();
+
+		out.writeStartElement("arguments");
+		out.writeAttribute("size",String.valueOf(params.size()));
+		for(Param m:params)
+			{
+			m.write(out);
+			}
+		out.writeEndElement();
+
+		out.writeStartElement("return");
+		out.writeAttribute("size",String.valueOf(ret.size()));
+		for(Param m:ret)
+			{
+			m.write(out);
+			}
+		out.writeEndElement();
+
+
+		out.writeEndElement();
+		}
+	}
+
 private static class Param
 	{
 	String name;
@@ -55,16 +105,26 @@ private static class Param
 		}
 	}
 
-private static void run(java.io.Reader in) throws Exception
+private void writeXml() throws XMLStreamException
 	{
 	XMLOutputFactory f=XMLOutputFactory.newInstance();
 	XMLStreamWriter w=f.createXMLStreamWriter(System.out);
 	w.writeStartDocument("UTF-8","1.0");
 	w.writeStartElement("gimp-procedures");
-	new GimpProcParser(in).input(w);
+	for(Procedure proc:this.procedures)
+		{
+		proc.write(w);
+		}
 	w.writeEndElement();
 	w.flush();
 	w.close();
+	}
+
+private static void run(java.io.Reader in) throws Exception
+	{
+	GimpProcParser parser=new GimpProcParser(in);
+	parser.procedures=parser.input();
+	parser.writeXml();
 	}
 
 /** just a test */
@@ -125,52 +185,22 @@ TOKEN : /* LITERALS */
 
 
 
-private void input(XMLStreamWriter w)  throws XMLStreamException:
-	{Object o;this.out=w;}
+private List<Procedure> input():
+	{Procedure proc;List<Procedure> L=new ArrayList<Procedure>();}
 	{
-	(registerProcedure())* <EOF>
+	(proc=registerProcedure() {L.add(proc);} )* <EOF>
+		{
+		return L;
+		}
 	}
-private void registerProcedure()  throws XMLStreamException :{String funName;String shortDesc;String longDesc;List<Param> params; List<Param> ret;String type;String date;}
+private Procedure registerProcedure() :{Procedure proc=new Procedure();}
 	{
-	(<LPAR> <REGISTER_PROCEDURE> funName=quoted() shortDesc=quoted() longDesc=quoted() quoted() quoted() date=quoted() type=quoted()
-	params=params()
-	ret=params()
+	(<LPAR> <REGISTER_PROCEDURE> proc.funName=quoted() proc.shortDesc=quoted() proc.longDesc=quoted() quoted() quoted() proc.date=quoted() proc.type=quoted()
+	proc.params=params()
+	proc.ret=params()
 	<RPAR>)
 		{
-		out.writeStartElement("procedure");
-		out.writeAttribute("name",funName);
-		out.writeAttribute("type",type);
-
-		out.writeStartElement("short-desc");
-		out.writeCharacters(shortDesc);
-		out.writeEndElement();
-
-		out.writeStartElement("long-desc");
-		out.writeCharacters(longDesc);
-		out.writeEndElement();
-
-		out.writeStartElement("date");
-		out.writeCharacters(date);
-		out.writeEndElement();
-
-		out.writeStartElement("arguments");
-		out.writeAttribute("size",String.valueOf(params.size()));
-		for(Param m:params)
-			{
-			m.write(out);
-			}
-		out.writeEndElement();
-
-		out.writeStartElement("return");
-		out.writeAttribute("size",String.valueOf(ret.size()));
-		for(Param m:ret)
-			{
-			m.write(out);
-			}
-		out.writeEndElement();
-
-
-		out.writeEndElement();
+		return proc;
 		}
 	}
 
