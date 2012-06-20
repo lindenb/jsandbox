@@ -1,0 +1,202 @@
+
+options {
+STATIC=false;
+JAVA_UNICODE_ESCAPE=true;
+}
+
+
+PARSER_BEGIN(GimpProcParser)
+
+package sandbox;
+
+/**
+ * Author Pierre Lindenbaum
+
+ *
+ */
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import javax.xml.XMLConstants;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+
+
+/**
+ *
+ * GimpProcParser
+ *
+ */
+@SuppressWarnings("unchecked")
+public class GimpProcParser
+{
+private XMLStreamWriter out;
+private static class Param
+	{
+	String name;
+	String type;
+	String desc;
+	void write(XMLStreamWriter out) throws XMLStreamException
+		{
+		out.writeStartElement("param");
+		out.writeStartElement("name");
+		out.writeCharacters(name);
+		out.writeEndElement();
+
+		out.writeStartElement("type");
+		out.writeCharacters(type);
+		out.writeEndElement();
+
+		out.writeStartElement("desc");
+		out.writeCharacters(desc);
+		out.writeEndElement();
+		out.writeEndElement();
+		}
+	}
+
+private static void run(java.io.Reader in) throws Exception
+	{
+	XMLOutputFactory f=XMLOutputFactory.newInstance();
+	XMLStreamWriter w=f.createXMLStreamWriter(System.out);
+	w.writeStartDocument("UTF-8","1.0");
+	w.writeStartElement("gimp-procedures");
+	new GimpProcParser(in).input(w);
+	w.writeEndElement();
+	w.flush();
+	w.close();
+	}
+
+/** just a test */
+public static void main(String args[])
+	{
+	int optind=0;
+	
+
+	try
+	    { 
+	    
+	    if(optind==args.length)
+	    	{
+	    	run(new java.io.InputStreamReader(System.in));
+		}
+	    else if(optind+1==args.length)
+	    	{
+	    	java.io.FileReader in= new java.io.FileReader(args[optind++]);
+		run(in);
+		in.close();
+	    	}
+	    else
+		{
+                System.err.println("Illegal number of arguments.\n");
+		return;
+		}
+          
+	   }
+	catch(Exception err)
+	        {
+	        err.printStackTrace();
+	        }
+	}
+
+}
+
+PARSER_END(GimpProcParser)
+
+SKIP :
+{
+" "
+| "\t"
+| "\n"
+| "\r"
+}
+
+
+TOKEN : /* LITERALS */
+{
+<#ESCAPE_CHAR: "\\" ["n","t","b","r","f","\\","'","\""] >
+| <SIMPLE_QUOTE_LITERAL: "\'" ( (~["\'","\\"]) | <ESCAPE_CHAR> )* "\'" >
+| <DOUBLE_QUOTE_LITERAL: "\"" ( (~["\"","\\"]) | <ESCAPE_CHAR> )* "\"" >
+| <LPAR: "(">
+| <RPAR: ")">
+| <DOTDOT: ":">
+| <REGISTER_PROCEDURE: "register-procedure">
+}
+
+
+
+private void input(XMLStreamWriter w)  throws XMLStreamException:
+	{Object o;this.out=w;}
+	{
+	(registerProcedure())* <EOF>
+	}
+private void registerProcedure()  throws XMLStreamException :{String funName;String shortDesc;String longDesc;List<Param> params; List<Param> ret;String type;String date;}
+	{
+	(<LPAR> <REGISTER_PROCEDURE> funName=quoted() shortDesc=quoted() longDesc=quoted() quoted() quoted() date=quoted() type=quoted()
+	params=params()
+	ret=params()
+	<RPAR>)
+		{
+		out.writeStartElement("procedure");
+		out.writeAttribute("name",funName);
+		out.writeAttribute("type",type);
+
+		out.writeStartElement("short-desc");
+		out.writeCharacters(shortDesc);
+		out.writeEndElement();
+
+		out.writeStartElement("long-desc");
+		out.writeCharacters(longDesc);
+		out.writeEndElement();
+
+		out.writeStartElement("date");
+		out.writeCharacters(date);
+		out.writeEndElement();
+
+		out.writeStartElement("arguments");
+		out.writeAttribute("size",String.valueOf(params.size()));
+		for(Param m:params)
+			{
+			m.write(out);
+			}
+		out.writeEndElement();
+
+		out.writeStartElement("return");
+		out.writeAttribute("size",String.valueOf(ret.size()));
+		for(Param m:ret)
+			{
+			m.write(out);
+			}
+		out.writeEndElement();
+
+
+		out.writeEndElement();
+		}
+	}
+
+private List<Param> params():{ List<Param> array=new ArrayList<Param>(); Param p;}
+	{
+	 ( <LPAR> (p= param() { array.add(p);})* <RPAR>)
+		{
+		return 	array;
+		}
+	}
+
+private Param param():{ Param p=new Param();}
+	{
+	(<LPAR>		
+		p.name=quoted()
+ 		p.type=quoted()
+		p.desc=quoted()
+	<RPAR>)
+		{
+		return p;
+		}
+	}
+
+
+private String quoted():{ Token t;}
+	{
+	t=<DOUBLE_QUOTE_LITERAL> { return t.image.substring(1,t.image.length()-1); }
+	}
+

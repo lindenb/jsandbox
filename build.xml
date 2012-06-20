@@ -37,8 +37,30 @@
 </path>
 
 
-<target name="all" depends="flickrss,treemap,velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
+<target name="all" depends="gimpprocparser,flickrss,treemap,velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
+</target>
+
+
+<target name="gimpprocparser">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<mkdir dir="tmp/sandbox"/>
+	<exec executable="javacc">
+		<arg value="-OUTPUT_DIRECTORY=tmp/sandbox"/>
+		<arg value="src/sandbox/GimpProcedures.jj"/>
+	</exec>
+	<javac srcdir="tmp" destdir="tmp" debug="true" includeantruntime="no">
+		<include name="**/GimpProcParser.java" />
+	</javac>
+	<jar destfile="dist/gimpprocparser.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.GimpProcParser"/>
+		 	<attribute name="Class-Path" value="${velocity.claspath}" />
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
 </target>
 
 
