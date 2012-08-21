@@ -7,10 +7,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +16,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 
-import javax.print.attribute.standard.MediaSize.Other;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
@@ -64,13 +61,17 @@ public class FlickrRss
 	private enum Format { html,atom};
 	private Format format=Format.html;
 	private boolean printMime=false;
-	private Set<Photo> photos=new TreeSet<FlickrRss.Photo>();
+	private TreeSet<Photo> photos=new TreeSet<FlickrRss.Photo>();
 	private int max_count=-1;
+	private int start_index=0;
 	private ScriptEngine jsEngine;
+	private String dateStart=null;
+	private String dateEnd=null;
+	private boolean enableGroup=true;
 	
 	static public class Photo implements Comparable<Photo>
 		{
-		String id=null;
+		Long id=null;
 		String owner=null;
 		String secret=null;
 		String title=null;
@@ -80,10 +81,42 @@ public class FlickrRss
 		String farm;
 		String tags;
 		Long dateupload;
-		
+		String date_taken="";//e.g: 2012-06-26 19:06:42
+		int o_width;
+		int o_height;
 		public String[] getTags()
 			{
 			return this.tags.split("[ \t]+");
+			}
+		public String getOwner()
+			{
+			return this.owner;
+			}
+		public int getWidth()
+			{
+			if(this.o_width>this.o_height)
+				{
+				return 240;
+				}
+			else
+				{
+				return (int)((240.0/o_height)*o_width);
+				}
+			}
+		public int getHeight()
+			{
+			if(this.o_width>this.o_height)
+				{
+				return (int)((240.0/o_width)*o_height);
+				}
+			else
+				{
+				return 240;
+				}
+			}
+		public String getTitle()
+			{
+			return title.toLowerCase();
 			}
 		
 		public String getLicense()
@@ -103,7 +136,7 @@ public class FlickrRss
 		
 		@Override
 		public int hashCode() {
-			return String.valueOf(id).hashCode();
+			return id.hashCode();
 			}
 		
 		@Override
@@ -112,11 +145,12 @@ public class FlickrRss
 			if(this==o) return 0;
 			Photo other=Photo.class.cast(o);
 			if(other.id.equals(this.id)) return 0;
-			return this.dateupload.compareTo(other.dateupload);
+			return other.dateupload.compareTo(this.dateupload);
 			}
 		
 		@Override
-		public boolean equals(Object obj) {
+		public boolean equals(Object obj)
+			{
 			return Photo.class.cast(obj).id.equals(this.id);
 			}
 		
@@ -140,6 +174,15 @@ public class FlickrRss
 			w.writeAttribute("href", this.getPageURL());
 			w.writeEmptyElement("img");
 			w.writeAttribute("src", this.getPhotoURL());
+			if(getWidth()>0 && getHeight()>0)
+				{
+				w.writeAttribute("width",String.valueOf(this.getWidth()));
+				w.writeAttribute("height",String.valueOf(this.getHeight()));
+				}
+			else
+				{
+				w.writeAttribute("height","240");
+				}
 			w.writeEndElement();//a
 			
 			w.writeEmptyElement("br");
@@ -159,7 +202,7 @@ public class FlickrRss
 		{
 		Photo p=new Photo();
 		Attribute att=start.getAttributeByName(new QName("id"));
-		if(att!=null) p.id=att.getValue();
+		if(att!=null) p.id=new Long(att.getValue());
 		att=start.getAttributeByName(new QName("secret"));
 		if(att!=null) p.secret=att.getValue();
 		att=start.getAttributeByName(new QName("owner"));
@@ -178,7 +221,13 @@ public class FlickrRss
 		if(att!=null) p.tags=att.getValue();
 		att=start.getAttributeByName(new QName("dateupload"));
 		if(att!=null) p.dateupload= new Long(att.getValue());
-	
+		att=start.getAttributeByName(new QName("datetaken"));
+		if(att!=null) p.date_taken= att.getValue();
+		att=start.getAttributeByName(new QName("o_width"));
+		if(att!=null) p.o_width= Integer.parseInt(att.getValue());
+		att=start.getAttributeByName(new QName("o_height"));
+		if(att!=null) p.o_height= Integer.parseInt(att.getValue());
+		
 		while(r.hasNext())
 			{
 			XMLEvent evt=r.nextEvent();
@@ -223,6 +272,12 @@ public class FlickrRss
 					Photo photo=parsePhoto(e, r);
 					L.add(photo);
 					}
+				else if(name.equals("err"))
+					{
+					System.err.println("ERROR:"+r.getElementText());
+					System.exit(-1);
+					}
+
 				}
 			}
 		r.close();
@@ -273,12 +328,26 @@ public class FlickrRss
 				}
 			case html:
 				{
+				final int num_cols=4;
+				int x=0;
 				w.writeStartElement("html");
 				w.writeStartElement("body");
+				w.writeStartElement("table");
 				for(Photo photo: this.photos)
 					{
+					if(x==0) w.writeStartElement("tr");
+					w.writeStartElement("td");
 					photo.writeHtml(w);
+					w.writeEndElement();
+					++x;
+					if(x==num_cols)
+						{
+						w.writeEndElement();
+						x=0;
+						}
 					}
+				if(x!=0) w.writeEndElement();//tr
+				w.writeEndElement();//table
 				w.writeEndElement();
 				w.writeEndElement();
 				break;
@@ -294,7 +363,7 @@ public class FlickrRss
 			Node root,
 			Map<String,String> args)
 		{
-		args.put("extras","license,description,owner_name,icon_server,tags,date_upload");
+		args.put("extras","o_dims,license,description,owner_name,icon_server,tags,date_upload");
 		if(root==null) return args;
 		for(Node c2=root.getFirstChild();c2!=null;c2=c2.getNextSibling())
 			{
@@ -335,7 +404,7 @@ public class FlickrRss
 				recursive(c1);
 				continue;
 				}
-			else if("query".equals(c1.getNodeName()))
+			else if ( "query".equals(c1.getNodeName()))
 				{
 				Map<String,String> args=getArguments(c1, new HashMap<String,String>());
 				String script=getScript(c1,"");
@@ -349,10 +418,24 @@ public class FlickrRss
 					url.append('=');
 					url.append(URLEncoder.encode(attValue, "UTF-8"));
 					}
+				if(dateStart!=null)
+					{
+					url.append("&min_upload_date=");
+					url.append(URLEncoder.encode(dateStart, "UTF-8"));
+					}
+				if(dateEnd!=null)
+					{
+					url.append("&max_upload_date=");
+					url.append(URLEncoder.encode(dateEnd, "UTF-8"));
+					}
 			
 				SimpleBindings bind=new SimpleBindings();
 				
-				List<Photo> L= parseUrl(url.toString());
+				List<Photo> L=new ArrayList<Photo>();
+				if(enableGroup || "flickr.groups.pools.getPhotos".equals(args.get("method"))==false )
+					{
+					L=parseUrl(url.toString());
+					}
 				if(!script.isEmpty())
 					{
 
@@ -379,11 +462,10 @@ public class FlickrRss
 				if(this.max_count!=-1)
 					{
 					while(!this.photos.isEmpty() &&
-						  this.photos.size()> this.max_count)
+						  this.photos.size()> (this.start_index+this.max_count) )
 						{
-						Iterator<Photo> t=this.photos.iterator();
-						t.next();
-						t.remove();
+						Photo last=this.photos.last();
+						this.photos.remove(last);
 						}
 					}
 				}
@@ -403,6 +485,14 @@ public class FlickrRss
 			Document dom=builder.parse(config);
 			Element root=dom.getDocumentElement();
 			recursive(root);
+			//remove head
+			for(int i=0;i<this.start_index && !this.photos.isEmpty();++i)
+				{
+				Iterator<Photo> iter=this.photos.iterator();
+				iter.next();
+				iter.remove();
+				}
+			
 			dump();
 			System.exit(0);
 			}
@@ -424,7 +514,34 @@ public class FlickrRss
 				{
 				System.err.println("Options:");
 				System.err.println(" -h help; This screen.");
+				System.err.println(" -proxyHost <host>.");
+				System.err.println(" -proxyPort <port>.");
+				System.err.println(" -n <count>.");
+				System.err.println(" -s <start0>.");
+				System.err.println(" --date-start <YYYYMMDD>.");
+				System.err.println(" --date-end <YYYYMMDD>.");
+				System.err.println(" --html --atom ");
+				System.err.println(" --mime ");
+				System.err.println(" --no-group ");
 				return;
+				}
+			else if(args[optind].equals("--no-group"))
+				{
+				app.enableGroup=false;
+				}
+			else if(args[optind].equals("--date-start"))
+				{
+				app.dateStart=args[++optind];
+				}
+			else if(args[optind].equals("--date-end"))
+				{
+				app.dateEnd=args[++optind];
+				}
+			else if(args[optind].equals("--date"))
+				{
+				app.dateStart=args[++optind];
+				app.dateEnd=app.dateStart+"  23:59:59";
+				app.dateStart+="  00:00:01";
 				}
 			else if(args[optind].equals("-proxyHost"))
 				{
@@ -438,6 +555,11 @@ public class FlickrRss
 				{
 				app.max_count=Integer.parseInt(args[++optind]);
 				}
+			else if(args[optind].equals("-s") && optind+1< args.length)
+				{
+				app.start_index=Integer.parseInt(args[++optind]);
+				}	
+				
 			else if(args[optind].equals("--atom"))
 				{
 				app.format=Format.atom;
