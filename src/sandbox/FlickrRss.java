@@ -11,7 +11,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Comparator;
 import java.util.Map;
+import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Logger;
@@ -68,8 +70,9 @@ public class FlickrRss
 	private String dateStart=null;
 	private String dateEnd=null;
 	private boolean enableGroup=true;
+
 	
-	static public class Photo implements Comparable<Photo>
+	private class Photo implements Comparable<Photo>
 		{
 		Long id=null;
 		String owner=null;
@@ -84,6 +87,7 @@ public class FlickrRss
 		String date_taken="";//e.g: 2012-06-26 19:06:42
 		int o_width;
 		int o_height;
+		int views=0;
 		public String[] getTags()
 			{
 			return this.tags.split("[ \t]+");
@@ -145,6 +149,7 @@ public class FlickrRss
 			if(this==o) return 0;
 			Photo other=Photo.class.cast(o);
 			if(other.id.equals(this.id)) return 0;
+
 			return other.dateupload.compareTo(this.dateupload);
 			}
 		
@@ -186,7 +191,7 @@ public class FlickrRss
 			w.writeEndElement();//a
 			
 			w.writeEmptyElement("br");
-			w.writeCharacters(this.title);
+			w.writeCharacters(this.title.length()>20?this.title.substring(0,17)+"...":this.title);
 			w.writeEndElement();
 			}
 		}
@@ -227,6 +232,8 @@ public class FlickrRss
 		if(att!=null) p.o_width= Integer.parseInt(att.getValue());
 		att=start.getAttributeByName(new QName("o_height"));
 		if(att!=null) p.o_height= Integer.parseInt(att.getValue());
+		att=start.getAttributeByName(new QName("views"));
+		if(att!=null) p.views= Integer.parseInt(att.getValue());
 		
 		while(r.hasNext())
 			{
@@ -333,7 +340,19 @@ public class FlickrRss
 				w.writeStartElement("html");
 				w.writeStartElement("body");
 				w.writeStartElement("table");
-				for(Photo photo: this.photos)
+				List<Photo> sorted=new ArrayList<Photo>(this.photos);
+				Collections.sort(sorted,new Comparator<Photo>()
+					{
+					@Override
+					public int compare(Photo a, Photo b)
+						{
+						int i=b.views-a.views;//inverse
+						if(i!=0) return i;
+						return a.compareTo(b);
+						} 
+					});
+				
+				for(Photo photo: sorted)
 					{
 					if(x==0) w.writeStartElement("tr");
 					w.writeStartElement("td");
@@ -363,7 +382,7 @@ public class FlickrRss
 			Node root,
 			Map<String,String> args)
 		{
-		args.put("extras","o_dims,license,description,owner_name,icon_server,tags,date_upload");
+		args.put("extras","o_dims,license,description,owner_name,icon_server,tags,date_upload,views");
 		if(root==null) return args;
 		for(Node c2=root.getFirstChild();c2!=null;c2=c2.getNextSibling())
 			{
@@ -540,8 +559,8 @@ public class FlickrRss
 			else if(args[optind].equals("--date"))
 				{
 				app.dateStart=args[++optind];
-				app.dateEnd=app.dateStart+"  23:59:59";
-				app.dateStart+="  00:00:01";
+				app.dateEnd=app.dateStart+" 23:59:59";
+				app.dateStart+=" 00:00:01";
 				}
 			else if(args[optind].equals("-proxyHost"))
 				{
