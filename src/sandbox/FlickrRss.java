@@ -38,6 +38,7 @@ import javax.xml.stream.events.XMLEvent;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.Attr;
 
 
 // http://www.flickr.com/services/api/flickr.photos.search.html
@@ -70,6 +71,7 @@ public class FlickrRss
 	private String dateStart=null;
 	private String dateEnd=null;
 	private boolean enableGroup=true;
+	private boolean sort_on_views=false;
 
 	
 	private class Photo implements Comparable<Photo>
@@ -88,6 +90,13 @@ public class FlickrRss
 		int o_width;
 		int o_height;
 		int views=0;
+		int priority=1;
+		
+		public int getPriority()
+			{
+			return priority;
+			}
+		
 		public String[] getTags()
 			{
 			return this.tags.split("[ \t]+");
@@ -118,9 +127,13 @@ public class FlickrRss
 				return 240;
 				}
 			}
+		public String getDescription()
+			{
+			return description==null?"":description.toLowerCase();
+			}
 		public String getTitle()
 			{
-			return title.toLowerCase();
+			return title==null?"":title.toLowerCase();
 			}
 		
 		public String getLicense()
@@ -149,7 +162,8 @@ public class FlickrRss
 			if(this==o) return 0;
 			Photo other=Photo.class.cast(o);
 			if(other.id.equals(this.id)) return 0;
-
+			int i=o.priority-this.priority;
+			if(i!=0) return i;
 			return other.dateupload.compareTo(this.dateupload);
 			}
 		
@@ -174,11 +188,13 @@ public class FlickrRss
 		void writeHtml(XMLStreamWriter w) throws XMLStreamException
 			{
 			w.writeStartElement("div");
-			
+			w.writeAttribute("style","margin:10px;background-color:lightgray;");
 			w.writeStartElement("a");
+			w.writeAttribute("title", this.getTitle());
 			w.writeAttribute("href", this.getPageURL());
 			w.writeEmptyElement("img");
 			w.writeAttribute("src", this.getPhotoURL());
+			w.writeAttribute("style","max-width:240px;");
 			if(getWidth()>0 && getHeight()>0)
 				{
 				w.writeAttribute("width",String.valueOf(this.getWidth()));
@@ -192,6 +208,8 @@ public class FlickrRss
 			
 			w.writeEmptyElement("br");
 			w.writeCharacters(this.title.length()>20?this.title.substring(0,17)+"...":this.title);
+			w.writeEmptyElement("br");
+			w.writeCharacters("by "+owner);
 			w.writeEndElement();
 			}
 		}
@@ -341,16 +359,19 @@ public class FlickrRss
 				w.writeStartElement("body");
 				w.writeStartElement("table");
 				List<Photo> sorted=new ArrayList<Photo>(this.photos);
-				Collections.sort(sorted,new Comparator<Photo>()
+				if(this.sort_on_views)
 					{
-					@Override
-					public int compare(Photo a, Photo b)
+					Collections.sort(sorted,new Comparator<Photo>()
 						{
-						int i=b.views-a.views;//inverse
-						if(i!=0) return i;
-						return a.compareTo(b);
-						} 
-					});
+						@Override
+						public int compare(Photo a, Photo b)
+							{
+							int i=b.views-a.views;//inverse
+							if(i!=0) return i;
+							return a.compareTo(b);
+							} 
+						});
+					}
 				
 				for(Photo photo: sorted)
 					{
@@ -455,10 +476,16 @@ public class FlickrRss
 					{
 					L=parseUrl(url.toString());
 					}
+				Node att=c1.getAttributes().getNamedItem("priority");
+				if(att!=null)
+					{
+					int priority=Integer.parseInt(Attr.class.cast(att).getValue());
+					for(Photo p:L) p.priority+=priority;
+					}
+				
 				if(!script.isEmpty())
 					{
-
-					for	(Photo p:L)
+					for(Photo p:L)
 						{
 						bind.put("photo", p);
 						try
@@ -468,9 +495,10 @@ public class FlickrRss
 								this.photos.add(p);
 								}
 							}
-						catch (ScriptException e)
+						catch (Throwable e)
 							{
 							e.printStackTrace();
+							break;
 							}
 						}
 					}
@@ -542,7 +570,12 @@ public class FlickrRss
 				System.err.println(" --html --atom ");
 				System.err.println(" --mime ");
 				System.err.println(" --no-group ");
+				System.err.println(" --sort-views ");
 				return;
+				}
+			else if(args[optind].equals("--sort-views"))
+				{
+				app.sort_on_views=true;
 				}
 			else if(args[optind].equals("--no-group"))
 				{
