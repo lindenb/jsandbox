@@ -1,5 +1,34 @@
-<project default="all">
+<project default="all"  xmlns:ivy="antlib:org.apache.ivy.ant">
 <property file="build.properties"/>
+
+
+<property name="ivy.install.version" value="2.2.0" />
+<property name="ivy.jar.dir" value="${user.home}/.ivy" />
+<property name="ivy.jar.file" value="${ivy.jar.dir}/ivy.jar" />
+
+    <target name="download-ivy" unless="skip.download">
+
+        <mkdir dir="${ivy.jar.dir}"/>
+        <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar"
+            dest="${ivy.jar.file}" usetimestamp="true"/>
+    </target>
+
+    <target name="install-ivy" depends="download-ivy" description="--> install ivy">
+        <path id="ivy.lib.path">
+            <fileset dir="${ivy.jar.dir}" includes="*.jar"/>
+        </path>
+        <taskdef
+            resource="org/apache/ivy/ant/antlib.xml"
+            uri="antlib:org.apache.ivy.ant"
+            classpathref="ivy.lib.path"
+        />
+    </target>
+
+
+  <target name="ivy.libs" depends="install-ivy"  description="">
+    <ivy:cachepath pathid="lib.path.id"/>
+  </target>
+
 
 <path id="jena.jars" description="ALl Jars for JENA">
 	<fileset  dir="${jena.dir}">
@@ -37,10 +66,31 @@
 </path>
 
 
-<target name="all" depends="gimpprocparser,flickrss,treemap,velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
+<path id="scribe.jars">
+	<pathelement location="/home/lindenb/package/scribe-1.3.2.jar"/>
+	<pathelement location="/home/lindenb/package/eclipse/plugins/org.apache.commons.codec_1.3.0.v201101211617.jar"/>
+</path>
+
+<target name="all" depends="mergepictures,twittercmd,gimpprocparser,flickrss,treemap,velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
 </target>
 
+<target name="mergepictures">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+
+
+	<javac srcdir="src" destdir="tmp" debug="true" includeantruntime="no">
+		<include name="**/MergePictures.java" />
+	</javac>
+	<jar destfile="dist/mergepictures.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.MergePictures"/>
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
+</target>
 
 <target name="gimpprocparser">
 	<mkdir dir="dist"/>
@@ -57,24 +107,51 @@
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
 			<attribute name="Main-Class" value="sandbox.GimpProcParser"/>
-		 	<attribute name="Class-Path" value="${velocity.claspath}" />
 		</manifest>
 	</jar>
 	<delete dir="tmp"/>
 </target>
 
 
+<target name="twittercmd">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<javac srcdir="src" destdir="tmp" debug="true" includeantruntime="false">
+		<classpath refid="scribe.jars"/>
+		<include name="**/TwitterCmd.java" />
+	</javac>
+	
+	<pathconvert property="scribe.classpath" pathsep=" ">
+		<path refid="scribe.jars" />
+	</pathconvert>
+	
+	<jar destfile="dist/twittercmd.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.TwitterCmd"/>
+			<attribute name="Class-Path" value="${scribe.classpath}" />
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
+</target>
+
 <target name="flickrss">
 	<mkdir dir="dist"/>
 	<mkdir dir="tmp"/>
 	<javac srcdir="src" destdir="tmp" debug="true" includeantruntime="false">
+		<classpath refid="scribe.jars"/>
 		<include name="**/FlickrRss.java" />
 	</javac>
+	
+	<pathconvert property="scribe.classpath" pathsep=" ">
+		<path refid="scribe.jars" />
+	</pathconvert>
 	
 	<jar destfile="dist/flickrrss.jar" basedir="tmp">
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
 			<attribute name="Main-Class" value="sandbox.FlickrRss"/>
+			<attribute name="Class-Path" value="${scribe.classpath}" />
 		</manifest>
 	</jar>
 	<delete dir="tmp"/>
@@ -652,5 +729,29 @@
    </jar>
    <delete dir="tmp"/>
 </target>
+
+<target name="stackexchangeskills" depends="ivy.libs">
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp" debug="true" includeantruntime="false">
+      <classpath refid="lib.path.id"/>
+      <include name="**/StackExchangeSkills.java" />
+   </javac>
+   
+   <pathconvert property="myclasspath" pathsep=" ">
+      <path refid="lib.path.id" />
+   </pathconvert>	
+   
+   
+   <jar destfile="dist/stackexchangeskills.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.StackExchangeSkills"/>
+         <attribute name="Class-Path" value="${myclasspath}" />
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>
+
 
 </project>

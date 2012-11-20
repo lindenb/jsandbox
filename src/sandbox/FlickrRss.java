@@ -1,10 +1,12 @@
 package sandbox;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.net.URLEncoder;
+import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -14,14 +16,14 @@ import java.util.List;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Collections;
-import java.util.Set;
+import java.util.Properties;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 import javax.script.SimpleBindings;
+import javax.swing.JOptionPane;
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -39,6 +41,12 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.Attr;
+
+
+import org.scribe.builder.*;
+import org.scribe.builder.api.*;
+import org.scribe.model.*;
+import org.scribe.oauth.*;
 
 
 // http://www.flickr.com/services/api/flickr.photos.search.html
@@ -72,20 +80,24 @@ public class FlickrRss
 	private String dateEnd=null;
 	private boolean enableGroup=true;
 	private boolean sort_on_views=false;
-
+	private Properties flickrProperties=new Properties();
+	private OAuthService service;
+	private org.scribe.model.Token accessToken;
+	private boolean use_priority=true;
 	
 	private class Photo implements Comparable<Photo>
 		{
 		Long id=null;
 		String owner=null;
+		String ownername=null;
 		String secret=null;
 		String title=null;
 		String license=null;
 		String description=null;
-		String server;
-		String farm;
-		String tags;
-		Long dateupload;
+		String server=null;
+		String farm=null;
+		String tags=null;
+		Long dateupload=null;
 		String date_taken="";//e.g: 2012-06-26 19:06:42
 		int o_width;
 		int o_height;
@@ -94,17 +106,23 @@ public class FlickrRss
 		
 		public int getPriority()
 			{
-			return priority;
+			return (use_priority?priority:1);
 			}
 		
 		public String[] getTags()
 			{
-			return this.tags.split("[ \t]+");
+			return (this.tags==null?"":this.tags).split("[ \t]+");
 			}
 		public String getOwner()
 			{
-			return this.owner;
+			return this.owner==null?"":this.owner;
 			}
+		
+		public String getOwnerName()
+			{
+			return this.ownername==null?getOwner():this.ownername;
+			}
+		
 		public int getWidth()
 			{
 			if(this.o_width>this.o_height)
@@ -138,12 +156,12 @@ public class FlickrRss
 		
 		public String getLicense()
 			{
-			return license;
+			return license==null?"":this.license;
 			}
 		
 		public String getPageURL()
 			{
-			return "http://www.flickr.com/photos/"+owner+"/"+id+"/";
+			return "http://www.flickr.com/photos/"+this.owner+"/"+id+"/";
 			}
 		
 		public String getPhotoURL()
@@ -162,9 +180,9 @@ public class FlickrRss
 			if(this==o) return 0;
 			Photo other=Photo.class.cast(o);
 			if(other.id.equals(this.id)) return 0;
-			int i=o.priority-this.priority;
+			int i=o.getPriority()-this.getPriority();
 			if(i!=0) return i;
-			return other.dateupload.compareTo(this.dateupload);
+			return other.id.compareTo(this.id);
 			}
 		
 		@Override
@@ -209,7 +227,7 @@ public class FlickrRss
 			w.writeEmptyElement("br");
 			w.writeCharacters(this.title.length()>20?this.title.substring(0,17)+"...":this.title);
 			w.writeEmptyElement("br");
-			w.writeCharacters("by "+owner);
+			w.writeCharacters("by "+getOwnerName());
 			w.writeEndElement();
 			}
 		}
@@ -230,6 +248,9 @@ public class FlickrRss
 		if(att!=null) p.secret=att.getValue();
 		att=start.getAttributeByName(new QName("owner"));
 		if(att!=null) p.owner=att.getValue();
+		att=start.getAttributeByName(new QName("ownername"));
+		if(att!=null) p.ownername=att.getValue();
+
 		att=start.getAttributeByName(new QName("title"));
 		if(att!=null) p.title=att.getValue();
 		att=start.getAttributeByName(new QName("license"));
@@ -276,11 +297,15 @@ public class FlickrRss
 		}
 	
 	
-	protected List<Photo> parseUrl(String url)throws IOException,XMLStreamException
+	protected List<Photo> parseUrl(OAuthRequest request)throws IOException,XMLStreamException
 		{
-		LOG.info(url);
+		service.signRequest(accessToken, request);
+		Response response = request.send();
+		LOG.info(request.getCompleteUrl());
+		LOG.info(request.getQueryStringParams().toString());
 		List<Photo> L=new ArrayList<FlickrRss.Photo>();
-		InputStream  in=new URL(url).openStream();
+		
+		InputStream  in=response.getStream();
 		XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
 		xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, Boolean.FALSE);
 		XMLEventReader r= xmlInputFactory.createXMLEventReader(in);	
@@ -403,6 +428,8 @@ public class FlickrRss
 			Node root,
 			Map<String,String> args)
 		{
+		args.put("api_key",this.flickrProperties.getProperty("api_key",""));
+		
 		args.put("extras","o_dims,license,description,owner_name,icon_server,tags,date_upload,views");
 		if(root==null) return args;
 		for(Node c2=root.getFirstChild();c2!=null;c2=c2.getNextSibling())
@@ -446,27 +473,23 @@ public class FlickrRss
 				}
 			else if ( "query".equals(c1.getNodeName()))
 				{
+				OAuthRequest request = new OAuthRequest(Verb.POST, BASE_REST);
+				
 				Map<String,String> args=getArguments(c1, new HashMap<String,String>());
 				String script=getScript(c1,"");
 				//System.err.println("script:"+script);
-				StringBuilder url=new StringBuilder(BASE_REST);
 				for(String attName:args.keySet())
 					{
 					String attValue=args.get(attName);
-					url.append(url.length()==BASE_REST.length()?'?':'&');
-					url.append(attName);
-					url.append('=');
-					url.append(URLEncoder.encode(attValue, "UTF-8"));
+					request.addBodyParameter(attName,attValue);
 					}
 				if(dateStart!=null)
 					{
-					url.append("&min_upload_date=");
-					url.append(URLEncoder.encode(dateStart, "UTF-8"));
+					request.addBodyParameter("min_upload_date",dateStart);
 					}
 				if(dateEnd!=null)
 					{
-					url.append("&max_upload_date=");
-					url.append(URLEncoder.encode(dateEnd, "UTF-8"));
+					request.addBodyParameter("max_upload_date",dateEnd);
 					}
 			
 				SimpleBindings bind=new SimpleBindings();
@@ -474,10 +497,10 @@ public class FlickrRss
 				List<Photo> L=new ArrayList<Photo>();
 				if(enableGroup || "flickr.groups.pools.getPhotos".equals(args.get("method"))==false )
 					{
-					L=parseUrl(url.toString());
+					L=parseUrl(request);
 					}
 				Node att=c1.getAttributes().getNamedItem("priority");
-				if(att!=null)
+				if(att!=null && this.use_priority)
 					{
 					int priority=Integer.parseInt(Attr.class.cast(att).getValue());
 					for(Photo p:L) p.priority+=priority;
@@ -487,6 +510,7 @@ public class FlickrRss
 					{
 					for(Photo p:L)
 						{
+						if(p==null || p.id==null) continue;
 						bind.put("photo", p);
 						try
 							{
@@ -497,6 +521,7 @@ public class FlickrRss
 							}
 						catch (Throwable e)
 							{
+							System.err.println("Error with photo "+p.id);
 							e.printStackTrace();
 							break;
 							}
@@ -524,8 +549,41 @@ public class FlickrRss
 		{
 	
 		try {
-			
-			
+		    this.service = new ServiceBuilder()
+		        .provider(FlickrApi.class)
+		        .apiKey(this.flickrProperties.getProperty("api_key",""))
+		        .apiSecret(this.flickrProperties.getProperty("api_secret",""))
+		        .build();
+	    
+		    org.scribe.model.Token requestToken = service.getRequestToken();
+		    LOG.info("got request token");
+		    
+		    this.accessToken=null;
+		    boolean update_token_file=true;
+		    File prefs=new File(System.getProperty("user.home"),".flickr_api.tokens.txt");
+		    if(prefs.exists())
+		    	{
+		    	BufferedReader in=new BufferedReader(new FileReader(prefs));
+		    	String token=in.readLine();
+		    	String secret=in.readLine();
+		    	String raw=in.readLine();
+		    	in.close();
+		    	if(token!=null && secret!=null)
+		    		{
+		    		this.accessToken=new org.scribe.model.Token(token,secret,raw);
+		    		}
+		    	update_token_file=false;
+		    	}
+		    
+		    if(this.accessToken==null || accessToken.isEmpty())
+		    	{
+		    	System.err.println("GO TO URL:\n"+service.getAuthorizationUrl(requestToken));
+		    	System.err.println();
+		    	Verifier verifier = new Verifier(JOptionPane.showInputDialog("Token?"));
+		    	this.accessToken = service.getAccessToken(requestToken, verifier);
+		    	}
+		   
+		    
 			DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
 			factory.setNamespaceAware(false);
 			DocumentBuilder builder=factory.newDocumentBuilder();
@@ -541,6 +599,17 @@ public class FlickrRss
 				}
 			
 			dump();
+			
+			if(update_token_file)
+				{
+				PrintWriter pw=new PrintWriter(prefs);
+				pw.println(this.accessToken.getToken());
+				pw.println(this.accessToken.getSecret());
+				pw.println(this.accessToken.getRawResponse());
+				pw.flush();
+				pw.close();
+				}
+			
 			System.exit(0);
 			}
 		catch (Exception e) 
@@ -571,7 +640,12 @@ public class FlickrRss
 				System.err.println(" --mime ");
 				System.err.println(" --no-group ");
 				System.err.println(" --sort-views ");
+				System.err.println(" -p do not use priority");
 				return;
+				}
+			else if(args[optind].equals("-p"))
+				{
+				app.use_priority=false;
 				}
 			else if(args[optind].equals("--sort-views"))
 				{
@@ -640,6 +714,10 @@ public class FlickrRss
 				}
 			++optind;
 			}
+		
+		FileInputStream isf=new FileInputStream(new File(System.getProperty("user.home"), ".flickr_api.xml"));
+		app.flickrProperties.loadFromXML(isf);
+		isf.close();
 		
 		if(optind+1!=args.length)
 			{
