@@ -38,7 +38,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 
-public class XmlToXsd
+public class JsonToXsd
 	{
 	private static final String XSD=XMLConstants.W3C_XML_SCHEMA_NS_URI;
 	private static final String JXB="http://java.sun.com/xml/ns/jaxb";
@@ -307,7 +307,7 @@ public class XmlToXsd
 		{
 		try
 			{
-			XmlToXsd app=new XmlToXsd();
+			JsonToXsd app=new JsonToXsd();
 			int optind=0;
 			while(optind< args.length)
 				{
