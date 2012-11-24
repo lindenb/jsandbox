@@ -2,12 +2,17 @@ package sandbox;
 
 import java.awt.Desktop;
 import java.io.Console;
+import java.io.PrintStream;
+import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 import javax.swing.JOptionPane;
+import javax.xml.stream.XMLEventFactory;
+import javax.xml.stream.XMLEventWriter;
+import javax.xml.stream.events.XMLEvent;
 
 
 import org.scribe.builder.ServiceBuilder;
@@ -32,6 +37,7 @@ public abstract class AbstractOAuthApplication
 	protected String api_key=null;
 	protected String api_secret=null;
 
+	
 	
 	protected AbstractOAuthApplication()
 		{
@@ -247,8 +253,7 @@ public abstract class AbstractOAuthApplication
 	        
 	        
 	        org.scribe.model.Token requestToken=null;
-	        if("A".equals("B"))
-	        {
+	       
 		requestToken  =  this.service.getRequestToken();
 		 LOG.info("got request token");
 		 
@@ -267,7 +272,7 @@ public abstract class AbstractOAuthApplication
 	    				);
 	    		}
 		     }
-		     }
+		     
 		    
 	    if(this.accessToken==null || accessToken.isEmpty())
 	    	{

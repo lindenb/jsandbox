@@ -71,7 +71,7 @@
 	<pathelement location="/home/lindenb/package/eclipse/plugins/org.apache.commons.codec_1.3.0.v201101211617.jar"/>
 </path>
 
-<target name="all" depends="makegraphdependencies,mergepictures,twittercmd,gimpprocparser,flickrss,treemap,velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
+<target name="all" depends="makegraphdependencies,mergepictures,twitterbackup,gimpprocparser,flickrss,treemap,velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
 </target>
 
@@ -113,27 +113,7 @@
 </target>
 
 
-<target name="twittercmd">
-	<mkdir dir="dist"/>
-	<mkdir dir="tmp"/>
-	<javac srcdir="src" destdir="tmp" debug="true" includeantruntime="false">
-		<classpath refid="scribe.jars"/>
-		<include name="**/TwitterCmd.java" />
-	</javac>
-	
-	<pathconvert property="scribe.classpath" pathsep=" ">
-		<path refid="scribe.jars" />
-	</pathconvert>
-	
-	<jar destfile="dist/twittercmd.jar" basedir="tmp">
-		<manifest>
-			<attribute name="Built-By" value="${user.name}"/>
-			<attribute name="Main-Class" value="sandbox.TwitterCmd"/>
-			<attribute name="Class-Path" value="${scribe.classpath}" />
-		</manifest>
-	</jar>
-	<delete dir="tmp"/>
-</target>
+
 
 <target name="flickrss">
 	<mkdir dir="dist"/>
@@ -728,6 +708,28 @@
       </manifest>
    </jar>
    <delete dir="tmp"/>
+</target>
+
+<target name="twitterbackup" depends="ivy.libs">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+	<javac srcdir="src" destdir="tmp" debug="true" includeantruntime="false">
+      		<classpath refid="lib.path.id"/>
+		<include name="**/TwitterBackup.java" />
+	</javac>
+	
+	<pathconvert property="myclasspath" pathsep=" ">
+     	 	<path refid="lib.path.id" />
+	</pathconvert>
+	
+	<jar destfile="dist/twitterbackup.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.TwitterBackup"/>
+         <attribute name="Class-Path" value="${myclasspath}" />
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
 </target>
 
 <target name="stackexchangeskills" depends="ivy.libs">
