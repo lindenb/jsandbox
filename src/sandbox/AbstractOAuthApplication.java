@@ -2,17 +2,12 @@ package sandbox;
 
 import java.awt.Desktop;
 import java.io.Console;
-import java.io.PrintStream;
-import java.util.List;
 import java.util.Scanner;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
-
 import javax.swing.JOptionPane;
-import javax.xml.stream.XMLEventFactory;
-import javax.xml.stream.XMLEventWriter;
-import javax.xml.stream.events.XMLEvent;
 
 
 import org.scribe.builder.ServiceBuilder;
@@ -28,6 +23,9 @@ import org.scribe.oauth.OAuthService;
 public abstract class AbstractOAuthApplication
 	{
 	protected static Logger LOG=Logger.getLogger("oauth");
+	static {
+		LOG.setLevel(Level.OFF);
+		}
 	private OAuthService service;
 	private org.scribe.model.Token accessToken;
 	private Preferences preferences;
@@ -86,6 +84,11 @@ public abstract class AbstractOAuthApplication
 		else if(args[optind].equals("-proxyPort") && optind+1 < args.length)
 			{
 			System.setProperty("http.proxyPort", args[++optind]);
+			return optind;
+			}
+		else if(args[optind].equals("-L") && optind+1 < args.length)
+			{
+			LOG.setLevel(Level.parse(args[++optind]));
 			return optind;
 			}
 		return -1;

@@ -301,8 +301,8 @@ public class FlickrRss
 		{
 		service.signRequest(accessToken, request);
 		Response response = request.send();
-		LOG.info(request.getCompleteUrl());
-		LOG.info(request.getQueryStringParams().toString());
+
+
 		List<Photo> L=new ArrayList<FlickrRss.Photo>();
 		
 		InputStream  in=response.getStream();
@@ -481,6 +481,7 @@ public class FlickrRss
 				for(String attName:args.keySet())
 					{
 					String attValue=args.get(attName);
+
 					request.addBodyParameter(attName,attValue);
 					}
 				if(dateStart!=null)

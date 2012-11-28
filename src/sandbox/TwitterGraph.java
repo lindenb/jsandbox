@@ -11,8 +11,6 @@
  *  https://github.com/lindenb/jsandbox/wiki/JSandbox-Wiki
  * Motivation:
  *  make a graph of a twitter account
- * Compilation:
- *        cd jsandbox; ant twittermosaic
  */
 
 package sandbox;
@@ -21,12 +19,20 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.Reader;
+import java.io.StringWriter;
 import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,6 +40,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -45,12 +52,25 @@ import javax.xml.stream.XMLStreamWriter;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 
+import org.scribe.model.OAuthRequest;
+import org.scribe.model.Response;
+import org.scribe.model.Verb;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.stream.JsonWriter;
+import com.hp.hpl.jena.reasoner.IllegalParameterException;
+
 
 
 public class TwitterGraph
+	extends AbstractTwitterApplication
 	{
-	private static final Logger LOG=Logger.getLogger("sandbox.TwitterMosaic");
-	private XMLInputFactory xmlInputFactory;
+	private Connection connection=null;
 	
 	private static class User
 		{
@@ -182,32 +202,6 @@ public class TwitterGraph
 		Map<BigInteger,User> id2user=new HashMap<BigInteger,User>();
 		List<Link> links=new ArrayList<Link>(1000);
 		
-		private int lower_bound(int first,int last,Link L)
-			{
-            int len = last - first;
-            while (len > 0)
-                    {
-                    int half = len / 2;
-                    int middle = first + half;
-
-
-                    if ( links.get(middle).compareTo(L) < 0  )
-                            {
-                            first = middle + 1;
-                            len -= half + 1;
-                            }
-                    else
-                            {
-                            len = half;
-                            }
-                    }
-            return first;
-			}
-		
-		public int lowerBound(Link L)
-			{
-			return lower_bound(0,links.size(),L);
-			}
 		
 		public void toDot(PrintWriter out)
 			{
@@ -338,10 +332,6 @@ public class TwitterGraph
 	
 	private TwitterGraph()
 		{
-		this.xmlInputFactory = XMLInputFactory.newInstance();
-		xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, Boolean.FALSE);
-		xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, Boolean.TRUE);
-		xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, Boolean.TRUE);
 		}
 	
 	
@@ -495,183 +485,237 @@ public class TwitterGraph
 		return null;
 		}
 	
-	private User getProfile(BigInteger userId)
-		throws Exception
+	
+	private Set<BigInteger> listFriends(
+			BigInteger userId,
+			String screen_name,
+			Set<BigInteger> retains
+			)
+			throws Exception
+			{		
+			JsonParser parser=new JsonParser();
+			Set<BigInteger> friends=new HashSet<BigInteger>();
+			BigInteger cursor=BigInteger.ONE.negate();
+			String url=getBaseURL()+"/get/friends/ids";
+
+			for(;;)
+				{
+				OAuthRequest request = new OAuthRequest(Verb.GET, url);
+			    if(userId!=null) request.addQuerystringParameter("user_id", userId.toString());
+			    else if(screen_name!=null) request.addQuerystringParameter("screen_name", screen_name);
+			    else throw new IllegalParameterException("user id/screen_name ?");
+			    request.addQuerystringParameter("cursor", cursor.toString());
+			    getService().signRequest(getAccessToken(), request);
+			    JsonElement jsonResponse=null;
+			    for(;;)
+			    	{
+			    	try
+			    		{
+					    Response response = request.send();
+					    Reader  in=new InputStreamReader(new LogInputStream(response.getStream(),
+					    		!Level.OFF.equals(LOG.getLevel())?System.err:null));
+					    jsonResponse=parser.parse(in);
+					    in.close();
+						break;
+			    		}
+			    	catch (Exception e)
+			    		{
+						e.printStackTrace();
+						Thread.sleep(5*60*1000);//5minutes
+						}
+			    	}
+			    JsonArray array=jsonResponse.getAsJsonObject().get("ids").getAsJsonArray();
+			    for(int i=0;i< array.size();++i)
+			    	{
+			    	BigInteger friendid=array.get(i).getAsBigInteger();
+			    	if(retains!=null && !retains.contains(friendid))
+			    		{
+			    		continue;
+			    		}
+			    	friends.add(friendid);
+			    	}
+			    
+			    cursor=null;
+			    if(jsonResponse.getAsJsonObject().get("next_cursor")!=null)
+			    	{
+			    	cursor=jsonResponse.getAsJsonObject().get("next_cursor").getAsBigInteger();
+			    	}
+			    if(cursor==null || cursor.equals(BigInteger.ZERO)) break;
+				}
+			LOG.info("count friends: of "+userId+"="+friends.size());
+			return friends;
+			}	
+	
+	private JsonObject sqlUserById(BigInteger id)
+		throws SQLException
 		{
-		User user=null;
-		String uri="http://api.twitter.com/1/users/show.xml?user_id="+
-				userId;
-		LOG.info(uri);
-		InputStream in=tryOpen(uri);
-		if(in==null)
+		JsonObject o=null;
+		JsonParser parser=new JsonParser();
+		PreparedStatement pstmt=connection.prepareStatement(
+				"select json from user where id=?");
+		pstmt.setString(1, id.toString());
+		ResultSet row=pstmt.executeQuery();
+		while(row.next())
 			{
-			user=new User();
-			user.id=userId;
-			user.imageUrl=null;
-			user.name=userId.toString();
-			user.screenName=userId.toString();
-			return user;
+			o=parser.parse(row.getString(1)).getAsJsonObject();
 			}
-		XMLEventReader reader= xmlInputFactory.createXMLEventReader(in);
-		while(reader.hasNext())
-			{
-			XMLEvent evt=reader.nextEvent();
-			if(!evt.isStartElement()) continue;
-			StartElement e=evt.asStartElement();
-			String localName=e.getName().getLocalPart();
-			if(!localName.equals("user")) continue;
-			user= parseUser(reader);
-			break;
-			}
-		reader.close();
-		in.close();
-		return user;
+		pstmt.close();
+		return o;
 		}
 	
-	private Set<BigInteger> listFriends(BigInteger userId)
+	private static String toString(JsonElement e)
+		{
+		return new GsonBuilder().create().toJson(e);
+		}
+	
+	private BigInteger fetchUserInfo(BigInteger user_id,String screen_name)
 		throws Exception
-		{			
-		Set<BigInteger> friends=new HashSet<BigInteger>();
-		BigInteger cursor=BigInteger.ONE.negate();
-		for(;;)
+		{
+		JsonParser parser=new JsonParser();
+		JsonObject user=null;
+		if(user_id!=null)user=sqlUserById(user_id);
+		if(user!=null)
 			{
-			String uri="http://api.twitter.com/1/friends/ids.xml?user_id="+
-			userId+"&cursor="+cursor;
-			LOG.info(uri);
-			InputStream in=tryOpen(uri);
-			if(in==null) break;
-			XMLEventReader reader= xmlInputFactory.createXMLEventReader(in);
-			String next_cursor=null;
-			while(reader.hasNext())
-				{
-				XMLEvent evt=reader.nextEvent();
-				if(evt.isEndDocument()) break;
-				if(!evt.isStartElement()) continue;
-				StartElement e=evt.asStartElement();
-				String localName=e.getName().getLocalPart();
-				if(localName.equals("id"))
-					{
-					friends.add(new BigInteger(reader.getElementText()));
-					}
-				else if(localName.equals("next_cursor"))
-					{
-					next_cursor=reader.getElementText();
-					break;
-					}
-				}
-			reader.close();
-			in.close();
-			
-			if(next_cursor==null || next_cursor.isEmpty() || next_cursor.equals("0"))
-				{
+			return user.getAsJsonObject().get("id_str").getAsBigInteger();
+			}
+		
+		//https://dev.twitter.com/docs/api/1.1/get/users/show
+		String url=getBaseURL()+"/get/users/show";
+
+		OAuthRequest request = new OAuthRequest(Verb.GET, url);
+	    if(user_id!=null) request.addQuerystringParameter("user_id", user_id.toString());
+	    else if(screen_name!=null) request.addQuerystringParameter("screen_name", screen_name);
+	    else throw new IllegalParameterException("user id/screen_name ?");
+
+	    getService().signRequest(getAccessToken(), request);
+	    JsonElement jsonResponse=null;
+	    for(;;)
+	    	{
+	    	try
+	    		{
+			    Response response = request.send();
+			    Reader  in=new InputStreamReader(new LogInputStream(response.getStream(),
+			    		!Level.OFF.equals(LOG.getLevel())?System.err:null));
+			    jsonResponse=parser.parse(in);
+			    in.close();
 				break;
+	    		}
+	    	catch (Exception e)
+	    		{
+				e.printStackTrace();
+				Thread.sleep(5*60*1000);//5minutes
 				}
-			cursor=new BigInteger(next_cursor);
-			}
-		LOG.info("count friends: of "+userId+"="+friends.size());
-		return friends;
-		}	
-	
-	private SocialGraph run(BigInteger userId)
-		throws Exception
+	    	}
+	    user_id=jsonResponse.getAsJsonObject().get("id_str").getAsBigInteger();
+	    PreparedStatement pstmt=connection.prepareStatement(
+	    	"insert into user(id,json) values(?,?)");
+	    pstmt.setString(1,user_id.toString() );
+		pstmt.setString(2, toString(jsonResponse));
+	    pstmt.executeUpdate();
+			
+			
+		
+		return user_id;
+		}
+
+	private void insertRelation(BigInteger user1,BigInteger user2)
+		throws SQLException
 		{
-		SocialGraph g=new SocialGraph();
-		g.owner=userId;
-		g.id2user.put(userId, getProfile(userId));
-		
-		Set<BigInteger> friendIds=listFriends(userId);
-		for(BigInteger id:friendIds)
-			{
-			g.links.add(new Link(userId,id));
-			}
-		Collections.sort(g.links);
-		
-		for(BigInteger id: friendIds)
-			{
-			g.id2user.put(id, getProfile(id));
-			Set<BigInteger> hisFriends=listFriends(id);
-			hisFriends.retainAll(friendIds);
-			for(BigInteger id2: hisFriends)
-				{
-				Link L=new Link(id, id2);
-				int index= g.lowerBound(L);
-				if(index==g.links.size())
-					{
-					g.links.add(L);
-					continue;
-					}
-				Link L2= g.links.get(index);
-				if(L2.compareTo(L)==0)
-					{
-					L2.one2two |= L.one2two ;
-					L2.two2one |= L.two2one ;
-					}
-				else
-					{
-					g.links.add(index, L);
-					}
-				}
-			}
-		
-		return g;
+	    PreparedStatement pstmt=connection.prepareStatement(
+		    	"insert into friend(id1,id2) values(?,?)");
+		pstmt.setString(1,user1.toString() );
+		pstmt.setString(2,user2.toString() );
+		pstmt.executeUpdate();
+		pstmt.close();
 		}
 	
-	public static void main(String[] args)
+	private void build(BigInteger user_id,String screen_name)
+		throws Exception
+		{
+		Set<BigInteger> friends=this.listFriends(user_id, screen_name,null);
+		user_id=this.fetchUserInfo(user_id,screen_name);
+		for(BigInteger friend_id:friends)
+			{
+			this.fetchUserInfo(friend_id,null);
+			Set<BigInteger> friendsOfMyFriends=this.listFriends(friend_id,null,friends);
+			friendsOfMyFriends.retainAll(friends);
+			
+			for(BigInteger link:friendsOfMyFriends)
+				{
+				insertRelation(friend_id,link);
+				}
+			
+			}
+		}
+	
+
+	
+	private void run(String args[]) throws Exception
 		{
 		//id: 7431072
 		//args=new String[]{"-o","/home/pierre/jeter.dot","7431072"};
-		File fileout=null;
-		TwitterGraph app=null;
-		try
+		File database=null;
+		
+		int optind=0;
+		while(optind< args.length)
 			{
-			app=new TwitterGraph();
-			int optind=0;
-			while(optind< args.length)
+			if(args[optind].equals("-h") ||
+			   args[optind].equals("-help") ||
+			   args[optind].equals("--help"))
 				{
-				if(args[optind].equals("-h") ||
-				   args[optind].equals("-help") ||
-				   args[optind].equals("--help"))
-					{
-					System.err.println("Options:");
-					System.err.println(" -h help; This screen.");
-					System.err.println(" -o <fileout>.gexf");
-					System.err.println("[screen-id]");
-					return;
-					}
-				else if(args[optind].equals("-o"))
-					{
-					fileout=new File(args[++optind]);
-					}
-				else if(args[optind].equals("--"))
-					{
-					optind++;
-					break;
-					}
-				else if(args[optind].startsWith("-"))
-					{
-					System.err.println("Unknown option "+args[optind]);
-					return;
-					}
-				else 
-					{
-					break;
-					}
-				++optind;
+				System.err.println("Options:");
+				System.err.println(" -h help; This screen.");
+				System.err.println(" -d <database>");
+				System.err.println("[screen-id]");
+				return;
 				}
+			else if(args[optind].equals("-d"))
+				{
+				database=new File(args[++optind]);
+				}
+			else if(args[optind].equals("--"))
+				{
+				optind++;
+				break;
+				}
+			else if(args[optind].startsWith("-"))
+				{
+				System.err.println("Unknown option "+args[optind]);
+				return;
+				}
+			else 
+				{
+				break;
+				}
+			++optind;
+			}
+		
+		if(database==null)
+			{
+			System.err.println("option -d <database> missing");
+			System.exit(-1);
+			}
+		Class.forName("org.sqlite.JDBC");
+		this.connection = DriverManager.getConnection("jdbc:sqlite:"+database);
+		if( (args[optind].equals("screen_name") || args[optind].equals("user_id")) && optind+1<args.length)
+			{
 			
-			if(optind+1!=args.length)
+			String screen_name=null;
+			BigInteger user_id=null;
+			if(args[optind].equals("screen_name"))
 				{
-				System.err.println("Screen-Name missing");
-				System.exit(-1);
+				screen_name=args[++optind];
 				}
-			if(fileout==null)
+			else
 				{
-				System.err.println("option -o <fileout> missing");
-				System.exit(-1);
+				user_id=new BigInteger(args[++optind]);
 				}
-			
-			BigInteger userId= new BigInteger(args[optind++]);
-			SocialGraph g=app.run(userId);
+			connect();
+			build(user_id,screen_name);
+			savePreferences();
+			}
+		this.connection.close();
+		/*
 			if(fileout.getName().toLowerCase().endsWith(".dot"))
 				{
 				PrintWriter p=new PrintWriter(fileout);
@@ -697,14 +741,11 @@ public class TwitterGraph
 				{
 				System.err.println("Boum");
 				}
-			} 
-		catch(Throwable err)
-			{
-			err.printStackTrace();
-			}
-		finally
-			{
-			if(app!=null) app=null;//was app.close();
-			}
+		*/
+		}
+	
+	public static void main(String[] args) throws Exception
+		{
+		new TwitterGraph().run(args);
 		}
 	}

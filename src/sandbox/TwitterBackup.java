@@ -42,6 +42,7 @@ public class TwitterBackup
 	private String screen_name=null;
 	private String user_id=null;
 	private File fileout;
+	private Integer countTweetsReturned=null;
 	private Map<BigInteger, Element> id2tweet=new TreeMap<BigInteger, Element>();
 	private Document dom;
 	private TwitterBackup()
@@ -202,7 +203,7 @@ public class TwitterBackup
 		}
 	private Element createPlace(JsonObject o)
 		{
-		if(o==null || o.get("place")==null) return null;
+		if(o==null) return null;
 		Element geo=this.dom.createElement("place");
 		appendAttributes(geo,o,"country","country_code","full_name","name","place_type");
 		return geo;
@@ -356,6 +357,12 @@ public class TwitterBackup
 			this.fileout=new File(args[++optind]);
 			return optind;
 			}
+		else if(args[optind].equals("-c") && optind+1<args.length)
+			{
+			this.countTweetsReturned=new Integer(args[++optind]);
+			return optind;
+			}
+
 		return -1;
 		}
 	
@@ -407,7 +414,8 @@ public class TwitterBackup
 			
 			for(String verb:new String[]{
 					"/statuses/user_timeline.json",
-					"/favorites/list.json"
+					"/favorites/list.json",
+					"/statuses/mentions_timeline.json"
 					})
 				{
 				String url=getBaseURL()+verb;
@@ -419,6 +427,10 @@ public class TwitterBackup
 			    if(this.screen_name!=null)
 			    	{
 				    request.addQuerystringParameter("screen_name", this.screen_name);
+			    	}
+			    if(this.countTweetsReturned!=null)
+			    	{
+				    request.addQuerystringParameter("count",String.valueOf(this.countTweetsReturned));
 			    	}
 			    
 			    request.addQuerystringParameter("exclude_replies","false");
