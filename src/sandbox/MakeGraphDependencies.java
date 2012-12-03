@@ -11,6 +11,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamWriter;
+
 /**
  * @author lindenb
  *
@@ -105,9 +108,48 @@ public class MakeGraphDependencies
         throw new IllegalStateException(target.name);
         }
 
+    private void usage()
+    	{
+		System.err.println("Options:");
+		System.err.println(" -h help; This screen.");
+		System.err.println(" -G gexf output.");
+    	}
+    
     /**  method */
-    private void run()  throws Exception
+    private void run(String args[])  throws Exception
         {
+        boolean gexf=false;
+        int optind=0;
+		while(optind< args.length)
+			{
+			if(args[optind].equals("-h") ||
+			   args[optind].equals("-help") ||
+			   args[optind].equals("--help"))
+				{
+				usage();
+				return;
+				}
+			else if(args[optind].equals("-g"))
+				{
+				gexf=true;
+				}
+			else if(args[optind].equals("--"))
+				{
+				optind++;
+				break;
+				}
+			else if(args[optind].startsWith("-"))
+				{
+				System.err.println("Unknown option "+args[optind]);
+				return;
+				}
+			else 
+				{
+				break;
+				}
+			++optind;
+			}
+		
         Target root=getTarget("[ROOT]");
         String line;
         while((line=nextLine())!=null)
@@ -123,27 +165,101 @@ public class MakeGraphDependencies
         	System.err.println("No target found.\nUsage:\n make -dq | java -jar makegraphdependencies.jar\n");
         	System.exit(-1);
         	}
-        System.out.println("digraph G {");
-        for(Target t:this.name2target.values())
-            {
-            System.out.println(t.node()+"[label=\""+t.name
-            		+"\" color=\""+
-            		(t.must_remake?"red":"green")+
-            		"\"];");
-            }
-        for(Target t:this.name2target.values())
-            {
-            for(Target c:t.children)
-                {
-                System.out.println(c.node()+" -> "+t.node()+";");
-                }
-            }
-        System.out.println("}");
+        if(gexf)
+        	{
+    		XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
+    		XMLStreamWriter w= xmlfactory.createXMLStreamWriter(System.out,"UTF-8");
+    		
+    		w.writeStartDocument("UTF-8","1.0");
+    		w.writeStartElement("gexf");
+    		w.writeAttribute("xmlns", "http://www.gexf.net/1.2draft");
+    		w.writeAttribute("version", "1.2");
+    		
+    		
+    		/* meta */
+    		w.writeStartElement("meta");
+    			w.writeStartElement("creator");
+    			  w.writeCharacters(TwitterGraph.class.getCanonicalName());
+    			w.writeEndElement();
+    			w.writeStartElement("description");
+    			  w.writeCharacters("Twitter Graph");
+    			w.writeEndElement();
+    		w.writeEndElement();
+    		
+    		/* graph */
+    		w.writeStartElement("graph");
+    		w.writeAttribute("mode", "static");
+    		w.writeAttribute("defaultedgetype", "directed");
+    		
+    		
+    		
+    		/* attributes */
+    		w.writeStartElement("attributes");
+    		w.writeAttribute("class","node");
+    		w.writeAttribute("mode","static");
+    		    		
+    		w.writeEndElement();//attributes
+    		
+    		/* nodes */
+    		w.writeStartElement("nodes");
+    		for(Target t:this.name2target.values())
+    			{
+    			w.writeStartElement("node");
+    			w.writeAttribute("id", String.valueOf(t.node()));
+    			w.writeAttribute("label", t.name);    			
+    			w.writeEndElement();
+    			}
+
+    		w.writeEndElement();//nodes
+    		
+    		/* edges */
+    		int relid=0;
+    		w.writeStartElement("edges");
+    	    for(Target t:this.name2target.values())
+ 	            {
+ 	           for(Target c:t.children)
+	                {
+	    			w.writeEmptyElement("edge");
+	    			w.writeAttribute("id", "E"+(++relid));
+	    			w.writeAttribute("type","directed");
+	    			w.writeAttribute("source",c.node());
+	    			w.writeAttribute("target",t.node());
+	                }
+    			}
+
+    		w.writeEndElement();//edges
+
+    		w.writeEndElement();//graph
+    		
+    		w.writeEndElement();//gexf
+    		w.writeEndDocument();
+    		w.flush();
+
+        	}
+        else //dot
+        	{
+	        System.out.println("digraph G {");
+	        for(Target t:this.name2target.values())
+	            {
+	            System.out.println(t.node()+"[label=\""+t.name
+	            		+"\" color=\""+
+	            		(t.must_remake?"red":"green")+
+	            		"\"];");
+	            }
+	        for(Target t:this.name2target.values())
+	            {
+	            for(Target c:t.children)
+	                {
+	                System.out.println(c.node()+" -> "+t.node()+";");
+	                }
+	            }
+	        System.out.println("}");
+        	}
         }
     
     public static void main(String args[]) throws Exception
         {
-        new MakeGraphDependencies().run();
+        new MakeGraphDependencies().run(args);
         }
 
 	}
