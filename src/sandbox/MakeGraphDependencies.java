@@ -179,7 +179,7 @@ public class MakeGraphDependencies
     		/* meta */
     		w.writeStartElement("meta");
     			w.writeStartElement("creator");
-    			  w.writeCharacters(TwitterGraph.class.getCanonicalName());
+    			  w.writeCharacters(MakeGraphDependencies.class.getCanonicalName());
     			w.writeEndElement();
     			w.writeStartElement("description");
     			  w.writeCharacters("Twitter Graph");
