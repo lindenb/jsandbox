@@ -488,7 +488,7 @@ public class FlickrRss
 				for(String attName:args.keySet())
 					{
 					String attValue=args.get(attName);
-
+					LOG.info(attName+":"+attValue);
 					request.addBodyParameter(attName,attValue);
 					}
 				if(dateStart!=null)
