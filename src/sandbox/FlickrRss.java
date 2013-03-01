@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.TreeSet;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.script.ScriptEngine;
@@ -85,13 +87,13 @@ public class FlickrRss
 	private org.scribe.model.Token accessToken;
 	private boolean use_priority=true;
 	
-	private class Photo implements Comparable<Photo>
+	public class Photo implements Comparable<Photo>
 		{
 		Long id=null;
 		String owner=null;
 		String ownername=null;
 		String secret=null;
-		String title=null;
+		String _title=null;
 		String license=null;
 		String description=null;
 		String server=null;
@@ -151,7 +153,7 @@ public class FlickrRss
 			}
 		public String getTitle()
 			{
-			return title==null?"":title.toLowerCase();
+			return _title==null?"":_title.toLowerCase();
 			}
 		
 		public String getLicense()
@@ -167,6 +169,11 @@ public class FlickrRss
 		public String getPhotoURL()
 			{
 			return "http://farm"+farm+".staticflickr.com/"+server+"/"+id+"_"+secret+"_"+"m"+".jpg";
+			}
+		@Override
+		public String toString()
+			{
+			return "PHOTO ID."+this.id+" title:"+getTitle();
 			}
 		
 		@Override
@@ -194,7 +201,7 @@ public class FlickrRss
 		void writeAtom(XMLStreamWriter w) throws XMLStreamException
 			{
 			w.writeStartElement("entry");
-			writeSimple(w,"title",this.title);
+			writeSimple(w,"title",this._title);
 			w.writeEmptyElement("link");
 			w.writeAttribute("href", this.getPageURL());
 			w.writeStartElement("author");
@@ -225,7 +232,7 @@ public class FlickrRss
 			w.writeEndElement();//a
 			
 			w.writeEmptyElement("br");
-			w.writeCharacters(this.title.length()>20?this.title.substring(0,17)+"...":this.title);
+			w.writeCharacters(this._title.length()>20?this._title.substring(0,17)+"...":this._title);
 			w.writeEmptyElement("br");
 			w.writeCharacters("by "+getOwnerName());
 			w.writeEndElement();
@@ -252,7 +259,7 @@ public class FlickrRss
 		if(att!=null) p.ownername=att.getValue();
 
 		att=start.getAttributeByName(new QName("title"));
-		if(att!=null) p.title=att.getValue();
+		if(att!=null) p._title=att.getValue();
 		att=start.getAttributeByName(new QName("license"));
 		if(att!=null) p.license=att.getValue();
 		att=start.getAttributeByName(new QName("server"));
@@ -481,7 +488,7 @@ public class FlickrRss
 				for(String attName:args.keySet())
 					{
 					String attValue=args.get(attName);
-
+					LOG.info(attName+":"+attValue);
 					request.addBodyParameter(attName,attValue);
 					}
 				if(dateStart!=null)
@@ -496,6 +503,7 @@ public class FlickrRss
 				SimpleBindings bind=new SimpleBindings();
 				
 				List<Photo> L=new ArrayList<Photo>();
+				
 				if(enableGroup || "flickr.groups.pools.getPhotos".equals(args.get("method"))==false )
 					{
 					L=parseUrl(request);
@@ -506,7 +514,6 @@ public class FlickrRss
 					int priority=Integer.parseInt(Attr.class.cast(att).getValue());
 					for(Photo p:L) p.priority+=priority;
 					}
-				
 				if(!script.isEmpty())
 					{
 					for(Photo p:L)
@@ -515,9 +522,13 @@ public class FlickrRss
 						bind.put("photo", p);
 						try
 							{
-							if(jsEngine.eval(script,bind).equals(Boolean.TRUE))
+							Object ret=null;
+							if((ret=jsEngine.eval(script,bind)).equals(Boolean.TRUE))
 								{
 								this.photos.add(p);
+								}
+							else
+								{
 								}
 							}
 						catch (Throwable e)
@@ -592,13 +603,14 @@ public class FlickrRss
 			Element root=dom.getDocumentElement();
 			recursive(root);
 			//remove head
+			LOG.info("remove head "+this.photos.size());
 			for(int i=0;i<this.start_index && !this.photos.isEmpty();++i)
 				{
 				Iterator<Photo> iter=this.photos.iterator();
 				iter.next();
 				iter.remove();
 				}
-			
+			LOG.info("dump "+this.photos.size());
 			dump();
 			
 			if(update_token_file)
@@ -610,7 +622,7 @@ public class FlickrRss
 				pw.flush();
 				pw.close();
 				}
-			
+			LOG.info("Done.");
 			System.exit(0);
 			}
 		catch (Exception e) 
@@ -686,7 +698,10 @@ public class FlickrRss
 				{
 				app.start_index=Integer.parseInt(args[++optind]);
 				}	
-				
+			else if(args[optind].equals("-L") && optind+1< args.length)
+				{
+				LOG.setLevel(Level.parse(args[++optind]));
+				}
 			else if(args[optind].equals("--atom"))
 				{
 				app.format=Format.atom;
@@ -727,5 +742,6 @@ public class FlickrRss
 			}
 		String filename=args[optind++];
 		app.run(new File(filename));
+		LOG.info("Done");
 		}
 }
