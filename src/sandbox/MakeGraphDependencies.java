@@ -160,9 +160,9 @@ public class MakeGraphDependencies
             root.children.add(child);
             recursive(child);
             }
-        if(name2target.isEmpty())
+        if(name2target.size()<=1)
         	{
-        	System.err.println("No target found.\nUsage:\n make -dq | java -jar makegraphdependencies.jar\n");
+        	System.err.println("No target found.\nUsage:\n make -d --dry-run | java -jar makegraphdependencies.jar\n");
         	System.exit(-1);
         	}
         if(gexf)
