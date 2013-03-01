@@ -71,7 +71,7 @@
 	<pathelement location="/home/lindenb/package/eclipse/plugins/org.apache.commons.codec_1.3.0.v201101211617.jar"/>
 </path>
 
-<target name="all" depends="makegraphdependencies,mergepictures,twitterbackup,gimpprocparser,flickrss,treemap,velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
+<target name="all" depends="java2graph,makegraphdependencies,mergepictures,twitterbackup,gimpprocparser,flickrss,treemap,velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
 </target>
 
@@ -458,21 +458,6 @@
    <delete dir="tmp"/>
 </target>	
 
-<target name="twittergraph">
-   <mkdir dir="dist"/>
-   <mkdir dir="tmp"/>
-   <javac srcdir="src" destdir="tmp" debug="true">
-      <include name="**/TwitterGraph.java" />
-   </javac>
-   
-   <jar destfile="dist/twittergraph.jar" basedir="tmp">
-      <manifest>
-         <attribute name="Built-By" value="${user.name}"/>
-         <attribute name="Main-Class" value="sandbox.TwitterGraph"/>
-      </manifest>
-   </jar>
-   <delete dir="tmp"/>
-</target>	
 
 
 <target name="twittermosaic">
@@ -726,12 +711,35 @@
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
 			<attribute name="Main-Class" value="sandbox.TwitterBackup"/>
-         <attribute name="Class-Path" value="${myclasspath}" />
+         	<attribute name="Class-Path" value="${myclasspath}" />
 		</manifest>
 	</jar>
 	<delete dir="tmp"/>
 </target>
 
+<target name="twittergraph" depends="ivy.libs">
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp" debug="true"  includeantruntime="false">
+		<classpath refid="lib.path.id"/>
+      <include name="**/TwitterGraph.java" />
+   </javac>
+	
+	<pathconvert property="myclasspath" pathsep=" ">
+     	 	<path refid="lib.path.id" />
+	</pathconvert>
+
+   <jar destfile="dist/twittergraph.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.TwitterGraph"/>
+     	<attribute name="Class-Path" value="${myclasspath}" />
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>	
+	
+	
 <target name="stackexchangeskills" depends="ivy.libs">
    <mkdir dir="dist"/>
    <mkdir dir="tmp"/>
@@ -770,4 +778,23 @@
    </jar>
    <delete dir="tmp"/>
 </target>
+	
+	
+<target name="java2graph">
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp" debug="true" includeantruntime="false">
+      <include name="**/Java2Graph.java" />
+   </javac>
+   
+   <jar destfile="dist/java2graph.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.Java2Graph"/>
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>	
+	
+	
 </project>
