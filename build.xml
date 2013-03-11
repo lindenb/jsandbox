@@ -103,7 +103,7 @@
 		
 		<manifest>
 			<attribute name="Built-By" value="${user.name}"/>
-			<attribute name="Main-Class" value="sanbox.MysqlDumpVelocity"/>
+			<attribute name="Main-Class" value="sandbox.MysqlDumpVelocity"/>
 			<attribute name="Class-Path" value="${manifest_cp1}"/>
 		</manifest>
 	</jar>

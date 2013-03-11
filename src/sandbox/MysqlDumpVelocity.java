@@ -39,6 +39,9 @@ public class MysqlDumpVelocity
 		out.println(" --vmpath (dir) path to velocity templates.");
 		out.println(" --vm (file) velocity template.");
 		out.println(" -D (key) (value) . Add this property/value to the velocity context.");
+		
+		out.println();
+		out.println("$mysqldump is the mysqldump structure passed to velocity.");
 		}
 
 	
@@ -58,7 +61,11 @@ public class MysqlDumpVelocity
 			{
 			vmTemplateDir= args[++optind];
 			}
-		else if(args[optind].equals("--vm") && optind+1< args.length)
+		else if((
+				  args[optind].equals("--vm") ||
+				  args[optind].equals("-vm")  ||
+				  args[optind].equals("-v")
+				  )&& optind+1< args.length)
 			{
 			vmTemplateName = args[++optind];
 			}
@@ -98,7 +105,7 @@ public class MysqlDumpVelocity
 		}
 	
 	 javax.xml.bind.JAXBContext jaxbCtxt=javax.xml.bind.JAXBContext.newInstance(
-			  	Mysqldump.class
+			  	Mysqldump.class,Options.class
 			  	);
 	 javax.xml.bind.Unmarshaller unmarshaller=jaxbCtxt.createUnmarshaller();
 	if(optind+1!=args.length)
