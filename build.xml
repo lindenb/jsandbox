@@ -71,9 +71,45 @@
 	<pathelement location="/home/lindenb/package/eclipse/plugins/org.apache.commons.codec_1.3.0.v201101211617.jar"/>
 </path>
 
-<target name="all" depends="java2graph,makegraphdependencies,mergepictures,twitterbackup,gimpprocparser,flickrss,treemap,velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
+<target name="all" depends="mysqldump2code,java2graph,makegraphdependencies,mergepictures,twitterbackup,gimpprocparser,flickrss,treemap,velocityjson,jsonquery,xmlcipher,divandb,images2base64,pubmedsortbycitations,gimpclient,convolution,raster2ora,oilpainting,pivot,geneticpainting,twitterkml,nar404,twittergraph,twittermosaic,vcfannotator,blastannot,wptimeline,mywordle,pubmeddump,pubmed2gender,pubmedperyear,variantpredictor,grepmysql,wirepeptide,xml2xsd,backlocate">
 
 </target>
+
+
+<target name="mysqldump2code" depends="ivy.libs">
+	<mkdir dir="lib"/>
+	<mkdir dir="tmp"/>
+	
+	
+	<exec executable="xjc" >
+			<arg value="-extension"/>
+			<arg value="-Xinject-code"/>
+			<arg value="-d"/> <arg value="tmp"/>
+			<arg value="-p"/> <arg value="sandbox"/>
+			<arg value="-b"/> <arg value="../xsd-sandbox/schemas/mysql/mysqldump.jxb"/>
+			<arg value="../xsd-sandbox/schemas/mysql/mysqldump.xsd"/>
+	</exec>
+	
+	<javac destdir="tmp" debug="true" includeantruntime="false">
+		<classpath refid="lib.path.id"/>
+		<src path="src"/>
+		<src path="tmp"/>
+		<include name="**/MysqlDumpVelocity.java" />
+	</javac>
+	
+	<pathconvert property="manifest_cp1" pathsep=" " refid="lib.path.id"/>
+	
+	<jar destfile="dist/mysqldump2code.jar" basedir="tmp">
+		
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sanbox.MysqlDumpVelocity"/>
+			<attribute name="Class-Path" value="${manifest_cp1}"/>
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
+</target>
+
 
 <target name="mergepictures">
 	<mkdir dir="dist"/>
@@ -795,6 +831,6 @@
    </jar>
    <delete dir="tmp"/>
 </target>	
-	
+
 	
 </project>
