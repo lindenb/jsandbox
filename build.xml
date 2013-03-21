@@ -79,7 +79,7 @@
 <target name="mysqldump2code" depends="ivy.libs">
 	<mkdir dir="lib"/>
 	<mkdir dir="tmp"/>
-	
+	<mkdir dir="tmp/sandbox"/>
 	
 	<exec executable="xjc" >
 			<arg value="-extension"/>
@@ -90,11 +90,12 @@
 			<arg value="../xsd-sandbox/schemas/mysql/mysqldump.xsd"/>
 	</exec>
 	
+	<copy file="src/sandbox/MysqlDumpVelocity.java" todir="tmp/sandbox"/>
+	
 	<javac destdir="tmp" debug="true" includeantruntime="false">
 		<classpath refid="lib.path.id"/>
-		<src path="src"/>
 		<src path="tmp"/>
-		<include name="**/MysqlDumpVelocity.java" />
+		<include name="**/*.java" />
 	</javac>
 	
 	<pathconvert property="manifest_cp1" pathsep=" " refid="lib.path.id"/>
