@@ -1,0 +1,258 @@
+options {
+STATIC=false;
+LOOKAHEAD=3;
+}
+
+
+PARSER_BEGIN(CToJava)
+
+package sandbox;
+
+import java.util.*;
+import java.io.*;
+
+
+@SuppressWarnings(value={"unchecked","unused"})
+@javax.annotation.Generated(value="schemaParser")
+public class CToJava
+{
+private String getter="get";
+private String setter="set";
+
+private boolean multiple=false;
+public static void main(String args[]) throws Exception
+    {
+    String getter="get";
+    String setter="set";
+    boolean multiple=false;
+    int optind=0;
+    while(optind< args.length)
+        {
+        if(args[optind].equals("-h"))
+            {
+            System.out.println("Options:");
+            System.out.println(" -g (string). getter name. default:"+getter);
+            System.out.println(" -s (string). getter name. default:"+setter); 
+            //System.out.println(" -m . '[a][b][c]' is converted to get(a).get(b).get(c)");
+            return;
+            }
+        else if(args[optind].equals("-g") && optind+1< args.length)
+            {
+			getter=args[++optind];
+            }
+         else if(args[optind].equals("-s") && optind+1< args.length)
+            {
+			setter=args[++optind];
+            }
+	     else if(args[optind].equals("-m"))
+	        {
+			multiple=true;
+	        }
+        else if(args[optind].equals("--"))
+            {
+            ++optind;
+            break;
+            }
+        else if(args[optind].startsWith("-"))
+            {
+            System.err.println("Unknown option "+args[optind]);
+            System.exit(-1);
+            }
+        else
+            {
+            break;
+            }
+        ++optind;
+        }
+
+    CToJava app=null;
+    if(optind==args.length)
+        {
+        app=new CToJava(System.in);
+        }
+    else if(optind+1==args.length)
+        {
+        FileInputStream fin=new FileInputStream(args[optind++]);
+        app=new CToJava(fin);
+        fin.close();
+        }
+    else
+        {
+        System.err.println("illegal number of args");
+        System.exit(-1);
+        }
+    app.getter=getter;
+    app.setter=setter;
+    app.multiple=multiple;
+    String s=app.input();
+    System.out.print(s);
+    }
+
+}
+
+PARSER_END(CToJava)
+
+
+
+TOKEN : /* LITERALS */
+{
+
+  <CCCOMMENT:"//" (~["\n","\r"])* ("\n" | "\r" | "\r\n")>
+| <CCOMMENT:"/*" (~["*"])* "*" ("*" | ~["*","/"] (~["*"])* "*")* "/">
+
+| <SINGLE_QUOTE_LITERAL: "\'" (~["\'"])*"\'" >
+| <DOUBLE_QUOTE_LITERAL: "\"" (~["\""])*"\"" >
+| <OARRAY:"[">
+| <CARRAY:"]">
+| <OPAR:"(">
+| <CPAR:")">
+| <COLON:";">
+| <#WS: [" ","\t"] >
+| <EQ1: "==">
+| <EQ: (<WS>)? "=" (<WS>)*>
+| <POINTER: "->">
+| <#NOTARRAY: (~["[","]","(",")","=",";"]) >
+| <#LETTER: ["_","a"-"z","A"-"Z"] >
+| <#DIGIT: ["0"-"9"] >
+| <IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
+| <ANY: <NOTARRAY>  >
+}
+
+private String input():
+        {
+        StringBuilder sb=new StringBuilder();
+        String s;
+        }
+    {
+    ( (s=node() {sb.append(s);} | <COLON> {sb.append(";");}) )* <EOF>  {return sb.toString();}
+    }
+
+private String statements():
+        {
+        StringBuilder sb=new StringBuilder();
+        String s;
+        }
+    {
+    (s=node() {sb.append(s);} )* <COLON>  {return sb.toString();}
+    }
+
+private String node():{ String s; }
+    {
+    (
+      s=complexArray()
+     | s=simpleContent()
+    ) { return s;}
+    }
+   
+private String complexArray():{
+		String s="";
+		List<String> arrays=new ArrayList<String>();
+		StringBuilder eq=new StringBuilder();
+
+		}
+	{
+	(s=simpleArray() { arrays.add(s);})+ (<EQ> (s=statements(){eq.append(s);}) )? 
+	
+	     	{
+	     	StringBuilder sb=new StringBuilder();
+	     	sb.append(".");
+	     	sb.append(eq.length()==0?this.getter:this.setter);
+	     	sb.append("(");
+	     	for(int i=0;i< arrays.size();++i)
+	     		{
+	     		if(i>0)sb.append(",");
+	     		sb.append(arrays.get(i));
+	     		}
+	     	if(eq.length()!=0)
+	     		{
+	     		sb.append(",");
+	     		sb.append(eq);
+	     		}
+	     	sb.append(")");
+	     	return sb.toString();
+	     	}
+	  
+	}
+	
+
+	
+private String simpleArray():{StringBuilder s2=new StringBuilder();String s;}
+	{
+	<OARRAY> (s=node() { s2.append(s);} )* <CARRAY> { return s2.toString();}
+	}
+   
+private String simpleContent():{Token t;String s2=null;}
+   {
+	 (
+	       t=< SINGLE_QUOTE_LITERAL > {return t.image;}
+	     | t=< DOUBLE_QUOTE_LITERAL > {return t.image;}
+	     | t=<CCCOMMENT> {return t.image;}
+	     | t=<CCOMMENT> {return t.image;}
+	     | t=<ANY> {return t.image;}
+	     | <POINTER> {return ".";}
+	     | t=<EQ> {return t.image;}
+	     | t=<EQ1>  {return t.image;}
+	     | t=<IDENTIFIER> (s2=fun()  )?
+	     	{
+	     	StringBuilder sb=new StringBuilder();
+	     	String s=t.image;
+	     	if(s2!=null)
+	     		{
+	     		if(s.equals("strlen"))
+	     			{
+	     			sb.append(s2).append(".length()");
+	     			return sb.toString();
+	     			}
+	     		if(s.equals("atoi"))
+	     			{
+	     			sb.append("Integer.parseInt(").append(s2).append(")");
+	     			return sb.toString();
+	     			}
+	     		
+	     		if(s.equals("printf"))
+	     			{
+	     			sb.append("System.out.printf(").append(s2).append(")");
+	     			return sb.toString();
+	     			}
+	     		if(s.equals("puts") || s.equals("putc"))
+	     			{
+	     			sb.append("System.out.print(").append(s2).append(")");
+	     			return sb.toString();
+	     			}
+	     		if(s.equals("exit"))
+	     			{
+	     			sb.append("System.exit(").append(s2).append(")");
+	     			return sb.toString();
+	     			}
+	     		if(s.equals("free"))
+	     			{
+	     			sb.append(s2).append("=null");
+	     			return sb.toString();
+	     			}
+	     		}
+
+	     	if(s.equals("typedef")) return "";
+	     	if(s.equals("struct")) return "class";
+	     	if(s.equals("stdout")) return "System.out";
+	     	if(s.equals("stderr")) return "System.err";
+	     	if(s.equals("stdin")) return "System.in";
+	     	if(s.equals("NULL")) return "null";
+	     	if(s.equals("FALSE")) return "false";
+	     	if(s.equals("TRUE")) return "true";
+	     	if(s.equals("const")) return "";
+	     	if(s.equals("register")) return "";
+	     	if(s.equals("unsigned")) return "/* unsigned */";
+	     	sb.append(s);
+	     	if(s2!=null)  sb.append("(").append(s2).append(")");
+	     	return sb.toString();
+	     	}
+	    | s2=fun() { return "("+s2+")";}
+	    )
+   }
+
+
+private String fun():{String s;StringBuilder s2=new StringBuilder();}
+	{
+	<OPAR> (s=node() { s2.append(s);} | <COLON>  { s2.append(";");}   )* <CPAR> { return s2.toString();}
+	}
+
