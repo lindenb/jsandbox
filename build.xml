@@ -651,7 +651,27 @@
       </manifest>
    </jar>
    <delete dir="tmp"/>
-</target>	
+</target>
+
+
+<target name="blastmapannot" depends="ncbi.api">
+   <mkdir dir="dist"/>
+   <mkdir dir="tmp"/>
+   <javac srcdir="src" destdir="tmp" debug="true">
+      <include name="**/MapBlastAnnotation.java" />
+      <include name="**/blast/ObjectFactory.java" />
+      <include name="**/gb/ObjectFactory.java" />
+   </javac>
+   
+   <jar destfile="dist/blastmapannot.jar" basedir="tmp">
+      <manifest>
+         <attribute name="Built-By" value="${user.name}"/>
+         <attribute name="Main-Class" value="sandbox.MapBlastAnnotation"/>
+      </manifest>
+   </jar>
+   <delete dir="tmp"/>
+</target>
+	
 
 <target name="vcfannotator" >
    <mkdir dir="dist"/>
@@ -686,7 +706,7 @@
 </target>
 
 
-<target name="ncbi.api" depends="blast.api,gbc.api">
+<target name="ncbi.api" depends="blast.api,gbc.api,gb.api">
 </target>
 
 <target name="blast.api">
@@ -707,6 +727,15 @@
    </exec>
 </target>
 
+
+<target name="gb.api">
+   <exec executable="xjc">
+      <arg value="-d"/>  <arg value="src"/>
+      <arg value="-p"/> <arg value="sandbox.ncbi.gb"/>
+      <arg value="-dtd"/>
+      <arg value="http://www.ncbi.nlm.nih.gov/dtd/NCBI_GBSeq.dtd"/>
+   </exec>
+</target>
 
 <target name="variantpredictor">
    <mkdir dir="dist"/>
