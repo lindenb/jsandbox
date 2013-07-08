@@ -15,8 +15,6 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -40,6 +38,10 @@ import sandbox.ncbi.gb.GBInterval;
 import sandbox.ncbi.gb.GBQualifier;
 import sandbox.ncbi.gb.GBSeq;
 import sandbox.ncbi.gb.GBSet;
+import sandbox.uniprot.Entry;
+import sandbox.uniprot.FeatureType;
+import sandbox.uniprot.LocationType;
+import sandbox.uniprot.Uniprot;
 
 /**
  * MapBlastAnnotation
@@ -53,6 +55,7 @@ public class MapBlastAnnotation
 	private Unmarshaller unmarshaller;
 	
 	private GBSet gbSet=null;
+	private Uniprot uniprotSet=null;
 	private BlastOutput blastOutput=null;
 
 	
@@ -80,7 +83,8 @@ public class MapBlastAnnotation
 				}
 			});
 		//create a Unmarshaller for NCBI
-		JAXBContext jc = JAXBContext.newInstance("sandbox.ncbi.blast:sandbox.ncbi.gb");
+		JAXBContext jc = JAXBContext.newInstance(
+				"sandbox.ncbi.blast:sandbox.ncbi.gb:sandbox.uniprot");
 		this.unmarshaller=jc.createUnmarshaller();
 		}
 	
@@ -94,19 +98,302 @@ public class MapBlastAnnotation
 			return "{hit:"+hit+",query:"+query+"}";
 			}
 		}
-	
-	
-	private class Interval
+	private abstract class Interval
 		{
-		GBInterval gbInterval;
-		GBFeature gbFeature;
+		
 		Hit hit;
 		Hsp hsp;
+		
+		protected final BlastPos convertQuery(int qPos1)
+			{
+			BlastPos left=getHspStart1();
+			
+			String qS=this.hsp.getHspQseq();
+			String hS=this.hsp.getHspHseq();
+			for(int i=0;i< qS.length() && i< hS.length();++i)
+				{
+				if(left.query>=qPos1) break;
+				if(isSeqLetter(qS.charAt(i)))
+					{
+					left.query+=this.queryShift();
+					}
+				if(isSeqLetter(hS.charAt(i)))
+					{
+					left.hit+=this.hitShift();
+					}
+				}
+			return left;
+			}
+		
+		protected final int queryShift()
+			{
+			return 1;
+			}
+		
+		protected final int hitShift()
+			{
+			int shift=1;
+			if(blastOutput.getBlastOutputProgram().equals("tblastn"))
+				{
+				shift=3;
+				}
+			else if(blastOutput.getBlastOutputProgram().equals("blastn"))
+				{
+				shift=1;
+				}
+			else
+				{
+				throw new RuntimeException("Sorry program not handled: "+blastOutput.getBlastOutputProgram());
+				}
+			return shift*(isHspForward()?1:-1);
+			}
+		
+	
+		private final boolean isSeqLetter(char c)
+			{
+			if(c=='-' || Character.isWhitespace(c)) return false;
+			if(Character.isLetter(c)) return true;
+			throw new IllegalArgumentException("letter: "+c);
+			}
 
-		public String getChrom()
+		
+		
+		protected final BlastPos getHspStart1()
+			{
+			BlastPos p=new BlastPos();
+			p.query=Integer.parseInt(this.hsp.getHspQueryFrom());
+			p.hit=Integer.parseInt(this.hsp.getHspHitFrom());
+			return p;
+			}
+		protected final BlastPos getHspEnd1()
+			{
+			BlastPos p=new BlastPos();
+			p.query=Integer.parseInt(this.hsp.getHspQueryTo());
+			p.hit=Integer.parseInt(this.hsp.getHspHitTo());
+			return p;
+			}
+		
+		protected final boolean isHspForward()
+			{
+			if(getHspStart1().query>getHspEnd1().query) throw new IllegalStateException();
+			return getHspStart1().hit<=getHspEnd1().hit;
+			}
+		
+		public final int getHspQueryStart0()
+			{
+			return Math.min(getHspStart1().query,getHspEnd1().query)-1;
+			}
+		public final int getHspQueryEnd0()
+			{
+			return Math.max(getHspStart1().query,getHspEnd1().query);
+			}
+
+		public final int getBedScore()
+			{
+			int len=featureEnd0()-featureStart0();
+			BlastPos left=getHspStart1();
+			float match=0f;
+			String qS=this.hsp.getHspQseq();
+			String hS=this.hsp.getHspHseq();
+			for(int i=0;i< qS.length() && i< hS.length();++i)
+				{
+				if(left.query-1 >= featureStart0() && left.query-1 < featureEnd0())
+					{
+					if(isSeqLetter(qS.charAt(i)) )
+						{
+						left.query+=this.queryShift();
+						match+=0.5;
+						}
+					if(isSeqLetter(hS.charAt(i)))
+						{
+						left.hit+=this.hitShift();
+						match+=0.5;
+						}
+					}
+				}
+			return (int)((match/len)*1000f);
+			}
+
+		public final boolean isFeatureOverlapHsp()
+			{
+			if(featureEnd0()<=getHspQueryStart0()) return false;
+			if(featureStart0()>=getHspQueryEnd0()) return false;
+			return true;
+			}
+		
+		public abstract Color getColor();
+		
+		public final String getBedColor()
+			{
+			 Color c= getColor();
+			 if(c==null) c=Color.WHITE;
+			 return ""+c.getRed()+","+c.getGreen()+","+c.getBlue();
+			}
+
+		
+		
+		public final String getChrom()
 			{
 			return hit.getHitDef();
 			}
+		protected abstract int featureStart0();
+		protected abstract int featureEnd0();
+
+		public abstract String getBedName();
+		public abstract int getBedStart();
+		public abstract int getBedEnd();
+		public abstract char getBedStrand();
+		
+		public final String toBedString()
+			{
+			StringBuilder b=new StringBuilder();
+			b.append(getChrom()).append('\t');
+			b.append(getBedStart()).append('\t');
+			b.append(getBedEnd()).append('\t');
+			b.append(getBedName()).append('\t');
+			b.append(getBedScore()).append('\t');
+			b.append(getBedStrand()).append('\t');
+			b.append(getBedStart()).append('\t');
+			b.append(getBedEnd()).append('\t');
+			b.append(getBedColor()).append('\t');
+			b.append(1).append('\t');
+			b.append(getBedEnd()-getBedStart()).append('\t');
+			b.append(getBedStart());
+			return b.toString();
+			}
+
+		
+		}
+	
+	/**===================================================================================
+	 * Interval for Uniprot
+	 */
+
+	private class UniprotInterval extends Interval
+		{
+		FeatureType featureType;
+		
+		
+		public int getEntryStart1()
+			{
+			LocationType lt=featureType.getLocation();
+			if(lt==null) throw new IllegalStateException();
+			if(lt.getPosition()!=null)
+				{
+				return lt.getPosition().getPosition().intValue();
+				}
+			else if(lt.getBegin()!=null)
+				{
+				return lt.getBegin().getPosition().intValue();
+				}
+			else
+				{
+				throw new IllegalStateException();
+				}
+			}
+		
+		public int getEntryEnd1()
+			{
+			LocationType lt=featureType.getLocation();
+			if(lt==null) throw new IllegalStateException();
+			if(lt.getPosition()!=null)
+				{
+				return lt.getPosition().getPosition().intValue();
+				}
+			else if(lt.getEnd()!=null)
+				{
+				return lt.getEnd().getPosition().intValue();
+				}
+			else
+				{
+				throw new IllegalStateException();
+				}
+			}
+		
+		@Override
+		public String toString() {
+			return "start1:"+getEntryStart1()+" end1:"+getEntryEnd1()+" acn:"+getBedName()+" start0:"+getEntryStart0()+" end0:"+getEntryEnd0()+"\n"+
+					" hsp.start:"+getHspStart1()+" hsp.end:"+getHspEnd1()+" hsp.foward:"+isHspForward()+"\nHSP:overlap-gb:"+isFeatureOverlapHsp();
+			}
+		
+		@Override
+		public String getBedName()
+			{
+			return this.featureType.getType();
+			}
+		
+		private int getEntryStart0()
+			{
+			return getEntryStart1()-1;
+			}
+		private int getEntryEnd0()
+			{
+			return getEntryEnd1();
+			}
+		
+		@Override
+		protected int featureEnd0()
+			{
+			return getEntryEnd1();
+			}
+		@Override
+		protected int featureStart0()
+			{
+			return getEntryStart0();
+			}
+		
+		
+		@Override
+		public int getBedStart()
+			{
+			return Math.min(convertQuery(getEntryStart1()).hit,convertQuery(getEntryEnd1()).hit)-1;
+			}
+		
+		@Override
+		public int getBedEnd()
+			{
+			return Math.max(convertQuery(getEntryStart1()).hit,convertQuery(getEntryEnd1()).hit)-1;//yes -1 because +1 of convertQuery
+			}
+
+		
+		@Override
+		public char getBedStrand()
+			{
+			int str=1;
+			if(!isHspForward()) str*=-1;
+			return str==1?'+':'-';
+			}
+		
+		@Override
+		public Color getColor()
+			{
+			String fkey="";//TODO
+			if(fkey.equals("CDS"))
+				{
+				return Color.YELLOW;
+				}
+			if(fkey.equals("gene"))
+				{
+				return Color.ORANGE;
+				}
+			if(fkey.equals("gene"))
+				{
+				return Color.GREEN;
+				}
+			return Color.WHITE;
+			}
+		
+		}
+	
+	/**===================================================================================
+	 * Interval for Genbank
+	 */
+	private class GenbankInterval extends Interval
+		{
+		GBInterval gbInterval;
+		GBFeature gbFeature;
+
+		
 
 		
 		public int getGBStart1()
@@ -143,11 +430,12 @@ public class MapBlastAnnotation
 		
 		@Override
 		public String toString() {
-			return "start1:"+getGBStart1()+" end1:"+getGBEnd1()+" forward:"+isGbForward()+" acn:"+getAcn()+" start0:"+getGBStart0()+" end0:"+getGBEnd0()+"\n"+
-					" hsp.start:"+getHspStart1()+" hsp.end:"+getHspEnd1()+" hsp.foward:"+isHspForward()+"\nHSP:overlap-gb:"+isGBIntervalOverlapHsp();
+			return "start1:"+getGBStart1()+" end1:"+getGBEnd1()+" forward:"+isGbForward()+" acn:"+getBedName()+" start0:"+getGBStart0()+" end0:"+getGBEnd0()+"\n"+
+					" hsp.start:"+getHspStart1()+" hsp.end:"+getHspEnd1()+" hsp.foward:"+isHspForward()+"\nHSP:overlap-gb:"+isFeatureOverlapHsp();
 			}
 		
-		public String getAcn()
+		@Override
+		public String getBedName()
 			{
 			String fkey=this.gbFeature.getGBFeatureKey();
 			for(GBQualifier q:this.gbFeature.getGBFeatureQuals().getGBQualifier())
@@ -191,140 +479,46 @@ public class MapBlastAnnotation
 			return getGBStart1()<=getGBEnd1();
 			}
 		
-		public int getGBStart0()
+		private int getGBStart0()
 			{
 			return Math.min(getGBStart1(), getGBEnd1())-1;
 			}
-		public int getGBEnd0()
+		private int getGBEnd0()
 			{
 			return Math.max(getGBStart1(), getGBEnd1());
 			}
 		
-		private BlastPos getHspStart1()
-			{
-			BlastPos p=new BlastPos();
-			p.query=Integer.parseInt(this.hsp.getHspQueryFrom());
-			p.hit=Integer.parseInt(this.hsp.getHspHitFrom());
-			return p;
-			}
-		private BlastPos getHspEnd1()
-			{
-			BlastPos p=new BlastPos();
-			p.query=Integer.parseInt(this.hsp.getHspQueryTo());
-			p.hit=Integer.parseInt(this.hsp.getHspHitTo());
-			return p;
-			}
 		
-		private boolean isHspForward()
+		@Override
+		protected int featureEnd0()
 			{
-			if(getHspStart1().query>getHspEnd1().query) throw new IllegalStateException();
-			return getHspStart1().hit<=getHspEnd1().hit;
+			return getGBEnd0();
 			}
-		public int getHspQueryStart0()
+		@Override
+		protected int featureStart0()
 			{
-			return Math.min(getHspStart1().query,getHspEnd1().query)-1;
-			}
-		public int getHspQueryEnd0()
-			{
-			return Math.max(getHspStart1().query,getHspEnd1().query);
-			}
-		public boolean isGBIntervalOverlapHsp()
-			{
-			if(getGBEnd0()<=getHspQueryStart0()) return false;
-			if(getGBStart0()>=getHspQueryEnd0()) return false;
-			return true;
-			}
-		
-		private BlastPos convertQuery(int qPos1)
-			{
-			BlastPos left=getHspStart1();
-			
-			String qS=this.hsp.getHspQseq();
-			String hS=this.hsp.getHspHseq();
-			for(int i=0;i< qS.length() && i< hS.length();++i)
-				{
-				if(left.query>=qPos1) break;
-				if(isSeqLetter(qS.charAt(i)))
-					{
-					left.query+=this.queryShift();
-					}
-				if(isSeqLetter(hS.charAt(i)))
-					{
-					left.hit+=this.hitShift();
-					}
-				}
-			return left;
-			}
-		
-		private int queryShift()
-			{
-			return 1;
-			}
-		
-		private int hitShift()
-			{
-			int shift=1;
-			if(blastOutput.getBlastOutputProgram().equals("tblastn"))
-				{
-				shift=3;
-				}
-			else if(blastOutput.getBlastOutputProgram().equals("blastn"))
-				{
-				shift=1;
-				}
-			else
-				{
-				throw new RuntimeException("Sorry program not handled: "+blastOutput.getBlastOutputProgram());
-				}
-			return shift*(isHspForward()?1:-1);
+			return getGBStart0();
 			}
 		
 	
-		private boolean isSeqLetter(char c)
-			{
-			if(c=='-' || Character.isWhitespace(c)) return false;
-			if(Character.isLetter(c)) return true;
-			throw new IllegalArgumentException("letter: "+c);
-			}
+		
+		
 		
 
-		
+		@Override
 		public int getBedStart()
 			{
 			return Math.min(convertQuery(getGBStart1()).hit,convertQuery(getGBEnd1()).hit)-1;
 			}
-		
+		@Override
 		public int getBedEnd()
 			{
 			return Math.max(convertQuery(getGBStart1()).hit,convertQuery(getGBEnd1()).hit)-1;//yes -1 because +1 of convertQuery
 			}
 
-		public int getBedScore()
-			{
-			int len=getGBEnd0()-getGBStart0();
-			BlastPos left=getHspStart1();
-			float match=0f;
-			String qS=this.hsp.getHspQseq();
-			String hS=this.hsp.getHspHseq();
-			for(int i=0;i< qS.length() && i< hS.length();++i)
-				{
-				if(left.query-1 >= getGBStart0() && left.query-1 < getGBEnd0())
-					{
-					if(isSeqLetter(qS.charAt(i)) )
-						{
-						left.query+=this.queryShift();
-						match+=0.5;
-						}
-					if(isSeqLetter(hS.charAt(i)))
-						{
-						left.hit+=this.hitShift();
-						match+=0.5;
-						}
-					}
-				}
-			return (int)((match/len)*1000f);
-			}
 		
+		
+		@Override
 		public char getBedStrand()
 			{
 			int str=1;
@@ -332,6 +526,7 @@ public class MapBlastAnnotation
 			if(!isHspForward()) str*=-1;
 			return str==1?'+':'-';
 			}
+		@Override
 		public Color getColor()
 			{
 			String fkey=this.gbFeature.getGBFeatureKey();
@@ -349,36 +544,43 @@ public class MapBlastAnnotation
 				}
 			return Color.WHITE;
 			}
-		public String getBedColor()
-			{
-			 Color c= getColor();
-			 if(c==null) c=Color.WHITE;
-			 return ""+c.getRed()+","+c.getGreen()+","+c.getBlue();
-			}
-		public String toBedString()
-			{
-			StringBuilder b=new StringBuilder();
-			b.append(getChrom()).append('\t');
-			b.append(getBedStart()).append('\t');
-			b.append(getBedEnd()).append('\t');
-			b.append(getAcn()).append('\t');
-			b.append(getBedScore()).append('\t');
-			b.append(getBedStrand()).append('\t');
-			b.append(getBedStart()).append('\t');
-			b.append(getBedEnd()).append('\t');
-			b.append(getBedColor()).append('\t');
-			b.append(1).append('\t');
-			b.append(getBedEnd()-getBedStart()).append('\t');
-			b.append(getBedStart());
-			return b.toString();
-			}
 		}
 
+	private void printUniprot()
+		{
+		for(Entry entry:this.uniprotSet.getEntry())
+			{	
+			BlastOutputIterations iterations=this.blastOutput.getBlastOutputIterations();
+			for(Iteration iteration:iterations.getIteration())
+				{
+				for(FeatureType feature:entry.getFeature())
+					{
+					for(Hit hit:iteration.getIterationHits().getHit())
+						{
+						for(Hsp hsp :hit.getHitHsps().getHsp())
+							{
+							UniprotInterval bi=new UniprotInterval();
+							bi.featureType=feature;
+							bi.hit=hit;
+							bi.hsp=hsp;
+							LOG.info("interval "+bi);
+							if(!bi.isFeatureOverlapHsp()) continue;
+							System.out.println(bi.toBedString());
+							}
+						}
+					
+					}
+				break;
+				}
+			}
+		
+		//System.err.println("OK");
+		
+		}	
 	
 	
 	
-	
-	private void print()
+	private void printGB()
 		{
 		for(GBSeq gbSeq:this.gbSet.getGBSeq())
 			{	
@@ -397,14 +599,14 @@ public class MapBlastAnnotation
 							{
 							for(Hsp hsp :hit.getHitHsps().getHsp())
 								{
-								Interval bi=new Interval();
+								GenbankInterval bi=new GenbankInterval();
 								bi.gbFeature=feature;
 								bi.gbInterval=interval;
 								bi.hit=hit;
 								bi.hsp=hsp;
 								LOG.info("interval "+bi);
 								if(!bi.isGbForward()) LOG.info("CHECK INTERVAL REVERSE");
-								if(!bi.isGBIntervalOverlapHsp()) continue;
+								if(!bi.isFeatureOverlapHsp()) continue;
 								System.out.println(bi.toBedString());
 								}
 							
@@ -421,6 +623,12 @@ public class MapBlastAnnotation
 		
 		}
 	
+	private void print()
+		{
+		if(this.gbSet!=null) printGB();
+		else if(this.uniprotSet!=null) printUniprot();
+		}
+	
 	public void run(String[] args) throws Exception
 		{
 				int optind=0;
@@ -431,7 +639,7 @@ public class MapBlastAnnotation
 				System.out.println("BlastMapAnnot Pierre Lindenbaum PhD 2013.");
 				System.out.println("Options:");
 				System.out.println(" -h this screen");
-				System.out.println(" [XML GBSet Result] [XML NCBI BLAST results]");
+				System.out.println(" [XML GBSet Result| uniprot XML] [XML NCBI BLAST results]");
 				return;
 				}
 			else if(args[optind].equals("-L") && optind+1< args.length)
@@ -460,8 +668,18 @@ public class MapBlastAnnotation
 			System.err.println("Expected input is genbank.xml blast.xml");
 			return;
 			}
-		LOG.info("reading gbset"+args[optind]);
-		this.gbSet=this.unmarshaller.unmarshal(this.docBuilder.parse(new File(args[optind])),GBSet.class).getValue();	
+		LOG.info("reading entry "+args[optind]);
+		Document domEntry=this.docBuilder.parse(new File(args[optind]));
+		if(domEntry.getDocumentElement().getNodeName().equals("GBSet"))
+			{
+			LOG.info("parsing as GBSet");
+			this.gbSet=this.unmarshaller.unmarshal(domEntry,GBSet.class).getValue();	
+			}
+		else
+			{
+			LOG.info("parsing as Uniprot");
+			this.uniprotSet=this.unmarshaller.unmarshal(domEntry,Uniprot.class).getValue();	
+			}
 		Document blastDom;
 		if(optind+2==args.length)
 			{

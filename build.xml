@@ -655,12 +655,13 @@
 </target>
 
 
-<target name="blastmapannot" depends="ncbi.api">
+<target name="blastmapannot" depends="ncbi.api,uniprot.api">
    <mkdir dir="dist"/>
    <mkdir dir="tmp"/>
-   <javac srcdir="src" destdir="tmp" debug="true">
+   <javac srcdir="src" destdir="tmp" debug="true" includeantruntime="false">
       <include name="**/MapBlastAnnotation.java" />
       <include name="**/blast/ObjectFactory.java" />
+      <include name="**/uniprot/ObjectFactory.java" />
       <include name="**/gb/ObjectFactory.java" />
    </javac>
    
@@ -737,6 +738,16 @@
       <arg value="http://www.ncbi.nlm.nih.gov/dtd/NCBI_GBSeq.dtd"/>
    </exec>
 </target>
+
+<target name="uniprot.api">
+   <exec executable="xjc">
+      <arg value="-d"/>  <arg value="src"/>
+      <arg value="-p"/> <arg value="sandbox.uniprot"/>
+      <arg value="http://www.uniprot.org/support/docs/uniprot.xsd"/>
+   </exec>
+</target>
+
+
 
 <target name="variantpredictor">
    <mkdir dir="dist"/>

@@ -313,6 +313,7 @@ public class FlickrRss
 		List<Photo> L=new ArrayList<FlickrRss.Photo>();
 		
 		InputStream  in=response.getStream();
+		if(in==null) return L;
 		XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
 		xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, Boolean.FALSE);
 		XMLEventReader r= xmlInputFactory.createXMLEventReader(in);	
