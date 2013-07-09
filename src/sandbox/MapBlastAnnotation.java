@@ -6,8 +6,8 @@
  * Mail:
  * 		plindenbaum@yahoo.fr
  * Motivation:
- * 		displays the annotation for a blast alignement.
- * 		annotations are fetched from the NCBI if sequence def starts with 'gi|...'
+ * 		map the annotations of a genbank uniprot file to a blast hit
+ * 		prints the results as a BED file.
  * 
  */
 package sandbox;
@@ -15,6 +15,9 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -49,43 +52,15 @@ import sandbox.uniprot.Uniprot;
 public class MapBlastAnnotation
 	{
 	private static final Logger LOG=Logger.getLogger("MapBlastAnnotation");
-	/** xml parser */
-	private DocumentBuilder docBuilder;
-	/** transforms XML/DOM to GBC entry */
-	private Unmarshaller unmarshaller;
 	
-	private GBSet gbSet=null;
-	private Uniprot uniprotSet=null;
 	private BlastOutput blastOutput=null;
-
+	private Set<String> restrictTofeatureKey=new HashSet<String>();
 	
 	
 
 	/** constructor */
 	private MapBlastAnnotation() throws Exception
 		{
-		//create a DOM parser
-		DocumentBuilderFactory f=DocumentBuilderFactory.newInstance();
-		f.setCoalescing(true);
-		f.setNamespaceAware(true);
-		f.setValidating(false);
-		f.setExpandEntityReferences(true);
-		f.setIgnoringComments(false);
-		f.setIgnoringElementContentWhitespace(true);
-		this.docBuilder= f.newDocumentBuilder();
-		this.docBuilder.setEntityResolver(new EntityResolver()
-			{
-			@Override
-			public InputSource resolveEntity(String publicId, String systemId)
-					throws SAXException, IOException
-				{
-				return new InputSource(new StringReader(""));
-				}
-			});
-		//create a Unmarshaller for NCBI
-		JAXBContext jc = JAXBContext.newInstance(
-				"sandbox.ncbi.blast:sandbox.ncbi.gb:sandbox.uniprot");
-		this.unmarshaller=jc.createUnmarshaller();
 		}
 	
 	
@@ -151,11 +126,18 @@ public class MapBlastAnnotation
 	
 		private final boolean isSeqLetter(char c)
 			{
-			if(c=='-' || Character.isWhitespace(c)) return false;
+			if(c=='-' || c=='*' || Character.isWhitespace(c)) return false;
 			if(Character.isLetter(c)) return true;
 			throw new IllegalArgumentException("letter: "+c);
 			}
+		private final boolean isMidMatch(char c)
+			{
+			if(Character.isWhitespace(c)) return false;
+			if(Character.isLetter(c) || c=='|' || c=='+') return true;
+			return false;
+			}
 
+		
 		
 		
 		protected final BlastPos getHspStart1()
@@ -195,23 +177,37 @@ public class MapBlastAnnotation
 			float match=0f;
 			String qS=this.hsp.getHspQseq();
 			String hS=this.hsp.getHspHseq();
+			String mid=this.hsp.getHspMidline();
 			for(int i=0;i< qS.length() && i< hS.length();++i)
 				{
 				if(left.query-1 >= featureStart0() && left.query-1 < featureEnd0())
 					{
 					if(isSeqLetter(qS.charAt(i)) )
 						{
-						left.query+=this.queryShift();
-						match+=0.5;
+						match+=(1/3.0);
 						}
 					if(isSeqLetter(hS.charAt(i)))
 						{
-						left.hit+=this.hitShift();
-						match+=0.5;
+						match+=(1/3.0);
+						}
+					if(isMidMatch(mid.charAt(i)))
+						{
+						match+=(1/3.0);
 						}
 					}
+				if(isSeqLetter(qS.charAt(i)) )
+					{
+					left.query+=this.queryShift();
+					}
+				if(isSeqLetter(hS.charAt(i)))
+					{
+					left.hit+=this.hitShift();
+					}
+
 				}
-			return (int)((match/len)*1000f);
+			int score= (int)((match/len)*1000f);
+			if(score==0) LOG.info("score==0 "+match+"/"+len);
+			return score;
 			}
 
 		public final boolean isFeatureOverlapHsp()
@@ -271,6 +267,7 @@ public class MapBlastAnnotation
 
 	private class UniprotInterval extends Interval
 		{
+		Entry entry;
 		FeatureType featureType;
 		
 		
@@ -316,10 +313,23 @@ public class MapBlastAnnotation
 					" hsp.start:"+getHspStart1()+" hsp.end:"+getHspEnd1()+" hsp.foward:"+isHspForward()+"\nHSP:overlap-gb:"+isFeatureOverlapHsp();
 			}
 		
-		@Override
+		private String entryName()
+			{
+			for(String s:entry.getName()) return s;
+			for(String s:entry.getAccession()) return s;
+			throw new IllegalStateException();
+			}
+		
+		@Override 
 		public String getBedName()
 			{
-			return this.featureType.getType();
+			String s=this.featureType.getType();
+			if(this.featureType.getDescription()!=null)
+				{
+				s= this.featureType.getDescription();
+				}
+			
+			return entryName()+":"+s;
 			}
 		
 		private int getEntryStart0()
@@ -384,12 +394,17 @@ public class MapBlastAnnotation
 			}
 		
 		}
-	
+	static enum QualKey
+		{
+		region_name,product,mol_type,gene,locus_tag,site_type,note
+		};
 	/**===================================================================================
 	 * Interval for Genbank
 	 */
 	private class GenbankInterval extends Interval
 		{
+		
+		GBSeq gbSeq;
 		GBInterval gbInterval;
 		GBFeature gbFeature;
 
@@ -434,44 +449,44 @@ public class MapBlastAnnotation
 					" hsp.start:"+getHspStart1()+" hsp.end:"+getHspEnd1()+" hsp.foward:"+isHspForward()+"\nHSP:overlap-gb:"+isFeatureOverlapHsp();
 			}
 		
+		
+		private String gbName()
+			{
+			String s=null;
+			s=gbSeq.getGBSeqLocus();
+			if(s!=null) return s;
+			s=gbSeq.getGBSeqAccessionVersion();
+			if(s!=null) return s;
+			s=gbSeq.getGBSeqEntryVersion();
+			if(s!=null) return s;
+			return "?";
+			}
+		
 		@Override
 		public String getBedName()
 			{
 			String fkey=this.gbFeature.getGBFeatureKey();
+			TreeMap<QualKey, String> t=new TreeMap<QualKey, String>();
+			
 			for(GBQualifier q:this.gbFeature.getGBFeatureQuals().getGBQualifier())
 				{
 				String key=q.getGBQualifierName();
-				String v=q.getGBQualifierValue();
-				if(v==null || v.isEmpty()) continue;
-				if(key.equals("product")) return v;
-				else if(key.equals("region_name") && fkey.equals("Region"))
+				for(QualKey qk:QualKey.values())
 					{
-					return  v;
+					if(qk.name().equals(key))
+						{
+						t.put(qk, q.getGBQualifierValue());
+						break;
+						}
 					}
 				
-				else if(fkey.equals("CDS") &&  key.equals("locus_tag"))
-					{
-					return  v;
-					}
-				else if(fkey.equals("CDS") &&  key.equals("gene"))
-					{
-					return  v;
-					}
-				else if(fkey.equals("Protein") && key.equals("product"))
-					{
-					return  v;
-					}
-				else if(fkey.equals("Site") && key.equals("site_type"))
-					{
-					return  v;
-					}
-				else if(fkey.equals("Site") && key.equals("note"))
-					{
-					return  v;
-					}
 				}
-			
-			return fkey+":"+gbInterval.getGBIntervalAccession();
+			if(t.isEmpty())
+				{
+				LOG.info("not qual for "+fkey);
+				return gbName()+":"+fkey;
+				}
+			return gbName()+":"+fkey+":"+t.get(t.keySet().iterator().next());
 			}
 		
 		public boolean isGbForward()
@@ -546,25 +561,47 @@ public class MapBlastAnnotation
 			}
 		}
 
-	private void printUniprot()
+	private void printUniprot(Uniprot uniprotSet)
 		{
-		for(Entry entry:this.uniprotSet.getEntry())
+		if(uniprotSet.getEntry().isEmpty())
+			{
+			LOG.warning("empty uniprot entry.");
+			return;
+			}
+
+		if(uniprotSet.getEntry().size()>1)
+			{
+			LOG.warning("entry contains more than one sequence.");
+			}
+		for(Entry entry:uniprotSet.getEntry())
 			{	
 			BlastOutputIterations iterations=this.blastOutput.getBlastOutputIterations();
 			for(Iteration iteration:iterations.getIteration())
 				{
 				for(FeatureType feature:entry.getFeature())
 					{
+					if(!this.restrictTofeatureKey.isEmpty())
+						{
+						if(!restrictTofeatureKey.contains(feature.getType()))
+							{
+							continue;
+							}
+						}
 					for(Hit hit:iteration.getIterationHits().getHit())
 						{
 						for(Hsp hsp :hit.getHitHsps().getHsp())
 							{
 							UniprotInterval bi=new UniprotInterval();
+						
+							bi.entry=entry;
 							bi.featureType=feature;
 							bi.hit=hit;
 							bi.hsp=hsp;
 							LOG.info("interval "+bi);
-							if(!bi.isFeatureOverlapHsp()) continue;
+							if(!bi.isFeatureOverlapHsp())
+								{
+								continue;
+								}
 							System.out.println(bi.toBedString());
 							}
 						}
@@ -580,9 +617,9 @@ public class MapBlastAnnotation
 	
 	
 	
-	private void printGB()
+	private void printGB(GBSet gbSet)
 		{
-		for(GBSeq gbSeq:this.gbSet.getGBSeq())
+		for(GBSeq gbSeq:gbSet.getGBSeq())
 			{	
 			BlastOutputIterations iterations=this.blastOutput.getBlastOutputIterations();
 			for(Iteration iteration:iterations.getIteration())
@@ -590,8 +627,17 @@ public class MapBlastAnnotation
 				for(GBFeature feature:gbSeq.getGBSeqFeatureTable().getGBFeature())
 					{
 					if(feature.getGBFeatureIntervals()==null) continue;
-					if(feature.getGBFeatureKey().equals("source")) continue;
-					LOG.info("feature key is "+feature.getGBFeatureKey());
+					
+					
+					if(!this.restrictTofeatureKey.isEmpty())
+						{
+						if(!restrictTofeatureKey.contains(feature.getGBFeatureKey()))
+							{
+							continue;
+							}
+						}
+
+					
 					for(GBInterval interval:feature.getGBFeatureIntervals().getGBInterval())
 						{
 		
@@ -600,6 +646,7 @@ public class MapBlastAnnotation
 							for(Hsp hsp :hit.getHitHsps().getHsp())
 								{
 								GenbankInterval bi=new GenbankInterval();
+								bi.gbSeq=gbSeq;
 								bi.gbFeature=feature;
 								bi.gbInterval=interval;
 								bi.hit=hit;
@@ -623,15 +670,40 @@ public class MapBlastAnnotation
 		
 		}
 	
-	private void print()
-		{
-		if(this.gbSet!=null) printGB();
-		else if(this.uniprotSet!=null) printUniprot();
-		}
+
 	
 	public void run(String[] args) throws Exception
 		{
-				int optind=0;
+		/** xml parser */
+		 DocumentBuilder docBuilder;
+		/** transforms XML/DOM to GBC entry */
+		 Unmarshaller unmarshaller;
+
+		//create a DOM parser
+		DocumentBuilderFactory f=DocumentBuilderFactory.newInstance();
+		f.setCoalescing(true);
+		f.setNamespaceAware(true);
+		f.setValidating(false);
+		f.setExpandEntityReferences(true);
+		f.setIgnoringComments(false);
+		f.setIgnoringElementContentWhitespace(true);
+		docBuilder= f.newDocumentBuilder();
+		docBuilder.setEntityResolver(new EntityResolver()
+			{
+			@Override
+			public InputSource resolveEntity(String publicId, String systemId)
+					throws SAXException, IOException
+				{
+				return new InputSource(new StringReader(""));
+				}
+			});
+		//create a Unmarshaller for NCBI
+		JAXBContext jc = JAXBContext.newInstance(
+				"sandbox.ncbi.blast:sandbox.ncbi.gb:sandbox.uniprot");
+		unmarshaller=jc.createUnmarshaller();
+
+		
+		int optind=0;
 		while(optind<args.length)
 			{
 			if(args[optind].equals("-h"))
@@ -639,8 +711,13 @@ public class MapBlastAnnotation
 				System.out.println("BlastMapAnnot Pierre Lindenbaum PhD 2013.");
 				System.out.println("Options:");
 				System.out.println(" -h this screen");
+				System.out.println(" -F (string) restict to that  featureType. Can be called multiple times.");
 				System.out.println(" [XML GBSet Result| uniprot XML] [XML NCBI BLAST results]");
 				return;
+				}
+			else if(args[optind].equals("-F") && optind+1< args.length)
+				{
+				this.restrictTofeatureKey.add(args[++optind]);
 				}
 			else if(args[optind].equals("-L") && optind+1< args.length)
 				{
@@ -669,31 +746,33 @@ public class MapBlastAnnotation
 			return;
 			}
 		LOG.info("reading entry "+args[optind]);
-		Document domEntry=this.docBuilder.parse(new File(args[optind]));
+		Document domEntry=docBuilder.parse(new File(args[optind]));
+		GBSet gbSet=null;
+		Uniprot uniprotSet=null;
 		if(domEntry.getDocumentElement().getNodeName().equals("GBSet"))
 			{
 			LOG.info("parsing as GBSet");
-			this.gbSet=this.unmarshaller.unmarshal(domEntry,GBSet.class).getValue();	
+			gbSet=unmarshaller.unmarshal(domEntry,GBSet.class).getValue();	
 			}
 		else
 			{
 			LOG.info("parsing as Uniprot");
-			this.uniprotSet=this.unmarshaller.unmarshal(domEntry,Uniprot.class).getValue();	
+			uniprotSet=unmarshaller.unmarshal(domEntry,Uniprot.class).getValue();	
 			}
 		Document blastDom;
 		if(optind+2==args.length)
 			{
 			LOG.info("reading "+args[optind+1]);
-			blastDom=this.docBuilder.parse(new File(args[optind+1]));
+			blastDom=docBuilder.parse(new File(args[optind+1]));
 			}
 		else
 			{
 			LOG.info("reading from stdin");
-			blastDom=this.docBuilder.parse(System.in);
+			blastDom=docBuilder.parse(System.in);
 			}
-		this.blastOutput=this.unmarshaller.unmarshal(blastDom,BlastOutput.class).getValue();	
-		
-		print();
+		this.blastOutput=unmarshaller.unmarshal(blastDom,BlastOutput.class).getValue();	
+		if(uniprotSet!=null) printUniprot(uniprotSet);
+		if(gbSet!=null) printGB(gbSet);
 		}
 	public static void main(String[] args) throws Exception
 		{
