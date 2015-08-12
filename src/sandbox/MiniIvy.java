@@ -20,8 +20,11 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 public class MiniIvy
@@ -29,7 +32,7 @@ public class MiniIvy
 	private XPath xpath=null;
 	private Map<Dependency,Dependency> dep2deps = new HashMap<Dependency,Dependency>();
 	private Map<String, Set<Dependency>> target2dependencies = new HashMap<String, Set<Dependency>>();
-	
+	private static final String MAVEN4_NS="http://maven.apache.org/POM/4.0.0";
 	
 	private class Dependency
 		{
@@ -95,10 +98,6 @@ public class MiniIvy
 			return getUrl()+".pom";
 			}
 		
-		public String getJarUrl()
-			{
-			return getUrl()+".jar";
-			}
 		
 		public String getFile()
 			{
@@ -106,6 +105,45 @@ public class MiniIvy
 					this.artifactId+"/"+revision+"/"+artifactId+"-"+
 					this.revision+".jar";
 			}
+		
+		private Node _fixns(Document dom,Node root)
+			{
+			if(root.getNodeType()==Node.ELEMENT_NODE)
+				{
+				Element e=dom.createElementNS(MAVEN4_NS, root.getLocalName());
+				if(e.hasAttributes())
+					{
+					NamedNodeMap nn= e.getAttributes();
+					for(int i=0;i< nn.getLength();++i)
+						{
+						e.setAttributeNode((Attr)nn.item(i));
+						}
+					}
+				Node c=root.getFirstChild();
+				while(c!=null)
+					{
+					Node next=c.getNextSibling();
+					e.appendChild(_fixns(dom,c));
+					c=next;
+					}
+				return e;
+				}
+			
+			return root;
+			}
+
+		
+		private Document fixNamespace(Document dom)
+			{
+			Element root=dom.getDocumentElement();
+			if(!MAVEN4_NS.equals(root.getNamespaceURI()))
+				{
+				dom.removeChild(root);
+				dom.appendChild(_fixns(dom,root));
+				}
+			return dom;
+			}
+		
 		private Set<Dependency> resolve() throws IOException
 			{
 			try {
@@ -116,7 +154,7 @@ public class MiniIvy
 				dbf.setNamespaceAware(true);
 				DocumentBuilder db= dbf.newDocumentBuilder();
 				System.err.println("resolving "+getPomUrl());
-				Document dom = db.parse(getPomUrl());
+				Document dom = fixNamespace(db.parse(getPomUrl()));
 				NodeList nl=(NodeList)xpath.evaluate("/pom:project/pom:dependencies/pom:dependency", dom, XPathConstants.NODESET);
 				for(int i=0;i< nl.getLength();++i)
 					{
@@ -125,13 +163,26 @@ public class MiniIvy
 						continue;
 					if("provided".equals(xpath.evaluate("pom:scope/text()", E, XPathConstants.STRING)))
 						continue;
-					if("true".equals(xpath.evaluate("optional/text()", E, XPathConstants.STRING)))
+					if("true".equals(xpath.evaluate("pom:optional/text()", E, XPathConstants.STRING)))
 						continue;
 					
 					Dependency dep = new Dependency();
 					dep.group = (String)xpath.evaluate("pom:groupId/text()", E, XPathConstants.STRING);
 					dep.artifactId = (String)xpath.evaluate("pom:artifactId/text()", E, XPathConstants.STRING);
 					dep.revision = (String)xpath.evaluate("pom:version/text()", E, XPathConstants.STRING);
+
+					if(dep.revision!=null && dep.revision.startsWith("${") && dep.revision.endsWith("}"))
+						{/*
+						String key=dep.revision.substring(2,dep.revision.length()-2);
+						
+						System.err.println("BOUM "+dep.revision);
+						dbf = DocumentBuilderFactory.newInstance();
+						dbf.setNamespaceAware(false);
+						System.err.println("getting "+dep.getMetaDataUrl());
+						Document dom2 = db.parse(dep.getMetaDataUrl());*/
+						dep.revision=null;
+						}
+					
 					if(dep.revision==null || dep.revision.trim().isEmpty())
 						{
 						dbf = DocumentBuilderFactory.newInstance();
@@ -139,6 +190,8 @@ public class MiniIvy
 						System.err.println("getting "+dep.getMetaDataUrl());
 						Document dom2 = db.parse(dep.getMetaDataUrl());
 						dep.revision =(String)xpath.evaluate("/metadata/versioning/release/text()", dom2, XPathConstants.STRING);
+						if(dep.revision==null || dep.revision.trim().isEmpty())
+						   dep.revision =(String)xpath.evaluate("/metadata/versioning/versions/version/text()", dom2, XPathConstants.STRING);
 						}
 					
 					if(dep.revision.equals("${project.version}"))
@@ -208,7 +261,7 @@ public class MiniIvy
 				
 				@Override
 				public String getNamespaceURI(String prefix) {
-					if(prefix.equals("pom")) return "http://maven.apache.org/POM/4.0.0";
+					if(prefix.equals("pom")) return MAVEN4_NS;
 					return null;
 				}
 			});
@@ -230,6 +283,7 @@ public class MiniIvy
 					{
 					Pattern colon=Pattern.compile("[\\:]");
 					String token2s[] =colon.split(tokens[i]);
+					if(token2s.length<2) throw new IllegalArgumentException("Expected 3 tokens in "+tokens[i]);
 					Dependency dep = new Dependency();
 					dep.group = token2s[0];
 					dep.artifactId = token2s[1];
@@ -249,22 +303,36 @@ public class MiniIvy
 				this.target2dependencies.put(tokens[0], deps);
 				}
 			r.close();
+			int n=0;
+
+			
 			for(String k : this.target2dependencies.keySet())
 				{
 				System.out.print(k);
 				System.out.print("  = ");
 				for(Dependency dep: this.target2dependencies.get(k))
 					{
-					System.out.print(" ");
+					System.out.print(n>1?" \\\n\t":" "); 
 					System.out.print(dep.getFile());
+					n++;
 					}
 				System.out.println();
 				}
-			for(Dependency dep:this.dep2deps.keySet())
+			System.out.print("all_maven_jars = $(sort ");
+			for(String k : this.target2dependencies.keySet())
 				{
-				System.out.println(dep.getFile()+" :");
-				System.out.println("\tmkdir -p $(dir $@) && wget -O \"$@\" \""+ dep.getJarUrl() +"\"");
+				System.out.print(" ${"+k+"}");
 				}
+			System.out.println(")");
+			
+			
+
+			for(String k : this.target2dependencies.keySet())
+				{
+				System.out.print("${"+k+"} ");
+				}
+			System.out.println(" : ");		
+			System.out.println("\tmkdir -p $(dir $@) && wget -O \"$@\" \"http://central.maven.org/maven2/$(patsubst ${lib.dir}/%,%,$@)\"");
 			return 0;
 			} 
 		catch (Exception e)
