@@ -2,19 +2,39 @@ package sandbox;
 
 
 
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.math.BigInteger;
+import java.util.logging.Level;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
 import org.scribe.builder.api.Api;
 import org.scribe.builder.api.TwitterApi;
+import org.scribe.model.OAuthRequest;
+import org.scribe.model.Response;
+import org.scribe.model.Verb;
+
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 
 
-public  class AbstractTwitterApplication
+public  abstract class AbstractTwitterApplication
 	extends AbstractOAuthApplication
 	{
 	private static final String BASE_REST="https://api.twitter.com/1.1";
+	private int sleep_minutes=5;
 
+	protected static interface Consumer<T>
+		{
+		void accept(final T o);
+		}
+	
 	protected static abstract class Entity
 		{
 		int begin;
@@ -118,15 +138,117 @@ public  class AbstractTwitterApplication
 		}
 	
 	
-
-	
-	
-	protected void usage()
+	@Override
+	protected void fillOptions(final Options options)
 		{
-		super.usage();
-
-		return;
+		options.addOption(Option.builder("wait").
+				hasArg().
+				required(false).
+				longOpt("wait").
+				argName("MINUTES").
+				type(Integer.class).
+				desc("wait MINUTES after twitter says quotas was reached default:"+sleep_minutes).
+				build()
+				);
+		
+		super.fillOptions(options);
 		}
+	
+	@Override
+	protected Status decodeOptions(CommandLine cmd)
+		{
+		if(cmd.hasOption("wait"))
+			{
+			this.sleep_minutes = Integer.parseInt(cmd.getOptionValue("wait"));
+			}
+		return super.decodeOptions(cmd);
+		}
+
+	
+	protected void listFollowers(
+			String user_id_or_screen_name,
+			Consumer<BigInteger> callback
+			)
+			throws Exception
+			{	
+			listFriendOrFollowers("followers",user_id_or_screen_name,callback);
+			}
+	
+	private void listFriendOrFollowers(
+			final String verb,
+			String user_id_or_screen_name,
+			Consumer<BigInteger> callback
+			)
+			throws Exception
+			{	
+			BigInteger userId=null;
+			String screen_name=null;
+			try{
+				userId=new BigInteger(user_id_or_screen_name);
+				if(userId.compareTo(BigInteger.ONE)<0)
+					{
+					userId=null;
+					throw  new NumberFormatException("negative id "+user_id_or_screen_name);
+					}
+				}
+			catch (NumberFormatException err)
+				{
+				screen_name=String.valueOf(user_id_or_screen_name);
+				}
+			
+			JsonParser parser=new JsonParser();
+			BigInteger cursor=BigInteger.ONE.negate();
+			String url=getBaseURL()+"/"+verb+"/ids.json";
+			LOG.info(url);
+			for(;;)
+				{
+			    JsonElement jsonResponse=null;
+			    JsonArray array=null;
+			    for(;;)
+			    	{
+			    	try
+			    		{
+						OAuthRequest request = new OAuthRequest(Verb.GET, url);
+					    if(userId!=null) request.addQuerystringParameter("user_id", userId.toString());
+					    else if(screen_name!=null) request.addQuerystringParameter("screen_name", screen_name);
+					    else throw new IllegalArgumentException("user id/screen_name ?");
+					    request.addQuerystringParameter("cursor", cursor.toString());
+					    getService().signRequest(getAccessToken(), request);
+
+					    Response response = request.send();
+					    Reader  in=new InputStreamReader(new LogInputStream(response.getStream(),
+					    		!Level.OFF.equals(LOG.getLevel())?System.err:null));
+					    jsonResponse=parser.parse(in);
+					    in.close();
+
+					    array=jsonResponse.getAsJsonObject().get("ids").getAsJsonArray();
+						break;
+			    		}
+			    	catch (Exception e)
+			    		{
+						LOG.info("Error: "+e.getMessage()+" sleep for "+sleep_minutes+" minutes.");
+						Thread.sleep(sleep_minutes*1000);//5minutes
+						}
+			    	}
+			    
+			    for(int i=0;callback!=null && i< array.size();++i)
+			    	{
+			    	BigInteger friendid=array.get(i).getAsBigInteger();
+			    	callback.accept(friendid);
+			    	}
+			    
+			    cursor=null;
+			    if(jsonResponse.getAsJsonObject().get("next_cursor")!=null)
+			    	{
+			    	cursor=jsonResponse.getAsJsonObject().get("next_cursor").getAsBigInteger();
+			    	}
+			    if(cursor==null || cursor.equals(BigInteger.ZERO)) break;
+				}
+			}	
+
+
+	
+	
 	
 	public String getBaseURL()
 		{
@@ -146,7 +268,7 @@ public  class AbstractTwitterApplication
 		return TwitterApi.class;
 		}
 	
-
+	
 
 	    
 	}

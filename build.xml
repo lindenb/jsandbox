@@ -111,6 +111,22 @@
 	<delete dir="tmp"/>
 </target>
 
+<target name="mosaicofpictures">
+	<mkdir dir="dist"/>
+	<mkdir dir="tmp"/>
+
+
+	<javac srcdir="src" destdir="tmp" debug="true" includeantruntime="no">
+		<include name="**/MosaicOfPictures.java" />
+	</javac>
+	<jar destfile="dist/mosaicofpictures.jar" basedir="tmp">
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-Class" value="sandbox.MosaicOfPictures"/>
+		</manifest>
+	</jar>
+	<delete dir="tmp"/>
+</target>
 
 <target name="mergepictures">
 	<mkdir dir="dist"/>

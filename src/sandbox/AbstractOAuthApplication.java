@@ -3,13 +3,14 @@ package sandbox;
 import java.awt.Desktop;
 import java.io.Console;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 import javax.swing.JOptionPane;
 
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
 import org.scribe.builder.ServiceBuilder;
 import org.scribe.builder.api.Api;
 import org.scribe.model.Verifier;
@@ -21,11 +22,8 @@ import org.scribe.oauth.OAuthService;
  *
  */
 public abstract class AbstractOAuthApplication
+	extends AbstractApplication
 	{
-	protected static Logger LOG=Logger.getLogger("oauth");
-	static {
-		LOG.setLevel(Level.OFF);
-		}
 	private OAuthService service;
 	private org.scribe.model.Token accessToken;
 	private Preferences preferences;
@@ -54,83 +52,47 @@ public abstract class AbstractOAuthApplication
 		return accessToken;
 		}
 	
-	protected void usage()
+	
+	
+	@Override
+	protected void fillOptions(final Options options)
 		{
-		System.err.println(" -h help; This screen.");
-		System.err.println(" -secret <api_secret> (or will use the one stored in the preferences).");
-		System.err.println(" -key <api_key> (or will use the one stored in the preferences).");
-		System.err.println(" -proxyHost <host>.");
-		System.err.println(" -proxyPort <port>.");
-		return;
+		options.addOption(Option.builder("secret").
+				hasArg().
+				required(false).
+				longOpt("secret").
+				argName("API_SECRET").
+				desc("api secret (or will use the one stored in the preferences)").
+				build()
+				);
+		options.addOption(Option.builder("key").
+				hasArg().
+				required(false).
+				longOpt("key").
+				argName("API_KEY").
+				desc("api key (or will use the one stored in the preferences)").
+				build()
+				);
+		
+		super.fillOptions(options);
 		}
+	
+	@Override
+	protected Status decodeOptions(CommandLine cmd)
+		{
+		if(cmd.hasOption("key"))
+			{
+			this.api_key = cmd.getOptionValue("key");
+			}
+		if(cmd.hasOption("secret"))
+			{
+			this.api_secret = cmd.getOptionValue("secret");
+			}
+		return super.decodeOptions(cmd);
+		}
+	
+	
 
-	protected int parseArgument(String[] args,int optind) throws Exception
-		{
-		if(args[optind].equals("-secret") && optind+1 < args.length)
-			{
-			api_secret= args[++optind];
-			return optind;
-			}
-		else if(args[optind].equals("-key") && optind+1 < args.length)
-			{
-			api_key= args[++optind];
-			return optind;
-			}
-		else if(args[optind].equals("-proxyHost") && optind+1 < args.length)
-			{
-			System.setProperty("http.proxyHost", args[++optind]);
-			return optind;
-			}
-		else if(args[optind].equals("-proxyPort") && optind+1 < args.length)
-			{
-			System.setProperty("http.proxyPort", args[++optind]);
-			return optind;
-			}
-		else if(args[optind].equals("-L") && optind+1 < args.length)
-			{
-			LOG.setLevel(Level.parse(args[++optind]));
-			return optind;
-			}
-		return -1;
-		}
-	
-	
-	protected int parseArguments(String[] args) throws Exception
-		{
-		int optind=0;
-		int next;
-		while(optind< args.length)
-			{
-			if(args[optind].equals("-h") ||
-			   args[optind].equals("-help") ||
-			   args[optind].equals("--help"))
-				{
-				usage();
-				System.exit(0);
-				}
-			else if((next=parseArgument(args,optind))!=-1)
-				{
-				optind=next;
-				}
-			else if(args[optind].equals("--"))
-				{
-				optind++;
-				break;
-				}
-			else if(args[optind].startsWith("-"))
-				{
-				System.err.println("Unknown option "+args[optind]);
-				return -1;
-				}
-			else 
-				{
-				break;
-				}
-			++optind;
-			}
-		return optind;
-		}
-	
 	protected boolean isIgnoringPrefs()
 		{
 		return force_ignore_prefs;

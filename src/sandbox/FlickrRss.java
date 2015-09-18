@@ -70,7 +70,7 @@ São Paulo - SP
 public class FlickrRss
 	{
 	private static Logger LOG=Logger.getLogger("flickr.search");
-	private static final String BASE_REST="http://api.flickr.com/services/rest/";
+	private static final String BASE_REST="https://api.flickr.com/services/rest/";
 	private enum Format { html,atom};
 	private Format format=Format.html;
 	private boolean printMime=false;
@@ -507,7 +507,14 @@ public class FlickrRss
 				
 				if(enableGroup || "flickr.groups.pools.getPhotos".equals(args.get("method"))==false )
 					{
-					L=parseUrl(request);
+					try
+						{
+						L=parseUrl(request);
+						}
+					catch(Exception err4)
+						{
+						L=new ArrayList<Photo>();
+						}
 					}
 				Node att=c1.getAttributes().getNamedItem("priority");
 				if(att!=null && this.use_priority)
