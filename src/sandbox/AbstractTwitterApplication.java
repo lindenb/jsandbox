@@ -28,7 +28,7 @@ public  abstract class AbstractTwitterApplication
 	extends AbstractOAuthApplication
 	{
 	private static final String BASE_REST="https://api.twitter.com/1.1";
-	private int sleep_minutes=5;
+	protected int sleep_minutes=5;
 
 	protected static interface Consumer<T>
 		{
@@ -161,6 +161,7 @@ public  abstract class AbstractTwitterApplication
 			{
 			this.sleep_minutes = Integer.parseInt(cmd.getOptionValue("wait"));
 			}
+	
 		return super.decodeOptions(cmd);
 		}
 
@@ -199,7 +200,7 @@ public  abstract class AbstractTwitterApplication
 			JsonParser parser=new JsonParser();
 			BigInteger cursor=BigInteger.ONE.negate();
 			String url=getBaseURL()+"/"+verb+"/ids.json";
-			LOG.info(url);
+			info(url);
 			for(;;)
 				{
 			    JsonElement jsonResponse=null;
@@ -226,8 +227,7 @@ public  abstract class AbstractTwitterApplication
 			    		}
 			    	catch (Exception e)
 			    		{
-						LOG.info("Error: "+e.getMessage()+" sleep for "+sleep_minutes+" minutes.");
-						Thread.sleep(sleep_minutes*1000);//5minutes
+						sleep(e);
 						}
 			    	}
 			    
@@ -246,8 +246,19 @@ public  abstract class AbstractTwitterApplication
 				}
 			}	
 
-
-	
+	protected void sleep()
+		{
+		sleep(null);
+		}
+	protected void sleep(Throwable err)
+		{
+		if(err!=null) error(err);
+		try { Thread.sleep(sleep_minutes*1000*60);//5minutes 
+			}
+		catch(Exception err2) {
+			
+			}
+		}
 	
 	
 	public String getBaseURL()

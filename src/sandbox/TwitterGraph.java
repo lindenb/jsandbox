@@ -27,6 +27,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 
@@ -35,6 +36,9 @@ import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
 import org.scribe.model.OAuthRequest;
 import org.scribe.model.Response;
 import org.scribe.model.Verb;
@@ -51,9 +55,7 @@ public class TwitterGraph
 	extends AbstractTwitterApplication
 	{
 	private Connection connection=null;
-	private int sleep_minutes=10;
 	private File databaseFile=null;
-	
 
 	
 	private TwitterGraph()
@@ -251,8 +253,7 @@ public class TwitterGraph
 			    		}
 			    	catch (Exception e)
 			    		{
-						LOG.info("Error: "+e.getMessage()+" sleep for "+sleep_minutes+" minutes.");
-						Thread.sleep(sleep_minutes*60*1000);//5minutes
+						sleep(e);
 						}
 			    	}
 			    for(int i=0;i< array.size();++i)
@@ -272,7 +273,7 @@ public class TwitterGraph
 			    	}
 			    if(cursor==null || cursor.equals(BigInteger.ZERO)) break;
 				}
-			LOG.info("count friends: of "+userId+"="+friends.size());
+			info("count friends: of "+userId+"="+friends.size());
 			return friends;
 			}	
 	
@@ -423,67 +424,85 @@ public class TwitterGraph
 		if(this.connection!=null) this.connection.close();
 		this.connection=null;
 		}
+	
 	@Override
-	protected int parseArgument(String[] args, int optind) throws Exception
-		{
-		if(args[optind].equals("-d"))
-			{
-			this.databaseFile=new File(args[++optind]);
-			return optind;
-			}
-		return super.parseArgument(args, optind);
+	protected void fillOptions(final Options options) {
+		options.addOption(Option.builder("d").
+				hasArg().
+				required(false).
+				longOpt("database").
+				argName("DB.sqlite").
+				desc("sqlite3 database").
+				build()
+				);
+		super.fillOptions(options);
 		}
-	private void run(String args[]) throws Exception
+
+	@Override
+	protected Status decodeOptions(CommandLine cmd) {
+		if(cmd.hasOption("d"))
+			{
+			this.databaseFile = new File(cmd.getOptionValue("d"));
+			}
+		
+		return super.decodeOptions(cmd);
+		}
+	
+	
+	@Override
+	protected int execute(final CommandLine cmd)
 		{
-		int optind=parseArguments(args);
-		
-		
-		
+		final List<String> args = cmd.getArgList();
 		if(this.databaseFile==null)
 			{
-			System.err.println("option -d <database> missing");
-			System.exit(-1);
+			error("undefined option 'd'");
+			return -1;
 			}
 		
-		
-		if(  optind+1< args.length &&
-			(args[optind].equals("screen_name") ||
-			 args[optind].equals("user_id"))
-			 )
+		try
 			{
-			String screen_name=null;
-			BigInteger user_id=null;
-			if(args[optind].equals("screen_name"))
+			
+			if( args.size()==1 )
 				{
-				screen_name=args[++optind];
+				String screen_name=args.get(0);
+				BigInteger user_id=null;
+				
+				try {
+					user_id = new BigInteger(screen_name);
+				} catch (Exception e) {
+					user_id = null;
+					}
+				
+				connect();
+				savePreferences();
+				openConnection();
+				build(user_id,screen_name);
+				closeConnection();
+				savePreferences();
+				}
+			else if(args.isEmpty())
+				{
+				openConnection();
+				this.toGexf(System.out);
+				closeConnection();
 				}
 			else
 				{
-				user_id=new BigInteger(args[++optind]);
+				error("Illegal Arguments.\n");
+				return -1;
 				}
-			connect();
-			savePreferences();
-			openConnection();
-			build(user_id,screen_name);
-			closeConnection();
-			savePreferences();
+			return 0;
 			}
-		else if(  optind< args.length &&
-				args[optind].equals("gexf"))
+		catch(Exception err)
 			{
-			openConnection();
-			this.toGexf(System.out);
-			closeConnection();
+			error(err);
+			return -1;
 			}
-		else
-			{
-			System.err.println("Illegal Arguments.\n");
-			System.exit(-1);
-			}
+		
 		}
 	
 	public static void main(String[] args) throws Exception
 		{
-		new TwitterGraph().run(args);
+		new TwitterGraph().instanceMainWithExit(args);
 		}
 	}
