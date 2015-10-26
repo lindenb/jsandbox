@@ -62,10 +62,11 @@ all: twitterfollow miniivy twitter01 redditoverview
 
 
 
-$(eval $(call compile,miniivy,sandbox.MiniIvy,))
+$(eval $(call compile,miniivy,sandbox.MiniIvy, ${apache.commons.cli}))
 $(eval $(call compile,redditoverview,sandbox.RedditOverview,${jtidy.jars}))
 $(eval $(call compile,twitter01,sandbox.Twitter01, ${twitter.hbc.jars}))
 $(eval $(call compile,twitterfollow,sandbox.TwitterFollow, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
+$(eval $(call compile,twitteruserlookup,sandbox.TwitterUserLookup, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	mkdir -p tmp $(dir $@)

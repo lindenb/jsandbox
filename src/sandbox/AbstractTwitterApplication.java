@@ -5,6 +5,9 @@ package sandbox;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 
 import org.apache.commons.cli.CommandLine;
@@ -37,13 +40,10 @@ public  abstract class AbstractTwitterApplication
 	
 	protected static abstract class Entity
 		{
-		int begin;
-		int end;
+		JsonObject delegate;
 		protected Entity(JsonObject o)
 			{
-			JsonArray indices=o.getAsJsonArray("indices");
-			this.begin=indices.get(0).getAsInt();
-			this.end=indices.get(1).getAsInt();
+			this.delegate= o;
 			}
 		public abstract String getType();
 		}
@@ -90,16 +90,39 @@ public  abstract class AbstractTwitterApplication
 	protected static class UserEntity
 	extends Entity
 		{
-		String screen_name;
-		String name;
-		String id_str;
 		UserEntity(JsonObject o)
 			{
 			super(o);
-			this.screen_name=o.get("screen_name").getAsString();
-			this.name=o.get("name").getAsString();
-			this.id_str=o.get("id_str").getAsString();
 			}
+		public String getName()
+			{
+			return this.delegate.get("name").getAsString();
+			}
+		public String getScreenName()
+			{
+			return this.delegate.get("screen_name").getAsString();
+			}
+		public String getIdStr()
+			{
+			return this.delegate.get("id_str").getAsString();
+			}
+		public BigInteger getId()
+			{
+			return new BigInteger(getIdStr());
+			}
+		@Override
+		public int hashCode()
+			{
+			return getId().hashCode();
+			}
+		@Override
+		public boolean equals(Object obj)
+			{
+			if(this==obj) return true;
+			if(obj==null || !(obj instanceof UserEntity)) return false;
+			return UserEntity.class.cast(obj).getId().equals(this.getId());
+			}
+		
 		@Override
 		public  String getType()
 			{
@@ -173,6 +196,42 @@ public  abstract class AbstractTwitterApplication
 			{	
 			listFriendOrFollowers("followers",user_id_or_screen_name,callback);
 			}
+	
+	protected List<UserEntity> usersLookup(final Set<BigInteger> ids) throws Exception
+		{		
+		 List<UserEntity> ret = new ArrayList<>();
+		 JsonParser parser=new JsonParser();
+		String url=getBaseURL()+"/users/lookup.json";
+		LOG.info(url);
+		ArrayList<BigInteger> copy=new ArrayList<>(ids);
+		while(!copy.isEmpty())
+			{
+			StringBuilder user_id_str=new StringBuilder();
+			for(int i=0;!copy.isEmpty() && i<100;++i)
+				{
+				if(user_id_str.length()!=0) user_id_str.append(",");
+				user_id_str.append(copy.remove(0));
+				}
+			
+			OAuthRequest request = new OAuthRequest(Verb.GET, url);
+		    request.addQuerystringParameter("user_id",user_id_str.toString());
+		    getService().signRequest(getAccessToken(), request);
+	
+		    Response response = request.send();
+		    Reader  in=new InputStreamReader(new LogInputStream(response.getStream(),
+		    		!Level.OFF.equals(LOG.getLevel())?System.err:null));
+		    JsonElement jsonResponse=parser.parse(in);
+		    in.close();
+	
+		    JsonArray array=jsonResponse.getAsJsonArray();
+		   
+			for(int i=0;i< array.size();++i)
+				{
+				ret.add(new UserEntity(array.get(i).getAsJsonObject()));
+				}
+			}
+		return ret;
+		}
 	
 	private void listFriendOrFollowers(
 			final String verb,
