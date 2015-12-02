@@ -53,7 +53,7 @@ org.scribe.jars  = \
 	$(lib.dir)/org/scribe/scribe/1.3.7/scribe-1.3.7.jar
 
 google.gson.jars  = \
-	$(lib.dir)/com/google/code/gson/gson/2.3.1/gson-2.3.1.jar
+	$(lib.dir)/com/google/code/gson/gson/2.5/gson-2.5.jar
 
 sqlite3.jdbc.jar  = \
 	$(lib.dir)/org/xerial/sqlite-jdbc/3.8.11.1/sqlite-jdbc-3.8.11.1.jar
@@ -62,7 +62,7 @@ sqlite3.jdbc.jar  = \
 all_maven_jars = $(sort  ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar})
 
 
-all: twittergraph twitterfollow miniivy twitter01 redditoverview
+all: json2xml twittergraph twitterfollow miniivy twitter01 redditoverview
 
 
 
@@ -71,6 +71,7 @@ $(eval $(call compile,redditoverview,sandbox.RedditOverview,${jtidy.jars}))
 $(eval $(call compile,twitter01,sandbox.Twitter01, ${twitter.hbc.jars}))
 $(eval $(call compile,twitterfollow,sandbox.TwitterFollow, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,twittergraph,sandbox.TwitterGraph, ${sqlite3.jdbc.jar} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
+$(eval $(call compile,json2xml,sandbox.Json2Xml,${google.gson.jars}))
 
 
 
