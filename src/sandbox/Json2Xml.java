@@ -38,10 +38,10 @@ import com.google.gson.stream.JsonToken;
 public final class Json2Xml {
 	private static final String NS="http://www.ibm.com/xmlns/prod/2009/jsonx";
 	public static Logger LOG=Logger.getLogger("json2xml");
-	private XMLStreamWriter w;
+	
 	private Json2Xml() {}
 	
-	private void parseObject(String label,JsonReader r) throws Exception
+	private void parseObject(final XMLStreamWriter w,String label,JsonReader r) throws Exception
 		{
 		
 		w.writeStartElement(NS, "object");
@@ -51,12 +51,12 @@ public final class Json2Xml {
 			if(r.peek()==JsonToken.END_OBJECT) break;
 			if(r.peek()!=JsonToken.NAME) throw new IllegalStateException(r.peek().name());
 			String s=r.nextName();
-			parse(s,r);
+			parse(w,s,r);
 			}
 		w.writeEndElement();
 		r.endObject();
 		}
-	private void parseArray(String label,JsonReader r) throws Exception
+	private void parseArray(final XMLStreamWriter w,String label,JsonReader r) throws Exception
 		{
 		
 		w.writeStartElement(NS, "array");
@@ -64,14 +64,14 @@ public final class Json2Xml {
 		for(;;)
 			{
 			if(r.peek()==JsonToken.END_ARRAY) break;
-			parse(null,r);
+			parse(w,null,r);
 			}
 		w.writeEndElement();
 		r.endArray();
 		}
 	
 	
-	private void parse(String label,JsonReader r) throws Exception
+	private void parse(final XMLStreamWriter w,String label,JsonReader r) throws Exception
 		{
 		if(!r.hasNext()) return;
 		    JsonToken token=r.peek();
@@ -81,7 +81,7 @@ public final class Json2Xml {
 		    	case BEGIN_OBJECT:
 		    		{
 		    		r.beginObject();
-		    		parseObject(label,r);	
+		    		parseObject(w,label,r);	
 		    		break;
 		    		}
 		    	case END_OBJECT:
@@ -91,7 +91,7 @@ public final class Json2Xml {
 		    	case BEGIN_ARRAY:
 		    		{
 		    		r.beginArray();
-		    		parseArray(label,r);
+		    		parseArray(w,label,r);
 		    		break;
 		    		}
 		    	case END_ARRAY:
@@ -173,13 +173,13 @@ public final class Json2Xml {
 			jr = new JsonReader(r);
 			XMLOutputFactory xof = XMLOutputFactory.newFactory();
 			xof.setProperty(XMLOutputFactory.IS_REPAIRING_NAMESPACES, Boolean.TRUE);
-			app.w = xof.createXMLStreamWriter(System.out,"UTF-8");
-			app.w.setDefaultNamespace(NS);
-			app.w.writeStartDocument("UTF-8", "1.0");
+			XMLStreamWriter w = xof.createXMLStreamWriter(System.out,"UTF-8");
+			w.setDefaultNamespace(NS);
+			w.writeStartDocument("UTF-8", "1.0");
 			
-			app.parse(null,jr);
-			app.w.writeEndDocument();
-			app.w.flush();
+			app.parse(w,null,jr);
+			w.writeEndDocument();
+			w.flush();
 			jr.close();
 			System.exit(0);
 		} catch (Exception e) {
