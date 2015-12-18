@@ -88,6 +88,7 @@ public abstract class AbstractOAuthApplication
 			{
 			this.api_secret = cmd.getOptionValue("secret");
 			}
+		
 		return super.decodeOptions(cmd);
 		}
 	
@@ -208,8 +209,8 @@ public abstract class AbstractOAuthApplication
 				System.exit(-1);
 				}
 			}
-		LOG.info("api_key:"+api_key);
-		LOG.info("api_secret:"+api_secret);
+		info("api_key:"+api_key);
+		info("api_secret:"+api_secret);
 		 this.service = new ServiceBuilder()
 	        .provider(getApiClass())
 	        .apiKey(api_key)
@@ -217,10 +218,10 @@ public abstract class AbstractOAuthApplication
 	        .build();
 	        
 	        
-	        org.scribe.model.Token requestToken=null;
-	       
+	     org.scribe.model.Token requestToken=null;
+	     info("getRequestToken....");
 		requestToken  =  this.service.getRequestToken();
-		 LOG.info("got request token");
+		info("got request token");
 		 
 		 this.accessToken=null;
 		 if(!(this.force_manual_access || force_ignore_prefs))

@@ -126,15 +126,15 @@ public abstract class AbstractApplication
 			usage();
 			return Status.EXIT_SUCCESS;
 			}
-		if(cmd.hasOption("proxy-host"))
+		if(cmd.hasOption("proxyHost"))
 			{
-			System.setProperty("http.proxyHost",cmd.getOptionValue("proxy-host"));
-			System.setProperty("https.proxyHost",cmd.getOptionValue("proxy-host"));
+			System.setProperty("http.proxyHost",cmd.getOptionValue("proxyHost"));
+			System.setProperty("https.proxyHost",cmd.getOptionValue("proxyHost"));
 			}
-		if(cmd.hasOption("proxy-port"))
+		if(cmd.hasOption("proxyPort"))
 			{
-			System.setProperty("http.proxyPort",cmd.getOptionValue("proxy-port"));
-			System.setProperty("https.proxyPort",cmd.getOptionValue("proxy-port"));
+			System.setProperty("http.proxyPort",cmd.getOptionValue("proxyPort"));
+			System.setProperty("https.proxyPort",cmd.getOptionValue("proxyPort"));
 			}
 		if(cmd.hasOption("log-level"))
 			{

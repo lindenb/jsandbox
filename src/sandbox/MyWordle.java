@@ -35,9 +35,14 @@ import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
-public class MyWordle
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+
+public class MyWordle extends AbstractApplication
 	{
-	
+	private File fileout=null;
+
 	public static class Word
 		{
 		private String fontFamily=null;
@@ -50,7 +55,7 @@ public class MyWordle
 		private float lineHeight=1.0f;
 		private String title=null;
 		private String url=null;
-		
+		private String format=null;
 		
 		public Word(String text,int weight)
 			{
@@ -709,13 +714,67 @@ public class MyWordle
 		this.useArea = useArea;
 		}
 	
-	private void read(BufferedReader in)throws IOException
+	private final Option optFontFamily=Option.builder("font-family").
+			required(false).
+			hasArg(true).
+			desc("font family default:"+this.fontFamily).
+			argName("FONT").
+			build();
+	
+	private final Option optFileOut=Option.builder("o").
+			required(false).
+			hasArg(true).
+			desc("file out").
+			build();
+	private final Option optAllowRotate=Option.builder("r").
+			required(false).
+			hasArg(false).
+			desc("allow rotation").
+			build();
+	private final Option optWidth=Option.builder("w").
+			longOpt("width").
+			required(false).
+			hasArg(true).
+			desc("width").
+			argName("WIDTH").
+			build();
+
+	
+	@Override
+	protected void fillOptions(Options options)
+		{
+		options.addOption(this.optFontFamily);
+		options.addOption(this.optFileOut);
+		options.addOption(this.optAllowRotate);
+		options.addOption(this.optWidth);
+		super.fillOptions(options);
+		}
+	
+	@Override
+	protected Status decodeOptions(CommandLine cmd)
+		{
+		if(!cmd.hasOption(this.optFileOut.getOpt()))
+			{
+			error("ouput file missing");
+			return Status.EXIT_ERROR;
+			}
+		else
+			{
+			this.fileout = new File(cmd.getOptionValue(this.optFileOut.getOpt()));
+			}
+		return super.decodeOptions(cmd);
+		}
+	
+	void read(BufferedReader r)
 		{
 		
 		}
 	
-	public static void main(String[] args)
+	@Override
+	protected int execute(CommandLine cmd)
 		{
+		
+		List<String> args=cmd.getArgList();
 		try
 			{
 			MyWordle app=new MyWordle();
@@ -723,103 +782,49 @@ public class MyWordle
 			File fileOut=null;
 			int optind=0;
 			
-			while(optind< args.length)
-				{
-				if(args[optind].equals("-h") ||
-				   args[optind].equals("-help") ||
-				   args[optind].equals("--help"))
-					{
-					System.err.println("Options:");
-					System.err.println(" -h help; This screen.");
-					return;
-					}
-				else if(args[optind].equals("-font-family"))
-					{
-					app.fontFamily=args[++optind];
-					}
-				else if(args[optind].equals("-o"))
-					{
-					fileOut=new File(args[++optind]);
-					}
-				else if(args[optind].equals("-f"))
-					{
-					format=args[++optind];
-					}
-				else if(args[optind].equals("-w"))
-					{
-					app.outputWidth=Integer.parseInt(args[++optind]);
-					}
-				else if(args[optind].equals("-r"))
-					{
-					app.allowRotate=true;
-					}
-				else if(args[optind].equals("--"))
-					{
-					optind++;
-					break;
-					}
-				else if(args[optind].startsWith("-"))
-					{
-					System.err.println("Unknown option "+args[optind]);
-					return;
-					}
-				else 
-					{
-					break;
-					}
-				++optind;
-				}
 			
-			if(fileOut==null)
-				{
-				System.err.println("file missing");
-				return;
-				}
 			
-			if(format==null)
-				{
-				System.err.println("format missing");
-				return;
-				}
 			
-	      	if(optind==args.length)
+	      	if(args.isEmpty())
 	                {
-	                app.read(new BufferedReader(new InputStreamReader(System.in)));
+	                this.read(new BufferedReader(new InputStreamReader(System.in)));
 	                }
 	        else
 	                {
-	                while(optind< args.length)
+	               for(String filename:args)
 	                        {
-	                        String filename=args[optind++];
 	                      	java.io.BufferedReader r= new BufferedReader(new FileReader(filename));
-	                        app.read(r);
+	                        this.read(r);
 	                        r.close();
 	                        }
 	                }
 			
 			
-			app.doLayout();
+			this.doLayout();
 			
 			if(fileOut.getName().toLowerCase().endsWith(".svg") || (format!=null && format.equalsIgnoreCase("svg")))
 				{
-				app.saveAsSVG(fileOut);
+				this.saveAsSVG(fileOut);
 				}
 			else if(fileOut.getName().toLowerCase().endsWith(".png") || (format!=null && format.equalsIgnoreCase("png")))
 				{
-				app.saveAsPNG(fileOut);
+				this.saveAsPNG(fileOut);
 				}
 			else if(fileOut.getName().toLowerCase().endsWith("ps") || (format!=null && format.equalsIgnoreCase("ps")))
 				{
-				app.saveAsPostscript(fileOut);
+				this.saveAsPostscript(fileOut);
 				}
 			else
 				{
-				System.err.println("undefined format");
+				error("undefined format");
+				return -1;
 				}
+			return 0;
 			} 
 		catch(Throwable err)
 			{
-			err.printStackTrace();
+			error(err);
+			return -1;
 			}
 		}
 	}

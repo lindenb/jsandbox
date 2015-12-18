@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -20,6 +21,7 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
+import org.apache.commons.cli.CommandLine;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -27,7 +29,7 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-public class MiniIvy
+public class MiniIvy extends AbstractApplication
 	{
 	private XPath xpath=null;
 	private Map<Dependency,Dependency> dep2deps = new HashMap<Dependency,Dependency>();
@@ -223,19 +225,19 @@ public class MiniIvy
 		{
 		}
 
-
-	public int instanceMain(String[] args)
+	@Override
+	protected int execute(CommandLine cmd)
 		{
-		int optind=0;
+		List<String> args= cmd.getArgList();
 		BufferedReader r = null;
 		try {
-			if(args.length==optind)
+			if(args.isEmpty())
 				{
 				r = new BufferedReader(new InputStreamReader(System.in));
 				}
-			else if(optind+1==args.length)
+			else if(args.size()==1)
 				{
-				r = new BufferedReader(new FileReader(new File(args[optind])));
+				r = new BufferedReader(new FileReader(new File(args.get(0))));
 				}
 			else
 				{
@@ -303,7 +305,6 @@ public class MiniIvy
 				this.target2dependencies.put(tokens[0], deps);
 				}
 			r.close();
-			int n=0;
 
 			
 			for(String k : this.target2dependencies.keySet())
@@ -312,9 +313,8 @@ public class MiniIvy
 				System.out.print("  = ");
 				for(Dependency dep: this.target2dependencies.get(k))
 					{
-					System.out.print(n>1?" \\\n\t":" "); 
+					System.out.print(" \\\n\t"); 
 					System.out.print(dep.getFile());
-					n++;
 					}
 				System.out.println();
 				}
@@ -325,13 +325,7 @@ public class MiniIvy
 				}
 			System.out.println(")");
 			
-			
-
-			for(String k : this.target2dependencies.keySet())
-				{
-				System.out.print("${"+k+"} ");
-				}
-			System.out.println(" : ");		
+			System.out.println("${all_maven_jars} : ");		
 			System.out.println("\tmkdir -p $(dir $@) && wget -O \"$@\" \"http://central.maven.org/maven2/$(patsubst ${lib.dir}/%,%,$@)\"");
 			return 0;
 			} 
@@ -345,7 +339,6 @@ public class MiniIvy
 	
 	public static void main(String[] args)
 		{
-		int ret=new MiniIvy().instanceMain(args);
-		System.exit(ret);
+		new MiniIvy().instanceMainWithExit(args);
 		}
 	}
