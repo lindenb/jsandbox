@@ -35,18 +35,24 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+
 /**
  * GeneticPainting
  *
  */
-public class GeneticPainting
+public class GeneticPainting extends AbstractApplication
 	{
+	protected static final Logger LOG=Logger.getLogger("jsandbox");
+
 	private BufferedImage sourceImage=null;
 	private Random random=new Random();
 	private String fileout="_painting";
@@ -67,6 +73,7 @@ public class GeneticPainting
 			return "fill:rgb("+red+","+green+","+blue+");fill-opacity:"+(alpha/255.0)+";";
 			}
 		public abstract void paint(Graphics2D g);
+		
 		
 		private int rnd255(int n)
 			{
@@ -711,7 +718,7 @@ public class GeneticPainting
 			}
 		}
 	
-	private void run() throws Exception
+	private int run() throws Exception
 		{
 		long now=System.currentTimeMillis();
 		long n_generation=0;
@@ -754,8 +761,6 @@ public class GeneticPainting
 			List<Solution> parents=new ArrayList<Solution>();
 			
 			
-			
-			
 			while(parents.size()< parent_count)
 				{
 				if(best==null || parents.isEmpty())
@@ -775,6 +780,7 @@ public class GeneticPainting
 			List<Solution> children=new ArrayList<Solution>(parents.size()*parents.size());
 			
 			
+			
 			for(int i=0;i< parents.size();++i)
 				{
 				for(int j=0;j< parents.size();++j)
@@ -783,6 +789,7 @@ public class GeneticPainting
 					children.add(mate(parents.get(i),parents.get(j)));
 					}
 				}
+				
 			Graphics2D g3=mosaicImage.createGraphics();
 			g3.setColor(Color.WHITE);
 			g3.fillRect(0, 0, mosaicImage.getWidth(), mosaicImage.getHeight());
@@ -906,99 +913,111 @@ public class GeneticPainting
 		if(a<0) a=-a;
 		return a*a;
 		}
-	
-	
-	
-	public static void main(String[] args)
+	protected void fillOptions(Options options)
 		{
-		GeneticPainting app=new GeneticPainting();
-		try {
-			int optind=0;
-			while(optind<args.length)
-				{
-				if(args[optind].equals("-h"))
-					{
-					System.out.println("Pierre Lindenbaum PhD. 2011");
-					System.out.println(" -o fileprefix "+app.fileout);
-					System.out.println(" -n1 parents count");
-					System.out.println(" -n2 min shapes per solution");
-					System.out.println(" -n3 max shapes per solution");
-					System.out.println(" -n4 min shape-size");
-					System.out.println(" -n5 max shape-size");
-					System.out.println(" -n6 num thread:"+app.n_threads);
-					System.out.println(" -t 'shape-type' c:circle l:line");
-					return;
-					}
-				else if(args[optind].equals("-t"))
-					{
-					app.shape_type= args[++optind].toLowerCase().charAt(0);
-					}
-				else if(args[optind].equals("-n1"))
-					{
-					app.parent_count=Integer.parseInt(args[++optind]);
-					}
-				else if(args[optind].equals("-n2"))
-					{
-					app.min_shape_per_solution=Integer.parseInt(args[++optind]);
-					}
-				else if(args[optind].equals("-n3"))
-					{
-					app.max_shape_per_solution=Integer.parseInt(args[++optind]);
-					}
-				else if(args[optind].equals("-n4"))
-					{
-					app.shape_min_size = Integer.parseInt(args[++optind]);
-					}
-				else if(args[optind].equals("-n5"))
-					{
-					app.shape_max_size = Integer.parseInt(args[++optind]);
-					}
-				else if(args[optind].equals("-n6"))
-					{
-					app.n_threads = Integer.parseInt(args[++optind]);
-					}
-				else if(args[optind].equals("-o"))
-					{
-					app.fileout=new String(args[++optind]);
-					}
-				else if(args[optind].equals("--"))
-					{
-					optind++;
-					break;
-					}
-				else if(args[optind].startsWith("-"))
-					{
-					System.err.println("Unnown option: "+args[optind]);
-					return;
-					}
-				else
-					{
-					break;
-					}
-				++optind;
-				}
-			if(optind+1!=args.length)
+		options.addOption(Option.builder("o").
+					desc("file prefix").
+					hasArg().
+					argName("OUTPUT").
+					build());
+		options.addOption(Option.builder("n1").
+				desc("parent count").
+				hasArg().
+				argName("NUM").
+				build());
+		options.addOption(Option.builder("n2").
+				desc("min shape per solution").
+				hasArg().
+				argName("NUM").
+				build());
+		options.addOption(Option.builder("n3").
+				desc("max shape per solution").
+				hasArg().
+				argName("NUM").
+				build());
+		options.addOption(Option.builder("n4").
+				desc("min shape size").
+				hasArg().
+				argName("NUM").
+				build());
+		options.addOption(Option.builder("n5").
+				desc("max shape size").
+				hasArg().
+				argName("NUM").
+				build());
+		options.addOption(Option.builder("t").
+				desc("shape type c:circle l:line").
+				hasArg().
+				argName("TYPE").
+				build());
+		super.fillOptions(options);
+		}
+	@Override
+	protected int execute(org.apache.commons.cli.CommandLine cmd) {
+		if(cmd.hasOption("t"))
+			{	
+			this.shape_type= cmd.getOptionValue("t").toLowerCase().charAt(0);
+			}
+		if(cmd.hasOption("n1"))
+			{	
+			this.parent_count= Integer.parseInt(cmd.getOptionValue("n1"));
+			}
+		if(cmd.hasOption("n2"))
+			{	
+			this.min_shape_per_solution= Integer.parseInt(cmd.getOptionValue("n2"));
+			}
+		if(cmd.hasOption("n3"))
+			{	
+			this.max_shape_per_solution= Integer.parseInt(cmd.getOptionValue("n3"));
+			}
+		if(cmd.hasOption("n4"))
+			{	
+			this.shape_min_size= Integer.parseInt(cmd.getOptionValue("n4"));
+			}
+		if(cmd.hasOption("n5"))
+			{	
+			this.shape_max_size= Integer.parseInt(cmd.getOptionValue("n5"));
+			}
+		
+		if(cmd.hasOption("o"))
+			{	
+			this.fileout= cmd.getOptionValue("o");
+			}
+		
+		final List<String> args = cmd.getArgList();
+		if(args.size()!=1)
 				{
 				System.err.println("Illegal number of arguments");
-				return;
+				return -1;
 				}
-			String filename=args[optind];
+		try
+			{
+			final String filename=args.get(0);
 			if( filename.startsWith("http://") ||
 				filename.startsWith("https://") ||
 				filename.startsWith("ftp://"))
 				{
-				app.sourceImage=ImageIO.read(new URL(filename));
+				LOG.info("reading "+filename);
+				this.sourceImage=ImageIO.read(new URL(filename));
 				}
 			else
 				{
-				app.sourceImage=ImageIO.read(new File(filename));
+				LOG.info("reading "+filename);
+				this.sourceImage=ImageIO.read(new File(filename));
 				}
-			
-			app.run();
+				
+			return this.run();
 			}
 		catch (Exception e)
 			{
 			e.printStackTrace();
+			return -1;
 			}
 		}
+	
+	
+	public static void main(String[] args) {
+		new GeneticPainting().instanceMainWithExit(args);
+	}
+	
 }

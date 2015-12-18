@@ -58,20 +58,39 @@ google.gson.jars  = \
 sqlite3.jdbc.jar  = \
 	$(lib.dir)/org/xerial/sqlite-jdbc/3.8.11.1/sqlite-jdbc-3.8.11.1.jar
 
+slf4j.jars  = \
+	$(lib.dir)/org/slf4j/slf4j-api/1.7.13/slf4j-api-1.7.13.jar \
+	$(lib.dir)/org/slf4j/slf4j-simple/1.7.13/slf4j-simple-1.7.13.jar
 
-all_maven_jars = $(sort  ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar})
+apache.httpclient.jars  = \
+	$(lib.dir)/org/apache/httpcomponents/httpclient/4.5.1/httpclient-4.5.1.jar \
+	$(lib.dir)/commons-codec/commons-codec/1.10/commons-codec-1.10.jar \
+	$(lib.dir)/org/apache/httpcomponents/httpcore/4.4.4/httpcore-4.4.4.jar \
+	$(lib.dir)/commons-logging/commons-logging/1.2/commons-logging-1.2.jar
+
+spring-beans.jars = \
+	$(lib.dir)/org/springframework/spring-beans/4.2.3.RELEASE/spring-beans-4.2.3.RELEASE.jar \
+	$(lib.dir)/org/springframework/spring-core/4.2.3.RELEASE/spring-core-4.2.3.RELEASE.jar \
+	$(lib.dir)/commons-logging/commons-logging/1.2/commons-logging-1.2.jar
+
+servlet.api.jars  =\
+	$(lib.dir)/javax/servlet/javax.servlet-api/4.0.0-b01/javax.servlet-api-4.0.0-b01.jar
 
 
-all: json2xml twittergraph twitterfollow miniivy twitter01 redditoverview
+all_maven_jars = $(sort ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar})
+
+
+all: geneticpainting json2xml twittergraph twitterfollow miniivy twitter01 redditoverview
 
 
 
 $(eval $(call compile,miniivy,sandbox.MiniIvy,))
-$(eval $(call compile,redditoverview,sandbox.RedditOverview,${jtidy.jars}))
+$(eval $(call compile,rgddigest,sandbox.RGDDigest,${slf4j.jars} ${google.gson.jars} ${apache.commons.cli} ${apache.httpclient.jars}))
 $(eval $(call compile,twitter01,sandbox.Twitter01, ${twitter.hbc.jars}))
 $(eval $(call compile,twitterfollow,sandbox.TwitterFollow, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,twittergraph,sandbox.TwitterGraph, ${sqlite3.jdbc.jar} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,json2xml,sandbox.Json2Xml,${google.gson.jars}))
+$(eval $(call compile,geneticpainting,sandbox.GeneticPainting,${apache.commons.cli}))
 
 
 

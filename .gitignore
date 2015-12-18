@@ -2,3 +2,4 @@ jeter*
 *.class
 *.jar
 *~
+/tmp/
