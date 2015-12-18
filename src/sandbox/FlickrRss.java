@@ -9,7 +9,6 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -19,8 +18,6 @@ import java.util.Map;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.TreeSet;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -45,10 +42,14 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Attr;
 
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
 import org.scribe.builder.*;
 import org.scribe.builder.api.*;
 import org.scribe.model.*;
 import org.scribe.oauth.*;
+import org.slf4j.LoggerFactory;
 
 
 // http://www.flickr.com/services/api/flickr.photos.search.html
@@ -67,9 +68,9 @@ São Paulo - SP
  
  * 
  */
-public class FlickrRss
+public class FlickrRss extends AbstractApplication
 	{
-	private static Logger LOG=Logger.getLogger("flickr.search");
+	private static org.slf4j.Logger LOG=LoggerFactory.getLogger(FlickrRss.class);
 	private static final String BASE_REST="https://api.flickr.com/services/rest/";
 	private enum Format { html,atom};
 	private Format format=Format.html;
@@ -271,7 +272,11 @@ public class FlickrRss
 		att=start.getAttributeByName(new QName("tags"));
 		if(att!=null) p.tags=att.getValue();
 		att=start.getAttributeByName(new QName("dateupload"));
-		if(att!=null) p.dateupload= new Long(att.getValue());
+		if(att!=null)
+			{
+			p.dateupload= new Long(att.getValue());
+			LOG.info(new Date(p.dateupload*1000).toString());
+			}
 		att=start.getAttributeByName(new QName("datetaken"));
 		if(att!=null) p.date_taken= att.getValue();
 		att=start.getAttributeByName(new QName("o_width"));
@@ -280,7 +285,6 @@ public class FlickrRss
 		if(att!=null) p.o_height= Integer.parseInt(att.getValue());
 		att=start.getAttributeByName(new QName("views"));
 		if(att!=null) p.views= Integer.parseInt(att.getValue());
-		
 		while(r.hasNext())
 			{
 			XMLEvent evt=r.nextEvent();
@@ -438,7 +442,7 @@ public class FlickrRss
 		{
 		args.put("api_key",this.flickrProperties.getProperty("api_key",""));
 		
-		args.put("extras","o_dims,license,description,owner_name,icon_server,tags,date_upload,views");
+		args.put("extras","o_dims,license,description,owner_name,icon_server,tags,date_upload,date_taken,views");
 		if(root==null) return args;
 		for(Node c2=root.getFirstChild();c2!=null;c2=c2.getNextSibling())
 			{
@@ -492,6 +496,9 @@ public class FlickrRss
 					LOG.info(attName+":"+attValue);
 					request.addBodyParameter(attName,attValue);
 					}
+				request.addBodyParameter("safe_search","3");
+				request.addBodyParameter("content_type","1");
+				
 				if(dateStart!=null)
 					{
 					request.addBodyParameter("min_upload_date",dateStart);
@@ -500,7 +507,7 @@ public class FlickrRss
 					{
 					request.addBodyParameter("max_upload_date",dateEnd);
 					}
-			
+				LOG.info(request.getBodyParams().asFormUrlEncodedString());
 				SimpleBindings bind=new SimpleBindings();
 				
 				List<Photo> L=new ArrayList<Photo>();
@@ -530,8 +537,7 @@ public class FlickrRss
 						bind.put("photo", p);
 						try
 							{
-							Object ret=null;
-							if((ret=jsEngine.eval(script,bind)).equals(Boolean.TRUE))
+							if(this.jsEngine.eval(script,bind).equals(Boolean.TRUE))
 								{
 								this.photos.add(p);
 								}
@@ -639,117 +645,73 @@ public class FlickrRss
 			}
 		}
 	
+	@Override
+	protected void fillOptions(Options options)
+		{
+		options.addOption(Option.builder("n").hasArg(true).desc("count").build());
+		options.addOption(Option.builder("s").hasArg(true).desc("start0").build());
+		options.addOption(Option.builder("datestart").longOpt("datestart").hasArg(true).desc("YYYYMMDD").build());
+		options.addOption(Option.builder("dateend").longOpt("dateend").hasArg(true).desc("YYYYMMDD").build());
+		options.addOption(Option.builder("date").longOpt("date").hasArg(true).desc("YYYYMMDD").build());
+		options.addOption(Option.builder("html").longOpt("html").hasArg(false).desc("html").build());
+		options.addOption(Option.builder("atom").longOpt("atom").hasArg(false).desc("atom").build());
+		options.addOption(Option.builder("mime").longOpt("mime").hasArg(false).desc("mime").build());
+		options.addOption(Option.builder("nogroup").longOpt("nogroup").hasArg(false).desc("nogroup").build());
+		options.addOption(Option.builder("sortviews").longOpt("sortviews").hasArg(false).desc("sortviews").build());
+		options.addOption(Option.builder("p").longOpt("p").hasArg(false).desc("do not use priority").build());
+		super.fillOptions(options);
+		}
+	
+	@Override
+	protected Status decodeOptions(CommandLine cmd)
+		{
+		if(cmd.hasOption("sortviews")) { this.sort_on_views=true; }
+		if(cmd.hasOption("p")) { this.use_priority=true; }
+		if(cmd.hasOption("nogroup")) { this.enableGroup=false; }
+		if(cmd.hasOption("datestart")) { this.dateStart=cmd.getOptionValue("datestart"); }
+		if(cmd.hasOption("dateend")) { this.dateEnd=cmd.getOptionValue("dateend"); }
+		if(cmd.hasOption("date")) {
+		
+			this.dateStart=cmd.getOptionValue("date");
+			this.dateEnd=this.dateStart+" 23:59:59";
+			this.dateStart+=" 00:00:01";
+			}
+		if(cmd.hasOption("n")) { this.max_count= Integer.parseInt(cmd.getOptionValue("n")); }
+		if(cmd.hasOption("s")) { this.start_index= Integer.parseInt(cmd.getOptionValue("s")); }
+		if(cmd.hasOption("html")) { this.format=Format.html;}
+		if(cmd.hasOption("atom")) { this.format=Format.atom;}
+		if(cmd.hasOption("mime")) { this.printMime=true;}
+		return super.decodeOptions(cmd);
+		}
+	
+	@Override
+	protected int execute(CommandLine cmd)
+		{
+		if(cmd.getArgList().size()!=1)
+			{
+			LOG.error("Illegal number of arguments.");
+			return -1;
+			}
+		try
+			{
+			FileInputStream isf=new FileInputStream(new File(System.getProperty("user.home"), ".flickr_api.xml"));
+			this.flickrProperties.loadFromXML(isf);
+			isf.close();
+			
+			
+			String filename=cmd.getArgList().get(0);
+			this.run(new File(filename));
+			}
+		catch (Exception e)
+			{
+			LOG.error("boum", e);
+			return -1;
+			}
+		return 0;
+		}
+	
 	public static void main(String[] args) throws Exception
 		{
-		FlickrRss app=new FlickrRss();
-		int optind=0;
-		while(optind< args.length)
-			{
-			if(args[optind].equals("-h") ||
-			   args[optind].equals("-help") ||
-			   args[optind].equals("--help"))
-				{
-				System.err.println("Options:");
-				System.err.println(" -h help; This screen.");
-				System.err.println(" -proxyHost <host>.");
-				System.err.println(" -proxyPort <port>.");
-				System.err.println(" -n <count>.");
-				System.err.println(" -s <start0>.");
-				System.err.println(" --date-start <YYYYMMDD>.");
-				System.err.println(" --date-end <YYYYMMDD>.");
-				System.err.println(" --html --atom ");
-				System.err.println(" --mime ");
-				System.err.println(" --no-group ");
-				System.err.println(" --sort-views ");
-				System.err.println(" -p do not use priority");
-				return;
-				}
-			else if(args[optind].equals("-p"))
-				{
-				app.use_priority=false;
-				}
-			else if(args[optind].equals("--sort-views"))
-				{
-				app.sort_on_views=true;
-				}
-			else if(args[optind].equals("--no-group"))
-				{
-				app.enableGroup=false;
-				}
-			else if(args[optind].equals("--date-start"))
-				{
-				app.dateStart=args[++optind];
-				}
-			else if(args[optind].equals("--date-end"))
-				{
-				app.dateEnd=args[++optind];
-				}
-			else if(args[optind].equals("--date"))
-				{
-				app.dateStart=args[++optind];
-				app.dateEnd=app.dateStart+" 23:59:59";
-				app.dateStart+=" 00:00:01";
-				}
-			else if(args[optind].equals("-proxyHost"))
-				{
-				System.setProperty("http.proxyHost", args[++optind]);
-				}
-			else if(args[optind].equals("-proxyPort"))
-				{
-				System.setProperty("http.proxyPort", args[++optind]);
-				}
-			else if(args[optind].equals("-n") && optind+1< args.length)
-				{
-				app.max_count=Integer.parseInt(args[++optind]);
-				}
-			else if(args[optind].equals("-s") && optind+1< args.length)
-				{
-				app.start_index=Integer.parseInt(args[++optind]);
-				}	
-			else if(args[optind].equals("-L") && optind+1< args.length)
-				{
-				LOG.setLevel(Level.parse(args[++optind]));
-				}
-			else if(args[optind].equals("--atom"))
-				{
-				app.format=Format.atom;
-				}
-			else if(args[optind].equals("--html"))
-				{
-				app.format=Format.html;
-				}
-			else if(args[optind].equals("--mime"))
-				{
-				app.printMime=true;
-				}
-			else if(args[optind].equals("--"))
-				{
-				optind++;
-				break;
-				}
-			else if(args[optind].startsWith("-"))
-				{
-				System.err.println("Unknown option "+args[optind]);
-				return;
-				}
-			else 
-				{
-				break;
-				}
-			++optind;
-			}
-		
-		FileInputStream isf=new FileInputStream(new File(System.getProperty("user.home"), ".flickr_api.xml"));
-		app.flickrProperties.loadFromXML(isf);
-		isf.close();
-		
-		if(optind+1!=args.length)
-			{
-			System.err.println("Illegal number of arguments.");
-			return;
-			}
-		String filename=args[optind++];
-		app.run(new File(filename));
-		LOG.info("Done");
+		new FlickrRss().instanceMainWithExit(args);
 		}
 }

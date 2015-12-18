@@ -172,6 +172,31 @@ public class MiniIvy extends AbstractApplication
 					dep.group = (String)xpath.evaluate("pom:groupId/text()", E, XPathConstants.STRING);
 					dep.artifactId = (String)xpath.evaluate("pom:artifactId/text()", E, XPathConstants.STRING);
 					dep.revision = (String)xpath.evaluate("pom:version/text()", E, XPathConstants.STRING);
+				
+					if(dep.group.equals("${project.groupId}"))
+						{
+						dep.group =  (String)xpath.evaluate("/pom:project/pom:groupId/text()", E, XPathConstants.STRING);
+						if(dep.group.isEmpty()) dep.group = "${project.parent.groupId}";
+						}
+
+					if(dep.group.equals("${project.parent.groupId}"))
+						{
+						dep.group =  (String)xpath.evaluate("/pom:project/pom:parent/pom:groupId/text()", E, XPathConstants.STRING);
+						}
+					
+					if(dep.revision.equals("${project.version}"))
+						{
+						dep.revision = (String)xpath.evaluate("/pom:project/pom:version/text()", E, XPathConstants.STRING);
+						dep.revision=dep.revision.trim();
+						if(dep.revision.isEmpty()) dep.revision = "${project.parent.version}";
+						}
+					
+					if(dep.revision.equals("${project.parent.version}"))
+						{
+						dep.revision = (String)xpath.evaluate("/pom:project/pom:parent/pom:version/text()", E, XPathConstants.STRING);
+						dep.revision = dep.revision.trim();
+						}
+					
 
 					if(dep.revision!=null && dep.revision.startsWith("${") && dep.revision.endsWith("}"))
 						{/*
