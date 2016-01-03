@@ -501,11 +501,13 @@ public class FlickrRss extends AbstractApplication
 				
 				if(dateStart!=null)
 					{
-					request.addBodyParameter("min_upload_date",dateStart);
+					request.addBodyParameter("min_upload_date",
+						String.valueOf(java.sql.Timestamp.valueOf(dateStart).getTime()/1000));
 					}
 				if(dateEnd!=null)
 					{
-					request.addBodyParameter("max_upload_date",dateEnd);
+					request.addBodyParameter("max_upload_date",
+						String.valueOf(java.sql.Timestamp.valueOf(dateEnd).getTime()/1000));
 					}
 				LOG.info(request.getBodyParams().asFormUrlEncodedString());
 				SimpleBindings bind=new SimpleBindings();
