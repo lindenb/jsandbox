@@ -84,7 +84,7 @@ servlet.api.jars  =\
 all_maven_jars = $(sort ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar})
 
 
-all: mosaicofpictures flickrrss geneticpainting json2xml twittergraph twitterfollow miniivy twitter01
+all: java2xml mosaicofpictures flickrrss geneticpainting json2xml twittergraph twitterfollow miniivy twitter01
 
 
 
@@ -97,6 +97,7 @@ $(eval $(call compile,json2xml,sandbox.Json2Xml,${google.gson.jars}))
 $(eval $(call compile,geneticpainting,sandbox.GeneticPainting,${apache.commons.cli}))
 $(eval $(call compile,flickrrss,sandbox.FlickrRss,${apache.commons.cli} ${slf4j.jars} ${org.scribe.jars}))
 $(eval $(call compile,mosaicofpictures,sandbox.MosaicOfPictures,${apache.commons.cli} ${slf4j.jars}))
+$(eval $(call compile,java2xml,sandbox.Java2Xml,${apache.commons.cli} ${slf4j.jars}))
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	mkdir -p tmp $(dir $@)
