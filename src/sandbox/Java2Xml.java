@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
@@ -153,9 +155,31 @@ public class Java2Xml extends AbstractApplication
 				out.writeComment(err.getMessage());
 				return;
 				}
+			
 			out.writeStartElement(clazz.isInterface()?"interface":"class");
 			out.writeAttribute("name", clazz.getName());
+			out.writeAttribute("simple-name", clazz.getSimpleName());
+			out.writeAttribute("canonical-name", clazz.getCanonicalName());
+			if(clazz.getPackage()!=null)
+				{
+				Package p =clazz.getPackage();
+				out.writeAttribute("package", p.getName());
+				}
+			
 			writeModififiers(clazz.getModifiers());
+			if(clazz.getSuperclass()!=null)
+				{
+				out.writeAttribute("super", clazz.getSuperclass().getName());
+				}
+			out.writeStartElement("interfaces");
+			for(final Type i:clazz.getInterfaces())
+				{
+				out.writeStartElement("interface");
+				writeType(i);
+				out.writeEndElement();
+				}
+			out.writeEndElement();
+
 			
 			out.writeStartElement("beans");
 			for(Method m1 : clazz.getMethods())
@@ -163,7 +187,7 @@ public class Java2Xml extends AbstractApplication
 				if(!Modifier.isPublic(m1.getModifiers())) continue;
 				if(Modifier.isStatic(m1.getModifiers())) continue;
 				if(m1.getReturnType()!=Void.TYPE) continue;
-				String name= m1.getName();
+				final String name= m1.getName();
 				if(name.length()<4 || !name.startsWith("set")) continue;
 				if(m1.getParameterCount()!=1) continue;
 				Type arg = m1.getParameterTypes()[0];
@@ -180,7 +204,10 @@ public class Java2Xml extends AbstractApplication
 				Method m2 = clazz.getMethod(name2,new Class[0]);
 				if(m2.getReturnType()!=arg) continue;
 				out.writeStartElement("bean");
-				out.writeAttribute("name",name.substring(3));
+				out.writeAttribute("name",
+						name.substring(3,4).toLowerCase()+
+						name.substring(4)
+						);
 				out.writeAttribute("setter",m1.getName());
 				out.writeAttribute("getter",m2.getName());
 				writeType(arg);
@@ -188,11 +215,51 @@ public class Java2Xml extends AbstractApplication
 				} catch(Exception err) { continue;}
 				}
 			out.writeEndElement();
+	
+			out.writeStartElement("fields");
+			for(final Field f:clazz.getFields())
+				{
+				out.writeStartElement("field");
+				out.writeAttribute("name",f.getName());
+				out.writeAttribute("declaring-class",f.getDeclaringClass().getName());
+				writeModififiers(f.getModifiers());
+
+				writeType(f.getType());
+				
+				out.writeEndElement();
+				}
+			out.writeEndElement();
+
 			
+			out.writeStartElement("constructors");
+			for(final Constructor<?> c:clazz.getConstructors())
+				{
+				out.writeStartElement("constructor");
+				out.writeAttribute("declaring-class",c.getDeclaringClass().getName());
+				writeModififiers(c.getModifiers());
+
+				out.writeStartElement("parameters");
+				for(Parameter parameter:c.getParameters())
+					{
+					out.writeStartElement("parameter");
+					out.writeAttribute("name", parameter.getName());
+					writeType(parameter.getParameterizedType());
+					out.writeEndElement();
+					}
+				out.writeEndElement();
+				
+				out.writeEndElement();
+				}
+			out.writeEndElement();
+
+
+			
+			out.writeStartElement("methods");
 			for(Method method : clazz.getMethods())
 				{
 				out.writeStartElement("method");
 				out.writeAttribute("name",method.getName());
+				out.writeAttribute("declaring-class",method.getDeclaringClass().getName());
 				writeModififiers(method.getModifiers());
 				out.writeStartElement("return");
 				
@@ -217,8 +284,19 @@ public class Java2Xml extends AbstractApplication
 					}
 				out.writeEndElement();
 
+				out.writeStartElement("throws");
+				for(final Type ex:method.getGenericExceptionTypes())
+					{
+					out.writeStartElement("throw");
+					writeType(ex);
+					out.writeEndElement();
+					}
+				out.writeEndElement();
+
+				
 				out.writeEndElement();
 				}
+			out.writeEndElement();
 			
 			
 			out.writeEndElement();
