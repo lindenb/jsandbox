@@ -21,7 +21,7 @@ $(1)  : $(addsuffix .java,$(addprefix src/,$(subst .,/,$(2)))) $(3)
 	echo "### COMPILING $(1) ######"
 	mkdir -p ${tmp.dir}/META-INF ${bin.dir}
 	#compile
-	${JAVAC} -d ${tmp.dir} -g -classpath "$$(subst $$(SPACE),:,$$(filter %.jar,$$^))" -sourcepath ${src.dir}:${generated.dir}/java $$(filter %.java,$$^)
+	${JAVAC} -Xlint -d ${tmp.dir} -g -classpath "$$(subst $$(SPACE),:,$$(filter %.jar,$$^))" -sourcepath ${src.dir}:${generated.dir}/java $$(filter %.java,$$^)
 	#create META-INF/MANIFEST.MF
 	echo "Manifest-Version: 1.0" > ${tmp.dir}/tmp.mf
 	echo "Main-Class: $(2)" >> ${tmp.dir}/tmp.mf
@@ -73,8 +73,9 @@ apache.httpclient.jars  = \
 
 spring-beans.jars = \
 	$(lib.dir)/org/springframework/spring-context/4.2.4.RELEASE/spring-context-4.2.4.RELEASE.jar \
-	$(lib.dir)/org/springframework/spring-beans/4.2.3.RELEASE/spring-beans-4.2.3.RELEASE.jar \
-	$(lib.dir)/org/springframework/spring-core/4.2.3.RELEASE/spring-core-4.2.3.RELEASE.jar \
+	$(lib.dir)/org/springframework/spring-beans/4.2.4.RELEASE/spring-beans-4.2.4.RELEASE.jar \
+	$(lib.dir)/org/springframework/spring-core/4.2.4.RELEASE/spring-core-4.2.4.RELEASE.jar \
+	$(lib.dir)/org/springframework/spring-expression/4.2.4.RELEASE/spring-expression-4.2.4.RELEASE.jar \
 	$(lib.dir)/commons-logging/commons-logging/1.2/commons-logging-1.2.jar \
 	$(lib.dir)/aopalliance/aopalliance/1.0/aopalliance-1.0.jar
 
@@ -95,7 +96,7 @@ jtidy.jars=\
 all_maven_jars = $(sort  ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar})
 
 
-all: xslserver java2xml mosaicofpictures flickrrss geneticpainting json2xml twittergraph twitterfollow miniivy twitter01
+all: xslserver java2xml mosaicofpictures flickrrss geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01
 
 
 
@@ -105,11 +106,12 @@ $(eval $(call compile,twitterfollow,sandbox.TwitterFollow, ${apache.commons.cli}
 $(eval $(call compile,twitteruserlookup,sandbox.TwitterUserLookup, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,twittergraph,sandbox.TwitterGraph, ${sqlite3.jdbc.jar} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,json2xml,sandbox.Json2Xml,${google.gson.jars}))
+$(eval $(call compile,json2dom,sandbox.Json2Dom,${google.gson.jars}))
 $(eval $(call compile,geneticpainting,sandbox.GeneticPainting,${apache.commons.cli}))
 $(eval $(call compile,flickrrss,sandbox.FlickrRss,${apache.commons.cli} ${slf4j.jars} ${org.scribe.jars}))
 $(eval $(call compile,mosaicofpictures,sandbox.MosaicOfPictures,${apache.commons.cli} ${slf4j.jars}))
 $(eval $(call compile,java2xml,sandbox.Java2Xml,${apache.commons.cli} ${slf4j.jars}))
-$(eval $(call compile,xslserver,sandbox.XslHandler,${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars} ${spring-beans.jars}))
+$(eval $(call compile,xslserver,sandbox.XslHandler,${google.gson.jars} ${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars} ${spring-beans.jars}))
 
 
 

@@ -171,6 +171,7 @@ public final class Json2Xml {
 			
 			
 			jr = new JsonReader(r);
+			jr.setLenient(true);
 			XMLOutputFactory xof = XMLOutputFactory.newFactory();
 			xof.setProperty(XMLOutputFactory.IS_REPAIRING_NAMESPACES, Boolean.TRUE);
 			XMLStreamWriter w = xof.createXMLStreamWriter(System.out,"UTF-8");
@@ -179,8 +180,8 @@ public final class Json2Xml {
 			
 			app.parse(w,null,jr);
 			w.writeEndDocument();
-			w.flush();
-			jr.close();
+			IOUtils.flush(w);
+			IOUtils.close(jr);
 			System.exit(0);
 		} catch (Exception e) {
 			e.printStackTrace();

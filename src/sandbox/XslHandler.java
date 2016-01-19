@@ -1,16 +1,42 @@
 package sandbox;
 
+/* <?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:util="http://www.springframework.org/schema/util"
+xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-2.5.xsd">
+
+
+<util:list id="myList">
+<bean id="mainBean" class="sandbox.XslHandler$XslConfig">
+	<property name="id"   value="1"/>
+	<property name="url"  value="http://www.ncbi.nlm.nih.gov/pubmed/trending/"/>
+        <property name="xsl"> 
+		<value>https://raw.githubusercontent.com/lindenb/xslt-sandbox/master/stylesheets/bio/ncbi/pubmedtrending2rss.xsl</value>
+        </property>
+</bean>
+
+</util:list>
+</beans>
+*/
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLStreamWriter;
+import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
@@ -62,11 +88,14 @@ public class XslHandler extends AbstractHandler
 	private static final Logger LOG = LoggerFactory.getLogger("jsandbox");
 	private String URL_PARAM="url";
 	private String XSL_PARAM="xsl";
+	private String ID_PARAM="id";
 	
 	public static class XslConfig
 		{
 		private String id="";
 		private String url="";
+		private String xsl="";
+		private String inlineXsl;
 		private String inputType="html";
 		
 		public XslConfig(){
@@ -93,153 +122,127 @@ public class XslHandler extends AbstractHandler
 			return inputType;
 		}
 		
+		public void setXsl(String xsl) {
+			this.xsl = xsl;
+		}
 		
-		private void _jsonparseObject(final Node root,final String label,JsonReader r) throws Exception
-			{
-			final Element E = root.getOwnerDocument().createElementNS(JSON_NS, "jsonx:object");
-			if(label!=null) E.setAttribute("name",label);
-			for(;;)
-				{
-				if(r.peek()==JsonToken.END_OBJECT) break;
-				if(r.peek()!=JsonToken.NAME) throw new IllegalStateException(r.peek().name());
-				final String s=r.nextName();
-				_jsonParse(E,s,r);
-				}
-			}
+		public String getXsl() {
+			return xsl;
+		}
 		
-		private void _jsonParseArray(final Node root,final String label,JsonReader r) throws Exception
-			{
-			final Element E =  root.getOwnerDocument().createElementNS(JSON_NS, "jsonx:array");
-			if(label!=null) E.setAttribute("name",label);
-			for(;;)
-				{
-				if(r.peek()==JsonToken.END_ARRAY) break;
-				_jsonParse(E,null,r);
+		public void setInlineXsl(String inlineXsl) {
+			this.inlineXsl = inlineXsl;
+		}
+		public String getInlineXsl() {
+			return inlineXsl;
+		}
+		
+		
+		public Source getStylesheet()
+		{
+		     if(this.getXsl().startsWith("http://") ||
+		    		 this.getXsl().startsWith("https://") ||
+		    		 this.getXsl().startsWith("ftp://") ||
+		    		 this.getXsl().startsWith("file:"))
+		     	{
+					return new StreamSource(this.getXsl());
+				} 
+		     else
+		     	{
+					return new StreamSource(new File(this.getXsl()));
 				}
-			}
-	
-	
-		private void _jsonParse(final Node root,final String label,JsonReader r) throws Exception
-			{
-			if(!r.hasNext()) return ;
-			final Document owner=root.getOwnerDocument();
-			    JsonToken token=r.peek();
-			    switch(token)
-			    	{
-			    	case NAME: break;
-			    	case BEGIN_OBJECT:
-			    		{
-			    		r.beginObject();
-			    		_jsonparseObject(root,label,r);	
-			    		break;
-			    		}
-			    	case END_OBJECT:
-			    		{
-			    		break;
-			    		}
-			    	case BEGIN_ARRAY:
-			    		{
-			    		r.beginArray();
-			    		_jsonParseArray(root,label,r);
-			    		break;
-			    		}
-			    	case END_ARRAY:
-			    		{
-			    		break;
-			    		}
-			    	case NULL:
-			    		{
-			    		r.nextNull();
-			    		final Element E = owner.createElementNS(JSON_NS, "jsonx:null");
-			    		if(label!=null) E.setAttribute("name",label);
-			    		root.appendChild(E);
-			    		break;
-			    		}
-			    	case STRING:
-			    		{
-			    		final Element E = owner.createElementNS(JSON_NS, "jsonx:string");
-			    		if(label!=null) E.setAttribute("name",label);
-			    		E.appendChild(owner.createTextNode(r.nextString()));
-			    		root.appendChild(E);
-			    		break;
-			    		}
-			    	case NUMBER:
-			    		{
-				    	final Element E = owner.createElementNS(JSON_NS, "jsonx:number");
-				    	root.appendChild(E);
-			    		if(label!=null) E.setAttribute("name",label);
-			    		String s;
-			    		try
-			    			{
-			    			s= String.valueOf(r.nextLong());
-			    			}
-			    		catch(Exception err)
-			    			{
-			    			s= String.valueOf(r.nextDouble());
-			    			}
-	
-			    		E.appendChild(owner.createTextNode(s));
-			    		break;
-			    		}
-			    	case BOOLEAN:
-			    		{
-					    final Element E = owner.createElementNS(JSON_NS, "jsonx:boolean");
-			    		if(label!=null) E.setAttribute("name",label);
-			    		E.appendChild(owner.createTextNode(String.valueOf(r.nextBoolean())));
-			    		root.appendChild(E);
-			    		break;
-			    		}
-			    	case END_DOCUMENT:
-			    		{
-			    		break;
-			    		}
-			    	default: throw new IllegalStateException(token.name());
-			    	}
-			}
-
+		}
+		
+		
 		
 		private Document fetchJson() throws IOException
 			{
-			CloseableHttpResponse httpResponse;
+			CloseableHttpClient httpclient=null;
+			CloseableHttpResponse httpResponse=null;
+			InputStream is=null;
 			HttpEntity httpEntity;
 			try {
-				CloseableHttpClient httpclient = HttpClients.createDefault();
-				final HttpGet httpget = new HttpGet(this.url);				
+				httpclient = HttpClients.createDefault();
+				final HttpGet httpget = new HttpGet(this.getUrl());				
 				httpResponse = httpclient.execute(httpget);
 				httpEntity = httpResponse.getEntity();
-				InputStream is=httpEntity.getContent();
-				JsonReader reader = new JsonReader(new InputStreamReader(is));
-				reader.setLenient(true);
-
-				
-				DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-				dbf.setNamespaceAware(true);
-				Document dom = dbf.newDocumentBuilder().newDocument();
-				_jsonParse(dom,null,reader);
-				
-				EntityUtils.consume(httpEntity);
-				httpResponse.close();
-				httpclient.close();
-				
+				is=httpEntity.getContent();
+				final Document dom = new Json2Dom().parse(is);				
+				EntityUtils.consumeQuietly(httpEntity);
 				return dom;
-				 
 			} catch (Exception e) {
+				e.printStackTrace();
 				throw new IOException(e);
-			}
-			
-			
-			
+			} finally
+				{
+				IOUtils.close(is,httpResponse,httpclient);
+				}
 			}
 		
-		Document fetchDocument() {
+		private Document fetchHtml() throws IOException
+			{
+			CloseableHttpClient httpclient=null;
+			CloseableHttpResponse httpResponse=null;
+			InputStream is=null;
+			HttpEntity httpEntity;
+			try {
+				httpclient = HttpClients.createDefault();
+				final HttpGet httpget = new HttpGet(this.getUrl());				
+				httpResponse = httpclient.execute(httpget);
+				httpEntity = httpResponse.getEntity();
+				is=httpEntity.getContent();
+				final Tidy tidy = new Tidy();
+				tidy.setXmlOut(true);
+				tidy.setShowErrors(0);
+				tidy.setShowWarnings(false);
+				final Document dom = tidy.parseDOM(is, null);
+				
+				/*final TransformerFactory trf = TransformerFactory.newInstance();
+				final Transformer tr = trf.newTransformer();
+				tr.setOutputProperty(OutputKeys.INDENT,"yes");
+				tr.setOutputProperty(OutputKeys.ENCODING,"UTF-8");
+				tr.transform(new DOMSource(dom),
+						new StreamResult(System.err)
+						);*/
+				
+				EntityUtils.consumeQuietly(httpEntity);
+				return dom;
+			} catch (Exception e) {
+				e.printStackTrace();
+				throw new IOException(e);
+			} finally
+				{
+				IOUtils.close(is,httpResponse,httpclient);
+				}
+			}
+
+		private Document fetchXml() throws IOException
+			{
+			try {
+				DocumentBuilderFactory dbf=DocumentBuilderFactory.newInstance();
+				dbf.setNamespaceAware(true);
+				DocumentBuilder db= dbf.newDocumentBuilder();
+				return db.parse(getUrl());
+			} catch (Exception e) {
+				e.printStackTrace();
+				throw new IOException(e);
+			} finally
+				{
+				}
+			}
+		
+		Document fetchDocument() throws IOException {
 			if(this.inputType==null) inputType="html";
-			if(this.inputType.equalsIgnoreCase("json")) ;
-			return null;
+			if(this.inputType.equalsIgnoreCase("json")) return this.fetchJson();
+			if(this.inputType.equalsIgnoreCase("xml")) return this.fetchXml();
+			return this.fetchHtml();
 			}
 		
 		
 		
 		}
+	
+	private List<XslConfig> configs=new ArrayList<>();
 	
 	@Override
 	public void handle(
@@ -249,54 +252,52 @@ public class XslHandler extends AbstractHandler
 			final HttpServletResponse response)
 			throws IOException, ServletException
 		{
-		final String urlIn = request.getParameter(URL_PARAM);
-		if(urlIn==null || urlIn.trim().isEmpty())
+		XslConfig config= null;
+		final String configId=request.getParameter(ID_PARAM);
+		if(configId!=null && !configId.isEmpty())
 			{
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST,URL_PARAM+" param is missing.");
-			return;
+			for(XslConfig xc:this.configs)
+				{	
+				if(configId.equals(xc.getId()))
+					{
+					config = xc;
+					break;
+					}
+				}
+			if(config==null)
+				{
+				response.sendError(HttpServletResponse.SC_BAD_REQUEST,"Cannot get "+configId);
+				return;
+				}
 			}
-		final String xslParam = request.getParameter(XSL_PARAM);
-		if(xslParam==null || xslParam.trim().isEmpty())
+		else
 			{
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST,XSL_PARAM+" param is missing.");
-			return;
+			config = new XslConfig();
+			
+			final String urlIn = request.getParameter(URL_PARAM);
+			if(urlIn==null || urlIn.trim().isEmpty())
+				{
+				response.sendError(HttpServletResponse.SC_BAD_REQUEST,URL_PARAM+" param is missing.");
+				return;
+				}
+			config.setUrl(urlIn);
+			
+			 String xslParam = request.getParameter(XSL_PARAM);
+			if(xslParam==null || xslParam.trim().isEmpty())
+				{
+				response.sendError(HttpServletResponse.SC_BAD_REQUEST,XSL_PARAM+" param is missing.");
+				return;
+				}
+			config.setXsl(xslParam);
 			}
-		CloseableHttpClient httpclient = null;
-		CloseableHttpResponse httpResponse = null;
-		InputStream in = null;
+		
 		try {
-			httpclient = HttpClients.createDefault();
+			Document dom = config.fetchDocument();
 			
-			final HttpGet httpget = new HttpGet(urlIn);
-			
-			 httpResponse = httpclient.execute(httpget);
-			
-			HttpEntity httpEntity = httpResponse.getEntity();
-			in=httpEntity.getContent();
-			final Tidy tidy = new Tidy(); 
-			tidy.setOutputEncoding("UTF-8");
-			tidy.setShowErrors(0);
-			tidy.setQuiet(true);
-			tidy.setErrout(null);
-			tidy.setXmlTags(true);
-			tidy.setXHTML(true);
-			final Document dom =tidy.parseDOM(in, null);
-			EntityUtils.consume(httpEntity);
-			httpResponse.close();
-			httpclient.close();
 			
 		     final TransformerFactory factory = TransformerFactory.newInstance();
-		     Source xslt=null ;
-		     if(xslParam.startsWith("http://") || xslParam.startsWith("https://") || xslParam.startsWith("ftp://") || xslParam.startsWith("file:"))
-		     	{
-					xslt = new StreamSource(xslParam);
-				} 
-		     else
-		     	{
-					xslt = new StreamSource(new File(xslParam));
-				}
 
-			final Transformer  transformer = factory.newTransformer(xslt);
+			final Transformer  transformer = factory.newTransformer(config.getStylesheet());
 	        final Source domSource = new DOMSource(dom);
 	        response.setContentType(ContentType.APPLICATION_ATOM_XML.getMimeType());
 	        response.setStatus(HttpServletResponse.SC_OK);
@@ -322,9 +323,6 @@ public class XslHandler extends AbstractHandler
 			}
 		finally
 			{
-			if(in!=null) in.close();
-			if(httpResponse!=null) httpResponse.close();
-			if(httpclient!=null) httpclient.close();
 			
 			}
 		}
@@ -354,7 +352,7 @@ public class XslHandler extends AbstractHandler
 			try {
 				ApplicationContext beanFactory = new FileSystemXmlApplicationContext(
 						new File(cmd.getOptionValue("f")).toURI().toASCIIString());
-				beanFactory.getBean("");
+				xslHandler.configs.addAll( (List)beanFactory.getBean("myList"));
 
 			} catch(Exception err) {
 				System.err.println(err.getMessage());
@@ -363,7 +361,7 @@ public class XslHandler extends AbstractHandler
 			}
 	    final Server server = new Server(port);
         ContextHandler context = new ContextHandler();
-        context.setContextPath("/tidyxsl");
+        context.setContextPath("/xsl2atom");
         context.setHandler(xslHandler);
         server.setHandler(context);
 	    server.start();
