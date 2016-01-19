@@ -89,6 +89,7 @@ public class XslHandler extends AbstractHandler
 	private String URL_PARAM="url";
 	private String XSL_PARAM="xsl";
 	private String ID_PARAM="id";
+	private File beanXmlFile=null;
 	
 	public static class XslConfig
 		{
@@ -97,6 +98,7 @@ public class XslHandler extends AbstractHandler
 		private String xsl="";
 		private String inlineXsl;
 		private String inputType="html";
+		private String contentType=ContentType.APPLICATION_ATOM_XML.getMimeType();
 		
 		public XslConfig(){
 		}
@@ -137,6 +139,13 @@ public class XslHandler extends AbstractHandler
 			return inlineXsl;
 		}
 		
+		public void setContentType(String contentType) {
+			this.contentType = contentType;
+		}
+		
+		public String getContentType() {
+			return contentType;
+		}
 		
 		public Source getStylesheet()
 		{
@@ -242,7 +251,11 @@ public class XslHandler extends AbstractHandler
 		
 		}
 	
-	private List<XslConfig> configs=new ArrayList<>();
+	public void setBeanXmlFile(File beanXmlFile) {
+		this.beanXmlFile = beanXmlFile;
+	}
+	
+	
 	
 	@Override
 	public void handle(
@@ -254,17 +267,16 @@ public class XslHandler extends AbstractHandler
 		{
 		XslConfig config= null;
 		final String configId=request.getParameter(ID_PARAM);
-		if(configId!=null && !configId.isEmpty())
+		if(configId!=null && !configId.isEmpty() && beanXmlFile!=null)
 			{
-			for(XslConfig xc:this.configs)
-				{	
-				if(configId.equals(xc.getId()))
-					{
-					config = xc;
-					break;
-					}
-				}
-			if(config==null)
+			try {
+				ApplicationContext beanFactory = new FileSystemXmlApplicationContext(
+						this.beanXmlFile.toURI().toASCIIString());
+				config = XslConfig.class.cast(beanFactory.getBean(configId));
+			} catch(Exception err) {
+				config= null;
+			}
+			if( config == null)
 				{
 				response.sendError(HttpServletResponse.SC_BAD_REQUEST,"Cannot get "+configId);
 				return;
@@ -298,8 +310,10 @@ public class XslHandler extends AbstractHandler
 		     final TransformerFactory factory = TransformerFactory.newInstance();
 
 			final Transformer  transformer = factory.newTransformer(config.getStylesheet());
-	        final Source domSource = new DOMSource(dom);
-	        response.setContentType(ContentType.APPLICATION_ATOM_XML.getMimeType());
+	        
+			
+			final Source domSource = new DOMSource(dom);
+	        response.setContentType(config.getContentType());
 	        response.setStatus(HttpServletResponse.SC_OK);
 	        baseRequest.setHandled(true);
 	        
@@ -349,15 +363,8 @@ public class XslHandler extends AbstractHandler
 		if(cmd.hasOption("p")) port=Integer.parseInt(cmd.getOptionValue("p"));
 		if(cmd.hasOption("f"))
 			{
-			try {
-				ApplicationContext beanFactory = new FileSystemXmlApplicationContext(
-						new File(cmd.getOptionValue("f")).toURI().toASCIIString());
-				xslHandler.configs.addAll( (List)beanFactory.getBean("myList"));
-
-			} catch(Exception err) {
-				System.err.println(err.getMessage());
-				System.exit(-1);
-			}
+			xslHandler.setBeanXmlFile(new File(cmd.getOptionValue("f")));
+			
 			}
 	    final Server server = new Server(port);
         ContextHandler context = new ContextHandler();
