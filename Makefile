@@ -72,9 +72,11 @@ apache.httpclient.jars  = \
 	$(lib.dir)/commons-logging/commons-logging/1.2/commons-logging-1.2.jar
 
 spring-beans.jars = \
+	$(lib.dir)/org/springframework/spring-context/4.2.4.RELEASE/spring-context-4.2.4.RELEASE.jar \
 	$(lib.dir)/org/springframework/spring-beans/4.2.3.RELEASE/spring-beans-4.2.3.RELEASE.jar \
 	$(lib.dir)/org/springframework/spring-core/4.2.3.RELEASE/spring-core-4.2.3.RELEASE.jar \
-	$(lib.dir)/commons-logging/commons-logging/1.2/commons-logging-1.2.jar
+	$(lib.dir)/commons-logging/commons-logging/1.2/commons-logging-1.2.jar \
+	$(lib.dir)/aopalliance/aopalliance/1.0/aopalliance-1.0.jar
 
 servlet.api.jars  =\
 	$(lib.dir)/javax/servlet/javax.servlet-api/4.0.0-b01/javax.servlet-api-4.0.0-b01.jar
@@ -93,7 +95,7 @@ jtidy.jars=\
 all_maven_jars = $(sort  ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar})
 
 
-all: tidyxslserver java2xml mosaicofpictures flickrrss geneticpainting json2xml twittergraph twitterfollow miniivy twitter01
+all: xslserver java2xml mosaicofpictures flickrrss geneticpainting json2xml twittergraph twitterfollow miniivy twitter01
 
 
 
@@ -107,7 +109,7 @@ $(eval $(call compile,geneticpainting,sandbox.GeneticPainting,${apache.commons.c
 $(eval $(call compile,flickrrss,sandbox.FlickrRss,${apache.commons.cli} ${slf4j.jars} ${org.scribe.jars}))
 $(eval $(call compile,mosaicofpictures,sandbox.MosaicOfPictures,${apache.commons.cli} ${slf4j.jars}))
 $(eval $(call compile,java2xml,sandbox.Java2Xml,${apache.commons.cli} ${slf4j.jars}))
-$(eval $(call compile,tidyxslserver,sandbox.TidyXslHandler,${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars}))
+$(eval $(call compile,xslserver,sandbox.XslHandler,${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars} ${spring-beans.jars}))
 
 
 
