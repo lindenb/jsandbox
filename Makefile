@@ -1,11 +1,10 @@
 EMPTY :=
 SPACE := $(EMPTY) $(EMPTY)
-.PHONY: all all_maven_jars
+.PHONY: all all_maven_jars clean_maven_jars eclipse_classpath
 bin.dir = dist
 javacc.exe ?= javacc
 lib.dir=maven
 src.dir=src
-jtidy.jars=$(lib.dir)/net/sf/jtidy/jtidy/r938/jtidy-r938.jar
 tmp.dir=tmp
 JAVAC?=javac
 JAR?=jar
@@ -81,10 +80,20 @@ servlet.api.jars  =\
 	$(lib.dir)/javax/servlet/javax.servlet-api/4.0.0-b01/javax.servlet-api-4.0.0-b01.jar
 
 
-all_maven_jars = $(sort ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar})
+jetty.jars=\
+	$(lib.dir)/javax/servlet/javax.servlet-api/4.0.0-b01/javax.servlet-api-4.0.0-b01.jar \
+	$(lib.dir)/org/eclipse/jetty/jetty-http/9.3.7.v20160115/jetty-http-9.3.7.v20160115.jar \
+	$(lib.dir)/org/eclipse/jetty/jetty-server/9.3.7.v20160115/jetty-server-9.3.7.v20160115.jar \
+	$(lib.dir)/org/eclipse/jetty/jetty-io/9.3.7.v20160115/jetty-io-9.3.7.v20160115.jar \
+	$(lib.dir)/org/eclipse/jetty/jetty-util/9.3.7.v20160115/jetty-util-9.3.7.v20160115.jar
+	
+jtidy.jars=\
+	$(lib.dir)/net/sf/jtidy/jtidy/r938/jtidy-r938.jar
+
+all_maven_jars = $(sort  ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar})
 
 
-all: java2xml mosaicofpictures flickrrss geneticpainting json2xml twittergraph twitterfollow miniivy twitter01
+all: tidyxslserver java2xml mosaicofpictures flickrrss geneticpainting json2xml twittergraph twitterfollow miniivy twitter01
 
 
 
@@ -98,6 +107,10 @@ $(eval $(call compile,geneticpainting,sandbox.GeneticPainting,${apache.commons.c
 $(eval $(call compile,flickrrss,sandbox.FlickrRss,${apache.commons.cli} ${slf4j.jars} ${org.scribe.jars}))
 $(eval $(call compile,mosaicofpictures,sandbox.MosaicOfPictures,${apache.commons.cli} ${slf4j.jars}))
 $(eval $(call compile,java2xml,sandbox.Java2Xml,${apache.commons.cli} ${slf4j.jars}))
+$(eval $(call compile,tidyxslserver,sandbox.TidyXslHandler,${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars}))
+
+
+
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	mkdir -p tmp $(dir $@)
@@ -110,7 +123,11 @@ $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 common.avdl :
 	curl -o $@ -L "https://raw.githubusercontent.com/ga4gh/schemas/master/src/main/resources/avro/$@"
 
-
 ${all_maven_jars}  : 
 	mkdir -p $(dir $@) && wget -O "$@" "http://central.maven.org/maven2/$(patsubst ${lib.dir}/%,%,$@)"
 
+eclipse_classpath:
+	echo "$(realpath ${all_maven_jars})" | tr " " "\n" | awk '{printf("\t<classpathentry kind=\"lib\" path=\"%s\"/>\n",$$1);}'
+
+clean_maven_jars :
+	rm -f ${all_maven_jars}
