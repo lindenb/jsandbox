@@ -2,12 +2,19 @@ package sandbox;
 
 import java.io.Closeable;
 import java.io.Flushable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 public class IOUtils {
 
 private IOUtils(){
+}
+public static void copyTo(final InputStream in,final OutputStream out) throws IOException
+{
+	
 }
 
 public static void flush(final Object...array)
