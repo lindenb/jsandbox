@@ -43,11 +43,11 @@ public class HtmlInXml extends AbstractApplication {
 				{
 				final Element e= Element.class.cast(n);
 				final NamedNodeMap atts = e.getAttributes();
-				final Element r = owner.createElement(e.getNodeName());
+				final Element r = owner.createElementNS(e.getNamespaceURI(),e.getNodeName());
 				for(int i=0;i< atts.getLength();++i)
 				{
 					Attr att=(Attr)atts.item(i);
-					r.setAttribute(att.getNodeName(),att.getValue());
+					r.setAttributeNS("http://www.w3.org/1999/xhtml",att.getNodeName(),att.getValue());
 					
 				}
 				
@@ -129,6 +129,7 @@ public class HtmlInXml extends AbstractApplication {
 			LOG.warning("Illegal number of args");
 			return -1;
 			}
+		
 		this.expand(dom,dom.getDocumentElement());
 		
 		final TransformerFactory trf = TransformerFactory.newInstance();
