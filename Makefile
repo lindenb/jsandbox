@@ -96,8 +96,9 @@ jtidy.jars=\
 all_maven_jars = $(sort  ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar})
 
 
-all: packageeclipsejars xslserver java2xml mosaicofpictures flickrrss geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01
 
+all: pubmedtrending \
+	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01
 
 
 $(eval $(call compile,miniivy,sandbox.MiniIvy,))
@@ -113,8 +114,8 @@ $(eval $(call compile,mosaicofpictures,sandbox.MosaicOfPictures,${apache.commons
 $(eval $(call compile,java2xml,sandbox.Java2Xml,${apache.commons.cli} ${slf4j.jars}))
 $(eval $(call compile,xslserver,sandbox.XslHandler,${google.gson.jars} ${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars} ${spring-beans.jars}))
 $(eval $(call compile,packageeclipsejars,sandbox.PackageEclipseJars,${apache.commons.cli}))
-
-
+$(eval $(call compile,htmlinxml,sandbox.HtmlInXml,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}))
+$(eval $(call compile,pubmedtrending,sandbox.PubmedTrending,${apache.commons.cli} ${slf4j.jars} ))
 
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
@@ -136,3 +137,4 @@ eclipse_classpath:
 
 clean_maven_jars :
 	rm -f ${all_maven_jars}
+
