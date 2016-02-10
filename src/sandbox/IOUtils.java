@@ -15,6 +15,12 @@ public class IOUtils {
 private IOUtils(){
 }
 
+public static boolean isURL(final String s) 
+	{
+	try  {new java.net.URL(s); return true;}
+	catch(java.net.MalformedURLException e) { return false;}
+	}
+
 public static void copyTo(final Reader in,final Writer out) throws IOException
 {
 char array[]=new char[1024];

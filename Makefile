@@ -97,7 +97,7 @@ all_maven_jars = $(sort  ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${sprin
 
 
 
-all: pubmedtrending \
+all: atommerger pubmedtrending \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01
 
 
@@ -116,6 +116,7 @@ $(eval $(call compile,xslserver,sandbox.XslHandler,${google.gson.jars} ${apache.
 $(eval $(call compile,packageeclipsejars,sandbox.PackageEclipseJars,${apache.commons.cli}))
 $(eval $(call compile,htmlinxml,sandbox.HtmlInXml,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}))
 $(eval $(call compile,pubmedtrending,sandbox.PubmedTrending,${apache.commons.cli} ${slf4j.jars} ))
+$(eval $(call compile,atommerger,sandbox.AtomMerger,${apache.commons.cli} ${slf4j.jars} ))
 
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
