@@ -8,12 +8,8 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.sql.Date;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -42,7 +38,7 @@ public class PubmedTrending extends AbstractApplication {
 		{
 		int y=0;
 		Date date;
-		List<Article> articles = new ArrayList();
+		List<Article> articles = new ArrayList<>();
 		
 		DateRow(Date date)
 			{
@@ -82,9 +78,9 @@ public class PubmedTrending extends AbstractApplication {
 		final QName nameAtt=new QName("Name");
 		final String uri = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=xml&id=" + pmids;
 		LOG.info(uri);
-		InputStream in  = new URL(uri).openStream();
-		XMLInputFactory xif = XMLInputFactory.newFactory();
-		XMLEventReader r= xif.createXMLEventReader(in);
+		final InputStream in  = new URL(uri).openStream();
+		final XMLInputFactory xif = XMLInputFactory.newFactory();
+		final XMLEventReader r= xif.createXMLEventReader(in);
 		String pmid=null;
 		String title=null;
 		while(r.hasNext())
@@ -106,7 +102,7 @@ public class PubmedTrending extends AbstractApplication {
 				Article article = null;
 				for(int i=0;i< this.pmid2article.size();++i)
 					{
-					Article tmpA = this.pmid2article.get(i);
+					final Article tmpA = this.pmid2article.get(i);
 					if(tmpA.pmid.equals(pmid) && (tmpA.nRows+tmpA.row.y) == dateRow.y)
 						{
 						article=tmpA;
@@ -138,13 +134,26 @@ public class PubmedTrending extends AbstractApplication {
 		{
 		while(index< text.length())
 			{
+			if(index+5<text.length() && text.substring(index, index+5).equals("<sup>"))
+				{
+				w.writeStartElement("sup");
+				index+=5;
+				continue;
+				}
+			if(index+6<text.length() && text.substring(index, index+6).equals("</sup>"))
+				{
+				w.writeEndElement();
+				index+=6;
+				continue;
+				}
+			
 			char c = text.charAt(index);
 			if(!Character.isJavaIdentifierPart(c)) {
 				w.writeCharacters(String.valueOf(c));
 				++index;
 				continue;
 				}
-			StringBuilder sb=new StringBuilder();
+			final StringBuilder sb=new StringBuilder();
 			sb.append(c);
 			index++;
 			while(index< text.length() )
@@ -230,8 +239,8 @@ public class PubmedTrending extends AbstractApplication {
 				}
 			
 			
-			XMLOutputFactory xof=XMLOutputFactory.newFactory();
-			XMLStreamWriter w = xof.createXMLStreamWriter(System.out,"UTF-8");
+			final XMLOutputFactory xof=XMLOutputFactory.newFactory();
+			final XMLStreamWriter w = xof.createXMLStreamWriter(System.out,"UTF-8");
 			w.writeStartElement("html");
 			w.writeStartElement("head");
 			w.writeStartElement("style");
@@ -242,11 +251,16 @@ public class PubmedTrending extends AbstractApplication {
 					"a {  text-decoration: none; color: black;}\n"+
 					".buzzword {font-size:150%; color:green;}\n"
 					);
-			w.writeEndElement();
-			w.writeEndElement();
+			w.writeEndElement();//style
+						
+			w.writeEmptyElement("meta");
+			w.writeAttribute("http-equiv", "Content-Type");
+			w.writeAttribute("content", "text/html; charset=utf-8");
+			
+			w.writeEndElement();//head
 			w.writeStartElement("body");
 			w.writeStartElement("table");
-			for(DateRow row:this.dates)
+			for(final DateRow row:this.dates)
 				{
 				w.writeStartElement("tr");
 				w.writeStartElement("th");
@@ -255,7 +269,7 @@ public class PubmedTrending extends AbstractApplication {
 				
 				Collections.sort(row.articles);
 				
-				for(Article a:row.articles)
+				for(final Article a:row.articles)
 					{
 					w.writeStartElement("td");
 					w.writeAttribute("rowspan", String.valueOf(a.nRows));
