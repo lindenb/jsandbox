@@ -1,12 +1,16 @@
 package sandbox;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -29,14 +33,44 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Attr;
+import org.w3c.dom.CDATASection;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
+import org.w3c.dom.Text;
+import org.w3c.tidy.Tidy;
 
 
 public class AtomMerger extends AbstractApplication
 	{
 	private static final String ATOM="http://www.w3.org/2005/Atom";
+	
+	private static class EntrySorter implements Comparator<Node>
+		{
+		SimpleDateFormat fmt= new SimpleDateFormat();
+		EntrySorter() {
+			fmt.setLenient(true);
+		}
+		Date getDate(Node o1) {
+			try {
+				for(Node c=o1.getFirstChild();c!=null;c=c.getNextSibling())
+				{
+					if(c.getLocalName().equals("updated")) {
+						return fmt.parse(c.getTextContent());
+					}
+				}
+			} catch(Exception err) {
+				//ignore
+			}
+			return new Date();
+			}
+		@Override
+		public int compare(Node o1, Node o2) {
+			return getDate(o2).compareTo(getDate(o1));
+			}
+		}	
 	
 	private static class FileAndFilter
 		{
@@ -69,6 +103,7 @@ public class AtomMerger extends AbstractApplication
 	private static final Logger LOG = LoggerFactory.getLogger("jsandbox");
 	private FileAndFilter rss2atom=null;
 	private FileAndFilter json2atom=null;
+	private FileAndFilter html2atom=null;
 	private final List<FileAndFilter> atomfilters=new ArrayList<>();
 	private final List<FileAndFilter> rssfilters=new ArrayList<>();
 	
@@ -97,13 +132,54 @@ public class AtomMerger extends AbstractApplication
 		return root!=null && root.getLocalName().equals("rss");
 		}
 
-	
+	private void cloneTidy(final Node root,final Node n)
+		{
+		final Document owner =root.getOwnerDocument();
+		switch(n.getNodeType())
+			{
+			case Node.TEXT_NODE:
+				{
+				String text = Text.class.cast(n).getTextContent();
+				if(text!=null) root.appendChild( owner.createTextNode(text));
+				break ;
+				}
+			case Node.CDATA_SECTION_NODE:
+				{
+				String text = CDATASection.class.cast(n).getTextContent();
+				if(text!=null) root.appendChild(owner.createTextNode(text));
+				break;
+				}
+			case Node.ELEMENT_NODE:
+				{
+				final Element e= Element.class.cast(n);
+				final NamedNodeMap atts = e.getAttributes();
+				final Element r = owner.createElementNS(e.getNamespaceURI(),e.getNodeName());
+				root.appendChild(r);
+				for(int i=0;i< atts.getLength();++i)
+				{
+					Attr att=(Attr)atts.item(i);
+					r.setAttributeNS("http://www.w3.org/1999/xhtml",att.getNodeName(),att.getValue());
+					
+				}
+				
+				for(Node c=e.getFirstChild();c!=null;c=c.getNextSibling())
+					{
+					this.cloneTidy(r,c); 
+					}
+				break;
+				}
+			default: LOG.warn(">>>>"+n.getNodeType()+ " "+n); break;
+			}
+		}
+
 	
 	@Override
 	protected void fillOptions(Options options) {
 		options.addOption(Option.builder("r2a").longOpt("rss2atom").hasArg(true).desc("Optional XSLT stylesheet transforming rss to atom.").build());
+		options.addOption(Option.builder("o").longOpt("output").hasArg(true).desc("File out.").build());
 		options.addOption(Option.builder("j2a").longOpt("json2atom").hasArg(true).desc("Optional XSLT stylesheet transforming jsonx to atom.").build());
-		options.addOption(Option.builder("i").longOpt("ignore").hasArg(true).desc("Ignore Errors").build());
+		options.addOption(Option.builder("h2a").longOpt("html2atom").hasArg(true).desc("Optional XSLT stylesheet transforming jsonx to atom.").build());
+		options.addOption(Option.builder("i").longOpt("ignore").hasArg(false).desc("Ignore Errors").build());
 		options.addOption(Option.builder("rf").longOpt("rssfilter").hasArgs().desc("Optional list of XSLT stylesheets filtering RSS (multiple)").build());
 		options.addOption(Option.builder("af").longOpt("atomfilter").hasArgs().desc("Optional list of XSLT stylesheets filtering ATOM (multiple)").build());
 		super.fillOptions(options);
@@ -111,6 +187,11 @@ public class AtomMerger extends AbstractApplication
 	
 	@Override
 	protected int execute(CommandLine cmd) {
+		File fileout=null;
+		if(cmd.hasOption("o")) {
+			fileout= new File( cmd.getOptionValue("o"));
+		}
+		
 		if(cmd.hasOption("r2a")) {
 			this.rss2atom= new FileAndFilter( cmd.getOptionValue("r2a"));
 		}
@@ -118,6 +199,10 @@ public class AtomMerger extends AbstractApplication
 			this.json2atom= new FileAndFilter( cmd.getOptionValue("j2a"));
 		}
 
+		if(cmd.hasOption("h2a")) {
+			this.html2atom= new FileAndFilter( cmd.getOptionValue("h2a"));
+		}
+		
 		if(cmd.hasOption("i")) {
 			this.ignoreErrors = true;
 		}
@@ -125,7 +210,7 @@ public class AtomMerger extends AbstractApplication
 		final List<String> args=cmd.getArgList();
 		if(args.isEmpty())
 			{
-			System.err.println("Empty input");
+			System.err.println("Empty input. Double colon '--' missing ?");
 			return -1;
 			}
 		try {
@@ -162,6 +247,7 @@ public class AtomMerger extends AbstractApplication
 					));
 			feedRoot.appendChild(c);
 			
+			List<Node> chilrens = new ArrayList<>();
 			
 			for(String path:paths)
 				{
@@ -177,18 +263,48 @@ public class AtomMerger extends AbstractApplication
 						}
 					catch(Exception err)
 						{
+						dom=null;
+						}
+					
+					if(dom==null && this.json2atom!=null) {
 						final Json2Dom json2dom = new Json2Dom();
 						InputStream in = IOUtils.openStream(path); 
 						try {
 						dom = json2dom.parse(in);
-						if(this.json2atom==null) {
-							throw new RuntimeException("json2atom stylesheet missing");
-						}
 						dom = this.json2atom.transform(dom);
-						}finally {
+						}
+						catch(Exception err) {
+							dom=null;
+						}
+						finally {
 							IOUtils.close(in);
 						}
+						}//json
+					
+					if(dom==null && this.html2atom!=null) {
+						InputStream in = IOUtils.openStream(path); 
+						try {
+							final Tidy tidy = new Tidy();
+							tidy.setXmlOut(true);
+							tidy.setShowErrors(0);
+							tidy.setShowWarnings(false);
+							final Document newdoc =db.newDocument();
+							cloneTidy(newdoc,tidy.parseDOM(in, null));
+							dom = this.json2atom.transform(dom);
+							}
+						catch(Exception err) {
+							dom=null;
+							}
+						finally {
+							IOUtils.close(in);
+							}
+						}//html
+					
+					if(dom==null)
+						{
+						throw new IOException("Cannot parse "+path);
 						}
+					
 					if(isRss(dom))
 						{
 						for(final FileAndFilter f:this.rssfilters)
@@ -230,8 +346,8 @@ public class AtomMerger extends AbstractApplication
 							}
 						if(id==null || seenids.contains(id)) continue;
 						seenids.add(id);
+						chilrens.add(outdom.importNode(c1, true) );
 						
-						feedRoot.appendChild(outdom.importNode(c1, true));
 						}
 				} catch(Exception err)
 					{
@@ -245,12 +361,21 @@ public class AtomMerger extends AbstractApplication
 					}
 				}
 			
+			Collections.sort(chilrens,new EntrySorter());
+			
+			for(Node n:chilrens)
+				{
+				feedRoot.appendChild(n);
+				}
+			
 			final TransformerFactory trf = TransformerFactory.newInstance();
 			final Transformer tr = trf.newTransformer();
 			tr.setOutputProperty(OutputKeys.INDENT,"yes");
 			tr.setOutputProperty(OutputKeys.ENCODING,"UTF-8");
 			tr.transform(new DOMSource(outdom),
-					new StreamResult(System.out)
+					fileout==null?
+							new StreamResult(System.out):
+							new StreamResult(fileout)
 					);
 
 			return 0;
