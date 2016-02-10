@@ -116,7 +116,7 @@ $(eval $(call compile,xslserver,sandbox.XslHandler,${google.gson.jars} ${apache.
 $(eval $(call compile,packageeclipsejars,sandbox.PackageEclipseJars,${apache.commons.cli}))
 $(eval $(call compile,htmlinxml,sandbox.HtmlInXml,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}))
 $(eval $(call compile,pubmedtrending,sandbox.PubmedTrending,${apache.commons.cli} ${slf4j.jars} ))
-$(eval $(call compile,atommerger,sandbox.AtomMerger,${apache.commons.cli} ${slf4j.jars} ))
+$(eval $(call compile,atommerger,sandbox.AtomMerger,${apache.commons.cli} ${slf4j.jars} ${google.gson.jars} ))
 
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
