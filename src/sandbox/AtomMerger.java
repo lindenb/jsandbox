@@ -3,10 +3,6 @@ package sandbox;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringReader;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,26 +42,40 @@ import org.w3c.tidy.Tidy;
 public class AtomMerger extends AbstractApplication
 	{
 	private static final String ATOM="http://www.w3.org/2005/Atom";
-	
+	private static final String DATE_FORMATS[]={"yyyy-MM-dd'T'HH:mm:ssXXX"};
 	private static class EntrySorter implements Comparator<Node>
 		{
-		SimpleDateFormat fmt= new SimpleDateFormat();
+		
+		Date defaultDate= new Date();
 		EntrySorter() {
-			fmt.setLenient(true);
+		
 		}
+
 		Date getDate(Node o1) {
-			try {
-				for(Node c=o1.getFirstChild();c!=null;c=c.getNextSibling())
-				{
-					if(c.getLocalName().equals("updated")) {
-						return fmt.parse(c.getTextContent());
-					}
+			String updated=null;
+
+			for (Node c = o1.getFirstChild(); c != null; c = c.getNextSibling()) {
+				if (c.getNodeType() == Node.ELEMENT_NODE && c.getLocalName().equals("updated")) {
+					updated = c.getTextContent();
+					break;
 				}
-			} catch(Exception err) {
-				//ignore
+				}
+				
+			if(updated==null) return defaultDate;
+			
+			for (final String format : DATE_FORMATS) {
+				final SimpleDateFormat fmt = new SimpleDateFormat(format);
+				fmt.setLenient(true);
+				try {
+					return fmt.parse(updated);
+				}
+				catch (Exception err) {
+				}
 			}
-			return new Date();
-			}
+			LOG.info("bad date format : "+updated);
+			return defaultDate;
+			
+		}
 		@Override
 		public int compare(Node o1, Node o2) {
 			return getDate(o2).compareTo(getDate(o1));
@@ -104,9 +114,10 @@ public class AtomMerger extends AbstractApplication
 	private FileAndFilter rss2atom=null;
 	private FileAndFilter json2atom=null;
 	private FileAndFilter html2atom=null;
+	private FileAndFilter xml2atom=null;
 	private final List<FileAndFilter> atomfilters=new ArrayList<>();
 	private final List<FileAndFilter> rssfilters=new ArrayList<>();
-	
+	private int limitEntryCount=-1;
 	
 	private boolean ignoreErrors=false;
 	private Document convertRssToAtom(Document rss) throws Exception
@@ -176,12 +187,14 @@ public class AtomMerger extends AbstractApplication
 	@Override
 	protected void fillOptions(Options options) {
 		options.addOption(Option.builder("r2a").longOpt("rss2atom").hasArg(true).desc("Optional XSLT stylesheet transforming rss to atom.").build());
+		options.addOption(Option.builder("x2a").longOpt("xml2atom").hasArg(true).desc("Optional XSLT stylesheet transforming xml to atom.").build());
 		options.addOption(Option.builder("o").longOpt("output").hasArg(true).desc("File out.").build());
 		options.addOption(Option.builder("j2a").longOpt("json2atom").hasArg(true).desc("Optional XSLT stylesheet transforming jsonx to atom.").build());
 		options.addOption(Option.builder("h2a").longOpt("html2atom").hasArg(true).desc("Optional XSLT stylesheet transforming jsonx to atom.").build());
 		options.addOption(Option.builder("i").longOpt("ignore").hasArg(false).desc("Ignore Errors").build());
 		options.addOption(Option.builder("rf").longOpt("rssfilter").hasArgs().desc("Optional list of XSLT stylesheets filtering RSS (multiple)").build());
 		options.addOption(Option.builder("af").longOpt("atomfilter").hasArgs().desc("Optional list of XSLT stylesheets filtering ATOM (multiple)").build());
+		options.addOption(Option.builder("n").longOpt("max-count").hasArgs().desc("Optional limit number of entries. default: no limit.").build());
 		super.fillOptions(options);
 	}
 	
@@ -203,8 +216,16 @@ public class AtomMerger extends AbstractApplication
 			this.html2atom= new FileAndFilter( cmd.getOptionValue("h2a"));
 		}
 		
+		
+		if(cmd.hasOption("x2a")) {
+			this.xml2atom= new FileAndFilter( cmd.getOptionValue("x2a"));
+		}
 		if(cmd.hasOption("i")) {
 			this.ignoreErrors = true;
+		}
+		
+		if(cmd.hasOption("n")) {
+			this.limitEntryCount = Integer.parseInt( cmd.getOptionValue("n"));
 		}
 		
 		final List<String> args=cmd.getArgList();
@@ -305,6 +326,11 @@ public class AtomMerger extends AbstractApplication
 						throw new IOException("Cannot parse "+path);
 						}
 					
+					if(!(isRss(dom) || isAtom(dom)) && this.xml2atom!=null) {
+						dom = this.xml2atom.transform(dom);
+					}
+					
+					
 					if(isRss(dom))
 						{
 						for(final FileAndFilter f:this.rssfilters)
@@ -347,6 +373,14 @@ public class AtomMerger extends AbstractApplication
 						if(id==null || seenids.contains(id)) continue;
 						seenids.add(id);
 						chilrens.add(outdom.importNode(c1, true) );
+						if(this.limitEntryCount!=-1)
+							{
+							Collections.sort(chilrens,new EntrySorter());
+							while(chilrens.size()>this.limitEntryCount) 
+								{
+								chilrens.remove(chilrens.size()-1);
+								}
+							}
 						
 						}
 				} catch(Exception err)
@@ -362,6 +396,13 @@ public class AtomMerger extends AbstractApplication
 				}
 			
 			Collections.sort(chilrens,new EntrySorter());
+			if(this.limitEntryCount!=-1)
+				{
+				while(chilrens.size()>this.limitEntryCount) 
+					{
+					chilrens.remove(chilrens.size()-1);
+					}
+				}
 			
 			for(Node n:chilrens)
 				{
