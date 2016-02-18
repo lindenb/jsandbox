@@ -9,8 +9,11 @@ import java.net.URL;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import javax.xml.namespace.QName;
@@ -200,6 +203,13 @@ public class PubmedTrending extends AbstractApplication {
 				LOG.severe("Illegal number of args");
 				return -1;
 				}
+			final Comparator<Date> inverseDateCmpd = new Comparator<Date>() {
+				@Override
+				public int compare(Date o1, Date o2) {
+					return o2.compareTo(o1);
+				}
+			};
+			Map<Date,String> date2line= new TreeMap<>(inverseDateCmpd);
 			String line;
 			while((line=r.readLine())!=null)
 				{
@@ -208,13 +218,17 @@ public class PubmedTrending extends AbstractApplication {
 				int n= line.indexOf('\t');
 				if(n==-1) n=line.indexOf(' ');
 				if(n==-1) throw new IOException("no space/tab in "+line);
-				run(
-					Date.valueOf(line.substring(0,n).trim()),
-					line.substring(n+1).trim()
-					);
+				date2line.put(
+						Date.valueOf(line.substring(0,n).trim()),
+						line.substring(n+1).trim()
+						);
 				}
 			r.close();
-			Collections.sort(this.dates);
+			
+			for(final Date date:date2line.keySet()){
+				this.run(date,date2line.get(date));
+			}
+			
 			
 			for(int y0=0;y0< dates.size();++y0)
 				{
@@ -260,6 +274,9 @@ public class PubmedTrending extends AbstractApplication {
 			w.writeEndElement();//head
 			w.writeStartElement("body");
 			w.writeStartElement("table");
+			w.writeStartElement("caption");
+			w.writeCharacters("Pubmed Trending");
+			w.writeEndElement();
 			for(final DateRow row:this.dates)
 				{
 				w.writeStartElement("tr");

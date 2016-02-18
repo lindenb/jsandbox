@@ -1,12 +1,17 @@
 package sandbox;
 
+import java.io.BufferedReader;
 import java.io.Closeable;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -51,6 +56,33 @@ public static Collection<String> expandList(Collection<String> files) throws IOE
 	return L;
 }
 
+
+public static BufferedReader openBufferedReader(final String path) throws IOException {
+	return new BufferedReader(openReader(path));
+	}
+
+public static BufferedReader openBufferedReaderFromFile(final File path) throws IOException {
+	return new BufferedReader(new FileReader(path));
+	}
+
+public static String readFileContent(final File path) throws IOException {
+	Reader r=null;
+	StringWriter sw= new StringWriter();
+	try { r = openReader(path);copyTo(r, sw);return sw.toString();} 
+	finally {close(r);}
+	}
+
+
+public static Reader openReader(final String path) throws IOException {
+	return new InputStreamReader(openStream(path));
+	}
+
+public static Reader openReader(final File path) throws IOException {
+	return new InputStreamReader(openStream(path));
+	}
+
+
+
 public static InputStream openStream(final String path) throws IOException {
 	InputStream in = null;
 	if(isURL(path)) {
@@ -59,6 +91,15 @@ public static InputStream openStream(final String path) throws IOException {
 	else {
 		in = new FileInputStream(path);
 	}
+	return mayGzipInputStream(in);
+}
+
+public static InputStream openStream(final File path) throws IOException {
+	return mayGzipInputStream( new FileInputStream(path));
+	}
+
+
+public static InputStream mayGzipInputStream(InputStream in) throws IOException {
 	/* http://stackoverflow.com/questions/4818468 */
 	java.io.PushbackInputStream pb = new java.io.PushbackInputStream( in, 2 ); //we need a pushbackstream to look ahead
  	byte [] signature = new byte[2];
@@ -68,6 +109,7 @@ public static InputStream openStream(final String path) throws IOException {
    		return new java.util.zip.GZIPInputStream( pb );
  	else 
    		return pb;
+
 }
 
 public static void copyTo(final Reader in,final Writer out) throws IOException
