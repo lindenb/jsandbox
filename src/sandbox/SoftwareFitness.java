@@ -5,7 +5,9 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.Callable;
@@ -28,12 +30,12 @@ import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.w3c.dom.Text;
 
 
 
 public class SoftwareFitness extends AbstractApplication {
 	private static final Logger LOG=Logger.getLogger("jsandbox");
+	private static final String NS="https://github.com/lindenb/jsandbox/";
 
 	
 	private static class StreamBoozer extends Thread
@@ -69,7 +71,7 @@ public class SoftwareFitness extends AbstractApplication {
 	    		}
 	    	finally
 	    		{
-	    		try{in.close();} catch(Exception e2) {}
+	    		IOUtils.close(in);
 	    		}
 	    	}
 		}
@@ -116,7 +118,8 @@ public class SoftwareFitness extends AbstractApplication {
 		@Override
 		VariableDef getVariableDef() {return def;}
 		@Override Node toNode(Document owner) {
-			final Element E = owner.createElement("boolean");
+			final Element E = owner.createElementNS(NS,"boolean");
+			E.setAttribute("name", def.name);
 			E.setAttribute("value", String.valueOf(value));
 			return E;
 		}
@@ -162,7 +165,8 @@ public class SoftwareFitness extends AbstractApplication {
 		@Override VariableDef getVariableDef() { return def;}
 		
 		@Override Node toNode(Document owner) {
-			final Element E = owner.createElement("double");
+			final Element E = owner.createElementNS(NS,"double");
+			E.setAttribute("name", def.name);
 			E.setAttribute("value", String.valueOf(value));
 			return E;
 		}
@@ -233,7 +237,8 @@ public class SoftwareFitness extends AbstractApplication {
 		IntVariableDef def;
 		
 		@Override Node toNode(Document owner) {
-			final Element E = owner.createElement("int");
+			final Element E = owner.createElementNS(NS,"int");
+			E.setAttribute("name", def.name);
 			E.setAttribute("value", String.valueOf(value));
 			return E;
 		}
@@ -305,7 +310,8 @@ public class SoftwareFitness extends AbstractApplication {
 			return v;
 			}
 		@Override Node toNode(Document owner) {
-			final Element E = owner.createElement("string");
+			final Element E = owner.createElementNS(NS,"string");
+			E.setAttribute("name", def.name);
 			E.setAttribute("value", String.valueOf(value));
 			return E;
 		}
@@ -323,7 +329,8 @@ public class SoftwareFitness extends AbstractApplication {
 		
 		@Override
 		public String toString() {
-			return variables.toString();
+			
+			return "ID:"+id+"\t"+variables.toString();
 			}
 	}
 
@@ -338,15 +345,7 @@ public class SoftwareFitness extends AbstractApplication {
 			this.rootXslStylesheet = rootXslStylesheet;
 			this.timeoutSecs = timeoutSecs;
 			}
-		private VariableInstance findVarInstanceByName(final String refName ) {
 		
-			for(VariableInstance v: this.sol.variables) {
-				if(v.getVariableDef().name.equals(refName)) {
-					return v;
-				}
-			}
-			throw new RuntimeException("Cannot find ref="+refName);
-			}
 		@Override
 		public Solution call() throws Exception
 			{
@@ -360,18 +359,20 @@ public class SoftwareFitness extends AbstractApplication {
 			final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 			final DocumentBuilder db=dbf.newDocumentBuilder();
 			final Document dom = db.newDocument();
-			final Element rootElement =dom.createElement("config");
+			final Element rootElement =dom.createElementNS(NS,"config");
 			dom.appendChild(rootElement);
 			rootElement.setAttribute("output", outputFile.getPath());
 			rootElement.setAttribute("id", String.valueOf(sol.id));
-			final Element varElement =dom.createElement("variables");
+			final Element varElement =dom.createElementNS(NS,"variables");
 			rootElement.appendChild(varElement);
 			for(VariableInstance v:this.sol.variables) 
 				{
 				varElement.appendChild(v.toNode(dom));
 				}
 			final TransformerFactory trf=TransformerFactory.newInstance();
-			final  Templates templates=trf.newTemplates(new DOMSource(this.rootXslStylesheet));
+			final Document copyXsl = db.newDocument();
+			copyXsl.appendChild(copyXsl.importNode(this.rootXslStylesheet, true));
+			final  Templates templates=trf.newTemplates(new DOMSource(copyXsl));
 			final  Transformer  tr=templates.newTransformer();
 			tr.setOutputProperty(OutputKeys.METHOD,"text");
 			tr.transform(
@@ -380,10 +381,15 @@ public class SoftwareFitness extends AbstractApplication {
 					);
 			
 			//make executable
-			Runtime.getRuntime().exec("chmod u+x "+shellScriptFile);
+			//Runtime.getRuntime().exec("chmod u+x "+shellScriptFile);
 		
+			//System.err.println(IOUtils.readFileContent(shellScriptFile));
+
 			
 			List<String> cmdargs = new ArrayList<>();
+			cmdargs.add("/bin/bash");
+			cmdargs.add("-x");
+			cmdargs.add(shellScriptFile.getPath());
 			
 			ProcessBuilder procbuilder= new ProcessBuilder(cmdargs);
 			procbuilder.directory(shellScriptFile.getParentFile());
@@ -391,50 +397,68 @@ public class SoftwareFitness extends AbstractApplication {
 			Process proc = procbuilder.start();
 			procStderr = new StreamBoozer(proc.getErrorStream(),
 					System.err,
-					"[make]"
+					"["+sol.id+":err]"
 					);
 			procStdout = new StreamBoozer(proc.getInputStream(),
 					System.out,
-					"[make]"
+					"["+sol.id+":out]"
 					);
 			procStderr.start();
 			procStdout.start();
 			
-			LOG.info("wait for make");
+			System.err.println(IOUtils.readFileContent(shellScriptFile));
+			
+			LOG.info("wait for "+sol);
 			proc.waitFor(this.timeoutSecs,TimeUnit.SECONDS);
 			this.sol.returnStatus = proc.exitValue();
 			if(this.sol.returnStatus!=0)
 				{
 				LOG.severe("solutio, failed");
 				}
-			else if(outputFile.exists())
+			else if(outputFile.exists() && outputFile.canRead())
 				{
-				this.sol.fitness = Optional.of( Double.parseDouble( IOUtils.readFileContent(outputFile).trim()));
+				String content =  IOUtils.readFileContent(outputFile).trim();
+				if(	content.isEmpty()) {
+					this.sol.returnStatus = -1;
+					LOG.severe("empty output");
+					}
+				else
+					{
+					this.sol.fitness = Optional.of( Double.parseDouble(content));
+					}
 				}
 			else
 				{
 				LOG.severe("output file was not created");
+				this.sol.returnStatus = -1;
 				}
-			
-			
-			return sol;
+			}
+		catch(Exception err) 
+			{
+			err.printStackTrace();
+			this.sol.returnStatus=-1;
 			}
 		finally
 			{
 			shellScriptFile.delete();
 			outputFile.delete();
+			try {if(procStderr!=null) procStderr.interrupt();} catch(Exception err){}
+			try {if(procStdout!=null) procStdout.interrupt();} catch(Exception err){}
 			}
+			
+			
+			return sol;
+
 		}
 		}
 
 	
-	private List<VariableDef> variablesDefs = new ArrayList<>();
+	private Map<String,VariableDef> variablesDefs = new HashMap<>();
 	private Random random = new Random(System.currentTimeMillis());
-	private File tmpDir=null;
 	
 	private Solution makeSolution() {
 		final Solution sol = new Solution();
-		for(final VariableDef def: this.variablesDefs) {
+		for(final VariableDef def: this.variablesDefs.values()) {
 			sol.variables.add(def.newInstance(this.random));
 		}
 		return sol;
@@ -466,37 +490,56 @@ public class SoftwareFitness extends AbstractApplication {
 			final DocumentBuilder db=dbf.newDocumentBuilder();
 			final Document dom = db.parse(new File(args.get(0)));
 			final Element root=dom.getDocumentElement();
+			
+			if(!(NS.equals(root.getNamespaceURI()) && root.getLocalName().equals("training")))
+				{
+				System.err.println("root node :"+root.getNodeName()+" is not "+NS+"/training");
+				return -1;
+				}
+			
 			for(Node n1=root.getFirstChild();n1!=null;n1=n1.getNextSibling())
 				{
 				if(n1.getNodeType()!=Node.ELEMENT_NODE) continue;
 				final Element E1= Element.class.cast(n1);
-				if(n1.getNodeName().equals("variables")) 
+				if(n1.getLocalName().equals("variables") && NS.equals(n1.getNamespaceURI())) 
 					{
 					for(Node n2=n1.getFirstChild();n2!=null;n2=n2.getNextSibling())
 						{
 						if(n2.getNodeType()!=Node.ELEMENT_NODE) continue;
 						final Element E2= Element.class.cast(n2);
-						if(n2.getNodeName().equals("double"))
+						VariableDef def=null;
+						if(!NS.equals(E2.getNamespaceURI()))
 							{
-							this.variablesDefs.add(new DoubleVariableDef(E2));
+							System.err.println("namespaceuri node :"+E2.getNodeName()+" is not "+NS);
+							return -1;
 							}
-						else if(n2.getNodeName().equals("int") || n2.getNodeName().equals("integer"))
+						else if(E2.getLocalName().equals("double"))
 							{
-							this.variablesDefs.add(new IntVariableDef(E2));
+							def=(new DoubleVariableDef(E2));
 							}
-						else if(n2.getNodeName().equals("bool") || n2.getNodeName().equals("boolean"))
+						else if(E2.getLocalName().equals("int") || E2.getLocalName().equals("integer"))
 							{
-							this.variablesDefs.add(new BooleanVariableDef(E2));
+							def=(new IntVariableDef(E2));
 							}
-						else if(n2.getNodeName().equals("items"))
+						else if(E2.getLocalName().equals("bool") || E2.getLocalName().equals("boolean"))
 							{
-							this.variablesDefs.add(new EnumVariableDef(E2));
+							def=(new BooleanVariableDef(E2));
+							}
+						else if(E2.getLocalName().equals("items"))
+							{
+							def=(new EnumVariableDef(E2));
 							}
 						else
 							{
 							System.err.println("unknown node :"+E2.getNodeName());
 							return -1;
 							}
+						if(this.variablesDefs.containsKey(def.name))
+							{
+							System.err.println("Duplicate entry "+def.name);
+							return -1;
+							}
+						this.variablesDefs.put(def.name, def);
 						}
 					}
 				else if(E1.getLocalName().equals("stylesheet") &&
@@ -511,7 +554,11 @@ public class SoftwareFitness extends AbstractApplication {
 				System.err.println("Undefined xsl:stylesheet");
 				return -1;
 				}
-			
+			if(this.variablesDefs.isEmpty())
+				{
+				System.err.println("Undefined variables");
+				return -1;
+				}
 			Solution best=null;
 			long iteration=0L;
 			for(;;) {

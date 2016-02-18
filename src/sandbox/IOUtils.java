@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.Flushable;
 import java.io.IOException;
@@ -66,6 +67,8 @@ public static BufferedReader openBufferedReaderFromFile(final File path) throws 
 	}
 
 public static String readFileContent(final File path) throws IOException {
+	if(!path.exists()) throw new FileNotFoundException("not existing file "+path);
+	if(!path.canRead()) throw new IOException("canRead==false : file "+path);
 	Reader r=null;
 	StringWriter sw= new StringWriter();
 	try { r = openReader(path);copyTo(r, sw);return sw.toString();} 
