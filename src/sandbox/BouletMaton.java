@@ -4,7 +4,7 @@ Les donnees de bouletmaton sont isssue de  http://www.zanorg.net/bouletmaton/
 (c) Boulet et Kek / bouletcorp.com  et zanorg.com
 
 
-**//
+**/
 package sandbox;
 
 import java.awt.Color;
@@ -46,19 +46,31 @@ public class BouletMaton {
 		  abstract boolean match(String s);
 	  }
 
-private static final List<String> PICTS= Arrays.asList("boucle10","boucle1","boucle2","boucle3","boucle4","boucle5",
-		"boucle6","boucle7","boucle8","boucle9","chapo10","chapo11","chapo12",
+private static final List<String> PICTS= Arrays.asList(
+		"boucle10","boucle1","boucle2","boucle3","boucle4","boucle5",
+		"boucle6","boucle7","boucle8","boucle9",
+		
+		"chapo10","chapo11","chapo12",
 		"chapo13","chapo14","chapo15","chapo16","chapo17","chapo18","chapo19",
 		"chapo1","chapo2","chapo3","chapo4","chapo5","chapo6","chapo7",
-		"chapo8","chapo9","col10","col11","col1","col2","col3",
-		"col4","col5","col6","col7","col8","col9","coul10/bar10",
+		"chapo8","chapo9",
+		
+		
+		"col10","col11","col1","col2","col3",
+		"col4","col5","col6","col7","col8","col9",
+		
+		"coul10/bar10",
 		"coul10/bar11","coul10/bar12","coul10/bar13","coul10/bar14","coul10/bar1","coul10/bar2","coul10/bar3",
-		"coul10/bar4","coul10/bar5","coul10/bar6","coul10/bar7","coul10/bar8","coul10/bar9","coul10/coi10",
+		"coul10/bar4","coul10/bar5","coul10/bar6","coul10/bar7","coul10/bar8","coul10/bar9",
+		
+		"coul10/coi10",
 		"coul10/coi11","coul10/coi12","coul10/coi13","coul10/coi14","coul10/coi15","coul10/coi16","coul10/coi17",
 		"coul10/coi18","coul10/coi19","coul10/coi1","coul10/coi20","coul10/coi21","coul10/coi22","coul10/coi23",
 		"coul10/coi24","coul10/coi25","coul10/coi26","coul10/coi27","coul10/coi28","coul10/coi29","coul10/coi2",
 		"coul10/coi30","coul10/coi31","coul10/coi32","coul10/coi33","coul10/coi3","coul10/coi4","coul10/coi5",
-		"coul10/coi6","coul10/coi7","coul10/coi8","coul10/coi9","coul11/bar10","coul11/bar11","coul11/bar12",
+		"coul10/coi6","coul10/coi7","coul10/coi8","coul10/coi9",
+		
+		"coul11/bar10","coul11/bar11","coul11/bar12",
 		"coul11/bar13","coul11/bar14","coul11/bar1","coul11/bar2","coul11/bar3","coul11/bar4","coul11/bar5",
 		"coul11/bar6","coul11/bar714","coul11/bar715","coul11/bar716","coul11/bar717","coul11/bar718","coul11/bar719",
 		"coul11/bar720","coul11/bar721","coul11/bar722","coul11/bar723","coul11/bar724","coul11/bar725","coul11/bar726",
@@ -134,9 +146,13 @@ private static final List<String> PICTS= Arrays.asList("boucle10","boucle1","bou
 		"coul9/coi1","coul9/coi20","coul9/coi21","coul9/coi22","coul9/coi23","coul9/coi24","coul9/coi25",
 		"coul9/coi26","coul9/coi27","coul9/coi28","coul9/coi29","coul9/coi2","coul9/coi30","coul9/coi31",
 		"coul9/coi32","coul9/coi33","coul9/coi3","coul9/coi4","coul9/coi5","coul9/coi6","coul9/coi7",
-		"coul9/coi8","coul9/coi9","fleche","indic","loading","lunette10","lunette11",
+		"coul9/coi8","coul9/coi9","fleche","indic","loading",
+		
+		"lunette10","lunette11",
 		"lunette12","lunette13","lunette14","lunette15","lunette16","lunette1","lunette2",
 		"lunette3","lunette4","lunette5","lunette6","lunette7","lunette8","lunette9",
+		
+		
 		"peau1/bou10","peau1/bou11","peau1/bou12","peau1/bou13","peau1/bou14","peau1/bou15","peau1/bou16",
 		"peau1/bou17","peau1/bou18","peau1/bou19","peau1/bou1","peau1/bou20","peau1/bou21","peau1/bou22",
 		"peau1/bou23","peau1/bou24","peau1/bou25","peau1/bou26","peau1/bou27","peau1/bou28","peau1/bou29",
@@ -145,19 +161,36 @@ private static final List<String> PICTS= Arrays.asList("boucle10","boucle1","bou
 		"peau1/bou42","peau1/bou43","peau1/bou44","peau1/bou45","peau1/bou46","peau1/bou47","peau1/bou48",
 		"peau1/bou49","peau1/bou4","peau1/bou50","peau1/bou51","peau1/bou52","peau1/bou53","peau1/bou54",
 		"peau1/bou55","peau1/bou56","peau1/bou57","peau1/bou58","peau1/bou59","peau1/bou5","peau1/bou60",
-		"peau1/bou61","peau1/bou62","peau1/bou6","peau1/bou7","peau1/bou8","peau1/bou9","peau1/cor10",
+		"peau1/bou61","peau1/bou62","peau1/bou6","peau1/bou7","peau1/bou8","peau1/bou9",
+		
+		
+		"peau1/cor10",
 		"peau1/cor11","peau1/cor12","peau1/cor13","peau1/cor14","peau1/cor15","peau1/cor16","peau1/cor17",
 		"peau1/cor18","peau1/cor19","peau1/cor1","peau1/cor20","peau1/cor21","peau1/cor22","peau1/cor23",
 		"peau1/cor24","peau1/cor25","peau1/cor26","peau1/cor27","peau1/cor2","peau1/cor3","peau1/cor4",
-		"peau1/cor5","peau1/cor6","peau1/cor7","peau1/cor8","peau1/cor9","peau1/divers10","peau1/divers11",
+		"peau1/cor5","peau1/cor6","peau1/cor7","peau1/cor8","peau1/cor9",
+		
+		
+		"peau1/divers10","peau1/divers11",
 		"peau1/divers12","peau1/divers13","peau1/divers1","peau1/divers2","peau1/divers3","peau1/divers4","peau1/divers5",
-		"peau1/divers6","peau1/divers7","peau1/divers8","peau1/divers9","peau1/nez10","peau1/nez11","peau1/nez12",
+		"peau1/divers6","peau1/divers7","peau1/divers8","peau1/divers9"
+		
+		
+		,"peau1/nez10","peau1/nez11","peau1/nez12",
 		"peau1/nez13","peau1/nez14","peau1/nez15","peau1/nez16","peau1/nez17","peau1/nez18","peau1/nez19",
 		"peau1/nez1","peau1/nez20","peau1/nez21","peau1/nez22","peau1/nez23","peau1/nez24","peau1/nez25",
 		"peau1/nez26","peau1/nez2","peau1/nez3","peau1/nez4","peau1/nez5","peau1/nez6","peau1/nez7",
-		"peau1/nez8","peau1/nez9","peau1/ore1","peau1/ore2","peau1/ore3","peau1/ore4","peau1/ore5",
-		"peau1/ore6","peau1/ore7","peau1/sec10","peau1/sec11","peau1/sec12","peau1/sec1","peau1/sec2",
+		"peau1/nez8","peau1/nez9",
+		
+		
+		"peau1/ore1","peau1/ore2","peau1/ore3","peau1/ore4","peau1/ore5",
+		"peau1/ore6","peau1/ore7",
+		
+		
+		"peau1/sec10","peau1/sec11","peau1/sec12","peau1/sec1","peau1/sec2",
 		"peau1/sec3","peau1/sec4","peau1/sec5","peau1/sec6","peau1/sec7","peau1/sec8","peau1/sec9",
+		
+		
 		"peau1/tete10","peau1/tete11","peau1/tete12","peau1/tete13","peau1/tete14","peau1/tete15","peau1/tete16",
 		"peau1/tete17","peau1/tete18","peau1/tete19","peau1/tete1","peau1/tete20","peau1/tete21","peau1/tete22",
 		"peau1/tete23","peau1/tete24","peau1/tete25","peau1/tete26","peau1/tete27","peau1/tete28","peau1/tete29",
@@ -165,6 +198,8 @@ private static final List<String> PICTS= Arrays.asList("boucle10","boucle1","bou
 		"peau1/tete36","peau1/tete37","peau1/tete38","peau1/tete39","peau1/tete3","peau1/tete40","peau1/tete41",
 		"peau1/tete42","peau1/tete43","peau1/tete44","peau1/tete45","peau1/tete46","peau1/tete47","peau1/tete48",
 		"peau1/tete49","peau1/tete4","peau1/tete50","peau1/tete51","peau1/tete52","peau1/tete53","peau1/tete54",
+		
+		
 		"peau1/tete5","peau1/tete6","peau1/tete7","peau1/tete8","peau1/tete9","peau2/bou10","peau2/bou11",
 		"peau2/bou12","peau2/bou13","peau2/bou14","peau2/bou15","peau2/bou16","peau2/bou17","peau2/bou18",
 		"peau2/bou19","peau2/bou1","peau2/bou20","peau2/bou21","peau2/bou22","peau2/bou23","peau2/bou24",
@@ -251,12 +286,22 @@ private static final List<String> PICTS= Arrays.asList("boucle10","boucle1","bou
 		"peau4/tete35","peau4/tete36","peau4/tete37","peau4/tete38","peau4/tete39","peau4/tete3","peau4/tete40",
 		"peau4/tete41","peau4/tete42","peau4/tete43","peau4/tete44","peau4/tete45","peau4/tete46","peau4/tete47",
 		"peau4/tete48","peau4/tete49","peau4/tete4","peau4/tete50","peau4/tete51","peau4/tete52","peau4/tete53",
-		"peau4/tete54","peau4/tete5","peau4/tete6","peau4/tete7","peau4/tete8","peau4/tete9","sec1",
-		"sec2","sec3","sec4","sec5","so10","so11","so12",
+		"peau4/tete54","peau4/tete5","peau4/tete6","peau4/tete7","peau4/tete8","peau4/tete9",
+		
+		
+		"sec1",
+		"sec2","sec3","sec4","sec5",
+		
+		"so10","so11","so12",
 		"so13","so14","so15","so16","so17","so18","so19",
 		"so1","so20","so21","so2","so3","so4","so5",
-		"so6","so7","so8","so9","tache1","tache2","tache3",
-		"tache4","_vide","ye10","ye11","ye12","ye13","ye14",
+		"so6","so7","so8","so9",
+		
+		"tache1","tache2","tache3",
+		"tache4","_vide",
+		
+		
+		"ye10","ye11","ye12","ye13","ye14",
 		"ye15","ye16","ye17","ye18","ye19","ye1","ye20",
 		"ye21","ye22","ye23","ye24","ye25","ye26","ye27",
 		"ye28","ye29","ye2","ye30","ye31","ye32","ye33",
