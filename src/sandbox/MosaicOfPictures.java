@@ -53,17 +53,19 @@ public class MosaicOfPictures extends AbstractApplication
 	@Override
 	protected void fillOptions(Options options) {
 		options.addOption(Option.builder("c").longOpt("width").desc("final image width").hasArg(true).build());
-		options.addOption(Option.builder("o").longOpt("out").desc("image output").hasArg(true).build());		
+		options.addOption(Option.builder("o").longOpt("out").desc("image output").hasArg(true).build());	
+		options.addOption(Option.builder("x").longOpt("extend").desc("square INSIDE picture").hasArg(false).build());
 		super.fillOptions(options);
 		}
 	
 	@Override
-	protected int execute(CommandLine cmd)
+	protected int execute(final CommandLine cmd)
 		{
 			try {
 			int image_size=400;
 			Set<String>  picts=null;
 			File outFile=null;
+			boolean squareinside = cmd.hasOption('x');
 			
 			if(cmd.hasOption('c'))
 				{
@@ -141,21 +143,33 @@ public class MosaicOfPictures extends AbstractApplication
 					}
 				double w=img2.getWidth();
 				double h=img2.getHeight();
-				double ratio=w/h;
-			
-				while(w>one_length || h> one_length)
-					{
-					w*=0.99999;
-					h=w/ratio;
-					}
-				g.drawImage(
-						img2,
-						(int)(x*one_length+(one_length-(int)w)/2.0),
-						(int)(y*one_length+(one_length-(int)h)/2.0),
-						(int)w,
-						(int)h,
-						null);
 				
+				
+			    if(squareinside) {
+				  if(w>h ) {
+				        img2 = img2.getSubimage((int)((w-h)/2.0),0,(int)h,(int)h);
+				        w=h;
+				        }
+				   else //h>w
+				        {
+				        img2 = img2.getSubimage(0,(int)((h-w)/2.0),(int)w,(int)w);
+				        h=w;
+				        }
+				    }
+				double ratio=w/h;
+
+				    while(w>one_length || h> one_length)
+					    {
+					    w*=0.99999;
+					    h=w/ratio;
+					    }
+				    g.drawImage(
+						    img2,
+						    (int)(x*one_length+(one_length-(int)w)/2.0),
+						    (int)(y*one_length+(one_length-(int)h)/2.0),
+						    (int)w,
+						    (int)h,
+						    null);
 				img2=null;
 				
 				x++;
