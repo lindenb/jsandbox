@@ -42,7 +42,10 @@ import org.w3c.tidy.Tidy;
 public class AtomMerger extends AbstractApplication
 	{
 	private static final String ATOM="http://www.w3.org/2005/Atom";
-	private static final String DATE_FORMATS[]={"yyyy-MM-dd'T'HH:mm:ssXXX"};
+	private static final String DATE_FORMATS[]={
+		"yyyy-MM-dd'T'HH:mm:ssXXX",
+		"EEE, dd MMM yyyy HH:mm:ss"
+		};
 	private static class EntrySorter implements Comparator<Node>
 		{
 		
@@ -56,7 +59,7 @@ public class AtomMerger extends AbstractApplication
 
 			for (Node c = o1.getFirstChild(); c != null; c = c.getNextSibling()) {
 				if (c.getNodeType() == Node.ELEMENT_NODE && c.getLocalName().equals("updated")) {
-					updated = c.getTextContent();
+					updated = c.getTextContent().replaceAll(" PST","");
 					break;
 				}
 				}

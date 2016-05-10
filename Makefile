@@ -120,6 +120,7 @@ $(eval $(call compile,atommerger,sandbox.AtomMerger,${apache.commons.cli} ${slf4
 $(eval $(call compile,cookiestorefile,sandbox.CookieStoreUtils,${apache.httpclient.jars}))
 $(eval $(call compile,softwarefitness,sandbox.SoftwareFitness,${apache.commons.cli} ${slf4j.jars}))
 $(eval $(call compile,bmcaltmetrics,sandbox.BmcAltmetrics,${apache.commons.cli} ${slf4j.jars}))
+$(eval $(call compile,rgddigest,sandbox.RGDDigest,${apache.commons.cli} ${slf4j.jars} ${jtidy.jars} ${apache.httpclient.jars} ))
 
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
