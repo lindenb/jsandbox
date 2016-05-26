@@ -1,14 +1,15 @@
-=Motivation=
+#Motivation
+
 SAXScript is an event-driven **SAX** parser java program invoking some **javascript** callbacks.
 It can be used to quickly write a piece of code to parse a huge XML file.
 
-=Compilation=
+#Compilation
 
 ```
 make saxscript
 ```
 
-=Options=
+#Options
 
 ```
  -e,--expression <arg>           read javascript script from argument
@@ -21,7 +22,7 @@ make saxscript
 
 ```
 
-=Callbacks=
+#Callbacks
 
 ```
 function startDocument()
