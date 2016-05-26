@@ -28,10 +28,14 @@ public abstract class AbstractApplication
 		return this.getClass().getName();
 		}
 	
+	protected String getProgramDescription() {
+		return "";
+	}
+	
 	protected void usage()
 		{
 		HelpFormatter formatter = new HelpFormatter();
-		formatter.printHelp(getProgramName(), getOptions());
+		formatter.printHelp(getProgramName()+ " : " + getProgramDescription(), getOptions());
 		}
 	
 	protected Options getOptions()

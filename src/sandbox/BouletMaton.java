@@ -7,14 +7,15 @@ Les donnees de bouletmaton sont isssue de  http://www.zanorg.net/bouletmaton/
 **/
 package sandbox;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
+import java.awt.GridLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
@@ -22,14 +23,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTree;
 import javax.swing.SwingUtilities;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.MutableTreeNode;
+import javax.swing.tree.TreePath;
 
 
 public class BouletMaton {
@@ -310,6 +314,8 @@ private static final List<String> PICTS= Arrays.asList(
 		"ye47","ye48","ye4","ye5","ye6","ye7","ye8",
 		"ye9");
 
+
+
 		private static final URL imageUrl(String s) {
 			try {
 				return new URL("http://www.zanorg.net/bouletmaton/assets/"+s+".png");
@@ -322,69 +328,119 @@ private static final List<String> PICTS= Arrays.asList(
 			private static final long serialVersionUID = 1L;
 			private JPanel drawingArea =null;
 			private Map<Part,ImageIcon> eyeIcon=new HashMap<>();
+			private JTree jtree=null;
 			
-			private void insertMenu(final JMenu owner,final String path,final String command)
+			private class ComponentTree extends DefaultMutableTreeNode
 				{
-				int n=path.length(),slash=path.length();
-				for(int i=0;i< path.length();++i)
-					{
-					char c = path.charAt(i);
-					if(slash==path.length() && c=='/') slash=i;
-					else if(i>0 && n==path.length() && Character.isDigit(c)) n=i;
+				final String command;
+				final String path;
+				ComponentTree(String path,String command,boolean allowChild){
+					super(path,allowChild);
+					this.command=command;
+					this.path=path;
 					}
-				if(n!=path.length() || slash!=path.length())
-					{
-					int x=Math.min(n,slash);
-					System.err.println(x+" "+path+" ("+command+") "+n+" "+slash+" "+x);
-					String menuName= path.substring(0,x);
-
-					JMenu menu=null;
-					for(int i=0;i< owner.getItemCount();++i)
+				Part getPart() {
+					String s=this.path;
+					if(Character.isDigit(s.charAt(0)))
 						{
-						
-						if(owner.getItem(i) instanceof JMenu && 
-								owner.getItem(i).getText().equals(menuName))
-							{
-							
-							menu=JMenu.class.cast(owner.getItem(i));
-							break;
-							}
+						s = String.valueOf(DefaultMutableTreeNode.class.cast(this.getParent()).getUserObject());
 						}
-					if(menu==null) menu=new JMenu(menuName);
-					owner.add(menu);
-					if(x==slash) x++;
-					insertMenu(menu, path.substring(x),command);
+					for(final Part p:Part.values()) {
+						if(p.name().equalsIgnoreCase(s)) return p;
 					}
-				else
-					{
-					owner.add(new JMenuItem(path));
+					return null;
 					}
 				}
 			
+			private void buildTree(final MutableTreeNode owner,String s,String command)
+				{
+				int end=0;
+				if(s.charAt(0)=='/')
+					{
+					buildTree(owner,s.substring(1),command);
+					return;
+					}
+				else if(Character.isDigit(s.charAt(0)))
+					{
+					while(end< s.length() && Character.isDigit(s.charAt(end)) && s.charAt(end)!='/')
+						{
+						++end;
+						}
+					}
+				else
+					{
+					while(end< s.length() && !Character.isDigit(s.charAt(end)) && s.charAt(end)!='/')
+						{
+						++end;
+						}
+					}
+				if(end==s.length())
+					{
+					ComponentTree leaf = new ComponentTree(s,command,false);
+					owner.insert(leaf, owner.getChildCount());
+					}
+				else
+					{
+					String key=s.substring(0,end);
+					DefaultMutableTreeNode parent=null;
+					for(int i=0;i< owner.getChildCount();++i)
+						{
+						DefaultMutableTreeNode c=(DefaultMutableTreeNode)owner.getChildAt(i);
+						if(key.equals(c.getUserObject())) {
+							parent =c;
+							break;
+						}
+						}
+					if(parent==null)
+						{
+						parent= new DefaultMutableTreeNode(key);
+						owner.insert(parent, owner.getChildCount());
+						}
+					
+					buildTree(parent, s.substring(end),command);
+					}
+				}
+			
+			
+			@SuppressWarnings("serial")
 			PersonFrame() {
 				this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 				this.addWindowListener(new WindowAdapter() {
 					
 				});
+				final JPanel contentPane=new JPanel(new GridLayout(1, 0));
 				final JMenuBar bar = new JMenuBar();
 				setJMenuBar(bar);
 				JMenu menu = new JMenu("Components");
 				bar.add(menu);
+				DefaultMutableTreeNode treeRoot= new DefaultMutableTreeNode("Components");
+				this.jtree = new JTree(treeRoot);
 				for(final String s:PICTS) {
-					insertMenu(menu,s,s);
-
+					buildTree(treeRoot,s,s);
 					}
+				final JPanel pane=new JPanel(new BorderLayout(5, 5));
+				final JScrollPane scroll=new JScrollPane(this.jtree);
+				pane.add(scroll,BorderLayout.CENTER);
+				contentPane.add(pane);
 				final Dimension dimension = new Dimension(WIDTH, HEIGHT);
-				this.drawingArea=new JPanel() {
+				this.drawingArea=new JPanel(null) {
 					@Override
 					protected void paintComponent(Graphics g) {
 						paintDrawingArea(Graphics2D.class.cast(g));
 						}
 					};
 					this.drawingArea.setOpaque(true);
-				this.setContentPane(this.drawingArea);
+				contentPane.add(drawingArea);
+				this.setContentPane(contentPane);
 				this.drawingArea.setSize(dimension);
 				this.drawingArea.setMinimumSize(dimension);
+				
+				this.jtree.addMouseListener(new MouseAdapter() {
+					public void mouseClicked(MouseEvent me) {
+						TreePath tp = jtree.getPathForLocation(me.getX(), me.getY());
+						
+						}
+					});
 				}
 			
 		private void paintDrawingArea(Graphics2D g) {

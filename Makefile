@@ -21,7 +21,7 @@ $(1)  : $(addsuffix .java,$(addprefix src/,$(subst .,/,$(2)))) $(3)
 	echo "### COMPILING $(1) ######"
 	mkdir -p ${tmp.dir}/META-INF ${bin.dir}
 	#compile
-	${JAVAC} -Xlint -d ${tmp.dir} -g -classpath "$$(subst $$(SPACE),:,$$(filter %.jar,$$^))" -sourcepath ${src.dir}:${generated.dir}/java $$(filter %.java,$$^)
+	${JAVAC} -Xlint -d ${tmp.dir} -g -classpath "$$(subst $$(SPACE),:,$$(filter %.jar,$$^))" -sourcepath ${src.dir} $$(filter %.java,$$^)
 	#create META-INF/MANIFEST.MF
 	echo "Manifest-Version: 1.0" > ${tmp.dir}/tmp.mf
 	echo "Main-Class: $(2)" >> ${tmp.dir}/tmp.mf
@@ -97,8 +97,9 @@ all_maven_jars = $(sort  ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${sprin
 
 
 
-all: bouletmatonsf atommerger pubmedtrending cookiestorefile softwarefitness \
-	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 
+all: saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
+	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
+	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 
 
 
 $(eval $(call compile,miniivy,sandbox.MiniIvy,))
@@ -119,9 +120,9 @@ $(eval $(call compile,pubmedtrending,sandbox.PubmedTrending,${apache.commons.cli
 $(eval $(call compile,atommerger,sandbox.AtomMerger,${apache.commons.cli} ${slf4j.jars} ${google.gson.jars} ${jtidy.jars}))
 $(eval $(call compile,cookiestorefile,sandbox.CookieStoreUtils,${apache.httpclient.jars}))
 $(eval $(call compile,softwarefitness,sandbox.SoftwareFitness,${apache.commons.cli} ${slf4j.jars}))
+$(eval $(call compile,bmcaltmetrics,sandbox.BmcAltmetrics,${apache.commons.cli} ${slf4j.jars}))
 $(eval $(call compile,rgddigest,sandbox.RGDDigest,${apache.commons.cli} ${slf4j.jars} ${jtidy.jars} ${apache.httpclient.jars} ))
-$(eval $(call compile,bouletmatonsf,sandbox.BouletMatonSpriteFactory,${apache.commons.cli} ${slf4j.jars}))
-
+$(eval $(call compile,saxscript,sandbox.SAXScript,${apache.commons.cli} ${slf4j.jars} ${google.gson.jars} ))
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	mkdir -p tmp $(dir $@)
