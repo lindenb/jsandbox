@@ -1,6 +1,6 @@
 #Motivation
 
-SAXScript is an event-driven **SAX** parser java program invoking some **javascript** callbacks.
+*SAXScript* is an event-driven **SAX** parser java program invoking some **javascript** callbacks.
 It can be used to quickly write a piece of code to parse a huge XML file.
 
 #Compilation
@@ -44,7 +44,7 @@ function endElement(uri,localName,name)
         {println("END: uri: "+uri+" localName:"+localName);}
 
 
-=Example=
+#Example
 
 The following script scan a pubmed+XML document and count the number of time each journal (tag is "MedlineTA") was cited.
 
