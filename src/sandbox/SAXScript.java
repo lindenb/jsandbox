@@ -219,7 +219,7 @@ public class SAXScript  extends AbstractApplication
 		 	}
 		 final ScriptEngineManager mgr=new  ScriptEngineManager();
 		 final  ScriptEngine scripEngine= mgr.getEngineByExtension("js");
-		 scripEngine.put("userData", userData);
+		
 		 
 		 
 	     if(scripEngine==null)
@@ -227,6 +227,7 @@ public class SAXScript  extends AbstractApplication
 	    	LOG.severe("Cannot get a javascript engine");
 	    	return -1;
 	     	}
+	     scripEngine.put("userData", userData);
 	     
 	     Reader scriptReader=null;
 	     try {
