@@ -1,5 +1,5 @@
 =Motivation=
-SAXScript is an event-driven SAX parser java program invoking some javascript callbacks.
+SAXScript is an event-driven **SAX** parser java program invoking some **javascript** callbacks.
 It can be used to quickly write a piece of code to parse a huge XML file.
 
 =Compilation=
@@ -9,15 +9,15 @@ make saxscript
 ```
 
 =Options=
+
 ```
- -e,--expression <arg>            read javascript script from argument
+ -e,--expression <arg>           read javascript script from argument
  -f,--script <arg>               read javascript script from file
- -h,--help                       help
  -j,--json <arg>                 insert JSON document in the javascript
                                  context as 'userData' using google gson
                                  library. Default is null json element.
  -notns,--notns                  SAX parser is NOT namespace aware
- -valid,--valid                   SAX parser is validating
+ -valid,--valid                  SAX parser is validating
 
 ```
 
@@ -47,7 +47,8 @@ function endElement(uri,localName,name)
 
 The following script scan a pubmed+XML document and count the number of time each journal (tag is "MedlineTA") was cited.
 
-```
+```javascript
+
 /** current title */
 var title=null;
 /** map title->count */
@@ -83,7 +84,6 @@ function endDocument()
                 print(key+"\t"+ title2count[key]);
                 }
         }
-
 ```
 
 Run:
