@@ -12,10 +12,9 @@ make nashornserver
 
 ```
  -f,--script <arg>               javascript file required.
- -logLevel,--logLevel <level>    Log level
  -P,--port <arg>                 port. Default:8080
  -p,--path <arg>                 servlet path . default: "/"
-
+```
 
 #Usage
 
