@@ -23,8 +23,6 @@ java -jar dist/nashornserver.jar [options] -f handler.js
 ```
 
 
-```
-
 #Handler
 
 The javascript file  **must** implement a function having the signature of http://download.eclipse.org/jetty/stable-9/apidocs/org/eclipse/jetty/server/Handler.html#handle-java.lang.String-org.eclipse.jetty.server.Request-javax.servlet.http.HttpServletRequest-javax.servlet.http.HttpServletResponse-
@@ -39,9 +37,7 @@ function handle(target,baseRequest,req,res) {
 	session.setAttribute("count",c);
 	res.setContentType("application/json");
     res.setStatus(200);
-   
 	var out= res.getWriter();
-
 	out.println(JSON.stringify({"count":c}));
 	out.flush();
 	out.close();
