@@ -102,7 +102,7 @@ all_maven_jars = $(sort  ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${sprin
 
 
 
-all: 	nashornserver \
+all: 	githistory nashornserver \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 
@@ -130,7 +130,7 @@ $(eval $(call compile,bmcaltmetrics,sandbox.BmcAltmetrics,${apache.commons.cli} 
 $(eval $(call compile,rgddigest,sandbox.RGDDigest,${apache.commons.cli} ${slf4j.jars} ${jtidy.jars} ${apache.httpclient.jars} ))
 $(eval $(call compile,saxscript,sandbox.SAXScript,${apache.commons.cli} ${slf4j.jars} ${google.gson.jars} ))
 $(eval $(call compile,nashornserver,sandbox.NashornServer,${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ))
-$(eval $(call compile,githistory,sandbox.GitRepoHistory,${apache.commons.cli}  ))
+$(eval $(call compile,githistory,sandbox.GitHistory,${apache.commons.cli}  ))
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	mkdir -p tmp $(dir $@)

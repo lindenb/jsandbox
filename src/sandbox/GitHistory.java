@@ -1,5 +1,7 @@
 package sandbox;
 
+import java.awt.Dimension;
+import java.awt.Rectangle;
 import java.awt.Insets;
 import java.io.BufferedReader;
 import java.io.File;
@@ -14,15 +16,19 @@ import javax.xml.stream.XMLStreamWriter;
 
 import org.apache.commons.cli.CommandLine;
 
-import com.sun.javafx.geom.Rectangle;
 
-public class GitRepoHistory extends AbstractApplication {
+
+public class GitHistory extends AbstractApplication {
 	private File gitWorkDir=null;
 	private List<GitFile> files= new ArrayList<>();
 	private List<GitEvent> events = new ArrayList<>();
 	private List<GitCommit> commits = new ArrayList<>();
+	final int COMMIT_WIDTH=50;
+	final int FILE_HEIGHT=80;
+	final Insets fileInsets = new Insets(5, 5, 0, 5);
+	private String commitUrl = "https://github.com/lindenb/jsandbox/commit/%H";
 	
-	private class GitFile
+	private class GitFile implements Comparable<GitFile>
 		{
 		private Optional<Long> myMaxSize=Optional.empty();
 		final String path;
@@ -30,6 +36,12 @@ public class GitRepoHistory extends AbstractApplication {
 		private GitFile(final String path) {
 			this.path = path;
 		}
+		
+		@Override
+		public int 	compareTo(final GitFile o) {
+		return this.path.compareTo(o.path);
+		}
+		
 		@Override
 		public int hashCode() {
 			return path.hashCode();
@@ -46,7 +58,7 @@ public class GitRepoHistory extends AbstractApplication {
 		
 		public boolean exists(final GitCommit commit) {
 			boolean found=false;
-			for(final GitCommit c :GitRepoHistory.this.commits) {
+			for(final GitCommit c :GitHistory.this.commits) {
 				if(c.index>commit.index) break;
 				for(final GitEvent e: this.events) {
 					if(!e.commit.equals(c)) continue;
@@ -59,10 +71,32 @@ public class GitRepoHistory extends AbstractApplication {
 			return found;
 		}
 		
+		public Rectangle rect(final GitCommit commit)
+			{
+			final Optional<Long> filesize = size(commit);
+			if(!filesize.isPresent()) return null;
+
+			
+			Dimension dim = new Dimension(
+				COMMIT_WIDTH - (fileInsets.left+fileInsets.right),
+				FILE_HEIGHT- (fileInsets.top+fileInsets.bottom)
+				);
+			
+			Rectangle rect=new Rectangle();
+			double fs= filesize.get()/(double)this.maxSize();
+			rect.x =  fileInsets.left;
+			rect.width =  dim.width ;
+			
+			rect.height = (int)(dim.height*fs);
+			rect.y =  fileInsets.top + dim.height - rect.height;
+			
+			return rect;
+			}
+		
 		public long maxSize() {
 			if(myMaxSize.isPresent()) return myMaxSize.get();
 			long fileSize=0L;
-			for(final GitCommit c :GitRepoHistory.this.commits) {
+			for(final GitCommit c :GitHistory.this.commits) {
 				Optional<Long> fs = this.size(c);
 				if(!fs.isPresent()) continue;
 				fileSize=Math.max(fileSize, fs.get());
@@ -318,14 +352,17 @@ public class GitRepoHistory extends AbstractApplication {
 				}
 			}
 			
+			java.util.Collections.sort(this.files);
+			
 			final Insets pageInsets = new Insets(500, 500, 100, 100);
-			final int COMMIT_WIDTH=50;
-			final int FILE_HEIGHT=80;
+
+			final String XLINK="http://www.w3.org/1999/xlink";
 			XMLOutputFactory  xof = XMLOutputFactory.newFactory();
 			XMLStreamWriter w= xof.createXMLStreamWriter(System.out);
 			w.writeStartDocument("UTF-8", "1.0");
 			w.setDefaultNamespace("http://www.w3.org/2000/svg");
 			w.writeStartElement("svg");
+			w.writeNamespace("xlink",XLINK);
 			w.writeDefaultNamespace("http://www.w3.org/2000/svg");
 			w.writeAttribute("width", String.valueOf(pageInsets.left + pageInsets.right + 1 +COMMIT_WIDTH*this.commits.size()));
 			w.writeAttribute("height",String.valueOf(pageInsets.top + pageInsets.bottom +1+FILE_HEIGHT*this.files.size()));
@@ -346,6 +383,15 @@ public class GitRepoHistory extends AbstractApplication {
 				commitRect.y = 0;
 				commitRect.height = FILE_HEIGHT*this.files.size();
 				
+				
+				if(!this.commitUrl.isEmpty())
+					{
+					w.writeStartElement("a");
+					w.writeAttribute("xlink",XLINK,"href",
+						this.commitUrl.replaceAll("%H",commit.hash)
+						);
+					w.writeAttribute("target","_blank");
+					}
 				w.writeStartElement("text");
 				w.writeAttribute("x","0");
 				w.writeAttribute("y","0");
@@ -353,6 +399,10 @@ public class GitRepoHistory extends AbstractApplication {
 				w.writeAttribute("transform","translate("+String.valueOf(COMMIT_WIDTH/2.0+x*COMMIT_WIDTH)+",-12),rotate(-33)");
 				w.writeCharacters(""+(commit.author==null?"":commit.author)+" "+(commit.date==null?"":commit.date));
 				w.writeEndElement();
+				if(!this.commitUrl.isEmpty())
+					{
+					w.writeEndElement();
+					}
 				
 				w.writeEmptyElement("rect");
 				w.writeAttribute("title", "commit "+commit.hash+" Author"+commit.author);
@@ -365,9 +415,6 @@ public class GitRepoHistory extends AbstractApplication {
 				}
 			for(int y=0;y< this.files.size();++y) {
 				final GitFile file =this.files.get(y);
-				
-				
-
 				
 				w.writeStartElement("g");
 				w.writeAttribute("transform", "translate(0,"+(y*FILE_HEIGHT)+")");
@@ -393,31 +440,13 @@ public class GitRepoHistory extends AbstractApplication {
 			
 			for(int y=0;y< this.files.size();++y) {
 				final GitFile file =this.files.get(y);
-				int x=0;
-				while(x<this.commits.size()) {
-					
+				for(int x=0;x<this.commits.size();++x) {
 					final GitCommit commit0 = this.commits.get(x);
-					Optional<Long> filesize0 = file.size(commit0);
-					if(!filesize0.isPresent()) {x++; continue;}
+					final Rectangle rect= file.rect(commit0);
+					if( rect == null ) continue;
 					
-					Rectangle rect=new Rectangle();
-					double fs= filesize0.get()/(double)file.maxSize();
-					rect.x =  COMMIT_WIDTH*x;
-					rect.height = (int)((FILE_HEIGHT-1)*fs);
-					rect.width =  COMMIT_WIDTH -2;
-					rect.y = (int)(FILE_HEIGHT*y+FILE_HEIGHT-(FILE_HEIGHT-2)*fs);
-					
-					
-					int next_x=x+1;
-					while(next_x < this.commits.size())
-						{
-						final GitCommit commit1 = this.commits.get(next_x);
-						Optional<Long> filesize1 = file.size(commit1);
-						if(!filesize1.isPresent()) break;
-						if(!filesize1.get().equals(filesize0.get())) break;
-						rect.width = (COMMIT_WIDTH*(next_x-x));
-						next_x++;
-						}
+					rect.x +=  COMMIT_WIDTH*x;
+					rect.y += FILE_HEIGHT*y;
 					
 					w.writeEmptyElement("rect");
 					w.writeAttribute("x", String.valueOf(rect.x));
@@ -426,24 +455,44 @@ public class GitRepoHistory extends AbstractApplication {
 					w.writeAttribute("height",String.valueOf(rect.height));
 					w.writeAttribute("class", "evt");
 					
-					/* if(x+1<this.commits.size()) {
-						final GitCommit nextCommit = this.commits.get(x+1);
-						for(GitEvent evt:file.events) {
-							if(!evt.commit.equals(nextCommit)) continue;
-							for(Diff diff:evt.components) {
-							Rectangle rectEvt=new Rectangle();
-							w.writeAttribute("x", String.valueOf(rectEvt.x));
-							w.writeAttribute("y", String.valueOf(rectEvt.y));
-							w.writeAttribute("width",String.valueOf(rectEvt.width));
-							w.writeAttribute("height",String.valueOf(rectEvt.height));
-							w.writeAttribute("class", "diff");
+					if( x+1 < this.commits.size() )
+						{
+						final GitCommit commit1 = this.commits.get(x+1);
+						final Rectangle rect1 = file.rect(commit1);
+						if(rect1!=null) {
+							rect1.x +=  COMMIT_WIDTH*(x+1);
+							rect1.y += FILE_HEIGHT*y;
+							for(GitEvent evt: file.events) {
+								if(!commit1.equals(evt.commit)) continue;
+								Optional<Long> size0 = file.size(commit0);
+								if(!size0.isPresent()) continue;
+								Optional<Long> size1 = file.size(commit1);
+								if(!size1.isPresent()) continue;
+								final Diff diffs[]=evt.components;
+								for(int z=0;z+1<diffs.length;++z) {
+								Diff diff=diffs[z];
+								Diff last=diffs[diffs.length-1];
+								double L0 = rect.y + (diff.start/(double)size0.get())*rect.height;
+								double L1 = rect.y + ((diff.start+diff.count)/(double)size0.get())*rect.height;
+								double R0 = rect1.y + (last.start/(double)size0.get())*rect1.height;
+								double R1 = rect1.y + ((last.start+last.count)/(double)size1.get())*rect1.height;								
+								w.writeEmptyElement("path");
+								w.writeAttribute("style","color:blue;fill:blue;");
+								w.writeAttribute("d",
+									"M "+ (rect.x+rect.width)  +" "+ L0+ " " +
+									"L "+ rect1.x +" "+ R0+ " " +
+									"L "+ rect1.x +" "+ R1+ " " +
+									"L "+ (rect.x+rect.width)  +" "+ L1+ " " +
+									"z"
+									);
+								
+								}
+								}
 							}
-
-						} 
+						}
 					
-					}*/
+					
 					w.writeCharacters("\n");
-					x=next_x;
 				}
 				
 				
@@ -474,7 +523,7 @@ public class GitRepoHistory extends AbstractApplication {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-			new GitRepoHistory().instanceMainWithExit(args);
+			new GitHistory().instanceMainWithExit(args);
 	}
 
 }
