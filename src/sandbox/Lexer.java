@@ -12,7 +12,6 @@ import java.util.regex.Pattern;
 public class Lexer implements Closeable {
 	private final Reader r;
 	private final List<Integer> buffer=new ArrayList<Integer>();
-	private int last_to_consumme=-1;
 	public Lexer(final Reader r) {
 		this.r=r;
 	}
@@ -85,7 +84,37 @@ public class Lexer implements Closeable {
 		return bi;
 	}
 	
+	public String quoted(int pos,char qc) throws IOException {
+		  final StringBuilder sb=new StringBuilder();
+		  if(peek(pos)!=(int)qc) return null;
+		  int n=1;
+		  int idx=pos+1;
+		  for(;;) {
+			  int c = peek(idx);
+			  if(c==-1) return null;
+			  if(c==(int)qc) {
+				  consume(pos,n);
+				  return sb.toString();
+			  }
+			 return null;
+		  }
+		  
+		  
+	}
 	
+    public String peek(final Pattern pattern) throws IOException {
+    		return peek(0,pattern);
+    }
+
+    public String peekRegex(final String pattern) throws IOException {
+		return peekRegex(0,pattern);
+}
+
+    
+    public String peekRegex(int pos,final String pattern) throws IOException {
+    	return peek(pos,Pattern.compile(pattern));
+    }
+    
     public String peek(int pos,final Pattern pattern) throws IOException {
     	String prevMatch=null;
     	int c;
