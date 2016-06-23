@@ -56,20 +56,16 @@ public class GitHistory extends AbstractApplication {
 			return path;
 			}
 		
-		public boolean exists(final GitCommit commit) {
-			boolean found=false;
-			for(final GitCommit c :GitHistory.this.commits) {
-				if(c.index>commit.index) break;
-				for(final GitEvent e: this.events) {
-					if(!e.commit.equals(c)) continue;
-					if(!e.file.equals(this))throw new IllegalStateException();
-					found=true;
-					if(e.is_delete_file) found=false;
-				}
-				
+		long diffLines(final GitCommit commit)
+			{
+			long n=0;
+			for(final GitEvent evt:this.events) {
+				if(!evt.commit.equals(commit)) continue;
+				n+=evt.diffLines();
 			}
-			return found;
-		}
+			return n;
+			}
+		
 		
 		public Rectangle rect(final GitCommit commit)
 			{
@@ -190,17 +186,13 @@ public class GitHistory extends AbstractApplication {
 	private class GitCommit 
 		{
 		int index=-1;
-		private final GitCommit next;
-		private GitCommit prev = null;
 		private final String hash;
 		private  String author;
 		private  String date;
 		
 		
-		GitCommit(final String hash,final GitCommit next) {
+		GitCommit(final String hash) {
 			this.hash=hash;
-			this.next=next;
-			if(next!=null) next.prev=this;
 			}
 		@Override
 		public int hashCode() {
@@ -247,7 +239,6 @@ public class GitHistory extends AbstractApplication {
 				 LOG.severe("Not a directory "+gitWorkDir);
 				return -1;
 			 	}
-			GitCommit next=null;
 			Process proc = 
 					new ProcessBuilder().
 					directory(this.gitWorkDir).
@@ -256,9 +247,8 @@ public class GitHistory extends AbstractApplication {
 			BufferedReader r=new BufferedReader(new InputStreamReader(proc.getInputStream()));
 			String line;
 			while((line=r.readLine())!=null) {
-				final GitCommit commit = new GitCommit(line, next);
+				final GitCommit commit = new GitCommit(line);
 				this.commits.add(0, commit);
-				next=commit;
 			}
 		
 			for(int i=0;i< this.commits.size();++i) {
@@ -369,6 +359,8 @@ public class GitHistory extends AbstractApplication {
 			
 			w.writeStartElement("style");
 			w.writeCharacters(".evt {fill:green;stroke:white;}");
+			w.writeCharacters(".evu {fill:yellow;stroke:white;}");
+			w.writeCharacters(".evv {fill:orange;stroke:white;}");
 			w.writeEndElement();
 			
 			w.writeStartElement("g");
@@ -453,7 +445,16 @@ public class GitHistory extends AbstractApplication {
 					w.writeAttribute("y", String.valueOf(rect.y));
 					w.writeAttribute("width",String.valueOf(rect.width));
 					w.writeAttribute("height",String.valueOf(rect.height));
+					
+					long difflines= file.diffLines(commit0);
+					
+					if(difflines==0L) {
 					w.writeAttribute("class", "evt");
+					} else if(difflines<0L) {
+					w.writeAttribute("class", "evu");
+					} else {
+						w.writeAttribute("class", "evv");
+						} 
 					
 					if( x+1 < this.commits.size() )
 						{

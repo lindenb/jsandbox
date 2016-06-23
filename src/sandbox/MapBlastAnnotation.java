@@ -254,7 +254,7 @@ public class MapBlastAnnotation
 			b.append(getBedColor()).append('\t');
 			b.append(1).append('\t');
 			b.append(getBedEnd()-getBedStart()).append('\t');
-			b.append(getBedStart());
+			b.append(0);
 			return b.toString();
 			}
 
