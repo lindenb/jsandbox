@@ -5,7 +5,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -42,6 +44,35 @@ public class MiniIvy extends AbstractApplication
 		String artifactId;
 		String revision;
 		Set<Dependency> dependencies = null;
+		
+		int[] splitVersion() {
+			final String tokens[]=revision.split("[\\.]");
+			
+			int v[]=new int[tokens.length];
+			for(int i=0;i<tokens.length;++i) {
+				try {
+					v[i]=Integer.parseInt(tokens[i]);
+				} catch (Exception e) {
+					return null;
+				}
+			}
+			return v;
+			
+		}
+		
+		boolean hasLowerVersionThan(final Dependency other) {
+			if(!this.group.equals(other.group)) return false;
+			if(!this.artifactId.equals(other.artifactId)) return false;
+			int v0[] = this.splitVersion();
+			if(v0==null) return false;
+			int v1[] = other.splitVersion();
+			if(v1==null) return false;
+			for(int i=0;i<v1.length && i<v0.length;++i)
+				{
+				if(v0[i]<v1[i]) return true;
+				}
+			return false;
+		}
 		
 		@Override
 		public int hashCode() {
@@ -209,7 +240,17 @@ public class MiniIvy extends AbstractApplication
 						Document dom2 = db.parse(dep.getMetaDataUrl());*/
 						dep.revision=null;
 						}
-					
+					// http://central.maven.org/maven2/net/java/dev/jets3t/jets3t/0.9.4/jets3t-0.9.4.pom
+					if(dep.revision!=null && 
+						dep.revision.contains(",") && 
+						dep.revision.startsWith("[") &&
+						dep.revision.endsWith(")")
+						)
+						{
+						int comma =  dep.revision.indexOf(",");
+						dep.revision = dep.revision.substring(1,comma);
+						}
+
 					if(dep.revision==null || dep.revision.trim().isEmpty())
 						{
 						dbf = DocumentBuilderFactory.newInstance();
@@ -244,7 +285,6 @@ public class MiniIvy extends AbstractApplication
 		
 		}
 
-	
 
 	private MiniIvy() 
 		{
@@ -330,13 +370,43 @@ public class MiniIvy extends AbstractApplication
 				this.target2dependencies.put(tokens[0], deps);
 				}
 			r.close();
-
+			
+			
+			
 			
 			for(String k : this.target2dependencies.keySet())
 				{
 				System.out.print(k);
 				System.out.print("  = ");
-				for(Dependency dep: this.target2dependencies.get(k))
+				
+				final List<Dependency> deps = new ArrayList<MiniIvy.Dependency>(this.target2dependencies.get(k));
+				for(int x=0;x< deps.size();++x)
+					{
+					int y=x+1;
+					while(y<deps.size())
+						{
+						if(deps.get(y).hasLowerVersionThan(deps.get(x))) {
+							deps.remove(y);
+						} 
+						else if(deps.get(x).hasLowerVersionThan(deps.get(y))) {
+							deps.set(x, deps.get(y));
+							deps.remove(y);
+						} 
+						
+						else
+						{
+						++y;
+						}
+						}
+					
+					}
+				deps.sort(new Comparator<Dependency>() {
+					public int compare(Dependency o1, Dependency o2) {
+						return o1.getFile().compareTo(o2.getFile());
+					};
+				});
+				
+				for(final Dependency dep: deps)
 					{
 					System.out.print(" \\\n\t"); 
 					System.out.print(dep.getFile());

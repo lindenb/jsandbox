@@ -4,21 +4,27 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
 
 
 /**
@@ -28,11 +34,8 @@ import javax.xml.stream.XMLStreamWriter;
  * @author Pierre Lindenbaum
  *
  */
-public class Java2Graph
+public class Java2Graph extends AbstractApplication
 	{
-	
-	/** logger */
-	private static final Logger LOG=Logger.getLogger("java2uml");
 	/** unique id generator */
 	private static int ID_GENERATOR=0;
 	/** final printer */
@@ -121,10 +124,20 @@ public class Java2Graph
 					}
 				w.writeStartElement("node");
 				w.writeAttribute("id", "N"+c.id);
-				w.writeAttribute("label", c.clazz.getSimpleName()==null?
-						c.clazz.toString():
-							c.clazz.getSimpleName()
-						);
+				
+				String className=String.valueOf(c.id);
+				try 
+					{
+					className = c.clazz.getSimpleName()==null?
+							c.clazz.toString():
+								c.clazz.getSimpleName()
+								;
+					}
+				catch(Throwable err) {
+					className=String.valueOf(c.id);
+				}
+				
+				w.writeAttribute("label", className );
 				
 				w.writeEmptyElement("viz:color");
 				if(c.isInterface())
@@ -141,9 +154,41 @@ public class Java2Graph
 					}
 				
 				w.writeStartElement("attvalues");
-				gexfAtt("simpleName",String.valueOf(c.clazz.getSimpleName()));
-				gexfAtt("canonicalName",String.valueOf(c.clazz.getCanonicalName()));
-				gexfAtt("defaultName",String.valueOf(c.clazz.getName()));
+				String cn;
+				try 
+					{
+					cn = c.clazz.getSimpleName();
+					}
+				catch(Throwable err)
+					{
+					cn = c.toString();
+					}
+				
+				
+				gexfAtt("simpleName",cn);
+				
+				try 
+					{
+					cn = c.clazz.getCanonicalName();
+					}
+				catch(Throwable err)
+					{
+					cn = c.toString();
+					}
+				
+				gexfAtt("canonicalName",cn);
+				
+
+				try 
+					{
+					cn = c.clazz.getName();
+					}
+				catch(Throwable err)
+					{
+					cn = c.toString();
+					}
+				
+				gexfAtt("defaultName",cn);
 
 				Package pack=c.clazz.getPackage();
 				if(pack==null)
@@ -244,6 +289,7 @@ public class Java2Graph
 				case IMPLEMENTS: out.print("color=red,fontcolor=red,arrowType=onormal,"); break;
 				case DECLARES: out.print("color=green,fontcolor=green,"); break;
 				case SUPER:out.print("color=black,fontcolor=black,arrowType=normal,"); break;
+				case HAS_PRIMITIVE_PARAMETER: out.print("color=black,fontcolor=orange,arrowType=normal,"); break;
 				default:System.err.println("???? dot type not handled "+L.label);break;
 				}
 			out.print("label=\""+L.label.name().toLowerCase()+"\"");
@@ -273,12 +319,13 @@ public class Java2Graph
 		{
 		SUPER,
 		IMPLEMENTS,
-		DECLARES
+		DECLARES,
+		HAS_PRIMITIVE_PARAMETER
 		};
 		
 		
 	/** Wrapper around a java class */
-	private static class ClassWrapper
+	private class ClassWrapper
 		{
 		/** unique id */
 		int id= (++ID_GENERATOR);
@@ -287,11 +334,11 @@ public class Java2Graph
 		/** did we already processed this class ? */
 		private boolean seen=false;
 		/** was selected by the user */
-		private boolean userTarget=false;
+		//private boolean userTarget=false;
 		/** distance to user Target */
 		private int distancdeToUserTarget=Integer.MAX_VALUE;
 		
-		ClassWrapper(Class<?> clazz)
+		ClassWrapper(final Class<?> clazz)
 			{
 			this.clazz=clazz;
 			}
@@ -315,7 +362,14 @@ public class Java2Graph
 			return this.clazz.isInterface();
 			}
 		
-		
+		public Set<ClassWrapper> getInterfaces() {
+			
+			try {
+				return findByClasses(this.clazz.getInterfaces());
+			} catch (Exception e) {
+				return Collections.emptySet();
+			}
+		}
 		
 		@Override
 		public String toString()
@@ -331,10 +385,10 @@ public class Java2Graph
 	 */
 	private static class Link
 		{
-		private ClassWrapper from;
-		private ClassWrapper to;
-		private Relation label;
-		Link(ClassWrapper from,ClassWrapper to,Relation label)
+		private final ClassWrapper from;
+		private final ClassWrapper to;
+		private final Relation label;
+		Link(final ClassWrapper from,final ClassWrapper to,final Relation label)
 			{
 			this.from=from;
 			this.to=to;
@@ -421,25 +475,39 @@ public class Java2Graph
 		}
 	
 	/** finds a class Wrapper by its name */
-	private ClassWrapper findByName(String s)
+	private ClassWrapper findByName(final String s)
 		{
-		for(ClassWrapper cw: this.classes)
+		for(final ClassWrapper cw: this.classes)
 			{
 			if(cw.clazz.getName().equals(s)) return cw;
 			}
 		try {
-			Class<?> c=Class.forName(s);
+			final Class<?> c=Class.forName(s);
 			LOG.info("adding class "+c);
-			ClassWrapper cw= new ClassWrapper(c);
+			final ClassWrapper cw= new ClassWrapper(c);
 			this.classes.add(cw);
 			return cw;
-		} catch (Exception e) {
+		} catch (final Exception e) {
 			LOG.warning(s+" not found");
 			return null;
 			}
 		
 		
 		}
+	
+	/** finds a class Wrapper by its delegated class */
+	private Set<ClassWrapper> findByClasses(Class<?>[] array)
+		{
+		if(array==null || array.length==0) return Collections.emptySet();
+		final Set<ClassWrapper> S=new HashSet<>();
+		for(final Class<?> clazz: array)
+			{
+			ClassWrapper cw = this.findByClass(clazz);
+			if(cw !=null) S.add(cw);
+			}
+		return S;
+		}
+
 	
 	/** finds a class Wrapper by its delegated class */
 	private ClassWrapper findByClass(Class<?> c)
@@ -542,14 +610,21 @@ public class Java2Graph
 			{
 			Class<?> subclasses[];
 			
-			if(usePrivateDeclaredClasses)
+			try 
 				{
-				subclasses=c.getDeclaredClasses();
+				if(usePrivateDeclaredClasses)
+					{
+					subclasses=c.getDeclaredClasses();
+					}
+				else
+					{
+					subclasses=c.getClasses();
+					}
 				}
-			else
-				{
-				subclasses=c.getClasses();
+			catch(Throwable err) {
+				subclasses=new Class[0];
 				}
+				
 			for(Class<?> d:subclasses)
 				{
 				ClassWrapper cw2= findByClass(d);
@@ -561,7 +636,29 @@ public class Java2Graph
 				}
 			}
 		
-		for(ClassWrapper child: this.classes)
+		
+		try {
+		Type genericSuperClass = c.getGenericSuperclass();
+		if(genericSuperClass!=null && genericSuperClass instanceof ParameterizedType) {
+		ParameterizedType parameterizedType=(ParameterizedType)genericSuperClass;
+		for(Type paramType:parameterizedType.getActualTypeArguments())
+			{
+			if(paramType instanceof java.lang.Class) {
+				ClassWrapper cw2= findByClass((Class<?>)paramType);
+				if(cw2!=null)
+					{
+					this.links.add(new Link(cw,cw2,Relation.HAS_PRIMITIVE_PARAMETER));
+					next.add(cw2);
+					}
+			}
+			else
+			System.err.println(paramType+" "+paramType.getClass().toString());
+			}
+		} } catch(java.lang.NoClassDefFoundError err) {
+			//ignore
+		}
+		
+		for(final ClassWrapper child: this.classes)
 			{
 			Class<?> parent3= child.clazz.getSuperclass();
 			if(parent3==null) continue;
@@ -657,8 +754,9 @@ public class Java2Graph
 		    			LOG.warning("#class not found : \""+className+"\" message:"+err.getMessage());
 		    			}
 		    		}
+		    	jf.close();
 		    	}
-		    
+		    cl.close();
 		    for(String x: setOfClasses)
 			    {
 			    ClassWrapper cw=findByName( x );
@@ -667,127 +765,104 @@ public class Java2Graph
 			    	System.err.println("Cannot find class "+x);
 			    	continue;
 			    	}
-			    cw.userTarget=true;
+			    //cw.userTarget=true;
 			    recursive(cw,0);
 			    }
 			}
 	
-	private void usage()
-		{
-		System.err.println("Pierre Lindenbaum PhD. 2013");
-		System.err.println(" -h this screen");
-		System.err.println(" -jar <dir0:jar1:jar2:dir1:...> add a jar in the jar list. If directory, will add all the *ar files");
-		System.err.println(" -r <regex> add a pattern of classes to be ignored. Can be used muliple times");
-		System.err.println(" -R <package name> ignore the package starting with this string. Can be used muliple times");
-		System.err.println(" -i ignore interfaces");
-		System.err.println(" -p use *private* inner classes.");
-		System.err.println(" -m ignore classes iMplementing interfaces");
-		System.err.println(" -d ignore declared-classes (classes with $ in the name)");
-		System.err.println(" -o <file> output file");
-		System.err.println(" -L <level> Log Level. optional");
-		System.err.println(" -G graphviz output");
-		System.err.println(" -D dot output");
-		System.err.println(" -x (int) max distance to classe(s) defined by user. Default: unlimited");
-		System.err.println("\n class-1 class-2 ... class-n");
-		}
 	
-	public void run(String[] args) {
+	@Override
+	protected void fillOptions(final Options options) {
+		options.addOption( Option.builder("jar").hasArg(true).desc(" <dir0:jar1:jar2:dir1:...> add a jar in the jar list. If directory, will add all the *ar files").build());
+		options.addOption( Option.builder("r").hasArgs().desc("<regex> add a pattern of classes to be ignored.").build());
+		options.addOption( Option.builder("R").hasArgs().desc("<package name> ignore the package starting with this string. Can be used muliple times.").build());
+		options.addOption( Option.builder("i").hasArg(false).desc("ignore interfaces").build());
+		options.addOption( Option.builder("p").hasArg(false).desc("use *private* inner classes").build());
+		options.addOption( Option.builder("m").hasArg(false).desc("ignore classes iMplementing interfaces").build());
+		options.addOption( Option.builder("d").hasArg(false).desc("ignore declared-classes (classes with $ in the name)").build());
+		options.addOption( Option.builder("o").hasArg(true).desc("output file").build());
+		options.addOption( Option.builder("G").hasArg(false).longOpt("gexf").desc("gephi/gexf output").build());
+		options.addOption( Option.builder("D").hasArg(false).longOpt("dot").desc("dot output").build());
+		options.addOption( Option.builder("x").hasArg(true).desc("(int) max distance to classe(s) defined by user. Default: unlimited").build());
+		super.fillOptions(options);
+	}
+	
+	
+
+	@Override
+	protected int execute(final CommandLine cmd) {
+		List<String> args = cmd.getArgList();
 		try {
-			int optind=0;
 			File output=null;
-		    while(optind<args.length)
-				{
-				if(args[optind].equals("-h"))
-					{
-					usage();
-					return;
-					}
-				else if (args[optind].equals("-G"))
+
+				if(cmd.hasOption("G"))
 					{
 					this.graphPrinter=new GexfPrinter();
 					}
-				else if (args[optind].equals("-p"))
+				if(cmd.hasOption("p"))
 					{
 					this.usePrivateDeclaredClasses=true;
 					}
-				else if (args[optind].equals("-D"))
+				if(cmd.hasOption("D"))
 					{
 					this.graphPrinter=new DotGraphPrinter();
 					}
-				else if (args[optind].equals("-jar") && optind+1< args.length)
+				if(cmd.hasOption("jar"))
 					{
-					String tokens[]=args[++optind].split("[:]");
-					for(String s:tokens)
+					final String tokens[]=cmd.getOptionValues("jar");
+					for( String s:tokens)
 						{
 						s=s.trim();
-						if(s.length()==0) continue;
+						if(s.isEmpty()) continue;
 						File file= new File(s);
-						
 						this.addFile(file);	
 						}
 					}
-				else if (args[optind].equals("-L") && optind+1 < args.length)
+				if (cmd.hasOption("x"))
 					{
-					LOG.setLevel(Level.parse(args[++optind]));
+					this.limitDistance=Integer.parseInt(cmd.getOptionValue("x"));
 					}
-				else if (args[optind].equals("-x") && optind+1 < args.length)
+				if (cmd.hasOption("r"))
 					{
-					this.limitDistance=Integer.parseInt(args[++optind]);
+					final String tokens[]=cmd.getOptionValues("r");
+					for(final String s:tokens)
+						{
+						this.ignorePattern.add(Pattern.compile(s));
+						}
 					}
-				else if (args[optind].equals("-r") && optind+1 < args.length)
+				if (cmd.hasOption("R"))
 					{
-					this.ignorePattern.add(Pattern.compile(args[++optind]));
+					final String tokens[]=cmd.getOptionValues("R");
+					for(final String s:tokens)
+						{
+						this.ignorePackagesStartingWith.add(s);
+						}
 					}
-				else if (args[optind].equals("-R") && optind+1 < args.length)
+				if (cmd.hasOption("o"))
 					{
-					this.ignorePackagesStartingWith.add(args[++optind]);
+					output=new File(cmd.getOptionValue("o"));
 					}
-				else if (args[optind].equals("-o"))
-					{
-					output=new File(args[++optind]);
-					}
-				else if (args[optind].equals("-i"))
+				if (cmd.hasOption("i"))
 					{
 					this.usingInterfaces=false;
 					}
-				else if (args[optind].equals("-d"))
+				if (cmd.hasOption("d"))
 					{
 					this.usingDeclaredClasses=false;
 					}
-				else if (args[optind].equals("-m"))
+				if (cmd.hasOption("m"))
 					{
 					this.usingClassesImplementingInterfaces=false;
 					}
-				else if (args[optind].equals("-d"))
-					{
-					this.usingDeclaredClasses=false;
-					}
-				 else if (args[optind].equals("--"))
-				     {
-				     ++optind;
-				     break;
-				     }
-				else if (args[optind].startsWith("-"))
-				     {
-				     System.err.println("bad argument " + args[optind]);
-				     System.exit(-1);
-				     }
-				else
-				     {
-				     break;
-				     }
-				++optind;
-				}
-		    if(optind==args.length)
+				
+		    if(args.isEmpty())
 		    	{
-		    	System.err.println("classes missing");
-		    	usage();
-		    	return;
+		    	LOG.severe("classes missing");
+		    	return -1;
 		    	}
-		    HashSet<String> setOfClasses=new HashSet<String>();
-		    while(optind< args.length)
+		    final HashSet<String> setOfClasses=new HashSet<String>();
+		    for(String className:args)
 		    	{
-		    	String className=args[optind++];
 		    	if(className.contains("/"))
 		    		{	
 		    		if(className.endsWith(".java"))
@@ -799,8 +874,8 @@ public class Java2Graph
 		    	setOfClasses.add(className);
 		    	}
 		   this.run(setOfClasses);
-			  LOG.info("COUNT(Classes) : "+this.classes.size());
-			  LOG.info("COUNT(LINKS) : "+this.links.size());
+		  LOG.info("COUNT(Classes) : "+this.classes.size());
+		  LOG.info("COUNT(LINKS) : "+this.links.size());
 
 			  
 		    PrintStream out= System.out;
@@ -811,16 +886,16 @@ public class Java2Graph
 		    graphPrinter.print(out);
 		    out.flush();
 		    if(output!=null) out.close();
-		} catch (Exception e) {
+		    return 0;
+		} catch (final Exception e) {
 			e.printStackTrace();
+			return -1;
 		}
 	}
 
 	public static void main(String[] args)
 		{
-		LOG.setLevel(Level.INFO);
-		Java2Graph app=new Java2Graph();
-		app.run(args);
+		new Java2Graph().instanceMainWithExit(args);
 		}
 	
 }
