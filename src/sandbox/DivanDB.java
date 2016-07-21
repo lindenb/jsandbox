@@ -34,16 +34,23 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.ajax.JSON;
+import org.eclipse.jetty.server.handler.ContextHandler;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.stream.JsonToken;
+import com.google.gson.stream.JsonWriter;
 import com.sleepycat.bind.tuple.StringBinding;
+import com.sleepycat.bind.tuple.TupleBinding;
+import com.sleepycat.bind.tuple.TupleInput;
+import com.sleepycat.bind.tuple.TupleOutput;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
@@ -55,12 +62,12 @@ import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
 import com.sleepycat.je.Transaction;
 
-@SuppressWarnings({ "unchecked", "serial","rawtypes" })
-public class DivanDB extends HttpServlet
+@SuppressWarnings({ "unchecked", "rawtypes" })
+public class DivanDB extends ContextHandler
 	{
 	private static final String STORAGE_ATTRIBUTE="divandb.storage";
 	
-	/** string compartor for ordering the keys in bdb */
+	/** string comparator for ordering the keys in bdb */
 	public static class StringComparator
 		implements Comparator<byte[]>
 		{
@@ -72,6 +79,35 @@ public class DivanDB extends HttpServlet
 			return s1.compareTo(s2);
 			}
 		}
+		
+	public static class JsonTupleBinding
+		extends TupleBinding<JsonElement>
+		{
+		@Override
+		public JsonElement entryToObject(TupleInput arg0) {
+			return null;
+			}
+		@Override
+		public void objectToEntry(final JsonElement elt,final TupleOutput out) {
+			if(elt.isJsonNull()) {
+				out.writeInt(JsonToken.NULL.ordinal());
+				}
+			else if(elt.isJsonArray()) {
+				out.writeInt(JsonToken.BEGIN_ARRAY.ordinal());
+				JsonArray array = elt.getAsJsonArray();
+				out.writeInt(array.size());
+				for(int i=0;i< array.size();++i) {
+					objectToEntry(array.get(i),out);
+					}
+				}
+			else if(elt.isJsonObject()) {
+				out.writeInt(JsonToken.BEGIN_OBJECT.ordinal());
+				
+				}
+			}
+		}
+		
+		
 	/** a berkeley-db String/String datastore */ 
 	private static class BDBStorage
 		{
@@ -122,9 +158,9 @@ public class DivanDB extends HttpServlet
 			}
 		}
 	
+	
 
-	@Override
-	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+	private void doGet(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException
 		{
 		BDBStorage storage=(BDBStorage)this.getServletContext().getAttribute(STORAGE_ATTRIBUTE);
@@ -133,7 +169,7 @@ public class DivanDB extends HttpServlet
 		String id=req.getRequestURI().substring(1+req.getContextPath().length());
 		DatabaseEntry key=new DatabaseEntry();
 		DatabaseEntry data=new DatabaseEntry();
-		PrintWriter out=null;
+		JsonWriter out=null;
 		
 		
 		/** no id ? we want to list everything */
@@ -141,7 +177,7 @@ public class DivanDB extends HttpServlet
 	    	{
 	    	int countFound=0;
 	    	int countPrinted=0;
-	    	out=resp.getWriter();
+	    	out=new JsonWriter(resp.getWriter());
 	    	resp.setStatus(HttpServletResponse.SC_OK);
 	    	Cursor c=null;
 	    	Transaction txn=null;
@@ -152,7 +188,7 @@ public class DivanDB extends HttpServlet
 	    		txn=storage.environment.beginTransaction(null, null);
 	    		c=storage.database.openCursor(txn, null);
 	    		boolean first=true;
-	    		out.print("[");
+	    		out.beginArray();
 	    		String startkey=req.getParameter("startkey");
 	    		String endkey=req.getParameter("endkey");
 	    		if(req.getParameter("limit")!=null)
@@ -211,7 +247,7 @@ public class DivanDB extends HttpServlet
 	    			countPrinted++;
 	    			}
 	    		
-	    		out.println("]");
+	    		out.endArray();
 	    		c.close();
 	    		c=null;
 	    		txn.commit();
@@ -237,23 +273,22 @@ public class DivanDB extends HttpServlet
 	    		{
 	    		//not found
 	    		resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-	    		out=resp.getWriter();
-	    		out.println("null");
+	    		out=new JsonWriter(resp.getWriter());
+	    		out.nullValue();
 	    		}
 	    	else
 	    		{
 	    		//ok, found
 	    		resp.setStatus(HttpServletResponse.SC_OK);
-	    		out=resp.getWriter();
-	    	    out.println(StringBinding.entryToString(data));
+	    		out=new JsonWriter(resp.getWriter());
+	    	    out.(StringBinding.entryToString(data));
 	    		}
 	    	}
 	    out.flush();
 	    out.close();
 	    }
 	
-	@Override
-	protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
+	private void doDelete(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException
 		{
 		Set<String> ids=new TreeSet<String>();
@@ -267,7 +302,7 @@ public class DivanDB extends HttpServlet
 			txn=storage.environment.beginTransaction(null, null);
 			String charset=req.getCharacterEncoding();
 			if(charset==null) charset="UTF-8";
-			Object o=JSON.parse(new InputStreamReader(in,charset));
+			Object o=new JsonParser().parse(new InputStreamReader(in,charset));
 			if(o==null ) throw new IllegalArgumentException("nil object");
 			List objects;
 			if(o.getClass().isArray())
@@ -339,13 +374,12 @@ public class DivanDB extends HttpServlet
 		response.put("id",ids.toArray());
 		if(errorMessage!=null) response.put("message",errorMessage);
 		PrintWriter out=resp.getWriter();
-		out.println(JSON.toString(response));
+		out.println(new Gson().toJson(response));
 		out.flush();
 		out.close();
 		}
 	
-	@Override
-	protected void doPut(HttpServletRequest req, HttpServletResponse resp)
+	private void doPut(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException
 		{
 		Set<String> ids=new TreeSet<String>();
@@ -360,7 +394,7 @@ public class DivanDB extends HttpServlet
 			txn=storage.environment.beginTransaction(null, null);
 			String charset=req.getCharacterEncoding();
 			if(charset==null) charset="UTF-8";
-			Object json = JSON.parse(new InputStreamReader(in,charset));
+			Object json =new JsonParser().parse(new InputStreamReader(in,charset));
 			if(json==null ) throw new IllegalArgumentException("nil object");
 			List objects;
 			if(json.getClass().isArray())
@@ -393,7 +427,7 @@ public class DivanDB extends HttpServlet
 					String id=String.valueOf(ido);
 					if(id.isEmpty())  throw new IllegalArgumentException("empty id in "+map);
 					StringBinding.stringToEntry(id, key);
-					StringBinding.stringToEntry(JSON.toString(map),data);//back to string
+					StringBinding.stringToEntry(new Gson().toJson(map),data);//back to string
 					if(storage.database.put(txn, key, data)!=OperationStatus.SUCCESS)
 						{
 						throw new RuntimeException("BDB.error: Cannot insert "+id);
@@ -413,7 +447,7 @@ public class DivanDB extends HttpServlet
 						if(storage.database.get(txn,key,data,LockMode.DEFAULT)==OperationStatus.SUCCESS) continue;
 						//add id to this object
 						map.put("id", id);
-						StringBinding.stringToEntry(JSON.toString(map),data);//back to string
+						StringBinding.stringToEntry(new Gson().toJson(map),data);//back to string
 						//put ,key must NOT exist
 						if(storage.database.putNoOverwrite(txn, key, data)!=OperationStatus.SUCCESS)
 							{
@@ -445,7 +479,7 @@ public class DivanDB extends HttpServlet
 		response.put("id",ids.toArray());
 		if(errorMessage!=null) response.put("message",errorMessage);
 		PrintWriter out=resp.getWriter();
-		out.println(JSON.toString(response));
+		out.println(new Gson().toJson(response));
 		out.flush();
 		out.close();
 		}
@@ -458,7 +492,6 @@ public class DivanDB extends HttpServlet
 			{
 			int port=8080;
 			final BDBStorage storage=new BDBStorage();
-			DivanDB app=new DivanDB();
 			Runtime.getRuntime().addShutdownHook(new Thread()
 				{
 				@Override
@@ -516,18 +549,17 @@ public class DivanDB extends HttpServlet
 			
 			
 	        storage.open(bdbDir);
-	        ServletContextHandler context = new ServletContextHandler();
+	        ContextHandler context = new DivanDB();
 	        context.setAttribute(
 	        		STORAGE_ATTRIBUTE,
 	        		storage
 	        		);
 	        
-	        context.addServlet(new ServletHolder(app),"/*");
 	        context.setContextPath("/divandb");
 	        context.setResourceBase(".");
 
 	        /* create a new server */
-			Server server = new Server(port);
+			final Server server = new Server(port);
 			/* context */
 			server.setHandler(context);
 			

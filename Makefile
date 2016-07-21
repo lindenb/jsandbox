@@ -102,7 +102,7 @@ all_maven_jars = $(sort  ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${sprin
 
 
 
-all: 	gribouille java2graph githistory nashornserver \
+all: 	weatherarchive gribouille java2graph githistory nashornserver \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 
@@ -133,6 +133,8 @@ $(eval $(call compile,nashornserver,sandbox.NashornServer,${apache.commons.cli} 
 $(eval $(call compile,githistory,sandbox.GitHistory,${apache.commons.cli}  ))
 $(eval $(call compile,java2graph,sandbox.Java2Graph,${apache.commons.cli}  ))
 $(eval $(call compile,gribouille,sandbox.Gribouille,${apache.commons.cli}  ))
+$(eval $(call compile,weatherarchive,sandbox.WeatherArchive,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}  ${apache.httpclient.jars} ))
+
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	mkdir -p tmp $(dir $@)
