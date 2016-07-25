@@ -2,12 +2,16 @@ package sandbox;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.geom.GeneralPath;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.awt.image.Raster;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -24,6 +28,61 @@ import org.apache.commons.cli.Options;
 
 public abstract class Gribouille extends AbstractApplication 
 	{
+	private static class GrayImageMap
+		{
+		private final Dimension dim;
+		private final java.awt.image.DataBufferByte dataBuffer;
+		GrayImageMap(final Dimension dim, final java.awt.image.DataBufferByte dataBuffer) {
+			this.dim = dim;
+			this.dataBuffer = dataBuffer;
+			}
+		float get(int x,int y) {
+			return this.dataBuffer.getElem(dim.width*y+x)/255f;
+			}
+		}
+	
+	private class ProbabilityFunction
+		{
+		final int array[];
+		ProbabilityFunction(int array[]) {
+			this.array=array;
+			Arrays.sort(this.array);
+			int m = Integer.MAX_VALUE;
+			int M = Integer.MIN_VALUE;
+			
+			}
+		public int nextInt(int max) {
+			double v = Gribouille.this.rand.nextDouble();
+			return 0;
+			}
+		}
+	
+	private class Random2D
+		{
+		final int indexesx[];
+		final int indexesy[];
+		Random2D(final GrayImageMap gm) {
+			this.indexesx=new int[gm.dim.width];
+			this.indexesy=new int[gm.dim.height];
+			float probay[] = new float[gm.dim.height];
+			float probax[] = new float[gm.dim.width];
+			for(int x=0;x< gm.dim.width;++x) {
+				for(int y=0;y< gm.dim.height;++y) {
+					float v = gm.get(x,y)/255f;
+					probax[x]+=v;
+					probay[y]+=v;
+					}
+				}
+			}
+	
+		public double get(int x,int y) {
+			double px=0;
+			//x = (int)((x/Gribouille.this.imgDimension.getWidth())*dim.getWidth());
+			//y = (int)((y/Gribouille.this.imgDimension.getHeight())*dim.getHeight());
+			return -1;
+			}
+		}
+	
 	private class MinMax
 		{
 		double m,M;
@@ -60,7 +119,42 @@ public abstract class Gribouille extends AbstractApplication
 		}
 	
 	
-	
+	protected GrayImageMap loadGrayMap(final File grayMapFile)  {
+		LOG.info("Read gray map "+ grayMapFile);
+		try {
+			BufferedImage grayImage = ImageIO.read(grayMapFile);
+			LOG.info("Grap type "+ grayImage.getType());
+			if(grayImage.getType()!=BufferedImage.TYPE_BYTE_GRAY)
+				{
+				LOG.info("Converting to gray type "+ grayMapFile);
+				BufferedImage grayImage2 = new BufferedImage(
+						grayImage.getWidth(),
+						grayImage.getHeight(),  
+					    BufferedImage.TYPE_BYTE_GRAY
+					    );  
+				Graphics g = grayImage2.getGraphics();  
+				g.drawImage(grayImage, 0, 0, null);  
+				g.dispose();  
+				grayImage = grayImage2;
+				grayImage2=null;
+				g=null;
+				}
+			final Raster raster = grayImage.getRaster();
+			LOG.info("raster "+raster.getWidth()+"/"+raster.getHeight());
+			final DataBuffer dataBuffer = raster.getDataBuffer();
+			if(!(dataBuffer instanceof java.awt.image.DataBufferByte))
+				{
+				throw new IOException("Not a  java.awt.image.DataBufferByte:  "+grayMapFile);
+				}
+			return new GrayImageMap(
+					new Dimension(raster.getWidth(), raster.getHeight()),
+					java.awt.image.DataBufferByte.class.cast(dataBuffer)
+					);
+			} 
+		catch(IOException err) {
+			throw new RuntimeException(err);
+			}
+		}
 	
 	@Override
 	protected void fillOptions(Options options) {
@@ -69,6 +163,8 @@ public abstract class Gribouille extends AbstractApplication
 		options.addOption(Option.builder("o").longOpt("output").hasArg(true).desc("output file").build());
 		super.fillOptions(options);
 		}
+	
+	
 	
 	@Override
 	protected Status decodeOptions(final CommandLine cmd)
@@ -391,20 +487,26 @@ public abstract class Gribouille extends AbstractApplication
 
 		}
 		}
-
 	
-	private static class Kirby01 extends Gribouille
+	
+	private abstract static class AbstractDot extends Gribouille
 		{
-		private MinMax alpha=new MinMax(0.5,1.0);
-		private MinMax radius=new MinMax(0.5,50.0);
-		private double proba = 0.001;
-		private boolean use_log=false;
+		protected MinMax alpha=new MinMax(0.5,1.0);
+		protected MinMax radius=new MinMax(0.5,50.0);
+		protected double proba = 0.001;
+		
+		protected Point2D randomPoint() {
+			return new Point2D.Double(
+				this.rand.nextInt(this.imgDimension.width),	
+				this.rand.nextInt(this.imgDimension.height)	
+				);
+			}
+		
 		@Override
 		protected void fillOptions(Options options) {
 			options.addOption(Option.builder("alpha").longOpt("alpha").hasArg(true).desc("min/max alpha").build());
 			options.addOption(Option.builder("radius").longOpt("radius").hasArg(true).desc("min/max radius").build());
 			options.addOption(Option.builder("p").longOpt("proba").hasArg(true).desc("Propability").build());
-			options.addOption(Option.builder("log").hasArg(false).desc("use log scale drawing").build());
 			super.fillOptions(options);
 			}
 		@Override
@@ -419,9 +521,45 @@ public abstract class Gribouille extends AbstractApplication
 				this.proba =Double.parseDouble(cmd.getOptionValue("p"));
 			}
 			
-			if(cmd.hasOption("log")) {
-				this.use_log = true;
+			return super.decodeOptions(cmd);
 			}
+		@Override
+		protected void paint(final Graphics2D g) {
+			long occurences = (long)(((imgDimension.width)*(imgDimension.height))*this.proba);
+			while(occurences>0) {
+				occurences--;
+		  		final Point2D p = randomPoint();
+				if(p==null) continue;
+				paint(g,p.getX(),p.getY());
+				}
+			}
+		protected abstract void paint(final Graphics2D g,double x,double y);
+		}
+	
+	private static class Kirby01 extends Gribouille
+		{
+		private MinMax alpha=new MinMax(0.5,1.0);
+		private MinMax radius=new MinMax(0.5,50.0);
+		private double proba = 0.001;
+		@Override
+		protected void fillOptions(Options options) {
+			options.addOption(Option.builder("alpha").longOpt("alpha").hasArg(true).desc("min/max alpha").build());
+			options.addOption(Option.builder("radius").longOpt("radius").hasArg(true).desc("min/max radius").build());
+			options.addOption(Option.builder("p").longOpt("proba").hasArg(true).desc("Propability").build());
+			super.fillOptions(options);
+			}
+		@Override
+		protected Status decodeOptions(CommandLine cmd) {
+			if(cmd.hasOption("alpha")) {
+				this.alpha.parse(cmd.getOptionValue("alpha"));
+			}
+			if(cmd.hasOption("radius")) {
+				this.radius.parse(cmd.getOptionValue("radius"));
+			}
+			if(cmd.hasOption("p")) {
+				this.proba =Double.parseDouble(cmd.getOptionValue("p"));
+			}
+			
 			return super.decodeOptions(cmd);
 			}
 		
@@ -434,18 +572,10 @@ public abstract class Gribouille extends AbstractApplication
 				double r;
 				double a;
 				
-				if(this.use_log)
-					{
-					cx = ((Math.exp(rand.nextDouble())-1)/(Math.exp(1.0)-1))*  this.image.getWidth();
-					r = radius.min() + ((this.image.getWidth()-cx)/this.image.getWidth())*this.radius.distance();
-					a = alpha.min() + ((this.image.getWidth()-cx)/this.image.getWidth())*this.alpha.distance();
-					}
-				else
-					{
 					cx = rand.nextInt( this.image.getWidth() ) ;
 					r = this.radius.rnd(this.rand);
 					a = this.alpha.rnd(this.rand);
-					}
+					
 				
 				Color c = this.black(a);
 				g.setColor(c);
@@ -456,6 +586,64 @@ public abstract class Gribouille extends AbstractApplication
 			}
 		
 		}
+	
+	/**
+	 * Dot01
+	 */
+	private static class Dot01 extends AbstractDot {
+		@Override
+			protected void paint(Graphics2D g, double cx, double cy)
+				{
+				final double r = this.radius.rnd(this.rand);
+				final double a = this.alpha.rnd(this.rand);
+				final Color c = this.black(a);
+				g.setColor(c);
+				g.fill(new java.awt.geom.Ellipse2D.Double((cx-r), (cy-r),(r*2),(r*2)));
+				}
+		}
+	
+	/**
+	 * 
+	 */
+	private static class Engine01 extends Gribouille {
+	private GrayImageMap grayMap=null;
+
+	@Override
+	protected void fillOptions(Options options) {
+	options.addOption(Option.builder("gm").longOpt("graymap").hasArg(true).desc("Gray map image file. Used for probability").build());
+		super.fillOptions(options);
+		}
+	@Override
+	protected Status decodeOptions(final CommandLine cmd) {
+		if(!cmd.hasOption("gm")) {
+			LOG.severe("gray map missing");
+			return Status.EXIT_ERROR;
+		} else {
+			this.grayMap = loadGrayMap(new File(cmd.getOptionValue("gm")));
+		}
+		return super.decodeOptions(cmd);
+		}
+	@Override
+	protected void paint(final Graphics2D g)
+		{
+		// TODO Auto-generated method stub
+		
+		}
+	}
+	
+	@Override
+	protected void usage()
+		{
+		super.usage();
+		printAvailableTools(System.out);
+		}
+	
+	
+	private static void printAvailableTools(PrintStream out) {
+	out.println("Available engines: ");
+	out.println("  eng01  loads a graymap, plot cross-point.");
+	out.println("  dot01  random points.");
+	}
 	
 	public static void main(String[] args) {
 		Gribouille app = null;
@@ -471,12 +659,19 @@ public abstract class Gribouille extends AbstractApplication
 		} else if(args[0].equals("h1")) {
 			app = new Hatching01();
 		}
+		 else if(args[0].equals("eng01")) {
+			app = new Engine01();
+		}
+		 else if(args[0].equals("dot01")) {
+			app = new Dot01();
+		}
 		if(app!=null) {
 			app.instanceMainWithExit( Arrays.copyOfRange(args, 1, args.length));
 			}
 		else
 			{
 			System.err.println("Illegal sub program");
+			printAvailableTools(System.err);
 			System.exit(-1);
 			}
 		}
