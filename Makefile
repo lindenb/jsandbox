@@ -98,7 +98,27 @@ emf.core.jars=\
 	$(lib.dir)/org/eclipse/emf/org.eclipse.emf.ecore/2.11.1-v20150805-0538/org.eclipse.emf.ecore-2.11.1-v20150805-0538.jar \
 	$(lib.dir)/org/eclipse/emf/org.eclipse.emf.common/2.11.0-v20150805-0538/org.eclipse.emf.common-2.11.0-v20150805-0538.jar
 
-all_maven_jars = $(sort  ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} )
+
+jena-core.jars  =\
+	$(lib.dir)/org/apache/jena/jena-core/3.1.0/jena-core-3.1.0.jar \
+	$(lib.dir)/org/apache/jena/jena-base/3.1.0/jena-base-3.1.0.jar \
+	$(lib.dir)/xml-apis/xml-apis/1.4.01/xml-apis-1.4.01.jar \
+	$(lib.dir)/org/slf4j/slf4j-api/1.7.21/slf4j-api-1.7.21.jar \
+	$(lib.dir)/org/apache/commons/commons-csv/1.4/commons-csv-1.4.jar \
+	$(lib.dir)/xerces/xercesImpl/2.11.0/xercesImpl-2.11.0.jar \
+	$(lib.dir)/org/apache/jena/jena-shaded-guava/3.1.0/jena-shaded-guava-3.1.0.jar \
+	$(lib.dir)/org/apache/commons/commons-lang3/3.4/commons-lang3-3.4.jar \
+	$(lib.dir)/org/apache/jena/jena-iri/3.1.0/jena-iri-3.1.0.jar \
+	$(lib.dir)/commons-cli/commons-cli/1.3.1/commons-cli-1.3.1.jar \
+	$(lib.dir)/com/github/andrewoma/dexx/collection/0.6/collection-0.6.jar
+
+apache-derby.jars =\
+	$(lib.dir)/org/apache/derby/derby/10.12.1.1/derby-10.12.1.1.jar \
+	$(lib.dir)/org/apache/derby/derbyclient/10.12.1.1/derbyclient-10.12.1.1.jar \
+	$(lib.dir)/org/apache/derby/derbytools/10.12.1.1/derbytools-10.12.1.1.jar
+
+
+all_maven_jars = $(sort  ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} )
 
 
 
@@ -153,6 +173,8 @@ ${all_maven_jars}  :
 
 eclipse_classpath:
 	echo "$(realpath ${all_maven_jars})" | tr " " "\n" | awk '{printf("\t<classpathentry kind=\"lib\" path=\"%s\"/>\n",$$1);}'
+
+download_maven_jars : ${all_maven_jars}
 
 clean_maven_jars :
 	rm -f ${all_maven_jars}
