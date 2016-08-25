@@ -102,7 +102,7 @@ all_maven_jars = $(sort  ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${sprin
 
 
 
-all: 	githistory nashornserver \
+all: 	xml2xsd githistory nashornserver \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 
@@ -131,6 +131,8 @@ $(eval $(call compile,rgddigest,sandbox.RGDDigest,${apache.commons.cli} ${slf4j.
 $(eval $(call compile,saxscript,sandbox.SAXScript,${apache.commons.cli} ${slf4j.jars} ${google.gson.jars} ))
 $(eval $(call compile,nashornserver,sandbox.NashornServer,${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ))
 $(eval $(call compile,githistory,sandbox.GitHistory,${apache.commons.cli}  ))
+$(eval $(call compile,xml2xsd,sandbox.XmlToXsd,${apache.commons.cli}  ))
+##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	mkdir -p tmp $(dir $@)
@@ -139,6 +141,9 @@ $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	jar cvf $@ -C tmp .
 	#rm -rf tmp
 	$(foreach F,alleleAnnotationmethods  alleleAnnotations  annotateAllelemethods beacon  genotypephenotype common metadata, echo "${F}" && curl -L -o "${F}.avdl" "https://raw.githubusercontent.com/ga4gh/schemas/master/src/main/resources/avro/${F}.avdl" && cat   "${F}.avdl" | java -cp $@ sandbox.Avdl2Xml  | xmllint --format - ; )
+
+src/sandbox/AutoLexYacc.java : src/sandbox/AutoLexYacc.jj
+	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<	
 
 common.avdl :
 	curl -o $@ -L "https://raw.githubusercontent.com/ga4gh/schemas/master/src/main/resources/avro/$@"

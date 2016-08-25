@@ -316,8 +316,9 @@ public class AtomMerger extends AbstractApplication
 							cloneTidy(newdoc,tidy.parseDOM(in, null));
 							dom = this.json2atom.transform(dom);
 							}
-						catch(Exception err) {
+						catch(final Exception err) {
 							dom=null;
+							err.printStackTrace();
 							}
 						finally {
 							IOUtils.close(in);

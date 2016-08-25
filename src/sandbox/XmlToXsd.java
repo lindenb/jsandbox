@@ -5,6 +5,14 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 /**
  * Author:
  * 	Pierre Lindenbaum PhD
@@ -38,7 +46,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 
-public class JsonToXsd
+public class XmlToXsd extends AbstractApplication
 	{
 	private static final String XSD=XMLConstants.W3C_XML_SCHEMA_NS_URI;
 	private static final String JXB="http://java.sun.com/xml/ns/jaxb";
@@ -261,7 +269,7 @@ public class JsonToXsd
 			}
 		}
 
-	public void parse(Document dom) throws XMLStreamException
+	public void parse(final Document dom) throws XMLStreamException
 		{
 		
 		XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
@@ -303,25 +311,13 @@ public class JsonToXsd
 		w.writeEndDocument();
 		w.flush();
 		}
-	public static void main(String[] args)
-		{
+
+	@Override
+	protected int execute(final CommandLine cmd) {
+		final List<String> args = cmd.getArgList();
 		try
 			{
-			JsonToXsd app=new JsonToXsd();
-			int optind=0;
-			while(optind< args.length)
-				{
-				if(args[optind].equals("-h") ||
-				   args[optind].equals("-help") ||
-				   args[optind].equals("--help"))
-					{
-					System.err.println("Options:");
-					System.err.println(" -h help; This screen.");
-					System.err.println(" -j disable jaxb support");
-					System.err.println(" -p <jaxb package name> default:"+app.packageName);
-					System.err.println("(stdin|xml-file)");
-					return;
-					}
+			/*
 				else if(args[optind].equals("-j"))
 					{
 					app.supportingJaxb=false;
@@ -346,7 +342,7 @@ public class JsonToXsd
 					}
 				++optind;
 				}
-			
+			*/
 			
 			DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
 			factory.setCoalescing(true);
@@ -356,24 +352,31 @@ public class JsonToXsd
 			factory.setIgnoringElementContentWhitespace(true);
 			DocumentBuilder builder=factory.newDocumentBuilder();
 			Document dom;
-			if(args.length==0)
+			if(args.isEmpty())
 				{
 				dom=builder.parse(System.in);
 				}
-			else if(optind+1==args.length)
+			else if(args.size()==1)
 				{
-				dom=builder.parse(new File(args[optind]));
+				dom=builder.parse(new File(args.get(0)));
 				}
 			else
 				{
 				System.err.println("Illegal number of arguments");
-				return;
+				return -1;
 				}
-			app.parse(dom);
+			this.parse(dom);
+			return 0;
 			}
 		catch(Exception error)
 			{
 			error.printStackTrace();
+			return -1;
 			}
+		}
+
+	public static void main(String[] args)
+		{
+		new XmlToXsd().instanceMainWithExit(args);
 		}
 	}

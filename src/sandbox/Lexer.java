@@ -16,11 +16,13 @@ public class Lexer implements Closeable {
 		this.r=r;
 	}
 	
+	/** @return next byte in stream. -1 on EOF */
 	public int peek() throws IOException
 	{
 		return peek(0);
 	}
 	
+	/** @return byte in stream at position <code>pos</code>. -1 on EOF */
 	public int peek(final int pos) throws IOException
 		{
 		while(buffer.size()<=pos) {
