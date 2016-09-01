@@ -118,7 +118,27 @@ apache-derby.jars =\
 	$(lib.dir)/org/apache/derby/derbytools/10.12.1.1/derbytools-10.12.1.1.jar
 
 
-all_maven_jars = $(sort  ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} )
+jersey-server.jars  =  \
+	$(lib.dir)/javax/annotation/javax.annotation-api/1.2/javax.annotation-api-1.2.jar \
+	$(lib.dir)/javax/inject/javax.inject/1/javax.inject-1.jar \
+	$(lib.dir)/javax/validation/validation-api/1.1.0.Final/validation-api-1.1.0.Final.jar \
+	$(lib.dir)/javax/ws/rs/javax.ws.rs-api/2.0.1/javax.ws.rs-api-2.0.1.jar \
+	$(lib.dir)/org/glassfish/hk2/external/aopalliance-repackaged/2.5.0-b10/aopalliance-repackaged-2.5.0-b10.jar \
+	$(lib.dir)/org/glassfish/hk2/external/javax.inject/2.5.0-b10/javax.inject-2.5.0-b10.jar \
+	$(lib.dir)/org/glassfish/hk2/hk2-api/2.5.0-b10/hk2-api-2.5.0-b10.jar \
+	$(lib.dir)/org/glassfish/hk2/hk2-locator/2.5.0-b10/hk2-locator-2.5.0-b10.jar \
+	$(lib.dir)/org/glassfish/hk2/hk2-utils/2.5.0-b10/hk2-utils-2.5.0-b10.jar \
+	$(lib.dir)/org/glassfish/hk2/osgi-resource-locator/2.5.0-b10/osgi-resource-locator-2.5.0-b10.jar \
+	$(lib.dir)/org/glassfish/jersey/bundles/repackaged/jersey-guava/2.23.2/jersey-guava-2.23.2.jar \
+	$(lib.dir)/org/glassfish/jersey/core/jersey-client/2.23.2/jersey-client-2.23.2.jar \
+	$(lib.dir)/org/glassfish/jersey/core/jersey-common/2.23.2/jersey-common-2.23.2.jar \
+	$(lib.dir)/org/glassfish/jersey/core/jersey-server/2.23.2/jersey-server-2.23.2.jar \
+	$(lib.dir)/org/glassfish/jersey/media/jersey-media-jaxb/2.23.2/jersey-media-jaxb-2.23.2.jar \
+	$(lib.dir)/org/javassist/javassist/3.20.0-GA/javassist-3.20.0-GA.jar \
+	$(lib.dir)/org/jmockit/jmockit/1.27/jmockit-1.27.jar
+
+
+all_maven_jars = $(sort  ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} )
 
 
 
