@@ -488,6 +488,10 @@ public abstract class Gribouille extends AbstractApplication
 		}
 		}
 	
+	private interface PointPlotter
+		{
+		public void paint(Graphics2D g,double x, double y);
+		}
 	
 	private abstract static class AbstractDot extends Gribouille
 		{
@@ -525,16 +529,20 @@ public abstract class Gribouille extends AbstractApplication
 			}
 		@Override
 		protected void paint(final Graphics2D g) {
+			final PointPlotter plotter = getPointPlotter();
 			long occurences = (long)(((imgDimension.width)*(imgDimension.height))*this.proba);
 			while(occurences>0) {
 				occurences--;
 		  		final Point2D p = randomPoint();
 				if(p==null) continue;
-				paint(g,p.getX(),p.getY());
+				plotter.paint(g, p.getX(), p.getY());
 				}
 			}
-		protected abstract void paint(final Graphics2D g,double x,double y);
+		protected abstract PointPlotter getPointPlotter();
 		}
+	
+	
+	
 	
 	private static class Kirby01 extends Gribouille
 		{
@@ -587,19 +595,41 @@ public abstract class Gribouille extends AbstractApplication
 		
 		}
 	
+	private abstract class  PointPlotter01 implements PointPlotter
+		{
+		public PointPlotter01() {
+			
+			}
+		public abstract double getRadius();
+		public abstract Color getColor();
+		
+		@Override
+		public void paint(Graphics2D g, double cx, double cy) {
+			final double r = this.getRadius();
+			g.setColor(getColor());
+			g.fill(new java.awt.geom.Ellipse2D.Double((cx-r), (cy-r),(r*2),(r*2)));
+
+			}
+		}
+	
 	/**
 	 * Dot01
 	 */
 	private static class Dot01 extends AbstractDot {
 		@Override
-			protected void paint(Graphics2D g, double cx, double cy)
-				{
-				final double r = this.radius.rnd(this.rand);
-				final double a = this.alpha.rnd(this.rand);
-				final Color c = this.black(a);
-				g.setColor(c);
-				g.fill(new java.awt.geom.Ellipse2D.Double((cx-r), (cy-r),(r*2),(r*2)));
-				}
+		protected PointPlotter getPointPlotter() {
+			return new PointPlotter01() {
+				@Override
+				public double getRadius() {
+					return Dot01.this.radius.rnd(Dot01.this.rand);
+					}
+				@Override
+				public java.awt.Color getColor() {
+					final double a = Dot01.this.alpha.rnd(Dot01.this.rand);
+					return Dot01.this.black(a);
+					}
+				};
+			}
 		}
 	
 	/**

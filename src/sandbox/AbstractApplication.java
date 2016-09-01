@@ -23,6 +23,12 @@ public abstract class AbstractApplication
 		{
 		
 		}
+	
+	/** get shutdown hook, may be null , will be called BEFORE 'execute' */
+	protected Runnable getShutDownHook() {
+		return null;
+	}
+	
 	protected String getProgramName()
 		{
 		return this.getClass().getName();
@@ -165,7 +171,7 @@ public abstract class AbstractApplication
 			{
 			cmd = parser.parse(getOptions(), args);
 			}
-		catch(ParseException err)
+		catch(final ParseException err)
 			{
 			System.err.println(err.getMessage());
 			return -1;
@@ -176,9 +182,13 @@ public abstract class AbstractApplication
 			case EXIT_SUCCESS : return 0;
 			default:break;
 			}
-		
+		final Runnable cleaner = this.getShutDownHook();
+		if( cleaner != null ) {
+			Runtime.getRuntime().addShutdownHook(new Thread(cleaner));
+			}
 		return execute(cmd);
 		}
+
 	public void instanceMainWithExit(String args[])
 		{
 		int ret= instanceMain(args);

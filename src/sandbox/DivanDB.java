@@ -43,8 +43,11 @@ import org.eclipse.jetty.server.handler.ContextHandler;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.internal.bind.TypeAdapters;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import com.sleepycat.bind.tuple.StringBinding;
@@ -65,6 +68,11 @@ import com.sleepycat.je.Transaction;
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class DivanDB extends ContextHandler
 	{
+	private static final byte OPCODE_ARRAY= (byte)1;
+	private static final byte OPCODE_OBJECT= (byte)2;
+	private static final byte OPCODE_NIL= (byte)3;
+	private static final byte OPCODE_BOOLEAN= (byte)4;
+	
 	private static final String STORAGE_ATTRIBUTE="divandb.storage";
 	
 	/** string comparator for ordering the keys in bdb */
@@ -72,10 +80,10 @@ public class DivanDB extends ContextHandler
 		implements Comparator<byte[]>
 		{
 		@Override
-		public int compare(byte[] o1, byte[] o2)
+		public int compare(final byte[] o1, final byte[] o2)
 			{
-			String s1=StringBinding.entryToString(new DatabaseEntry(o1));
-			String s2=StringBinding.entryToString(new DatabaseEntry(o2));
+			final String s1=StringBinding.entryToString(new DatabaseEntry(o1));
+			final String s2=StringBinding.entryToString(new DatabaseEntry(o2));
 			return s1.compareTo(s2);
 			}
 		}
@@ -84,25 +92,74 @@ public class DivanDB extends ContextHandler
 		extends TupleBinding<JsonElement>
 		{
 		@Override
-		public JsonElement entryToObject(TupleInput arg0) {
+		public JsonElement entryToObject(TupleInput in) {
+			final byte opcode= in.readByte();
+			switch(opcode) {
+			case OPCODE_NIL:
+				{
+				return JsonNull.INSTANCE;
+				}
+			case OPCODE_BOOLEAN:
+				{
+				return new JsonPrimitive(in.readBoolean());
+				}
+			case OPCODE_ARRAY:
+				{
+				int n = in.readInt();
+				final JsonArray o = new JsonArray();
+				for(int i=0;i< n; ++i) {
+					o.add(this.entryToObject(in));
+				}
+				return o;
+				}
+			case OPCODE_OBJECT:
+				{
+				int n = in.readInt();
+				final JsonObject o = new JsonObject();
+				for(int i=0;i< n; ++i) {
+					final int keylen = in.readInt();
+					final String key = in.readString(keylen);
+					final JsonElement v = this.entryToObject(in);
+					o.add(key, v);
+					}
+				return o;
+				}
+			}
 			return null;
 			}
 		@Override
 		public void objectToEntry(final JsonElement elt,final TupleOutput out) {
-			if(elt.isJsonNull()) {
-				out.writeInt(JsonToken.NULL.ordinal());
+			if(elt==null || elt.isJsonNull()) {
+				out.writeByte(OPCODE_NIL);
 				}
+			else if (elt.isJsonPrimitive()) {
+		        final JsonPrimitive primitive = elt.getAsJsonPrimitive();
+		        if (primitive.isNumber()) {
+		         // out.value(primitive.getAsNumber());
+		        } else if (primitive.isBoolean()) {
+		        	out.writeByte(OPCODE_BOOLEAN);
+		        	out.writeBoolean(primitive.getAsBoolean());
+		        } else {
+		          //out.value(primitive.getAsString());
+		        }
+			}
 			else if(elt.isJsonArray()) {
-				out.writeInt(JsonToken.BEGIN_ARRAY.ordinal());
-				JsonArray array = elt.getAsJsonArray();
+				out.writeByte(OPCODE_ARRAY);
+				final JsonArray array = elt.getAsJsonArray();
 				out.writeInt(array.size());
 				for(int i=0;i< array.size();++i) {
 					objectToEntry(array.get(i),out);
 					}
 				}
 			else if(elt.isJsonObject()) {
-				out.writeInt(JsonToken.BEGIN_OBJECT.ordinal());
-				
+				out.writeByte(OPCODE_OBJECT);
+				final JsonObject o = elt.getAsJsonObject();
+				final Set<Map.Entry<String, JsonElement>> keys = o.entrySet();
+				out.writeInt(keys.size());
+				for(final Map.Entry<String, JsonElement> k:keys) {
+					out.writeString(k.getKey());
+					this.objectToEntry(k.getValue(),out);
+				}
 				}
 			}
 		}
@@ -163,14 +220,14 @@ public class DivanDB extends ContextHandler
 	private void doGet(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException
 		{
-		BDBStorage storage=(BDBStorage)this.getServletContext().getAttribute(STORAGE_ATTRIBUTE);
+		final BDBStorage storage=(BDBStorage)this.getServletContext().getAttribute(STORAGE_ATTRIBUTE);
 		resp.setContentType("application/json");
 		
-		String id=req.getRequestURI().substring(1+req.getContextPath().length());
+		final String id=req.getRequestURI().substring(1+req.getContextPath().length());
 		DatabaseEntry key=new DatabaseEntry();
 		DatabaseEntry data=new DatabaseEntry();
 		JsonWriter out=null;
-		
+		final JsonTupleBinding binding = new JsonTupleBinding();
 		
 		/** no id ? we want to list everything */
 	    if(id.isEmpty())
@@ -189,8 +246,8 @@ public class DivanDB extends ContextHandler
 	    		c=storage.database.openCursor(txn, null);
 	    		boolean first=true;
 	    		out.beginArray();
-	    		String startkey=req.getParameter("startkey");
-	    		String endkey=req.getParameter("endkey");
+	    		final String startkey =req.getParameter("startkey");
+	    		final String endkey = req.getParameter("endkey");
 	    		if(req.getParameter("limit")!=null)
 	    			{
 	    			limit=Integer.parseInt(req.getParameter("limit"));
@@ -206,7 +263,7 @@ public class DivanDB extends ContextHandler
 	    				{
 	    				break;
 	    				}
-	    			OperationStatus status;
+	    			final OperationStatus status;
 	    			/* first cursor call */ 
 	    			if(first)
 	    				{
@@ -240,10 +297,9 @@ public class DivanDB extends ContextHandler
 	    				{
 	    				continue;
 	    				}
-	    			
-	    			
-	    			if(countPrinted>0) out.print(",");
-	    			out.print(StringBinding.entryToString(data));
+	    			// https://groups.google.com/d/msg/google-gson/JpHbpZ9mTOk/h0JxiKTcu_oJ
+	    			final JsonElement jsonValue = binding.entryToObject(data);
+	    			TypeAdapters.JSON_ELEMENT.write(out, jsonValue); 
 	    			countPrinted++;
 	    			}
 	    		
@@ -281,7 +337,8 @@ public class DivanDB extends ContextHandler
 	    		//ok, found
 	    		resp.setStatus(HttpServletResponse.SC_OK);
 	    		out=new JsonWriter(resp.getWriter());
-	    	    out.(StringBinding.entryToString(data));
+	    		TypeAdapters.JSON_ELEMENT.write(out, binding.entryToObject(data));
+	    		
 	    		}
 	    	}
 	    out.flush();
