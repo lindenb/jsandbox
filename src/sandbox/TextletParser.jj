@@ -1,0 +1,126 @@
+
+options {
+STATIC=false;
+}
+
+
+PARSER_BEGIN(Textlet)
+
+
+package sandbox;
+/**
+ * Author Pierre Lindenbaum
+ */
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.Reader;
+import java.util.zip.GZIPInputStream;
+import java.io.PrintStream;
+import java.io.StringReader;
+import java.math.BigDecimal;
+import java.net.URL;
+import java.util.Iterator;
+import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import org.w3c.dom.*;
+import javax.xml.parsers.*;
+import javax.xml.transform.*;
+import javax.xml.transform.dom.*;
+import javax.xml.transform.stream.*;
+
+
+/**
+ *
+ * Textlet
+ *
+ */
+@SuppressWarnings("unchecked")
+public class Textlet
+	{
+	
+	public static void main(String args[])
+		{
+		try
+		        {
+				int optind=0;
+				while(optind< args.length)
+					{
+					if(args[optind].equals("-h") ||
+					   args[optind].equals("-help") ||
+					   args[optind].equals("--help"))
+						{
+						System.err.println("Pierre Lindenbaum PhD 2015. http://plindenbaum.blogspot.com");
+						System.err.println("Options:");
+						System.err.println(" -h help; This screen.");
+						return;
+						}
+					else if(args[optind].startsWith("-L"))
+						{
+						//todo
+						}
+					else if(args[optind].equals("--"))
+						{
+						optind++;
+						break;
+						}
+					else if(args[optind].startsWith("-"))
+						{
+						System.err.println("Unknown option "+args[optind]);
+						return;
+						}
+					else 
+						{
+						break;
+						}
+					++optind;
+					}
+		        
+		        new Textlet(System.in).input();
+		        }
+		catch(Exception err)
+		        {
+		        err.printStackTrace();
+		        }
+		}
+	
+	
+	}
+PARSER_END(Textlet)
+
+SKIP: {
+	"<%"  : ST1
+}  
+TOKEN :
+    {
+    <ANY : (~[] ) >
+    }
+ 
+  
+<ST1>SKIP: {
+	"%>"  : DEFAULT
+}  
+
+<ST1>TOKEN :
+    {
+    <ST1_ANY : (~[] ) > 
+    }  
+
+
+private void input(): {}
+	{
+	( any() )* <EOF>
+	}
+private void any(): {Token t;}
+	{
+	(
+	t=<ANY> { System.out.println(t.image);} |
+	t=<ST1_ANY> { System.out.println("["+t.image+"]");} 
+	)
+	}
+	
