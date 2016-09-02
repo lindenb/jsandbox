@@ -138,7 +138,13 @@ jersey-server.jars  =  \
 	$(lib.dir)/org/jmockit/jmockit/1.27/jmockit-1.27.jar
 
 
-all_maven_jars = $(sort  ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} )
+velocity.jars  =  \
+	$(lib.dir)/commons-collections/commons-collections/3.2.1/commons-collections-3.2.1.jar \
+	$(lib.dir)/commons-lang/commons-lang/2.4/commons-lang-2.4.jar \
+	$(lib.dir)/org/apache/velocity/velocity/1.7/velocity-1.7.jar
+
+
+all_maven_jars = $(sort  ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} )
 
 
 
@@ -175,6 +181,8 @@ $(eval $(call compile,xml2xsd,sandbox.XmlToXsd,${apache.commons.cli}  ))
 $(eval $(call compile,java2graph,sandbox.Java2Graph,${apache.commons.cli}  ))
 $(eval $(call compile,gribouille,sandbox.Gribouille,${apache.commons.cli}  ))
 $(eval $(call compile,weatherarchive,sandbox.WeatherArchive,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}  ${apache.httpclient.jars} ))
+$(eval $(call compile,velocityjson,sandbox.VelocityJson,${apache.commons.cli}  ${velocity.jars} ${google.gson.jars}  ))
+
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 
 

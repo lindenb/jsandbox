@@ -70,9 +70,18 @@ public static String readFileContent(final File path) throws IOException {
 	if(!path.exists()) throw new FileNotFoundException("not existing file "+path);
 	if(!path.canRead()) throw new IOException("canRead==false : file "+path);
 	Reader r=null;
-	StringWriter sw= new StringWriter();
-	try { r = openReader(path);copyTo(r, sw);return sw.toString();} 
+	try { r = openReader(path); return readReaderContent(r);} 
 	finally {close(r);}
+	}
+
+public static String readStreamContent(final InputStream in) throws IOException {
+	return readReaderContent(new InputStreamReader(in));
+	}
+
+public static String readReaderContent(final Reader r) throws IOException {
+	final StringWriter sw= new StringWriter();
+	copyTo(r, sw);
+	return sw.toString();
 	}
 
 
@@ -83,7 +92,6 @@ public static Reader openReader(final String path) throws IOException {
 public static Reader openReader(final File path) throws IOException {
 	return new InputStreamReader(openStream(path));
 	}
-
 
 
 public static InputStream openStream(final String path) throws IOException {
