@@ -10,10 +10,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Lexer implements Closeable {
+	public static final int EOF = 1;
 	private final Reader r;
 	private final List<Integer> buffer=new ArrayList<Integer>();
 	public Lexer(final Reader r) {
 		this.r=r;
+	}
+	
+	/** @return true if no more input is available */
+	public boolean eof() {
+		return this.peek() == EOF ;
 	}
 	
 	/** @return next byte in stream. -1 on EOF */
@@ -27,7 +33,7 @@ public class Lexer implements Closeable {
 		{
 		while(buffer.size()<=pos) {
 			int c= this.r.read();
-			if(c==-1) return -1;
+			if(c==EOF) return EOF;
 			buffer.add(c);
 			}
 		
@@ -37,7 +43,7 @@ public class Lexer implements Closeable {
 	public boolean downstream(final int pos,String s)  throws IOException {
 		for(int i=0;i< s.length();i++) {
 			int c = peek(pos+i);
-			if(c==-1 ||c!=(int)s.charAt(i)) return false;
+			if(c==EOF ||c!=(int)s.charAt(i)) return false;
 		}
 		return true;
 	}
@@ -53,7 +59,7 @@ public class Lexer implements Closeable {
 		}
 		while(n>0) {
 			int c= this.r.read();
-			if(c==-1) return -1;
+			if(c==EOF) return EOF;
 			n--;
 		}
 		return peek(pos);
@@ -65,7 +71,7 @@ public class Lexer implements Closeable {
 	
 	public int skipWithspaces()  throws IOException {
 		int c;
-		while((c=this.peek())!=-1 && Character.isWhitespace(c)) {
+		while((c=this.peek())!=EOF && Character.isWhitespace(c)) {
 			consume(1);
 		}
 		return c;
@@ -76,6 +82,10 @@ public class Lexer implements Closeable {
 		buffer.clear();
 		r.close();
 		}
+	
+	public char nextChar()  throws IOException {
+		
+	}
 	
 	private static final Pattern BIGINTEGER = Pattern.compile("[+-]?[0-9]+");
 	public java.math.BigInteger nextBigInteger(int pos) throws IOException {

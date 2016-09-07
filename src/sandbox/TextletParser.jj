@@ -1,6 +1,8 @@
 
 options {
 STATIC=false;
+DEBUG_PARSER=false;
+DEBUG_TOKEN_MANAGER=false;
 }
 
 
@@ -16,8 +18,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.Reader;
 import java.util.zip.GZIPInputStream;
-import java.io.PrintStream;
-import java.io.StringReader;
+import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.util.Iterator;
@@ -43,7 +44,7 @@ import javax.xml.transform.stream.*;
 @SuppressWarnings("unchecked")
 public class Textlet
 	{
-	
+	private StringBuilder outBody = new StringBuilder();
 	public static void main(String args[])
 		{
 		try
@@ -94,7 +95,12 @@ public class Textlet
 PARSER_END(Textlet)
 
 SKIP: {
-	"<%"  : ST1
+	  "<%@"  : ST2 
+	| "<%--" : ST3
+	| "<%=" { System.out.print("\");\nout.print( this.toString( ");} : ST4
+	| "<%!"  : ST5
+	| "<%"  { System.out.print("\"); ");} : ST1
+	
 }  
 TOKEN :
     {
@@ -112,15 +118,96 @@ TOKEN :
     }  
 
 
+<ST2>SKIP: {
+	"\n"|"\t"|" "|
+	"%>"  : DEFAULT
+}  
+
+<ST2>TOKEN :
+    {
+      <ST2_FILE : "file">
+    | <ST2_PAGE : "page">
+    | <ST2_INCLUDE : "include">
+    | <ST2_IMPORT : "import">
+    | <ST2_EQ : "=">
+    | <ST2_STR : ( "\'" (~["\'"])*"\'" |  "\"" (~["\""])*"\"" ) >
+    }  
+
+
+
+<ST3>SKIP: {
+	"\n"|"\t"|" "|
+	"--%>"  : DEFAULT
+}  
+
+<ST3>TOKEN :
+    {
+   	<ST3_ANY : (~[] ) > 
+    }  
+
+
+<ST4>SKIP: {
+	"%>"  {System.out.print(" ));\nout.print(\""); } : DEFAULT
+}  
+
+<ST4>TOKEN :
+    {
+    <ST4_ANY : (~[] ) > 
+    }  
+
+<ST5>TOKEN :
+    {
+    <ST5_ANY : (~[] ) > 
+    }  
+
+
+<ST5>SKIP: {
+	"%>"  : DEFAULT
+}  
+
+
+
 private void input(): {}
 	{
-	( any() )* <EOF>
+	{
+	System.out.print("@Generated public class ClassName { \n");
+	System.out.print("public void write(final PrintWriter out) {\nout.print(\"");
+	} ( any() )* <EOF> 
+	{
+	System.out.println("\");\n}");
+	System.out.println("protected String toString(final Object o) { return o==null?\"\":String.valueOf(o); }");
+	System.out.println(this.outBody);
+	System.out.println("\n}");
+	}
 	}
 private void any(): {Token t;}
 	{
 	(
-	t=<ANY> { System.out.println(t.image);} |
-	t=<ST1_ANY> { System.out.println("["+t.image+"]");} 
+	t=<ANY> {
+		for(int i=0;i< t.image.length();++i)
+			{
+			final char c = t.image.charAt(i);
+			switch(c)
+				{
+				case '\'': System.out.print("\\\'"); break;
+				case '\"': System.out.print("\\\""); break;
+				case '\\': System.out.print("\\\\"); break;
+				case '\n': System.out.print("\\n"); break;
+				case '\t': System.out.print("\\t"); break;
+				default:  System.out.print(c); break;
+				}
+			}
+		} |	
+	t=<ST1_ANY> { System.out.print(t.image);} |
+	t=<ST4_ANY> { System.out.print(t.image);} |
+	t=<ST5_ANY> { this.outBody.append(t.image);} |
+	include() {   }
 	)
 	}
-	
+
+private void include():{ Token t;}
+	{
+	<ST2_INCLUDE> <ST2_FILE>   <ST2_EQ>    t=<ST2_STR>   { }
+	}
+
+
