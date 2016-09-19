@@ -41,61 +41,61 @@ public final class Json2Xml {
 	
 	private Json2Xml() {}
 	
-	private void parseObject(final XMLStreamWriter w,String label,JsonReader r) throws Exception
+	private void parseObject(final XMLStreamWriter w,final String label,final JsonReader r) throws Exception
 		{
 		
 		w.writeStartElement(NS, "object");
 		if(label!=null) w.writeAttribute("name", label);
 		for(;;)
 			{
-			if(r.peek()==JsonToken.END_OBJECT) break;
+			if(r.peek()==JsonToken.END_OBJECT) 
+				{
+				w.writeEndElement();
+				r.endObject();		
+				break;
+				}
 			if(r.peek()!=JsonToken.NAME) throw new IllegalStateException(r.peek().name());
-			String s=r.nextName();
+			final String s = r.nextName();
 			parse(w,s,r);
 			}
-		w.writeEndElement();
-		r.endObject();
 		}
-	private void parseArray(final XMLStreamWriter w,String label,JsonReader r) throws Exception
+	private void parseArray(final XMLStreamWriter w,final String label,final JsonReader r) throws Exception
 		{
 		
 		w.writeStartElement(NS, "array");
 		if(label!=null) w.writeAttribute("name", label);
 		for(;;)
 			{
-			if(r.peek()==JsonToken.END_ARRAY) break;
+			if(r.peek()==JsonToken.END_ARRAY) 
+				{
+				w.writeEndElement();
+				r.endArray();		
+				break;
+				}
 			parse(w,null,r);
 			}
-		w.writeEndElement();
-		r.endArray();
 		}
 	
 	
-	private void parse(final XMLStreamWriter w,String label,JsonReader r) throws Exception
+	private void parse(final XMLStreamWriter w,final String label,final JsonReader r) throws Exception
 		{
 		if(!r.hasNext()) return;
-		    JsonToken token=r.peek();
+		    JsonToken token= r.peek();
 		    switch(token)
 		    	{
-		    	case NAME: break;
+		    	case END_OBJECT://through
+		    	case END_ARRAY://through
+		    	case NAME: throw new IllegalStateException("unexpected "+ token);
 		    	case BEGIN_OBJECT:
 		    		{
 		    		r.beginObject();
 		    		parseObject(w,label,r);	
 		    		break;
 		    		}
-		    	case END_OBJECT:
-		    		{
-		    		break;
-		    		}
 		    	case BEGIN_ARRAY:
 		    		{
 		    		r.beginArray();
 		    		parseArray(w,label,r);
-		    		break;
-		    		}
-		    	case END_ARRAY:
-		    		{
 		    		break;
 		    		}
 		    	case NULL:
@@ -180,7 +180,8 @@ public final class Json2Xml {
 			
 			app.parse(w,null,jr);
 			w.writeEndDocument();
-			IOUtils.flush(w);
+			w.flush();
+			w.close();
 			IOUtils.close(jr);
 			System.exit(0);
 		} catch (Exception e) {
