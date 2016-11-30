@@ -13,6 +13,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.script.Bindings;
+import javax.script.ScriptException;
+
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -46,6 +50,27 @@ public class AtomMerger extends AbstractApplication
 		"yyyy-MM-dd'T'HH:mm:ssXXX",
 		"EEE, dd MMM yyyy HH:mm:ss"
 		};
+	public static class EntryBean
+		{
+		private final Node root;
+		EntryBean(Node root)
+			{
+			this.root = root;
+			}
+		public String getId() {
+			String id=null;
+			for(Node c2= root.getFirstChild();c2!=null;c2=c2.getNextSibling())
+					{
+					if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
+					if(!c2.getLocalName().equals("id")) continue;
+					id  = c2.getTextContent().trim();
+					break;
+					}
+			return id;
+			}
+						
+			
+		} 
 	private static class EntrySorter implements Comparator<Node>
 		{
 		
@@ -197,13 +222,18 @@ public class AtomMerger extends AbstractApplication
 		options.addOption(Option.builder("i").longOpt("ignore").hasArg(false).desc("Ignore Errors").build());
 		options.addOption(Option.builder("rf").longOpt("rssfilter").hasArgs().desc("Optional list of XSLT stylesheets filtering RSS (multiple)").build());
 		options.addOption(Option.builder("af").longOpt("atomfilter").hasArgs().desc("Optional list of XSLT stylesheets filtering ATOM (multiple)").build());
-		options.addOption(Option.builder("n").longOpt("max-count").hasArgs().desc("Optional limit number of entries. default: no limit.").build());
+		options.addOption(Option.builder("n").longOpt("maxcount").hasArgs().desc("Optional limit number of entries. default: no limit.").build());
+		options.addOption(Option.builder("jse").longOpt("jsexpr").hasArgs().desc("optional javascript expression to filter entity 'entry'").build());
+		options.addOption(Option.builder("jsf").longOpt("jsfile").hasArgs().desc("optional javascript file to filter entity 'entry'").build());
 		super.fillOptions(options);
 	}
 	
 	@Override
 	protected int execute(CommandLine cmd) {
 		File fileout=null;
+		javax.script.CompiledScript compiledScript = null;
+		Bindings bindings = null;
+		
 		if(cmd.hasOption("o")) {
 			fileout= new File( cmd.getOptionValue("o"));
 		}
@@ -230,6 +260,44 @@ public class AtomMerger extends AbstractApplication
 		if(cmd.hasOption("n")) {
 			this.limitEntryCount = Integer.parseInt( cmd.getOptionValue("n"));
 		}
+		
+		
+		if(cmd.hasOption("jse") || cmd.hasOption("jsf"))
+			{
+			final javax.script.ScriptEngineManager manager = new javax.script.ScriptEngineManager();
+			final javax.script.ScriptEngine engine = manager.getEngineByName("js");
+			if(engine==null)
+				{
+				throw new RuntimeException("not available ScriptEngineManager: javascript. Use the SUN/Oracle JDK ?");
+				}
+			bindings = engine.createBindings();
+			
+			final javax.script.Compilable compilingEngine = (javax.script.Compilable)engine;
+			try {
+				if(cmd.hasOption("jse")) {
+					compiledScript = compilingEngine.compile(cmd.getOptionValue("jse"));
+					}
+				else if(cmd.hasOption("jsf")) {
+					java.io.FileReader r = null;
+					try
+						{
+						r = new java.io.FileReader(cmd.getOptionValue("jsf"));
+						compiledScript =  compilingEngine.compile(r);
+						r.close();
+						}
+					catch(IOException err)
+						{
+						err.printStackTrace();
+						return -1;
+						}
+					}
+				}
+			catch(Exception err)
+				{
+				err.printStackTrace();
+				return -1;
+				}
+			}
 		
 		final List<String> args=cmd.getArgList();
 		if(args.isEmpty())
@@ -366,16 +434,30 @@ public class AtomMerger extends AbstractApplication
 						{
 						if(c1.getNodeType()!=Node.ELEMENT_NODE) continue;
 						if(!c1.getLocalName().equals("entry")) continue;
-						String id=null;
-						for(Node c2= c1.getFirstChild();c2!=null;c2=c2.getNextSibling())
-							{
-							if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
-							if(!c2.getLocalName().equals("id")) continue;
-							id  = c2.getTextContent().trim();
-							break;
+						
+						EntryBean bean=new EntryBean(c1);
+						
+						if(bean.getId()==null || seenids.contains(bean.getId())) continue;	
+						
+						if( compiledScript != null) {
+							bindings.put("entry",bean);
+							Object result = compiledScript.eval(bindings);
+							if(result==null) continue;
+							if(result instanceof Boolean)
+								{
+								if(Boolean.FALSE.equals(result)) continue;
+								}
+							else if(result instanceof Number)
+								{
+								if(((Number)result).intValue()!=1) continue;
+								}
+							else
+								{
+								continue;
+								}
 							}
-						if(id==null || seenids.contains(id)) continue;
-						seenids.add(id);
+						
+						seenids.add(bean.getId());
 						chilrens.add(outdom.importNode(c1, true) );
 						if(this.limitEntryCount!=-1)
 							{
@@ -431,6 +513,9 @@ public class AtomMerger extends AbstractApplication
 		}
 		
 		}
+	
+
+
 	
 	public static void main(String[] args)
 		{
