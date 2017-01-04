@@ -1,10 +1,11 @@
 EMPTY :=
 SPACE := $(EMPTY) $(EMPTY)
 .PHONY: all all_maven_jars clean_maven_jars eclipse_classpath
-bin.dir = dist
+here.dir=$(dir $(realpath $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))))
+bin.dir =${here.dir}dist
 javacc.exe ?= javacc
-lib.dir=maven
-src.dir=src
+lib.dir=${here.dir}maven
+src.dir=${here.dir}src
 tmp.dir=tmp
 JAVAC?=javac
 JAR?=jar
@@ -25,7 +26,7 @@ $(1)  : $(addsuffix .java,$(addprefix src/,$(subst .,/,$(2)))) $(3)
 	#create META-INF/MANIFEST.MF
 	echo "Manifest-Version: 1.0" > ${tmp.dir}/tmp.mf
 	echo "Main-Class: $(2)" >> ${tmp.dir}/tmp.mf
-	echo "Class-Path: $$(realpath $$(filter %.jar,$$^)) ${dist.dir}/$(1).jar" | fold -w 71 | awk '{printf("%s%s\n",(NR==1?"": " "),$$$$0);}' >>  ${tmp.dir}/tmp.mf
+	echo "Class-Path: $$(filter %.jar,$$^) ${bin.dir}/$(1).jar" | fold -w 71 | awk '{printf("%s%s\n",(NR==1?"": " "),$$$$0);}' >>  ${tmp.dir}/tmp.mf
 	#create jar
 	${JAR} cfm ${bin.dir}/$(1).jar ${tmp.dir}/tmp.mf  -C ${tmp.dir} .
 	#cleanup
@@ -60,7 +61,11 @@ google.gson.jars  = \
 sqlite3.jdbc.jar  = \
 	$(lib.dir)/org/xerial/sqlite-jdbc/3.8.11.1/sqlite-jdbc-3.8.11.1.jar
 
+log4j.jars = \
+	$(lib.dir)/log4j/log4j/1.2.17/log4j-1.2.17.jar
+
 slf4j.jars  = \
+	$(log4j.jars) \
 	$(lib.dir)/org/slf4j/slf4j-api/1.7.13/slf4j-api-1.7.13.jar \
 	$(lib.dir)/org/slf4j/slf4j-log4j12/1.7.13/slf4j-log4j12-1.7.13.jar \
 	$(lib.dir)/org/slf4j/slf4j-simple/1.7.13/slf4j-simple-1.7.13.jar
@@ -207,11 +212,22 @@ $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 src/sandbox/AutoLexYacc.java : src/sandbox/AutoLexYacc.jj
 	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<	
 
+
+textlet : src/sandbox/TextletParser.jj
+	${javacc.exe} -OUTPUT_DIRECTORY=src/sandbox $<	
+	javac -sourcepath src src/sandbox/Textlet.java
+	echo "aa (<%@ include file='azda'  %>) aa <%= 2 %> <%!  int i=0; public int getI() { return this.i;} %>" | java -cp src sandbox.Textlet
+
+x : src/sandbox/EmfModelParser.jj ${emf.core.jars}
+	${javacc.exe} -OUTPUT_DIRECTORY=src/sandbox $<	
+	javac -cp $(subst $(SPACE),:,${emf.core.jars}) -sourcepath src src/sandbox/EmfModel.java
+	echo "package x1 { class x2 {int a int b String c } }" | java -cp $(subst $(SPACE),:,${emf.core.jars}):src sandbox.EmfModel
+
 common.avdl :
 	curl -o $@ -L "https://raw.githubusercontent.com/ga4gh/schemas/master/src/main/resources/avro/$@"
 
 ${all_maven_jars}  : 
-	mkdir -p $(dir $@) && wget -O "$@" "http://central.maven.org/maven2/$(patsubst ${lib.dir}/%,%,$@)"
+	mkdir -p $(dir $@) && wget -O "$(addsuffix .tmp.jar,$@)" "http://central.maven.org/maven2/$(patsubst ${lib.dir}/%,%,$@)" && mv "$(addsuffix .tmp.jar,$@)" $@
 
 eclipse_classpath:
 	echo "$(realpath ${all_maven_jars})" | tr " " "\n" | awk '{printf("\t<classpathentry kind=\"lib\" path=\"%s\"/>\n",$$1);}'
