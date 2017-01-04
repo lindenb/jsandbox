@@ -143,8 +143,18 @@ velocity.jars  =  \
 	$(lib.dir)/commons-lang/commons-lang/2.4/commons-lang-2.4.jar \
 	$(lib.dir)/org/apache/velocity/velocity/1.7/velocity-1.7.jar
 
+jgit.jars  =  \
+	$(lib.dir)/com/googlecode/javaewah/JavaEWAH/1.1.6/JavaEWAH-1.1.6.jar \
+	$(lib.dir)/com/jcraft/jsch/0.1.54/jsch-0.1.54.jar \
+	$(lib.dir)/commons-codec/commons-codec/1.10/commons-codec-1.10.jar \
+	$(lib.dir)/commons-logging/commons-logging/1.2/commons-logging-1.2.jar \
+	$(lib.dir)/org/apache/httpcomponents/httpclient/4.5.2/httpclient-4.5.2.jar \
+	$(lib.dir)/org/apache/httpcomponents/httpcore/4.4.5/httpcore-4.4.5.jar \
+	$(lib.dir)/org/eclipse/jgit/org.eclipse.jgit/4.4.1.201607150455-r/org.eclipse.jgit-4.4.1.201607150455-r.jar \
+	$(lib.dir)/org/slf4j/slf4j-api/1.7.21/slf4j-api-1.7.21.jar
 
-all_maven_jars = $(sort  ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} )
+
+all_maven_jars = $(sort ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} )
 
 
 
