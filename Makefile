@@ -65,7 +65,6 @@ log4j.jars = \
 	$(lib.dir)/log4j/log4j/1.2.17/log4j-1.2.17.jar
 
 slf4j.jars  = \
-	$(log4j.jars) \
 	$(lib.dir)/org/slf4j/slf4j-api/1.7.13/slf4j-api-1.7.13.jar \
 	$(lib.dir)/org/slf4j/slf4j-log4j12/1.7.13/slf4j-log4j12-1.7.13.jar \
 	$(lib.dir)/org/slf4j/slf4j-simple/1.7.13/slf4j-simple-1.7.13.jar
