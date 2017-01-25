@@ -31,8 +31,6 @@ import javax.xml.transform.stream.StreamSource;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.w3c.dom.Attr;
 import org.w3c.dom.CDATASection;
 import org.w3c.dom.Document;
@@ -58,7 +56,7 @@ public class AtomMerger extends AbstractApplication
 			this.root = root;
 			}
 		public String getId() {
-			String id=null;
+			String id="";
 			for(Node c2= root.getFirstChild();c2!=null;c2=c2.getNextSibling())
 					{
 					if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
@@ -68,8 +66,57 @@ public class AtomMerger extends AbstractApplication
 					}
 			return id;
 			}
-						
-			
+		public Date getDate() {
+			for(Node c2= root.getFirstChild();c2!=null;c2=c2.getNextSibling())
+					{
+					if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
+					if(!c2.getLocalName().equals("updated")) continue;
+					String u  = c2.getTextContent().trim();
+					
+					for (final String format : DATE_FORMATS) {
+					final SimpleDateFormat fmt = new SimpleDateFormat(format);
+					fmt.setLenient(true);
+					try { return fmt.parse(u); }
+					catch (Exception err) { }
+					}
+					}
+			return new Date();
+			}
+		public String getTitle() {
+			String t="";
+			for(Node c2= root.getFirstChild();c2!=null;c2=c2.getNextSibling())
+					{
+					if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
+					if(!c2.getLocalName().equals("title")) continue;
+					t  = c2.getTextContent().trim();
+					break;
+					}
+			return t;
+			}
+		public String getUrl() {
+			String url="";
+			for(Node c2= root.getFirstChild();c2!=null;c2=c2.getNextSibling())
+					{
+					if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
+					if(!c2.getLocalName().equals("link")) continue;
+					final Element e2=Element.class.cast(c2);
+					if(!e2.hasAttribute("href")) continue;
+					url = e2.getAttribute("href");
+					break;
+					}
+			return url;
+			}	
+		public String getContent() {
+			for(Node c2= root.getFirstChild();c2!=null;c2=c2.getNextSibling())
+					{
+					if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
+					if(!c2.getLocalName().equals("content")) continue;
+					final Element e2=Element.class.cast(c2);
+					
+					break;
+					}
+			return "";
+			}
 		} 
 	private static class EntrySorter implements Comparator<Node>
 		{
@@ -138,7 +185,7 @@ public class AtomMerger extends AbstractApplication
 			}
 		}
 	
-	private static final Logger LOG = LoggerFactory.getLogger("jsandbox");
+	private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger("atommerger");
 	private FileAndFilter rss2atom=null;
 	private FileAndFilter json2atom=null;
 	private FileAndFilter html2atom=null;
@@ -207,7 +254,7 @@ public class AtomMerger extends AbstractApplication
 					}
 				break;
 				}
-			default: LOG.warn(">>>>"+n.getNodeType()+ " "+n); break;
+			default: LOG.warning(">>>>"+n.getNodeType()+ " "+n); break;
 			}
 		}
 
@@ -472,7 +519,7 @@ public class AtomMerger extends AbstractApplication
 				} catch(Exception err)
 					{
 					if(this.ignoreErrors) {
-						LOG.error("Ignore error", err);
+						LOG.severe("Ignore error" + err);
 						}
 					else
 						{
