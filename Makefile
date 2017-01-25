@@ -162,7 +162,8 @@ all_maven_jars = $(sort ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${ap
 
 
 
-all: 	xml2xsd weatherarchive gribouille java2graph githistory nashornserver \
+all: 	treemapviewer \
+	xml2xsd weatherarchive gribouille java2graph githistory nashornserver \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 
@@ -196,6 +197,8 @@ $(eval $(call compile,java2graph,sandbox.Java2Graph,${apache.commons.cli}  ))
 $(eval $(call compile,gribouille,sandbox.Gribouille,${apache.commons.cli}  ))
 $(eval $(call compile,weatherarchive,sandbox.WeatherArchive,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}  ${apache.httpclient.jars} ))
 $(eval $(call compile,velocityjson,sandbox.VelocityJson,${apache.commons.cli}  ${velocity.jars} ${google.gson.jars}  ))
+$(eval $(call compile,treemapviewer,sandbox.TreeMapViewer,  ))
+
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 
