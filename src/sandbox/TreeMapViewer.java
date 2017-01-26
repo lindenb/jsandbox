@@ -92,7 +92,7 @@ public class TreeMapViewer extends JFrame {
     	private final TreePack parent;
     	private final Map<String, TreePack> children=new HashMap<>();
     	private Rectangle2D bounds=new Rectangle2D.Double();
-    	private long weight=1;
+    	private long weight=0L;
 		public void setBounds(final Rectangle2D bounds) { this.bounds=bounds;}
 		//public Rectangle2D getBounds() { return this.bounds;}
 		TreePack(final String label,final TreePack parent)
