@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Set;
 
 import javax.script.Bindings;
-import javax.script.ScriptException;
 
 
 import javax.xml.parsers.DocumentBuilder;
@@ -51,20 +50,25 @@ public class AtomMerger extends AbstractApplication
 	public static class EntryBean
 		{
 		private final Node root;
-		EntryBean(Node root)
+		EntryBean(final Node root)
 			{
 			this.root = root;
 			}
-		public String getId() {
-			String id="";
+		
+		private String _get(final String localName) {
+			String t="";
 			for(Node c2= root.getFirstChild();c2!=null;c2=c2.getNextSibling())
 					{
 					if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
-					if(!c2.getLocalName().equals("id")) continue;
-					id  = c2.getTextContent().trim();
+					if(!c2.getLocalName().equals(localName)) continue;
+					t  = c2.getTextContent().trim();
 					break;
 					}
-			return id;
+			return t;
+			}
+		
+		public String getId() {
+			return _get("id");
 			}
 		public Date getDate() {
 			for(Node c2= root.getFirstChild();c2!=null;c2=c2.getNextSibling())
@@ -82,16 +86,12 @@ public class AtomMerger extends AbstractApplication
 					}
 			return new Date();
 			}
+		public String getSummary() {
+			return _get("summary");
+			}
+		
 		public String getTitle() {
-			String t="";
-			for(Node c2= root.getFirstChild();c2!=null;c2=c2.getNextSibling())
-					{
-					if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
-					if(!c2.getLocalName().equals("title")) continue;
-					t  = c2.getTextContent().trim();
-					break;
-					}
-			return t;
+			return _get("title");
 			}
 		public String getUrl() {
 			String url="";
@@ -107,26 +107,18 @@ public class AtomMerger extends AbstractApplication
 			return url;
 			}	
 		public String getContent() {
-			for(Node c2= root.getFirstChild();c2!=null;c2=c2.getNextSibling())
-					{
-					if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
-					if(!c2.getLocalName().equals("content")) continue;
-					final Element e2=Element.class.cast(c2);
-					
-					break;
-					}
-			return "";
+			return _get("content");
 			}
 		} 
+	
+	
 	private static class EntrySorter implements Comparator<Node>
 		{
-		
-		Date defaultDate= new Date();
+		private Date defaultDate= new Date();
 		EntrySorter() {
-		
-		}
-
-		Date getDate(Node o1) {
+			
+			}
+		private Date getDate(Node o1) {
 			String updated=null;
 
 			for (Node c = o1.getFirstChild(); c != null; c = c.getNextSibling()) {
