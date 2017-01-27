@@ -73,15 +73,15 @@ public class TreeMapViewer extends JFrame {
 	private enum Orientation { VERTICAL, HORIZONTAL};
     private enum Direction { ASCENDING, DESCENDING}
     private static final Font THE_FONT=new Font("Courier", Font.PLAIN, 12);
-    private static final  DecimalFormat decimalFormat = new DecimalFormat("#,###");
+    private static final  DecimalFormat decimalFormat = new DecimalFormat("#,###.##");
     
     private static class HistogramRow
     	{
     	final List<String> values;
-    	final long weight;
-    	HistogramRow(final List<String> values,final long weight) {
+    	final double weight_d;
+    	HistogramRow(final List<String> values,final double weight_d) {
     		this.values=values;
-    		this.weight=weight;
+    		this.weight_d=weight_d;
     		}
     	}
     
@@ -92,7 +92,7 @@ public class TreeMapViewer extends JFrame {
     	private final TreePack parent;
     	private final Map<String, TreePack> children=new HashMap<>();
     	private Rectangle2D bounds=new Rectangle2D.Double();
-    	private long weight=0L;
+    	private double weight_d= 0.0;
 		public void setBounds(final Rectangle2D bounds) { this.bounds=bounds;}
 		//public Rectangle2D getBounds() { return this.bounds;}
 		TreePack(final String label,final TreePack parent)
@@ -100,8 +100,8 @@ public class TreeMapViewer extends JFrame {
 			this.label=label;
 			this.parent=parent;
 			}
-		public long getWeight() { 
-			return weight;
+		public double getWeight() { 
+			return weight_d;
 			}
 		public int getDepth()
 			{
@@ -287,8 +287,8 @@ public class TreeMapViewer extends JFrame {
 			{
 			this.values = values;
 			}
-		public long getWeight() { 
-			return Long.parseLong(values[values.length-1]);
+		public double getWeight() { 
+			return Double.parseDouble(values[values.length-1]);
 			}
 		}
 	
@@ -442,8 +442,8 @@ public class TreeMapViewer extends JFrame {
 						}
 					try
 						{
-						long n=Long.parseLong(tokens[tokens.length-1]);
-						if(n<1L) throw new IOException(
+						double n=Double.parseDouble(tokens[tokens.length-1]);
+						if(n<=0.0) throw new IOException(
 								"Bad Count of last column in "+line
 								);
 						}
@@ -714,7 +714,7 @@ public class TreeMapViewer extends JFrame {
 			g.draw(r);
 			r=root.grow(0.9, r);
 			root.print(g, r, (x<selectedHeaders.size()?selectedHeaders.get(x).label:
-				"TOTAL "+decimalFormat.format(root.weight)));
+				"TOTAL "+decimalFormat.format(root.weight_d)));
 			}
 		y+=rowheight;
 		int rowidx=0;
@@ -735,7 +735,7 @@ public class TreeMapViewer extends JFrame {
 			Rectangle2D r= new Rectangle2D.Double(x*colwidth,y,colwidth,rowheight);
 			g.setColor(bckColor);
 			g.fill(r);
-			double barwidth = ((histrow.weight/(double)root.weight))*colwidth;
+			double barwidth = ((histrow.weight_d/root.weight_d))*colwidth;
 			r= new Rectangle2D.Double(x*colwidth,y,barwidth,rowheight);
 			g.setColor(Color.RED);
 			g.fill(r);
@@ -746,7 +746,7 @@ public class TreeMapViewer extends JFrame {
 			g.draw(r);
 			r=root.grow(0.9, r);
 			g.setColor(Color.DARK_GRAY);
-			root.print(g, r, decimalFormat.format(histrow.weight)+" "+String.format("(%.2f%%)",((histrow.weight/(double)root.weight)*100.0)));
+			root.print(g, r, decimalFormat.format(histrow.weight_d)+" "+String.format("(%.2f%%)",((histrow.weight_d/root.weight_d)*100.0)));
 			y+=rowheight;
 			}
 		
@@ -769,7 +769,7 @@ public class TreeMapViewer extends JFrame {
 			}
 		
 		final TreePack root=new TreePack("ALL",null);
-		long count=0L;
+		double count=0.0;
 		for(final DataRow row:this.filteredDataRows)
 			{
 			count+=row.getWeight();
@@ -783,11 +783,11 @@ public class TreeMapViewer extends JFrame {
 					newpack = new TreePack(token,curr);
 					curr.children.put(token,newpack);
 					}
-				newpack.weight+=row.getWeight();
+				newpack.weight_d+=row.getWeight();
 				curr = newpack;
 				}
 			}
-		root.weight=count;
+		root.weight_d=count;
 		final Rectangle2D area= new Rectangle2D.Double(0,0,drawingArea.getWidth(), drawingArea.getHeight());
 		if(useHistogramCbox.isSelected())
 			{
