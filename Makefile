@@ -238,4 +238,40 @@ download_maven_jars : ${all_maven_jars}
 
 clean_maven_jars :
 	rm -f ${all_maven_jars}
+	
+	
+## JNLP
+
+ifneq (${webstart.remotedir},)	
+
+define sign_with_jarsigner
+	jarsigner $(if ${FASTJARSIGN},,-tsa http://timestamp.digicert.com ) \
+		-keystore .secret.keystore \
+		-keypass "$(if ${keytool.keypass},${keytool.keypass},KEYTOOLPASS)" \
+		-storepass "$(if ${keytool.storepass},${keytool.storepass},KEYTOOLSTOREPASS)" \
+		"$(1)" secret ;
+endef
+
+
+scp-webstart: compile-webstart
+	scp -r webstart/* "${webstart.remotedir}"
+
+
+compile-webstart : .secret.keystore treemapviewer
+	rm -rf webstart
+	mkdir -p webstart
+	cp dist/treemapviewer.jar webstart/
+	sed 's/__BASE__/webstart.remotedir/' src/sandbox/TreeMapViewer.jnlp > webstart/TreeMapViewer.jnlp
+	$(call sign_with_jarsigner,webstart/treemapviewer.jar)
+	chmod 755 webstart/*.html webstart/*.jar webstart/*.jnlp
+
+
+endif
+	
+	
+.secret.keystore :
+	-keytool -genkeypair -keystore $@ -alias secret \
+	       	-keypass "$(if ${keytool.keypass},${keytool.keypass},KEYTOOLPASS)" \
+		-storepass "$(if ${keytool.storepass},${keytool.storepass},KEYTOOLSTOREPASS)" \
+		-dname "CN=Pierre Lindenbaum, OU=INSERM, O=INSERM, L=Nantes, ST=Nantes, C=Fr"
 

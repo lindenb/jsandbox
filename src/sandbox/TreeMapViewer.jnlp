@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jnlp xmlns="http://javafx.com/fxml" xmlns:fx="http://javafx.com/fxml" spec="6.0+" codebase="http://__CODEBASE__" href="TreeMapViewer.jnlp">
+  <information>
+    <title>TreeMapViewer</title>
+    <vendor>Pierre Lindenbaum PhD</vendor>
+    <homepage href="http://www.umr1087.univ-nantes.fr"/>
+    <description>TODO</description>
+    <description kind="short">TODO</description>
+    <offline-allowed/>
+    <shortcut online="true">
+      <desktop/>
+      <menu submenu="TreeMapViewer"/>
+    </shortcut>
+  </information>
+  <security>
+    <all-permissions/>
+  </security>
+  <update check="always" policy="prompt-run"/>
+  <resources>
+    <j2se version="1.8+"/>
+    <jar download="null" href="treemapviewer.jar"/>
+  </resources>
+  <application-desc width="1000" height="800" name="TreeMapViewer" main-class="sanbox.TreeMapViewer"/>
+  <update check="background"/>
+</jnlp>
+
