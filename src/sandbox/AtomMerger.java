@@ -30,6 +30,11 @@ import javax.xml.transform.stream.StreamSource;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.w3c.dom.Attr;
 import org.w3c.dom.CDATASection;
 import org.w3c.dom.Document;
@@ -38,6 +43,7 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 import org.w3c.tidy.Tidy;
+
 
 
 public class AtomMerger extends AbstractApplication
@@ -70,6 +76,22 @@ public class AtomMerger extends AbstractApplication
 		public String getId() {
 			return _get("id");
 			}
+		public String getAuthor()
+			{
+			for(Node c2= root.getFirstChild();c2!=null;c2=c2.getNextSibling())
+					{
+					if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
+					if(!c2.getLocalName().equals("author")) continue;
+					for(Node c3= c2.getFirstChild();c3!=null;c3=c3.getNextSibling())
+						{
+						if(c3.getNodeType()!=Node.ELEMENT_NODE) continue;
+						if(!c3.getLocalName().equals("name")) continue;
+						return c3.getTextContent().trim();
+						}
+					}
+			return "";
+			}
+		
 		public Date getDate() {
 			for(Node c2= root.getFirstChild();c2!=null;c2=c2.getNextSibling())
 					{
@@ -185,8 +207,24 @@ public class AtomMerger extends AbstractApplication
 	private final List<FileAndFilter> atomfilters=new ArrayList<>();
 	private final List<FileAndFilter> rssfilters=new ArrayList<>();
 	private int limitEntryCount=-1;
-	
+	private HttpClient httpClient =null;
 	private boolean ignoreErrors=false;
+	
+	private InputStream openStream(final String path) throws IOException
+		{
+		if(IOUtils.isURL(path)) {
+			final HttpGet request = new HttpGet(path);
+			final HttpResponse resp = this.httpClient.execute(request);
+			if(resp.getStatusLine().getStatusCode()!=HttpStatus.SC_OK)
+				{
+				LOG.warning(path + "returned "+resp.getStatusLine().getReasonPhrase());
+				return null;
+				}
+			return resp.getEntity().getContent();
+			}
+		return IOUtils.openStream(path);
+		}
+	
 	private Document convertRssToAtom(Document rss) throws Exception
 		{
 		if(rss2atom==null) 
@@ -264,6 +302,7 @@ public class AtomMerger extends AbstractApplication
 		options.addOption(Option.builder("n").longOpt("maxcount").hasArgs().desc("Optional limit number of entries. default: no limit.").build());
 		options.addOption(Option.builder("jse").longOpt("jsexpr").hasArgs().desc("optional javascript expression to filter entity 'entry'").build());
 		options.addOption(Option.builder("jsf").longOpt("jsfile").hasArgs().desc("optional javascript file to filter entity 'entry'").build());
+		options.addOption(Option.builder("cookies").longOpt("cookies").hasArg(true).desc("optional cookie file").build());
 		super.fillOptions(options);
 	}
 	
@@ -299,6 +338,19 @@ public class AtomMerger extends AbstractApplication
 		if(cmd.hasOption("n")) {
 			this.limitEntryCount = Integer.parseInt( cmd.getOptionValue("n"));
 		}
+		HttpClientBuilder httpClientBuilder= HttpClientBuilder.create();
+		httpClientBuilder.setUserAgent("Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:50.0) Gecko/20100101 Firefox/50.0");
+		if(cmd.hasOption("cookie")) {
+			try
+				{
+				httpClientBuilder.setDefaultCookieStore(CookieStoreUtils.readTsv(new File(cmd.getOptionValue("cookie"))));
+				}
+			catch(IOException err)
+				{
+				LOG.warning("Cannot set cookie store "+err);
+				}
+			}
+		this.httpClient = httpClientBuilder.build();
 		
 		
 		if(cmd.hasOption("jse") || cmd.hasOption("jsf"))
@@ -385,21 +437,26 @@ public class AtomMerger extends AbstractApplication
 				if(path.isEmpty()) continue;
 				LOG.info(path);
 				Document dom = null;
-				
 				try {
-					//try as dom 
+					//try as dom
+					InputStream domin=null;
 					try 
 						{
-						dom  = db.parse(path);
+						domin = this.openStream(path);
+						dom  = db.parse(domin);
 						}
 					catch(Exception err)
 						{
 						dom=null;
 						}
+					finally
+						{
+						IOUtils.close(domin);
+						}
 					
 					if(dom==null && this.json2atom!=null) {
 						final Json2Dom json2dom = new Json2Dom();
-						InputStream in = IOUtils.openStream(path); 
+						InputStream in = this.openStream(path); 
 						try {
 						dom = json2dom.parse(in);
 						dom = this.json2atom.transform(dom);
@@ -413,7 +470,7 @@ public class AtomMerger extends AbstractApplication
 						}//json
 					
 					if(dom==null && this.html2atom!=null) {
-						InputStream in = IOUtils.openStream(path); 
+						InputStream in = this.openStream(path); 
 						try {
 							final Tidy tidy = new Tidy();
 							tidy.setXmlOut(true);
@@ -543,7 +600,7 @@ public class AtomMerger extends AbstractApplication
 							new StreamResult(System.out):
 							new StreamResult(fileout)
 					);
-
+			IOUtils.close(this.httpClient);
 			return 0;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -558,6 +615,7 @@ public class AtomMerger extends AbstractApplication
 	
 	public static void main(String[] args)
 		{
+		System.setProperty("http.agent", ""); 
 		new AtomMerger().instanceMainWithExit(args);
 		}
 	
