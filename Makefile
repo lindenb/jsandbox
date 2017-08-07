@@ -157,12 +157,14 @@ jgit.jars  =  \
 	$(lib.dir)/org/eclipse/jgit/org.eclipse.jgit/4.4.1.201607150455-r/org.eclipse.jgit-4.4.1.201607150455-r.jar \
 	$(lib.dir)/org/slf4j/slf4j-api/1.7.21/slf4j-api-1.7.21.jar
 
+jcommander.jar= \
+	$(lib.dir)/com/beust/jcommander/1.64/jcommander-1.64.jar
 
-all_maven_jars = $(sort ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} )
+all_maven_jars = $(sort ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} )
 
 
 
-all: 	treemapviewer \
+all: 	genisansbouillir treemapviewer \
 	xml2xsd weatherarchive gribouille java2graph githistory nashornserver \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
@@ -182,7 +184,7 @@ $(eval $(call compile,mosaicofpictures,sandbox.MosaicOfPictures,${apache.commons
 $(eval $(call compile,java2xml,sandbox.Java2Xml,${apache.commons.cli} ${slf4j.jars}))
 $(eval $(call compile,xslserver,sandbox.XslHandler,${google.gson.jars} ${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars} ${spring-beans.jars}))
 $(eval $(call compile,packageeclipsejars,sandbox.PackageEclipseJars,${apache.commons.cli}))
-$(eval $(call compile,htmlinxml,sandbox.HtmlInXml,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}))
+$(eval $(call compile,htmlinxml,sandbox.HtmlInXml,${jcommander.jar}  ${jtidy.jars}))
 $(eval $(call compile,pubmedtrending,sandbox.PubmedTrending,${apache.commons.cli} ${slf4j.jars} ))
 $(eval $(call compile,atommerger,sandbox.AtomMerger,${apache.httpclient.jars}  ${apache.commons.cli} ${slf4j.jars} ${google.gson.jars} ${jtidy.jars}))
 $(eval $(call compile,cookiestorefile,sandbox.CookieStoreUtils,${apache.httpclient.jars}))
@@ -199,7 +201,7 @@ $(eval $(call compile,weatherarchive,sandbox.WeatherArchive,${apache.commons.cli
 $(eval $(call compile,velocityjson,sandbox.VelocityJson,${apache.commons.cli}  ${velocity.jars} ${google.gson.jars}  ))
 $(eval $(call compile,treemapviewer,sandbox.TreeMapViewer,  ))
 $(eval $(call compile,comicstrip,sandbox.ComicsStrip, ))
-
+$(eval $(call compile,genisansbouillir,sandbox.GeniSansBouillir,${jcommander.jar} ${apache.httpclient.jars}  ${jtidy.jars}))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 

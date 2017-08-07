@@ -27,7 +27,7 @@ import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.cookie.BasicClientCookie;
 
 public class CookieStoreUtils  {
-	
+	public static final String OPT_DESC="Cookie file. Obtained from sqlite3 -header -separator '   '  ~/.mozilla/firefox/xxx/cookies.sqlite 'select * from moz_cookies' ";
 	private CookieStoreUtils()
 		{
 		
@@ -122,7 +122,20 @@ public class CookieStoreUtils  {
 				column2index.put(tokens[i], i);
 				}
 			for(final String col:new String[]{
-					"baseDomain", "appId","name", "value", "host", "path", "expiry","isSecure", "isHttpOnly"})
+					"id", 
+					"baseDomain", 
+					"originAttributes", 
+					"name", 
+					"value", 
+					"host", 
+					"path", 
+					"expiry", 
+					"lastAccessed", 
+					"creationTime", 
+					"isSecure", 
+					"isHttpOnly", 
+					"inBrowserElement"
+				})
 				{
 				if(!column2index.containsKey(col))
 					{

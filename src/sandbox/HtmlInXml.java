@@ -2,6 +2,7 @@ package sandbox;
 
 import java.io.StringReader;
 import java.util.List;
+import java.util.function.Function;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -11,7 +12,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.apache.commons.cli.CommandLine;
 import org.w3c.dom.Attr;
 import org.w3c.dom.CDATASection;
 import org.w3c.dom.Document;
@@ -21,47 +21,64 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 import org.w3c.tidy.Tidy;
 
-public class HtmlInXml extends AbstractApplication {
-	
-	private Node clone(final Document owner,final Node n)
+public class HtmlInXml extends Launcher {
+	private static final Logger LOG = Logger.builder(HtmlInXml.class).build();
+
+	public static class TidyToDom
+		implements Function<Node, Node>
 		{
-		switch(n.getNodeType())
-			{
-			case Node.TEXT_NODE:
-				{
-				String text = Text.class.cast(n).getTextContent();
-				if(text!=null) return owner.createTextNode(text);
-				return null;
-				}
-			case Node.CDATA_SECTION_NODE:
-				{
-				String text = CDATASection.class.cast(n).getTextContent();
-				if(text!=null) return owner.createTextNode(text);
-				return null;
-				}
-			case Node.ELEMENT_NODE:
-				{
-				final Element e= Element.class.cast(n);
-				final NamedNodeMap atts = e.getAttributes();
-				final Element r = owner.createElementNS(e.getNamespaceURI(),e.getNodeName());
-				for(int i=0;i< atts.getLength();++i)
-				{
-					Attr att=(Attr)atts.item(i);
-					r.setAttributeNS("http://www.w3.org/1999/xhtml",att.getNodeName(),att.getValue());
-					
-				}
-				
-				for(Node c=e.getFirstChild();c!=null;c=c.getNextSibling())
-					{
-					final Node x = this.clone(owner,c); 
-					if(x==null ) continue;
-					r.appendChild(x);
-					}
-				return r;
-				}
-			default: LOG.warning(">>>>"+n.getNodeType()+ " "+n); return null;
+		private final Document owner;
+		TidyToDom(final Document owner) {
+			this.owner = owner;
 			}
+		
+		@Override
+		public Node apply(Node t)
+			{
+			return clone(t);
+			}
+		private Node clone(final Node n)
+			{
+			switch(n.getNodeType())
+				{
+				case Node.TEXT_NODE:
+					{
+					String text = Text.class.cast(n).getTextContent();
+					if(text!=null) return this.owner.createTextNode(text);
+					return null;
+					}
+				case Node.CDATA_SECTION_NODE:
+					{
+					String text = CDATASection.class.cast(n).getTextContent();
+					if(text!=null) return this.owner.createTextNode(text);
+					return null;
+					}
+				case Node.ELEMENT_NODE:
+					{
+					final Element e= Element.class.cast(n);
+					final NamedNodeMap atts = e.getAttributes();
+					final Element r = this.owner.createElementNS(e.getNamespaceURI(),e.getNodeName());
+					for(int i=0;i< atts.getLength();++i)
+						{
+						Attr att=(Attr)atts.item(i);
+						r.setAttributeNS("http://www.w3.org/1999/xhtml",att.getNodeName(),att.getValue());
+						}
+					
+					for(Node c=e.getFirstChild();c!=null;c=c.getNextSibling())
+						{
+						final Node x = this.clone(c); 
+						if(x==null ) continue;
+						r.appendChild(x);
+						}
+					return r;
+					}
+				default: LOG.warning(">>>>"+n.getNodeType()+ " "+n); return null;
+				}
+			}
+		
 		}
+	
+	
 	
 	private void expand(final Document dom,final Element root)
 		{
@@ -92,9 +109,8 @@ public class HtmlInXml extends AbstractApplication {
 			sr.close();
 			if(newdoc!=null && newdoc.getDocumentElement()!=null)
 				{
-				final Node newChild = this.clone(dom,newdoc.getDocumentElement());
 				
-				
+				final Node newChild = new TidyToDom(dom).apply(newdoc.getDocumentElement());
 				
 				
 				if( newChild !=null)
@@ -106,48 +122,48 @@ public class HtmlInXml extends AbstractApplication {
 			}
 		}
 	@Override
-	protected int execute(final CommandLine cmd) {
-		try
+	public int doWork(final List<String> args)
 		{
-		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-		dbf.setNamespaceAware(true);
-		DocumentBuilder db = dbf.newDocumentBuilder();
-		final List<String> args = cmd.getArgList();
-		Document dom=null;
-		if(args.isEmpty())
+		try
 			{
-			LOG.info("read stdin");
-			dom = db.parse(System.in);
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+			dbf.setNamespaceAware(true);
+			DocumentBuilder db = dbf.newDocumentBuilder();
+			Document dom=null;
+			if(args.isEmpty())
+				{
+				LOG.info("read stdin");
+				dom = db.parse(System.in);
+				}
+			else if(args.size()==1)
+				{
+				LOG.info("read "+args.get(0));
+				dom = db.parse(args.get(0));
+				}
+			else
+				{
+				LOG.warning("Illegal number of args");
+				return -1;
+				}
+			
+			this.expand(dom,dom.getDocumentElement());
+			
+			final TransformerFactory trf = TransformerFactory.newInstance();
+			final Transformer tr = trf.newTransformer();
+			tr.setOutputProperty(OutputKeys.ENCODING,"UTF-8");
+			tr.transform(new DOMSource(dom),
+					new StreamResult(System.out)
+					);
+			
+			return 0;
 			}
-		else if(args.size()==1)
-			{
-			LOG.info("read "+args.get(0));
-			dom = db.parse(args.get(0));
-			}
-		else
-			{
-			LOG.warning("Illegal number of args");
-			return -1;
-			}
-		
-		this.expand(dom,dom.getDocumentElement());
-		
-		final TransformerFactory trf = TransformerFactory.newInstance();
-		final Transformer tr = trf.newTransformer();
-		tr.setOutputProperty(OutputKeys.ENCODING,"UTF-8");
-		tr.transform(new DOMSource(dom),
-				new StreamResult(System.out)
-				);
-		
-		return 0;
-		}
 	catch(Exception err)
 		{
-		err.printStackTrace();
+		LOG.error(err);
 		return -1;
 		}
 	}
-	public static void main(String[] args) {
+	public static void main(final String[] args) {
 		new HtmlInXml().instanceMainWithExit(args);
 	}
 
