@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.function.Function;
 
 import javax.imageio.ImageIO;
@@ -28,6 +29,7 @@ import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -41,6 +43,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
@@ -234,6 +237,14 @@ public class BouletMaton extends Application {
 		i = new MenuItem("Read Svg As ...");
 		i.setOnAction(AE->doMenuReadSvg(primaryStage));
 		menu.getItems().add(i);
+		menu.getItems().add(new SeparatorMenuItem());
+		i = new MenuItem("Random...");
+		i.setOnAction(AE->doRandom());
+		menu.getItems().add(i);
+		menu.getItems().add(new SeparatorMenuItem());
+		i = new MenuItem("Quit...");
+		i.setOnAction(AE->Platform.exit());
+		menu.getItems().add(i);
 		
 		menuBar.getMenus().add(menu);
 		contentPane.setTop(menuBar);
@@ -382,19 +393,22 @@ public class BouletMaton extends Application {
 	             w.writeAttribute("width",String.valueOf(WIDTH)+"px");
 	             w.writeAttribute("height",String.valueOf(HEIGHT)+"px");
 	             w.writeAttribute("version","1.1");
+	             w.writeStartElement("g");
 	             for(final Part p: this.pars) {
-	            	 if(!p.show) continue;
 	            	 String url = p.getImageUrl();
-	            	 if(url==null) continue;
+	            	 if( (url==null || !p.show) && !p.name.startsWith("coul")) continue;
 	            	 w.writeEmptyElement("image");
 	            	 w.writeAttribute("x","0");
 	            	 w.writeAttribute("y","0");
 	            	 w.writeAttribute("width",String.valueOf(WIDTH)+"px");
 		             w.writeAttribute("height",String.valueOf(HEIGHT)+"px");
-	            	 w.writeAttribute("xlink:href", url);
+		             if(url!=null) {
+		            	 w.writeAttribute("xlink:href", url);
+		             }
 	            	 w.writeAttribute("bouletmaton:name", p.name);
 	            	 w.writeAttribute("bouletmaton:num", String.valueOf(p.num));
 	             	}
+	             w.writeEndElement();//g
 	             w.writeEndElement();
 	             w.flush();
 	             w.close();
@@ -442,6 +456,8 @@ public class BouletMaton extends Application {
                  	}
                  	name2num.put(name.getValue(), Integer.parseInt(num.getValue()));
                  	}
+                 r.close();
+                 fr.close();
                 for(final Part p:this.pars)
                 	{
                 	if(!name2num.containsKey(p.name)) {
@@ -461,6 +477,15 @@ public class BouletMaton extends Application {
              }
          }
 		}
+	
+	private void doRandom() {
+		final Random rand = new Random(System.currentTimeMillis());
+		for(final Part part: this.pars) {
+			part.num = 1+ rand.nextInt(part.max);
+			}
+		paintDrawingArea();
+		}
+	
 	public static void main(final String[] args) throws Exception {
 	launch(args);
 	}
