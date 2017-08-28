@@ -28,10 +28,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Base64;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamWriter;
+import com.beust.jcommander.Parameter;
 
 
 /**
@@ -39,110 +42,17 @@ import javax.xml.stream.XMLStreamWriter;
  * ImagesToBase64
  *
  */
-public class ImagesToBase64
+public class ImagesToBase64 extends Launcher
 	{
-	private final static String BASE64 =
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	
-	
-	private static void encode(InputStream dataIn,StringBuilder out)
-		throws IOException
-		{
+	private static final Logger LOG=Logger.builder(ImagesToBase64.class).build();
 
-		char output[] = new char[4];
-		int restbits = 0;
-		 int chunks = 0;
-		int c;
-		int nFill=0;
-		
-		while((c=dataIn.read())!=-1)
-			{
-			int ic = ( c >= 0 ? c : (c & 0x7F) + 128);
-			//array3[nFill]=(byte)ic;
-		   
-		    switch (nFill)
-		        {	
-		        case 0:
-		        	{
-		        	output[nFill] = BASE64.charAt(ic >>> 2);
-		            restbits = ic & 0x03;
-		            nFill++;
-		            break;
-		        	}
-		       case 1:
-		    	    {
-		    		output[nFill] = BASE64.charAt((restbits << 4) | (ic >>> 4));
-		    	    restbits = ic & 0x0F;
-		    	    nFill++;
-		            break;
-		    	    }
-		       case 2:
-		    	   	{
-		    	   	output[nFill  ] = BASE64.charAt((restbits << 2) | (ic >>> 6));
-		    	   	output[nFill+1] = BASE64.charAt(ic & 0x3F);
-		            out.append(new String(output));
-		            // keep no more the 76 character per line
-		            chunks++;
-		            nFill=0;
-		            break;
-		    	   	}
-		        }
-			} // for
-		
-			/* final */
-			switch (nFill)
-			{    case 1:
-		         	 output[1] = BASE64.charAt((restbits << 4));
-		             output[2] = output[3] = '=';
-		             out.append(new String(output));
-		             break;
-		         case 2:
-		         	 output[2] = BASE64.charAt((restbits << 2));
-		             output[3] = '=';
-		             out.append(new String(output));
-		             break;
-			}
+	@Parameter(names={"-w","-width","--width"},description="final image width")
+	private int width=-1;
 
-		}
-	
-	public static void main(String[] args)
-		{
+	@Override
+	public int doWork(List<String> args) {
 		try
 			{
-			int width=-1;
-			int optind=0;
-			while(optind< args.length)
-				{
-				if(args[optind].equals("-h") ||
-				   args[optind].equals("-help") ||
-				   args[optind].equals("--help"))
-					{
-					System.err.println("Pierre Lindenbaum PhD. 2011");
-					System.err.println("Options:");
-					System.err.println(" -h help; This screen.");
-					System.err.println(" -w <width> (optional) force width.");
-					return;
-					}
-				else if(args[optind].equals("-w"))
-					{
-					width=Integer.parseInt(args[++optind]);
-					}
-				else if(args[optind].equals("--"))
-					{
-					optind++;
-					break;
-					}
-				else if(args[optind].startsWith("-"))
-					{
-					System.err.println("Unknown option "+args[optind]);
-					return;
-					}
-				else 
-					{
-					break;
-					}
-				++optind;
-				}
 			XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
 			XMLStreamWriter w= xmlfactory.createXMLStreamWriter(System.out,"UTF-8");
 			w.writeStartDocument("UTF-8","1.0");
@@ -151,11 +61,8 @@ public class ImagesToBase64
 			 w.writeCharacters("\n");
 			w.writeStartElement("div");
 			                      
-            while(optind< args.length)
+            for(String filename:args)
                     {
-                    
-                   
-                    String filename=args[optind++];
                     BufferedImage img=null;
                     boolean is_url=false;
                     if(	filename.startsWith("http://") ||
@@ -201,18 +108,11 @@ public class ImagesToBase64
                 		{
                 		w.writeAttribute("title",filename);
                 		}
-                	StringBuilder encoded=new StringBuilder("data:image/png;base64,");
-                	ByteArrayOutputStream baos=new ByteArrayOutputStream();
+                	final ByteArrayOutputStream baos=new ByteArrayOutputStream();
                 	ImageIO.write(img, "PNG", baos);
                 	baos.flush();
                 	baos.close();
-                	ByteArrayInputStream bais=new ByteArrayInputStream(baos.toByteArray());
-                	encode(bais,encoded);
-                	bais.close();
-                	
-                	
-                	w.writeAttribute("src",encoded.toString());
-                	
+                	w.writeAttribute("src","data:image/png;base64,"+Base64.getEncoder().encodeToString(baos.toByteArray()));
                 	
                   	if(is_url)
                   		{
@@ -229,11 +129,15 @@ public class ImagesToBase64
 			w.writeEndDocument();
 			w.flush();
 			w.close();
+			return 0;
 			} 
 		catch(Throwable err)
 			{
-			err.printStackTrace();
-			}
-		
+			LOG.error(err);
+			return -1;
+			}		
 		}
+	public static void main(final String[] args) {
+		new ImagesToBase64().instanceMainWithExit(args);
+	}
 	}

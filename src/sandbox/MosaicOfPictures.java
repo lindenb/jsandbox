@@ -12,17 +12,12 @@ import java.net.URL;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Logger;
-
 import javax.imageio.ImageIO;
+import com.beust.jcommander.Parameter;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-
-public class MosaicOfPictures extends AbstractApplication
+public class MosaicOfPictures extends Launcher
 	{
-	private static final Logger LOG=Logger.getLogger("lindenb");
+	private static final Logger LOG=Logger.builder(MosaicOfPictures.class).build();
 	
 	
 	private MosaicOfPictures()
@@ -32,12 +27,12 @@ public class MosaicOfPictures extends AbstractApplication
 	private Set<String> readPictures(BufferedReader r)
 		throws IOException
 		{
-		 Set<String> set=new LinkedHashSet<String>();
+		final Set<String> set=new LinkedHashSet<String>();
 		String line;
 		while((line=r.readLine())!=null)
 			{
 			if(line.isEmpty() || line.startsWith("#")) continue;
-			int tab=line.indexOf('\t');
+			final int tab=line.indexOf('\t');
 			if(tab==-1)
 				{
 				set.add(line.trim());
@@ -50,63 +45,47 @@ public class MosaicOfPictures extends AbstractApplication
 		return set;
 		}
 	
-	@Override
-	protected void fillOptions(Options options) {
-		options.addOption(Option.builder("c").longOpt("width").desc("final image width").hasArg(true).build());
-		options.addOption(Option.builder("o").longOpt("out").desc("image output").hasArg(true).build());	
-		options.addOption(Option.builder("x").longOpt("extend").desc("square INSIDE picture").hasArg(false).build());
-		super.fillOptions(options);
-		}
+	@Parameter(names={"-w","-width","--width"},description="final image width")
+	private int image_size=400;
+	@Parameter(names={"-o","--out"},description="image output")
+	private File outFile=null;
+	@Parameter(names={"-x","--extend"},description="square INSIDE picture")
+	private boolean squareinside=false;
 	
-	@Override
-	protected int execute(final CommandLine cmd)
-		{
-			try {
-			int image_size=400;
-			Set<String>  picts=null;
-			File outFile=null;
-			boolean squareinside = cmd.hasOption('x');
+	public int doWork(final java.util.List<String> args) {
+			try
+			{
+			Set<String>  picts=null;	
 			
-			if(cmd.hasOption('c'))
+			if(this.outFile==null)
 				{
-				image_size= Integer.parseInt(cmd.getOptionValue('c'));
-				}
-			if(cmd.hasOption('o'))
-				{
-				outFile= new File(cmd.getOptionValue('o'));
-				}
-			else
-				{
-				LOG.severe("No output file");
+				LOG.error("No output file");
 				return -1;
-				}
-			
-			final List<String> args = cmd.getArgList();
-			
+				}			
 			if(args.isEmpty())
 				{
 				picts=readPictures(new BufferedReader(new InputStreamReader(System.in)));
 				}
 			else if(args.size()==1)
 				{
-				BufferedReader r=new BufferedReader(new FileReader(args.get(0)));
+				final BufferedReader r=new BufferedReader(new FileReader(args.get(0)));
 				picts=readPictures(r);
 				r.close();
 				}
 			else
 				{
-				LOG.severe("Illegal number of arguments.");
+				LOG.error("Illegal number of arguments.");
 				return -1;
 				}
 			
 			
 			if(picts.isEmpty())
 				{
-				LOG.severe("No images");
+				LOG.error("No images");
 				return -1;
 				}
-			int per_side=(int)Math.ceil(Math.sqrt(picts.size()));
-			double one_length =image_size/Math.ceil(Math.sqrt(picts.size()));
+			final int per_side=(int)Math.ceil(Math.sqrt(picts.size()));
+			final double one_length =image_size/Math.ceil(Math.sqrt(picts.size()));
 			
 			
 			BufferedImage img=new BufferedImage(
@@ -121,7 +100,7 @@ public class MosaicOfPictures extends AbstractApplication
 			int y=0;
 			int x=0;
 			int nReads=0;
-			for(String file:picts)
+			for(final String file:picts)
 				{
 				++nReads;
 				LOG.info(file+" "+nReads+"/"+picts.size());
@@ -138,7 +117,7 @@ public class MosaicOfPictures extends AbstractApplication
 					}
 				if(img2==null)
 					{
-					LOG.severe("Cannot read "+file);
+					LOG.error("Cannot read "+file);
 					return -1;
 					}
 				double w=img2.getWidth();
@@ -186,12 +165,11 @@ public class MosaicOfPictures extends AbstractApplication
 			}
 		catch(Exception err)
 			{
-			err.printStackTrace();
-			LOG.severe(err.getMessage());
+			LOG.error(err.getMessage());
 			return -1;
 			}
 		}
-	public static void main(String[] args) throws Exception
+	public static void main(final String[] args) throws Exception
 		{
 		new MosaicOfPictures().instanceMainWithExit(args);
 		}

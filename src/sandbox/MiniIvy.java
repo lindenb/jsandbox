@@ -23,7 +23,6 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
-import org.apache.commons.cli.CommandLine;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -31,11 +30,11 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-public class MiniIvy extends AbstractApplication
+public class MiniIvy extends Launcher
 	{
 	private XPath xpath=null;
-	private Map<Dependency,Dependency> dep2deps = new HashMap<Dependency,Dependency>();
-	private Map<String, Set<Dependency>> target2dependencies = new HashMap<String, Set<Dependency>>();
+	private final Map<Dependency,Dependency> dep2deps = new HashMap<Dependency,Dependency>();
+	private final Map<String, Set<Dependency>> target2dependencies = new HashMap<String, Set<Dependency>>();
 	private static final String MAVEN4_NS="http://maven.apache.org/POM/4.0.0";
 	
 	private class Dependency
@@ -291,23 +290,17 @@ public class MiniIvy extends AbstractApplication
 		}
 
 	@Override
-	protected int execute(CommandLine cmd)
-		{
-		List<String> args= cmd.getArgList();
+	public int doWork(List<String> args) {
 		BufferedReader r = null;
 		try {
-			if(args.isEmpty())
+			final String input=oneFileOrNull(args);
+			if(input==null)
 				{
 				r = new BufferedReader(new InputStreamReader(System.in));
 				}
-			else if(args.size()==1)
-				{
-				r = new BufferedReader(new FileReader(new File(args.get(0))));
-				}
 			else
 				{
-				System.err.println("Illegal number of arguments.");
-				return -1;
+				r = new BufferedReader(new FileReader(new File(input)));
 				}
 			
 			this.xpath = XPathFactory.newInstance().newXPath();

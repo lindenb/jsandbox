@@ -46,6 +46,11 @@ public abstract class Launcher
 			}
 		}
 
+	protected String oneFileOrNull(final List<String> args) {
+		if(args.isEmpty()) return null;
+		if(args.size()==1) return args.get(0);
+		throw new IllegalArgumentException("expected one zero file one input but got "+args.size());
+		}
 	
 	public void instanceMainWithExit(final String args[]) {
 		final int ret =  instanceMain(args);

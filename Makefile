@@ -164,14 +164,14 @@ all_maven_jars = $(sort ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey
 
 
 
-all: 	genisansbouillir treemapviewer \
+all: 	bouletmaton genisansbouillir treemapviewer \
 	xml2xsd weatherarchive gribouille java2graph githistory nashornserver \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
-	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 
+	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64
 
 
-$(eval $(call compile,miniivy,sandbox.MiniIvy,${apache.commons.cli}))
+$(eval $(call compile,miniivy,sandbox.MiniIvy,${jcommander.jar}))
 $(eval $(call compile,twitter01,sandbox.Twitter01, ${twitter.hbc.jars}))
 $(eval $(call compile,twitterfollow,sandbox.TwitterFollow, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,twitteruserlookup,sandbox.TwitterUserLookup, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
@@ -180,7 +180,7 @@ $(eval $(call compile,json2xml,sandbox.Json2Xml,${google.gson.jars}))
 $(eval $(call compile,json2dom,sandbox.Json2Dom,${google.gson.jars}))
 $(eval $(call compile,geneticpainting,sandbox.GeneticPainting,${apache.commons.cli}))
 $(eval $(call compile,flickrrss,sandbox.FlickrRss,${apache.commons.cli} ${slf4j.jars} ${org.scribe.jars}))
-$(eval $(call compile,mosaicofpictures,sandbox.MosaicOfPictures,${apache.commons.cli} ${slf4j.jars}))
+$(eval $(call compile,mosaicofpictures,sandbox.MosaicOfPictures,${jcommander.jar}))
 $(eval $(call compile,java2xml,sandbox.Java2Xml,${apache.commons.cli} ${slf4j.jars}))
 $(eval $(call compile,xslserver,sandbox.XslHandler,${google.gson.jars} ${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars} ${spring-beans.jars}))
 $(eval $(call compile,packageeclipsejars,sandbox.PackageEclipseJars,${apache.commons.cli}))
@@ -202,6 +202,9 @@ $(eval $(call compile,velocityjson,sandbox.VelocityJson,${apache.commons.cli}  $
 $(eval $(call compile,treemapviewer,sandbox.TreeMapViewer,  ))
 $(eval $(call compile,comicstrip,sandbox.ComicsStrip, ))
 $(eval $(call compile,genisansbouillir,sandbox.GeniSansBouillir,${jcommander.jar} ${apache.httpclient.jars}  ${jtidy.jars}))
+$(eval $(call compile,bouletmaton,sandbox.BouletMaton,${jcommander.jar}))
+$(eval $(call compile,aksum,sandbox.Aksum,))
+$(eval $(call compile,images2base64,sandbox.ImagesToBase64,${jcommander.jar}))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 
