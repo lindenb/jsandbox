@@ -1,4 +1,4 @@
-package sandbox.options;
+package sandbox;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -62,7 +62,7 @@ public class JFXWatcher extends Application {
 		try {
 			url =this.file.toURI().toURL();
 			}
-		catch(MalformedURLException err)
+		catch(final MalformedURLException err)
 			{
 			err.printStackTrace();
 			return;
@@ -81,7 +81,6 @@ public class JFXWatcher extends Application {
 			}
 		}
 	public static void main( String[] args) {
-		args = new String[]{"/home/lindenb/jeter.xml"};
 		if(args.length!=1) {
 			System.err.println("expected one XML arguments");
 			System.exit(-1);

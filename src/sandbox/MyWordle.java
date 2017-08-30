@@ -34,14 +34,12 @@ import javax.xml.XMLConstants;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
+import com.beust.jcommander.Parameter;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
 
-public class MyWordle extends AbstractApplication
+public class MyWordle extends Launcher
 	{
-	private File fileout=null;
+	private final static Logger LOG=Logger.builder(MyWordle.class).build();
 
 	public static class Word
 		{
@@ -135,10 +133,15 @@ public class MyWordle extends AbstractApplication
 			}
 		
 		}
+	
+	@Parameter(names={"-o","-out","--out"},description="output file")
+	private File fileout=null;
+	@Parameter(names={"--font-family"},description="font")
+	private String fontFamily="Dialog";
+
 	private int biggestSize=72;
 	private int smallestSize=10;
 	private List<Word> words=new ArrayList<Word>();
-	private String fontFamily="Dialog";
 	private Random rand=new Random();
 	private Rectangle2D imageSize=null;
 	private Color fill=Color.YELLOW;
@@ -147,7 +150,9 @@ public class MyWordle extends AbstractApplication
 	private int dDeg=10;
 	private boolean useArea=false;
 	private int doSortType=-1;
+	@Parameter(names={"-w"},description="output width")
 	private Integer outputWidth=null;
+	@Parameter(names={"-f"},description="allow rotate")
 	private boolean allowRotate=false;
 	
 	public MyWordle()
@@ -713,57 +718,7 @@ public class MyWordle extends AbstractApplication
 		{
 		this.useArea = useArea;
 		}
-	
-	private final Option optFontFamily=Option.builder("font-family").
-			required(false).
-			hasArg(true).
-			desc("font family default:"+this.fontFamily).
-			argName("FONT").
-			build();
-	
-	private final Option optFileOut=Option.builder("o").
-			required(false).
-			hasArg(true).
-			desc("file out").
-			build();
-	private final Option optAllowRotate=Option.builder("r").
-			required(false).
-			hasArg(false).
-			desc("allow rotation").
-			build();
-	private final Option optWidth=Option.builder("w").
-			longOpt("width").
-			required(false).
-			hasArg(true).
-			desc("width").
-			argName("WIDTH").
-			build();
-
-	
-	@Override
-	protected void fillOptions(Options options)
-		{
-		options.addOption(this.optFontFamily);
-		options.addOption(this.optFileOut);
-		options.addOption(this.optAllowRotate);
-		options.addOption(this.optWidth);
-		super.fillOptions(options);
-		}
-	
-	@Override
-	protected Status decodeOptions(CommandLine cmd)
-		{
-		if(!cmd.hasOption(this.optFileOut.getOpt()))
-			{
-			error("ouput file missing");
-			return Status.EXIT_ERROR;
-			}
-		else
-			{
-			this.fileout = new File(cmd.getOptionValue(this.optFileOut.getOpt()));
-			}
-		return super.decodeOptions(cmd);
-		}
+			
 	
 	void read(BufferedReader r)
 		{
@@ -771,10 +726,11 @@ public class MyWordle extends AbstractApplication
 		}
 	
 	@Override
-	protected int execute(CommandLine cmd)
-		{
-		
-		List<String> args=cmd.getArgList();
+	public int doWork(final List<String> args) {
+		if(this.fileout==null) {
+			LOG.error("file out missing");
+			return -1;
+		}
 		try
 			{
 			MyWordle app=new MyWordle();
@@ -816,14 +772,14 @@ public class MyWordle extends AbstractApplication
 				}
 			else
 				{
-				error("undefined format");
+				LOG.error("undefined format");
 				return -1;
 				}
 			return 0;
 			} 
 		catch(Throwable err)
 			{
-			error(err);
+			LOG.error(err);
 			return -1;
 			}
 		}

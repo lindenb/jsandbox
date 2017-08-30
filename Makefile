@@ -168,10 +168,13 @@ all: 	bouletmaton genisansbouillir treemapviewer \
 	xml2xsd weatherarchive gribouille java2graph githistory nashornserver \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
-	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64
+	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
+	jfxwatcher mywordle
 
 
 $(eval $(call compile,miniivy,sandbox.MiniIvy,${jcommander.jar}))
+$(eval $(call compile,mywordle,sandbox.MyWordle,${jcommander.jar}))
+$(eval $(call compile,jfxwatcher,sandbox.JFXWatcher,))
 $(eval $(call compile,twitter01,sandbox.Twitter01, ${twitter.hbc.jars}))
 $(eval $(call compile,twitterfollow,sandbox.TwitterFollow, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,twitteruserlookup,sandbox.TwitterUserLookup, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
