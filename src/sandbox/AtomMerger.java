@@ -49,7 +49,6 @@ import org.w3c.tidy.Tidy;
 public class AtomMerger extends AbstractApplication
 	{
 	private static final String ATOM="http://www.w3.org/2005/Atom";
-	private static final String ATOM="http://www.w3.org/2005/Atom";
 	private static final String DATE_FORMATS[]={
 		"yyyy-MM-dd'T'HH:mm:ssXXX",
 		"EEE, dd MMM yyyy HH:mm:ss"

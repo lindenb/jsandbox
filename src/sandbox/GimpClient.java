@@ -168,7 +168,7 @@ public class GimpClient
 					}
 				}
 			} 
-		catch (Exception err)
+		catch (final Exception err)
 			{
 			err.printStackTrace();
 			}
