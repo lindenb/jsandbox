@@ -164,7 +164,7 @@ all_maven_jars = $(sort ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey
 
 
 
-all: 	bouletmaton genisansbouillir treemapviewer \
+all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
 	xml2xsd weatherarchive gribouille java2graph githistory nashornserver \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
@@ -208,6 +208,8 @@ $(eval $(call compile,genisansbouillir,sandbox.GeniSansBouillir,${jcommander.jar
 $(eval $(call compile,bouletmaton,sandbox.BouletMaton,${jcommander.jar}))
 $(eval $(call compile,aksum,sandbox.Aksum,))
 $(eval $(call compile,images2base64,sandbox.ImagesToBase64,${jcommander.jar}))
+$(eval $(call compile,rss2atom,sandbox.RssToAtom,${jcommander.jar}))
+
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 

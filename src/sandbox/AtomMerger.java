@@ -12,6 +12,8 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.script.Bindings;
 
@@ -53,6 +55,41 @@ public class AtomMerger extends AbstractApplication
 		"yyyy-MM-dd'T'HH:mm:ssXXX",
 		"EEE, dd MMM yyyy HH:mm:ss"
 		};
+	
+	public static class RssToAtom implements Function<Document, Document>
+		{
+		@Override
+		public Document apply(final Document rssDoc)
+			{
+			try
+				{
+				DocumentBuilderFactory dbf=  DocumentBuilderFactory.newInstance();
+				DocumentBuilder db= dbf.newDocumentBuilder();
+				final Document atomDoc = db.newDocument();
+				final Element  feedE = atomDoc.createElementNS(ATOM, "a:feed");
+				atomDoc.appendChild(feedE);
+				final Element rssE = rssDoc.getDocumentElement();
+				for(final Element channelE : XmlUtils.elements(rssE,E->E.getLocalName().equals("channel")))
+					{
+					final Element titleE =  atomDoc.createElementNS(ATOM, "a:title");
+					titleE.appendChild(atomDoc.createTextNode(XmlUtils.elements(channelE,E->E.getLocalName().equals("title")).stream().map(E->E.getTextContent()).collect(Collectors.joining(" "))));
+					feedE.appendChild(titleE);
+					for(final Element itemE : XmlUtils.elements(rssE,E->E.getLocalName().equals("item")))
+						{
+						
+						}
+					
+					}
+				return atomDoc;
+				}
+			catch(final Exception err)
+				{
+				throw new RuntimeException(err);
+				}
+			}
+		}
+	
+	
 	public static class EntryBean
 		{
 		private final Node root;

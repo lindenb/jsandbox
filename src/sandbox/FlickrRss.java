@@ -49,7 +49,6 @@ import org.scribe.builder.*;
 import org.scribe.builder.api.*;
 import org.scribe.model.*;
 import org.scribe.oauth.*;
-import org.slf4j.LoggerFactory;
 
 
 // http://www.flickr.com/services/api/flickr.photos.search.html
@@ -70,7 +69,7 @@ São Paulo - SP
  */
 public class FlickrRss extends AbstractApplication
 	{
-	private static org.slf4j.Logger LOG=LoggerFactory.getLogger(FlickrRss.class);
+	private static Logger LOG = Logger.builder(FlickrRss.class).build();
 	private static final String BASE_REST="https://api.flickr.com/services/rest/";
 	private enum Format { html,atom};
 	private Format format=Format.html;
@@ -501,8 +500,15 @@ public class FlickrRss extends AbstractApplication
 				
 				if(dateStart!=null)
 					{
+					try {
 					request.addBodyParameter("min_upload_date",
 						String.valueOf(java.sql.Timestamp.valueOf(dateStart).getTime()/1000));
+						}
+					catch(Exception err)
+						{
+						System.err.println("Bad date "+dateStart);
+						System.exit(-1);
+						}
 					}
 				if(dateEnd!=null)
 					{
@@ -706,7 +712,7 @@ public class FlickrRss extends AbstractApplication
 			}
 		catch (Exception e)
 			{
-			LOG.error("boum", e);
+			LOG.error(e);
 			return -1;
 			}
 		return 0;
