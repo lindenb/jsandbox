@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -35,6 +36,11 @@ public class RssToAtom extends Launcher
 			{
 			private Document atomDoc = null;
 			private String prefix="atom";
+			
+			private boolean hasName(final Element E,final String s) {
+				return s.equals(E.getNodeName()) || s.equals(E.getLocalName());
+				}
+			
 			private Element createElement(final String localName) {
 			return this.atomDoc.createElementNS(ATOM, this.prefix +":"+localName);
 			}
@@ -49,8 +55,7 @@ public class RssToAtom extends Launcher
 				XmlUtils.stream(fragment).
 					filter(N->N.getNodeType()==Node.ELEMENT_NODE).
 					map(N->Element.class.cast(N)).
-					filter(E->E.getLocalName()!=null).
-					filter(E->E.getLocalName().equals("guid")).
+					filter(E->hasName(E,"guid")).
 					map(E->E.getTextContent()).
 					map(S->{
 						final Element id = createElement("id");
@@ -64,8 +69,7 @@ public class RssToAtom extends Launcher
 				XmlUtils.stream(fragment).
 					filter(N->N.getNodeType()==Node.ELEMENT_NODE).
 					map(N->Element.class.cast(N)).
-					filter(E->E.getLocalName()!=null).
-					filter(E->E.getLocalName().equals("pubDate")).
+					filter(E->hasName(E,"pubDate")).
 					map(E->E.getTextContent()).
 					map(S->{
 						final Element id = createElement("updated");
@@ -75,6 +79,21 @@ public class RssToAtom extends Launcher
 					limit(1L).
 					forEach(E->{entry.appendChild(E);});
 
+				// pubDate
+				XmlUtils.stream(fragment).
+					filter(N->N.getNodeType()==Node.ELEMENT_NODE).
+					map(N->Element.class.cast(N)).
+					filter(E->hasName(E,"description")).
+					map(E->E.getTextContent()).
+					map(S->{
+						final Element id = createElement("subtitle");
+						id.appendChild(createText(S));
+						return id;
+						}).
+					limit(1L).
+					forEach(E->{entry.appendChild(E);});
+
+				
 				return entry;
 
 				}
@@ -86,8 +105,7 @@ public class RssToAtom extends Launcher
 				XmlUtils.stream(channel).
 					filter(N->N.getNodeType()==Node.ELEMENT_NODE).
 					map(N->Element.class.cast(N)).
-					filter(E->E.getLocalName()!=null).
-					filter(E->E.getLocalName().equals("title")).
+					filter(E->hasName(E,"title")).
 					map(E->E.getTextContent()).
 					map(S->{
 						final Element id = createElement("title");
@@ -101,8 +119,7 @@ public class RssToAtom extends Launcher
 				XmlUtils.stream(channel).
 					filter(N->N.getNodeType()==Node.ELEMENT_NODE).
 					map(N->Element.class.cast(N)).
-					filter(E->E.getLocalName()!=null).
-					filter(E->E.getLocalName().equals("link")).
+					filter(E->hasName(E,"link")).
 					map(E->E.getTextContent()).
 					map(S->{
 						final Element id = createElement("id");
@@ -120,8 +137,7 @@ public class RssToAtom extends Launcher
 				XmlUtils.stream(channel).
 					filter(N->N.getNodeType()==Node.ELEMENT_NODE).
 					map(N->Element.class.cast(N)).
-					filter(E->E.getLocalName()!=null).
-					filter(E->E.getLocalName().equals("item")).
+					filter(E->hasName(E,"item")).
 					map(E->matchItem(E)).
 					filter(N->N!=null).
 					forEach(E->{frag.appendChild(E);})
@@ -147,10 +163,9 @@ public class RssToAtom extends Launcher
 
 					final Element feedE = this.createElement("feed");
 					this.atomDoc.appendChild(feedE);
-					
+
 					XmlUtils.elements(rss).stream().
-						filter(E->E.getLocalName()!=null).
-						filter(E->E.getLocalName().equals("channel")).
+						filter(E->hasName(E,"channel")).
 						limit(1L).
 						forEach(C->{
 							feedE.appendChild(matchChannel(C));	
