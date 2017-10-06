@@ -37,6 +37,21 @@ public class MiniIvy extends Launcher
 	private final Map<String, Set<Dependency>> target2dependencies = new HashMap<String, Set<Dependency>>();
 	private static final String MAVEN4_NS="http://maven.apache.org/POM/4.0.0";
 	
+	
+	private static String fixArray( String s)
+	{
+		if(s==null) return null;
+		for(;;) {
+			int i= s.indexOf("[");
+			if(i==-1) return s;
+			int j= s.indexOf("]",i+1);
+			if(j==-1) return s;
+			String array[]= s.substring(i+1,j).split("[,]");
+			s = s.substring(0,i) + array[array.length-1] + s.substring(j+1); 
+		}
+		
+	}
+	
 	private class Dependency
 		{
 		String group;
@@ -199,9 +214,9 @@ public class MiniIvy extends Launcher
 						continue;
 					
 					Dependency dep = new Dependency();
-					dep.group = (String)xpath.evaluate("pom:groupId/text()", E, XPathConstants.STRING);
-					dep.artifactId = (String)xpath.evaluate("pom:artifactId/text()", E, XPathConstants.STRING);
-					dep.revision = (String)xpath.evaluate("pom:version/text()", E, XPathConstants.STRING);
+					dep.group = fixArray((String)xpath.evaluate("pom:groupId/text()", E, XPathConstants.STRING));
+					dep.artifactId =  fixArray((String)xpath.evaluate("pom:artifactId/text()", E, XPathConstants.STRING));
+					dep.revision =  fixArray((String)xpath.evaluate("pom:version/text()", E, XPathConstants.STRING));
 				
 					if(dep.group.equals("${project.groupId}"))
 						{
