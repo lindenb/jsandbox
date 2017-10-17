@@ -169,7 +169,7 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
-	jfxwatcher mywordle
+	jfxwatcher mywordle atom500px
 
 
 $(eval $(call compile,miniivy,sandbox.MiniIvy,${jcommander.jar}))
@@ -201,7 +201,7 @@ $(eval $(call compile,xml2xsd,sandbox.XmlToXsd,${apache.commons.cli}  ))
 $(eval $(call compile,java2graph,sandbox.Java2Graph,${apache.commons.cli}  ))
 $(eval $(call compile,gribouille,sandbox.Gribouille,${apache.commons.cli}  ))
 $(eval $(call compile,weatherarchive,sandbox.WeatherArchive,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}  ${apache.httpclient.jars} ))
-$(eval $(call compile,velocityjson,sandbox.VelocityJson,${apache.commons.cli}  ${velocity.jars} ${google.gson.jars}  ))
+$(eval $(call compile,velocityjson,sandbox.VelocityJson,${apache.commons.cli}  ${velocity.jars} ${gogle.gson.jars}  ))
 $(eval $(call compile,treemapviewer,sandbox.TreeMapViewer,  ))
 $(eval $(call compile,comicstrip,sandbox.ComicsStrip, ))
 $(eval $(call compile,genisansbouillir,sandbox.GeniSansBouillir,${jcommander.jar} ${apache.httpclient.jars}  ${jtidy.jars}))
@@ -209,6 +209,7 @@ $(eval $(call compile,bouletmaton,sandbox.BouletMaton,${jcommander.jar}))
 $(eval $(call compile,aksum,sandbox.Aksum,))
 $(eval $(call compile,images2base64,sandbox.ImagesToBase64,${jcommander.jar}))
 $(eval $(call compile,rss2atom,sandbox.RssToAtom,${jcommander.jar}))
+$(eval $(call compile,atom500px,sandbox.Atom500px,${jcommander.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
