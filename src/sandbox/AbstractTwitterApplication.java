@@ -8,11 +8,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
 import org.scribe.builder.api.Api;
 import org.scribe.builder.api.TwitterApi;
 import org.scribe.model.OAuthRequest;
@@ -24,14 +20,16 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.beust.jcommander.Parameter;
 
 
 
 public  abstract class AbstractTwitterApplication
 	extends AbstractOAuthApplication
 	{
+	private static final Logger LOG=Logger.builder(AbstractTwitterApplication.class).build();
+
 	private static final String BASE_REST="https://api.twitter.com/1.1";
-	protected int sleep_minutes=5;
 
 	protected static interface Consumer<T>
 		{
@@ -41,7 +39,7 @@ public  abstract class AbstractTwitterApplication
 	protected static abstract class Entity
 		{
 		JsonObject delegate;
-		protected Entity(JsonObject o)
+		protected Entity(final JsonObject o)
 			{
 			this.delegate= o;
 			}
@@ -53,7 +51,7 @@ public  abstract class AbstractTwitterApplication
 		extends Entity
 		{
 		String text;
-		HashTagEntity(JsonObject o)
+		HashTagEntity(final JsonObject o)
 			{
 			super(o);
 			this.text=o.get("text").getAsString();
@@ -71,7 +69,7 @@ public  abstract class AbstractTwitterApplication
 		String url;
 		String expanded_url;
 		String display_url;
-		UrlEntity(JsonObject o)
+		UrlEntity(final JsonObject o)
 			{
 			super(o);
 			this.url=o.get("url").getAsString();
@@ -160,33 +158,10 @@ public  abstract class AbstractTwitterApplication
 		{
 		}
 	
+	@Parameter(names={"-wait","--wait"},description="wait MINUTES after twitter says quotas was reached")
+	protected int sleep_minutes=5;
+
 	
-	@Override
-	protected void fillOptions(final Options options)
-		{
-		options.addOption(Option.builder("wait").
-				hasArg().
-				required(false).
-				longOpt("wait").
-				argName("MINUTES").
-				type(Integer.class).
-				desc("wait MINUTES after twitter says quotas was reached default:"+sleep_minutes).
-				build()
-				);
-		
-		super.fillOptions(options);
-		}
-	
-	@Override
-	protected Status decodeOptions(CommandLine cmd)
-		{
-		if(cmd.hasOption("wait"))
-			{
-			this.sleep_minutes = Integer.parseInt(cmd.getOptionValue("wait"));
-			}
-	
-		return super.decodeOptions(cmd);
-		}
 
 	
 	protected void listFollowers(
@@ -219,8 +194,7 @@ public  abstract class AbstractTwitterApplication
 		    getService().signRequest(getAccessToken(), request);
 	
 		    Response response = request.send();
-		    Reader  in=new InputStreamReader(new LogInputStream(response.getStream(),
-		    		!Level.OFF.equals(LOG.getLevel())?System.err:null));
+		    Reader  in=new InputStreamReader(new LogInputStream(response.getStream(),System.err));
 		    JsonElement jsonResponse=parser.parse(in);
 		    in.close();
 	
@@ -259,7 +233,7 @@ public  abstract class AbstractTwitterApplication
 			JsonParser parser=new JsonParser();
 			BigInteger cursor=BigInteger.ONE.negate();
 			String url=getBaseURL()+"/"+verb+"/ids.json";
-			info(url);
+			LOG.info(url);
 			for(;;)
 				{
 			    JsonElement jsonResponse=null;
@@ -277,7 +251,7 @@ public  abstract class AbstractTwitterApplication
 
 					    Response response = request.send();
 					    Reader  in=new InputStreamReader(new LogInputStream(response.getStream(),
-					    		!Level.OFF.equals(LOG.getLevel())?System.err:null));
+					    		System.err));
 					    jsonResponse=parser.parse(in);
 					    in.close();
 
@@ -311,7 +285,7 @@ public  abstract class AbstractTwitterApplication
 		}
 	protected void sleep(Throwable err)
 		{
-		if(err!=null) error(err);
+		if(err!=null) LOG.error(err);
 		try { Thread.sleep(sleep_minutes*1000*60);//5minutes 
 			}
 		catch(Exception err2) {

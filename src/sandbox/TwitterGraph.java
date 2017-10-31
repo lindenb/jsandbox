@@ -29,16 +29,12 @@ import java.sql.Statement;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
 
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
 import org.scribe.model.OAuthRequest;
 import org.scribe.model.Response;
 import org.scribe.model.Verb;
@@ -48,14 +44,19 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.beust.jcommander.Parameter;
 
 
 
 public class TwitterGraph
 	extends AbstractTwitterApplication
 	{
+	private static final Logger LOG=Logger.builder(TwitterGraph.class).build();
+
 	private Connection connection=null;
+	@Parameter(names={"-d","--database"},description="sqlite3 database",required=true)
 	private File databaseFile=null;
+
 
 	
 	private TwitterGraph()
@@ -63,7 +64,7 @@ public class TwitterGraph
 		}
 	
 	
-	private static void gexfAtt(XMLStreamWriter w,String key,String value)
+	private static void gexfAtt(final XMLStreamWriter w,final String key,final String value)
 			throws XMLStreamException
 			{
 			if(value==null) return;
@@ -111,8 +112,11 @@ public class TwitterGraph
 		
 		w.writeStartDocument("UTF-8","1.0");
 		w.writeStartElement("gexf");
-		w.writeAttribute("xmlns", "http://www.gexf.net/1.2draft");
-		w.writeAttribute("version", "1.2");
+		w.writeAttribute("version", "1.3");
+		w.writeAttribute("xmlns", "http://www.gexf.net/1.3");
+		w.writeAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+		w.writeAttribute("xsi:schemaLocation", "http://www.gexf.net/1.3 http://www.gexf.net/1.3/gexf.xsd");
+
 		
 		
 		/* meta */
@@ -128,7 +132,7 @@ public class TwitterGraph
 		/* graph */
 		w.writeStartElement("graph");
 		w.writeAttribute("mode", "static");
-		w.writeAttribute("defaultedgetype", "directed");
+		//w.writeAttribute("defaultedgetype", "directed");
 		
 		
 		
@@ -155,7 +159,7 @@ public class TwitterGraph
 		ResultSet row=stmt.executeQuery("select json from user");
 		while(row.next())
 			{
-			JsonObject user=jsonParser.parse(row.getString(1)).getAsJsonObject();
+			final JsonObject user=jsonParser.parse(row.getString(1)).getAsJsonObject();
 			userToGexf(w,user);
 			}
 		row.close();
@@ -169,12 +173,12 @@ public class TwitterGraph
 		int relid=0;
 		while(row.next())
 			{
-			BigInteger id1=new BigInteger(row.getString(1));
-			BigInteger id2=new BigInteger(row.getString(2));
-			boolean reverse=row.getInt(3)!=0;
+			final BigInteger id1=new BigInteger(row.getString(1));
+			final BigInteger id2=new BigInteger(row.getString(2));
+			final  boolean reverse=row.getInt(3)!=0;
 			w.writeEmptyElement("edge");
 			w.writeAttribute("id", "E"+(++relid));
-			w.writeAttribute("type", (reverse?"mutual":"directed"));
+			w.writeAttribute("type", (reverse?"undirected":"directed"));
 			w.writeAttribute("source",id1.toString());
 			w.writeAttribute("target",id2.toString());
 				
@@ -190,7 +194,7 @@ public class TwitterGraph
 		w.flush();
 		}
 	
-	private void userToGexf(XMLStreamWriter w,JsonObject user)
+	private void userToGexf(final  XMLStreamWriter w,final JsonObject user)
 		throws XMLStreamException
 		{
 		w.writeStartElement("node");
@@ -244,8 +248,7 @@ public class TwitterGraph
 					    getService().signRequest(getAccessToken(), request);
 
 					    Response response = request.send();
-					    Reader  in=new InputStreamReader(new LogInputStream(response.getStream(),
-					    		!Level.OFF.equals(LOG.getLevel())?System.err:null));
+					    Reader  in=new InputStreamReader(new LogInputStream(response.getStream(),System.err));
 					    jsonResponse=parser.parse(in);
 					    in.close();
 					    array=jsonResponse.getAsJsonObject().get("ids").getAsJsonArray();
@@ -273,7 +276,7 @@ public class TwitterGraph
 			    	}
 			    if(cursor==null || cursor.equals(BigInteger.ZERO)) break;
 				}
-			info("count friends: of "+userId+"="+friends.size());
+			LOG.info("count friends: of "+userId+"="+friends.size());
 			return friends;
 			}	
 	
@@ -330,7 +333,7 @@ public class TwitterGraph
 	    		{
 			    Response response = request.send();
 			    Reader  in=new InputStreamReader(new LogInputStream(response.getStream(),
-			    		!Level.OFF.equals(LOG.getLevel())?System.err:null));
+			    		System.err));
 			    jsonResponse=parser.parse(in);
 			    in.close();
 				break;
@@ -425,37 +428,14 @@ public class TwitterGraph
 		this.connection=null;
 		}
 	
-	@Override
-	protected void fillOptions(final Options options) {
-		options.addOption(Option.builder("d").
-				hasArg().
-				required(false).
-				longOpt("database").
-				argName("DB.sqlite").
-				desc("sqlite3 database").
-				build()
-				);
-		super.fillOptions(options);
-		}
+	
 
-	@Override
-	protected Status decodeOptions(CommandLine cmd) {
-		if(cmd.hasOption("d"))
-			{
-			this.databaseFile = new File(cmd.getOptionValue("d"));
-			}
-		
-		return super.decodeOptions(cmd);
-		}
-	
 	
 	@Override
-	protected int execute(final CommandLine cmd)
-		{
-		final List<String> args = cmd.getArgList();
+	public int doWork(List<String> args) {
 		if(this.databaseFile==null)
 			{
-			error("undefined option 'd'");
+			LOG.error("undefined option 'd'");
 			return -1;
 			}
 		
@@ -464,7 +444,7 @@ public class TwitterGraph
 			
 			if( args.size()==1 )
 				{
-				String screen_name=args.get(0);
+				final String screen_name=oneFileOrNull(args);
 				BigInteger user_id=null;
 				
 				try {
@@ -488,14 +468,14 @@ public class TwitterGraph
 				}
 			else
 				{
-				error("Illegal Arguments.\n");
+				LOG.error("Illegal Arguments.\n");
 				return -1;
 				}
 			return 0;
 			}
 		catch(Exception err)
 			{
-			error(err);
+			LOG.error(err);
 			return -1;
 			}
 		
