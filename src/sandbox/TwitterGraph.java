@@ -205,14 +205,14 @@ public class TwitterGraph
 		gexfAtt(w,"name",user.get("name").getAsString());
 		gexfAtt(w,"screenName",user.get("screen_name").getAsString());
 		gexfAtt(w,"imageUrl",user.get("screen_name").getAsString());
-		gexfAtt(w,"location","nowhere");
+		gexfAtt(w,"location",user.has("location")?user.get("location").getAsString():"nowhere");
 		gexfAtt(w,"description",user.get("screen_name").getAsString());
-		gexfAtt(w,"protectedProfile","false");
-		gexfAtt(w,"friends","0");
-		gexfAtt(w,"followers","0");
-		gexfAtt(w,"listed","0");
-		gexfAtt(w,"utc_offset","0");
-		gexfAtt(w,"statuses_count","0");
+		gexfAtt(w,"protectedProfile",user.has("protected")?String.valueOf(user.get("protected").getAsBoolean()):"false");
+		gexfAtt(w,"friends",user.has("friends_count")?user.get("friends_count").getAsString():"0");
+		gexfAtt(w,"followers",user.has("followers_count")?user.get("followers_count").getAsString():"0");
+		gexfAtt(w,"listed",user.has("listed_count")?user.get("listed_count").getAsString():"0");
+		gexfAtt(w,"utc_offset",user.has("utc_offset")?user.get("utc_offset").getAsString():"0");
+		gexfAtt(w,"statuses_count",user.has("statuses_count")?user.get("statuses_count").getAsString():"0");
 		
 		w.writeEndElement();
 		
