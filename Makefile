@@ -169,7 +169,7 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
-	jfxwatcher mywordle atom500px
+	jfxwatcher mywordle atom500px gimpprocs2xml
 
 
 $(eval $(call compile,miniivy,sandbox.MiniIvy,${jcommander.jar}))
@@ -226,6 +226,16 @@ $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 src/sandbox/AutoLexYacc.java : src/sandbox/AutoLexYacc.jj
 	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<	
 
+
+gimpprocs2xml: ./src/sandbox/GimpProcedures.jj
+	mkdir -p ${tmp.dir}/sandbox ${tmp.dir}/META-INF ${bin.dir}
+	${javacc.exe} -OUTPUT_DIRECTORY=tmp/sandbox $<
+	javac -d ${tmp.dir} ${tmp.dir}/sandbox/*.java
+	mkdir -p ${tmp.dir}/META-INF 
+	echo "Manifest-Version: 1.0" > ${tmp.dir}/tmp.mf
+	echo "Main-Class: sandbox.GimpProcParser" >> ${tmp.dir}/tmp.mf
+	${JAR} cfm ${bin.dir}/gimpprocs2xml.jar ${tmp.dir}/tmp.mf  -C ${tmp.dir} .
+	rm -rf ${tmp.dir}	
 
 textlet : src/sandbox/TextletParser.jj
 	${javacc.exe} -OUTPUT_DIRECTORY=src/sandbox $<	
