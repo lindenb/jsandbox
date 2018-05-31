@@ -3,6 +3,7 @@ package sandbox;
 import java.io.File;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -36,6 +37,7 @@ public class RssToAtom extends Launcher
 			{
 			private Document atomDoc = null;
 			private String prefix="atom";
+			private Predicate<Element> itemFilter = (E)->true;
 			
 			private boolean hasName(final Element E,final String s) {
 				return s.equals(E.getNodeName()) || s.equals(E.getLocalName());
@@ -138,6 +140,7 @@ public class RssToAtom extends Launcher
 					filter(N->N.getNodeType()==Node.ELEMENT_NODE).
 					map(N->Element.class.cast(N)).
 					filter(E->hasName(E,"item")).
+					filter(E->itemFilter.test(E)).
 					map(E->matchItem(E)).
 					filter(N->N!=null).
 					forEach(E->{frag.appendChild(E);})
