@@ -3,3 +3,4 @@ jeter*
 *.jar
 *~
 /tmp/
+/bin/
