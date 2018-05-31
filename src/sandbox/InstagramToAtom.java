@@ -31,6 +31,20 @@ import org.apache.http.impl.client.HttpClientBuilder;
 
 import com.beust.jcommander.Parameter;
 /**
+```
+$ crontab -e
+
+0 0-23 * * * /home/lindenb/bin/insta2atom.sh
+
+$ cat /home/lindenb/bin/insta2atom.sh
+
+```bash
+#!/bin/bash
+
+java -jar ${HOME}/src/jsandbox/dist/insta2atom.jar |\
+	xmllint --format --output  "${HOME}/public_html/feed/instagram.xml" -
+```
+
 
  */
 public class InstagramToAtom extends Launcher {
@@ -38,7 +52,7 @@ public class InstagramToAtom extends Launcher {
 	
 	@Parameter(names={"-t","--tumb-size"},description="Thumb size.")
 	private int thumb_size =128;
-	@Parameter(names={"-f","--force"},description="Force print every items, even if they're not new.")
+	@Parameter(names={"-f","--force"},description="Force print only new items, discard the non-updated.")
 	private boolean force_print_flag=true;
 	@Parameter(names={"-s","--seconds"},description="Sleep s seconds between each calls.")
 	private int sleep_seconds = 5;
@@ -189,7 +203,8 @@ public class InstagramToAtom extends Launcher {
 				map(L->L.split("[\t]")).
 				map(A->{
 					final Query q = new Query();
-					q.query=A[0];
+					q.query=A[0].trim();
+					if(q.query.isEmpty()) return null;
 					if(A.length>2) { 
 						try {
 							q.date = dateFormatter.parse(A[1]);
