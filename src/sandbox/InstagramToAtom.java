@@ -13,9 +13,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import javax.xml.stream.XMLOutputFactory;
@@ -24,6 +25,7 @@ import javax.xml.stream.XMLStreamWriter;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
@@ -40,8 +42,10 @@ public class InstagramToAtom extends Launcher {
 	private boolean force_print_flag=true;
 	@Parameter(names={"-s","--seconds"},description="Sleep s seconds between each calls.")
 	private int sleep_seconds = 5;
-	@Parameter(names={"-c","--cache"},description="Cache directory. default: ${HOME}/.insta2atom ")
+	@Parameter(names={"-d","--directory"},description="Cache directory. default: ${HOME}/.insta2atom ")
 	private File cacheDirectory  = null;
+	@Parameter(names={"-c","--cookies"},description=CookieStoreUtils.OPT_DESC)
+	private File cookieStoreFile  = null;
 	
 	private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	CloseableHttpClient client = null;
@@ -53,7 +57,7 @@ public class InstagramToAtom extends Launcher {
 		String query = "";
 		Date date = new Date();
 		String md5 = "";
-		final Set<String> images_urls = new LinkedHashSet<>();
+		final Set<String> images_urls = new TreeSet<>();
 		boolean changed_flag = false;
 		
 		String getUrl() {
@@ -76,11 +80,9 @@ public class InstagramToAtom extends Launcher {
 		return new File(getPreferenceDir(),"cache.tsv");
 		}
 	
-	private void  query(Query q)
+	private void  query(final Query q)
 		{
-		
 		String html;
-		
 		CloseableHttpResponse response = null;
 		InputStream httpIn = null;
 		try
@@ -100,12 +102,15 @@ public class InstagramToAtom extends Launcher {
 			IOUtils.close(httpIn);
 			IOUtils.close(response);
 			}
-		
+		final Set<String> new_images_url = new HashSet<>();
 		final String thumbnail_src= "\"thumbnail_src\":\"";
 		for(;;)
 			{
 			int i= html.indexOf(thumbnail_src);
-			if(i==-1) break;
+			if(i==-1) {
+				
+				break;
+			}
 			i+= thumbnail_src.length();
 			int j=  html.indexOf("\"",i);
 			if(j!=-1) {
@@ -113,7 +118,7 @@ public class InstagramToAtom extends Launcher {
 				if(image_url.startsWith("https://") &&
 					(image_url.endsWith(".png") || image_url.endsWith(".jpg")))
 					{
-					q.images_urls.add(image_url);
+					new_images_url.add(image_url);
 					}
 				html = html.substring(j);
 				}
@@ -122,20 +127,27 @@ public class InstagramToAtom extends Launcher {
 				html = html.substring(i);
 				}
 			}
+		
+		if(new_images_url.isEmpty()) {
+			LOG.warning("No image found for "+q.query);
+		}
+		
 		 MessageDigest md;
 		 try {
 			 md = MessageDigest.getInstance("MD5");
-		 } catch (Exception err) {
+		 } catch (final Exception err) {
 			LOG.error(err);
 			throw new RuntimeException(err);
 		 	}
-		 md.update(String.join(" ", q.images_urls).getBytes());
+		 md.update(String.join(" ", new_images_url).getBytes());
 		 final String new_md5 = new BigInteger(1,md.digest()).toString(16);
-		if(q.images_urls.isEmpty() || new_md5.equals(q.md5)) {
+		if(new_images_url.isEmpty() || new_md5.equals(q.md5)) {
 			q.changed_flag =false;
 		} 
 		else
 		{
+			q.images_urls.clear();
+			q.images_urls.addAll(new_images_url);
 			q.changed_flag =true;
 			q.md5 = new_md5;
 			q.date = new Date();
@@ -155,6 +167,7 @@ public class InstagramToAtom extends Launcher {
 			}
 		try(final PrintWriter pw = new PrintWriter(cacheFile))
 			{
+			pw.println("#Date: "+dateFormatter.format(new Date()));
 			cache.stream().forEach(Q->pw.println(Q.query+"\t"+dateFormatter.format(Q.date)+"\t"+Q.md5+"\t"+String.join(" ", Q.images_urls)));
 			pw.flush();
 			}
@@ -208,12 +221,25 @@ public class InstagramToAtom extends Launcher {
 		
 		XMLStreamWriter w = null;
 		try
-			{
-			HttpHost proxy=new HttpHost("cache.ha.univ-nantes.fr", 3128);
-			this.client = HttpClientBuilder.create().
-					setProxy(proxy).
-					setUserAgent(IOUtils.getUserAgent()).
-					build();
+			{			
+			final HttpClientBuilder builder = HttpClientBuilder.create();
+			final String proxyH = System.getProperty("http.proxyHost");
+			final String proxyP = System.getProperty("http.proxyPort");
+			if(proxyH!=null && proxyP!=null && 
+					!proxyH.trim().isEmpty() && 
+					!proxyP.trim().isEmpty())
+				{
+				builder.setProxy(new HttpHost(proxyH, Integer.parseInt(proxyP)));
+				}
+			builder.setUserAgent(IOUtils.getUserAgent());
+			
+			if(this.cookieStoreFile!=null) {
+				final BasicCookieStore cookies = CookieStoreUtils.readTsv(this.cookieStoreFile);
+				builder.setDefaultCookieStore(cookies);
+			}
+			
+			this.client = builder.build();
+					
 			
 			final XMLOutputFactory xof = XMLOutputFactory.newInstance();
 			w = xof.createXMLStreamWriter(System.out, "UTF-8");
@@ -230,7 +256,8 @@ public class InstagramToAtom extends Launcher {
 			w.writeEndElement();
 			
 			final List<Query> cache = readCache();
-			for(final Query q:cache) {
+			for(int idx=0;idx < cache.size();++idx) {
+				final Query q=cache.get(idx);
 				w.writeComment(q.query);
 				query(q);
 				if(q.images_urls.isEmpty()) continue;
@@ -260,22 +287,22 @@ public class InstagramToAtom extends Launcher {
 					w.writeEndElement();
 				w.writeEndElement();
 				
-				w.writeStartElement("summary"); 
+				w.writeStartElement("content"); 
 				w.writeAttribute("type","html");
 				w.writeCharacters("<div><p>");
 				for(final String thumb: q.images_urls) {
 					w.writeCharacters(
-						"<a href=\""+q.getUrl()+"\"><img src=\"" +
+						"<a target=\"_blank\" href=\""+q.getUrl()+"\"><img src=\"" +
 								thumb+
 						"\" width=\""+thumb_size+"\" height=\""+this.thumb_size+"\"/></a>"
 						);
 					}
 				w.writeCharacters("</p></div>");
-				w.writeEndElement();
+				w.writeEndElement();//content
 				
 				w.writeEndElement();//entry
 				
-				Thread.sleep(this.sleep_seconds*1000);
+				if(idx>0) Thread.sleep(this.sleep_seconds*1000);
 				}
 			
 			w.writeEndElement();
