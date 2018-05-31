@@ -65,17 +65,65 @@ public class InstagramToAtom extends Launcher {
 	
 	
 	private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-	CloseableHttpClient client = null;
+	private CloseableHttpClient client = null;
 	
-	
+	private static class Image implements Comparable<Image>
+		{
+		final String url;
+		final String shortcode;
+		
+		Image(final String url,final String shortcode) {
+			this.url = url;
+			this.shortcode = shortcode.trim();
+			}
+		Image(final String url) {
+			final int pipe = url.indexOf("|");
+			if(pipe==-1) {
+				this.url = url;
+				this.shortcode = "";
+				}
+			else
+				{
+				this.url = url.substring(0,pipe);
+				this.shortcode = url.substring(pipe+1).trim();
+				}
+			}
+		@Override
+		public int compareTo(final Image o)
+			{
+			return this.url.compareTo(o.url);
+			}
+		@Override
+		public int hashCode()
+			{
+			return this.url.hashCode();
+			}
+		
+		public String getPageHref() {
+			return "https://www.instagram.com/p/"+this.shortcode+"/";
+		}
+		
+		@Override
+		public boolean equals(Object obj)
+			{
+			if(obj==this) return true;
+			if(obj==null || !(this instanceof Image)) return false;
+			return compareTo(Image.class.cast(obj))==0;
+			}
+		@Override
+		public String toString()
+			{
+			return this.url;
+			}
+		}
 	
 	private class Query
 		{
 		String query = "";
 		Date date = new Date();
 		String md5 = "";
-		final Set<String> old_images_urls = new TreeSet<>();
-		final Set<String> new_images_urls = new TreeSet<>();
+		final Set<Image> old_images_urls = new TreeSet<>();
+		final Set<Image> new_images_urls = new TreeSet<>();
 		
 		String getUrl() {
 			return "https://www.instagram.com"+
@@ -130,20 +178,36 @@ public class InstagramToAtom extends Launcher {
 			IOUtils.close(response);
 			}
 		final String thumbnail_src= "\"thumbnail_src\":\"";
+		final String shortcode_src= "\"shortcode\":\"";
 		for(;;)
 			{
 			int i= html.indexOf(thumbnail_src);
+			
 			if(i==-1) {
 				break;
 				}
+			int h=i;
 			i+= thumbnail_src.length();
-			int j=  html.indexOf("\"",i);
+			final int j=  html.indexOf("\"",i);
 			if(j!=-1) {
+				String shortcode="";
+				while(h>=0 && h+shortcode_src.length() < html.length()) {
+					if(html.substring(h,h+shortcode_src.length()).equals(shortcode_src)) {
+						h+=shortcode_src.length();
+						final int k = html.indexOf("\"",h);
+						if(k!=-1) {
+							shortcode =  html.substring(h, k);;
+							}
+						break;
+						}
+					--h;
+					}
+				
 				final String image_url = html.substring(i, j);
 				if(image_url.startsWith("https://") &&
 					(image_url.endsWith(".png") || image_url.endsWith(".jpg")))
 					{
-					q.new_images_urls.add(image_url);
+					q.new_images_urls.add(new Image(image_url,shortcode));
 					}
 				html = html.substring(j);
 				}
@@ -157,7 +221,9 @@ public class InstagramToAtom extends Launcher {
 			LOG.warning("No image found for "+q.query);
 		}
 		
-		final String new_md5 = md5(String.join(" ", q.new_images_urls));
+		final String new_md5 = md5(q.new_images_urls.stream().
+				map(I->I.url).
+				collect(Collectors.joining(" ")));
 		if(!new_md5.equals(q.md5)) {
 			q.md5 = new_md5;
 			q.date = new Date();
@@ -179,7 +245,11 @@ public class InstagramToAtom extends Launcher {
 			{
 			pw.println("#Date: "+dateFormatter.format(new Date()));
 			cache.stream().forEach(Q->pw.println(
-					Q.query+"\t"+dateFormatter.format(Q.date)+"\t"+Q.md5+"\t"+String.join(" ", Q.new_images_urls)));
+					Q.query+"\t"+dateFormatter.format(Q.date)+"\t"+Q.md5+"\t"+
+					Q.new_images_urls.
+					stream().
+					map(I->I.url+(I.shortcode.isEmpty()?"":"|"+I.shortcode)).
+					collect(Collectors.joining(" "))));
 			pw.flush();
 			}
 		catch(final IOException err) {
@@ -213,7 +283,8 @@ public class InstagramToAtom extends Launcher {
 						q.md5 = A[2];
 						if(A.length>3 && !A[3].trim().isEmpty()) {
 							q.old_images_urls.clear();
-							q.old_images_urls.addAll(Arrays.asList(A[3].split("[ ]")));
+							q.old_images_urls.addAll(
+									Arrays.stream(A[3].split("[ ]")).map(S->new Image(S)).collect(Collectors.toSet()));
 							}
 						}
 					return q;
@@ -273,7 +344,7 @@ public class InstagramToAtom extends Launcher {
 				w.writeComment(q.query);
 				if(!query(q)) continue;
 				
-				final Set<String> images_to_print = new TreeSet<>(q.new_images_urls);
+				final Set<Image> images_to_print = new TreeSet<>(q.new_images_urls);
 				
 				if(this.force_print_new_only)
 					{
@@ -311,9 +382,11 @@ public class InstagramToAtom extends Launcher {
 					w.writeStartElement("content"); 
 					w.writeAttribute("type","html");
 					w.writeCharacters("<div><p>");
-					for(final String image_url:images_to_print) {
-						w.writeCharacters("<a target=\"_blank\" href=\""+q.getUrl()+"\"><img src=\"" +
-								image_url +
+					for(final Image image_url:images_to_print) {
+						w.writeCharacters("<a target=\"_blank\" href=\""+
+								(image_url.shortcode.isEmpty()?q.getUrl():image_url.getPageHref())+
+								"\"><img src=\"" +
+								image_url.url +
 						"\" width=\""+this.thumb_size+"\" height=\""+this.thumb_size+"\"/></a>"
 						);
 					}
@@ -324,7 +397,7 @@ public class InstagramToAtom extends Launcher {
 					}
 				else
 					{
-					for(final String image_url : images_to_print) {
+					for(final Image image_url : images_to_print) {
 						w.writeStartElement("entry");
 						
 						w.writeStartElement("title");
@@ -332,12 +405,16 @@ public class InstagramToAtom extends Launcher {
 						w.writeEndElement();
 		
 						w.writeStartElement("id");
-						w.writeCharacters(md5(image_url));
+						w.writeCharacters(md5(image_url.url));
 						w.writeEndElement();
 		
 						
 						w.writeEmptyElement("link");
-						w.writeAttribute("href", q.getUrl()+"?m="+md5(image_url));
+						w.writeAttribute("href", 
+								image_url.shortcode.isEmpty()?
+								q.getUrl()+"?m="+md5(image_url.url):
+								image_url.getPageHref()
+								);
 						
 						w.writeStartElement("updated");
 							w.writeCharacters(this.dateFormatter.format(q.date));
@@ -352,8 +429,12 @@ public class InstagramToAtom extends Launcher {
 						w.writeStartElement("content"); 
 						w.writeAttribute("type","html");
 						w.writeCharacters("<div><p>" +
-							"<a target=\"_blank\" href=\""+q.getUrl()+"\"><img src=\"" +
-									image_url +
+							"<a target=\"_blank\" href=\""+
+									(image_url.shortcode.isEmpty()?
+									q.getUrl()+"?m="+md5(image_url.url):
+									image_url.getPageHref()
+									)+"\"><img src=\"" +
+									image_url.url +
 							"\" width=\""+this.thumb_size+"\" height=\""+this.thumb_size+"\"/></a>" +
 							"</p></div>"
 							);
