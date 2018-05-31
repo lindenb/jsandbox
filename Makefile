@@ -169,7 +169,7 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
-	jfxwatcher mywordle
+	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom
 
 
 $(eval $(call compile,miniivy,sandbox.MiniIvy,${jcommander.jar}))
@@ -178,7 +178,7 @@ $(eval $(call compile,jfxwatcher,sandbox.JFXWatcher,))
 $(eval $(call compile,twitter01,sandbox.Twitter01, ${twitter.hbc.jars}))
 $(eval $(call compile,twitterfollow,sandbox.TwitterFollow, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,twitteruserlookup,sandbox.TwitterUserLookup, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
-$(eval $(call compile,twittergraph,sandbox.TwitterGraph, ${sqlite3.jdbc.jar} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
+$(eval $(call compile,twittergraph,sandbox.TwitterGraph, ${sqlite3.jdbc.jar} ${jcommander.jar} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,json2xml,sandbox.Json2Xml,${google.gson.jars}))
 $(eval $(call compile,json2dom,sandbox.Json2Dom,${google.gson.jars}))
 $(eval $(call compile,geneticpainting,sandbox.GeneticPainting,${apache.commons.cli}))
@@ -201,7 +201,7 @@ $(eval $(call compile,xml2xsd,sandbox.XmlToXsd,${apache.commons.cli}  ))
 $(eval $(call compile,java2graph,sandbox.Java2Graph,${apache.commons.cli}  ))
 $(eval $(call compile,gribouille,sandbox.Gribouille,${apache.commons.cli}  ))
 $(eval $(call compile,weatherarchive,sandbox.WeatherArchive,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}  ${apache.httpclient.jars} ))
-$(eval $(call compile,velocityjson,sandbox.VelocityJson,${apache.commons.cli}  ${velocity.jars} ${google.gson.jars}  ))
+$(eval $(call compile,velocityjson,sandbox.VelocityJson,${apache.commons.cli}  ${velocity.jars} ${gogle.gson.jars}  ))
 $(eval $(call compile,treemapviewer,sandbox.TreeMapViewer,  ))
 $(eval $(call compile,comicstrip,sandbox.ComicsStrip, ))
 $(eval $(call compile,genisansbouillir,sandbox.GeniSansBouillir,${jcommander.jar} ${apache.httpclient.jars}  ${jtidy.jars}))
@@ -209,6 +209,8 @@ $(eval $(call compile,bouletmaton,sandbox.BouletMaton,${jcommander.jar}))
 $(eval $(call compile,aksum,sandbox.Aksum,))
 $(eval $(call compile,images2base64,sandbox.ImagesToBase64,${jcommander.jar}))
 $(eval $(call compile,rss2atom,sandbox.RssToAtom,${jcommander.jar}))
+$(eval $(call compile,atom500px,sandbox.Atom500px,${jcommander.jar}))
+$(eval $(call compile,insta2atom,sandbox.InstagramToAtom,${jcommander.jar} ${apache.httpclient.jars}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
@@ -225,6 +227,16 @@ $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 src/sandbox/AutoLexYacc.java : src/sandbox/AutoLexYacc.jj
 	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<	
 
+
+gimpprocs2xml: ./src/sandbox/GimpProcedures.jj
+	mkdir -p ${tmp.dir}/sandbox ${tmp.dir}/META-INF ${bin.dir}
+	${javacc.exe} -OUTPUT_DIRECTORY=tmp/sandbox $<
+	javac -d ${tmp.dir} ${tmp.dir}/sandbox/*.java
+	mkdir -p ${tmp.dir}/META-INF 
+	echo "Manifest-Version: 1.0" > ${tmp.dir}/tmp.mf
+	echo "Main-Class: sandbox.GimpProcParser" >> ${tmp.dir}/tmp.mf
+	${JAR} cfm ${bin.dir}/gimpprocs2xml.jar ${tmp.dir}/tmp.mf  -C ${tmp.dir} .
+	rm -rf ${tmp.dir}	
 
 textlet : src/sandbox/TextletParser.jj
 	${javacc.exe} -OUTPUT_DIRECTORY=src/sandbox $<	

@@ -8,13 +8,11 @@ import java.util.prefs.Preferences;
 import javax.swing.JOptionPane;
 
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
 import org.scribe.builder.ServiceBuilder;
 import org.scribe.builder.api.Api;
 import org.scribe.model.Verifier;
 import org.scribe.oauth.OAuthService;
+import com.beust.jcommander.Parameter;
 
 /**
  *
@@ -22,16 +20,15 @@ import org.scribe.oauth.OAuthService;
  *
  */
 public abstract class AbstractOAuthApplication
-	extends AbstractApplication
+	extends Launcher
 	{
+	private static final Logger LOG=Logger.builder(AbstractOAuthApplication.class).build();
 	private OAuthService service;
 	private org.scribe.model.Token accessToken;
 	private Preferences preferences;
 	private boolean force_manual_access=false;
 	private boolean force_ignore_prefs=false;
 	
-	protected String api_key=null;
-	protected String api_secret=null;
 
 	
 	
@@ -52,46 +49,13 @@ public abstract class AbstractOAuthApplication
 		return accessToken;
 		}
 	
+	@Parameter(names={"-secret","--secret"},description="api secret (or will use the one stored in the preferences)")
+	private String api_secret=null;
 	
-	
-	@Override
-	protected void fillOptions(final Options options)
-		{
-		options.addOption(Option.builder("secret").
-				hasArg().
-				required(false).
-				longOpt("secret").
-				argName("API_SECRET").
-				desc("api secret (or will use the one stored in the preferences)").
-				build()
-				);
-		options.addOption(Option.builder("key").
-				hasArg().
-				required(false).
-				longOpt("key").
-				argName("API_KEY").
-				desc("api key (or will use the one stored in the preferences)").
-				build()
-				);
-		
-		super.fillOptions(options);
-		}
-	
-	@Override
-	protected Status decodeOptions(CommandLine cmd)
-		{
-		if(cmd.hasOption("key"))
-			{
-			this.api_key = cmd.getOptionValue("key");
-			}
-		if(cmd.hasOption("secret"))
-			{
-			this.api_secret = cmd.getOptionValue("secret");
-			}
-		
-		return super.decodeOptions(cmd);
-		}
-	
+	@Parameter(names={"-key","--key"},description="api key (or will use the one stored in the preferences)")
+	private String api_key=null;
+
+
 	
 
 	protected boolean isIgnoringPrefs()
@@ -209,8 +173,8 @@ public abstract class AbstractOAuthApplication
 				System.exit(-1);
 				}
 			}
-		info("api_key:"+api_key);
-		info("api_secret:"+api_secret);
+		LOG.info("api_key:"+api_key);
+		LOG.info("api_secret:"+api_secret);
 		 this.service = new ServiceBuilder()
 	        .provider(getApiClass())
 	        .apiKey(api_key)
@@ -219,9 +183,9 @@ public abstract class AbstractOAuthApplication
 	        
 	        
 	     org.scribe.model.Token requestToken=null;
-	     info("getRequestToken....");
+	     LOG.info("getRequestToken....");
 		requestToken  =  this.service.getRequestToken();
-		info("got request token");
+		LOG.info("got request token");
 		 
 		 this.accessToken=null;
 		 if(!(this.force_manual_access || force_ignore_prefs))
