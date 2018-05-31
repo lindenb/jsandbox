@@ -51,9 +51,9 @@ public class InstagramToAtom extends Launcher {
 	private static final Logger LOG = Logger.builder(InstagramToAtom.class).build();
 	
 	@Parameter(names={"-t","--tumb-size"},description="Thumb size.")
-	private int thumb_size =128;
+	private int thumb_size =256;
 	@Parameter(names={"-f","--force"},description="Force print only new items, discard the non-updated.")
-	private boolean force_print_flag=true;
+	private boolean force_print_new_only=true;
 	@Parameter(names={"-s","--seconds"},description="Sleep s seconds between each calls.")
 	private int sleep_seconds = 5;
 	@Parameter(names={"-d","--directory"},description="Cache directory. default: ${HOME}/.insta2atom ")
@@ -71,8 +71,8 @@ public class InstagramToAtom extends Launcher {
 		String query = "";
 		Date date = new Date();
 		String md5 = "";
-		final Set<String> images_urls = new TreeSet<>();
-		boolean changed_flag = false;
+		final Set<String> old_images_urls = new TreeSet<>();
+		final Set<String> new_images_urls = new TreeSet<>();
 		
 		String getUrl() {
 			return "https://www.instagram.com"+
@@ -80,6 +80,17 @@ public class InstagramToAtom extends Launcher {
 					this.query +
 					(this.query.endsWith("/")?"":"/");
 			}
+		}
+	
+	private String md5(final String s) {
+		 MessageDigest md;
+		 try {
+			 md = MessageDigest.getInstance("MD5");
+		 } catch (final Exception err) {
+			throw new RuntimeException(err);
+		 	}
+		md.update(s.getBytes());
+		return new BigInteger(1,md.digest()).toString(16);
 		}
 	
 	private File getPreferenceDir() {
@@ -94,7 +105,7 @@ public class InstagramToAtom extends Launcher {
 		return new File(getPreferenceDir(),"cache.tsv");
 		}
 	
-	private void  query(final Query q)
+	private boolean  query(final Query q)
 		{
 		String html;
 		CloseableHttpResponse response = null;
@@ -108,15 +119,13 @@ public class InstagramToAtom extends Launcher {
 		catch(final IOException err)
 			{
 			LOG.error(err);
-			q.changed_flag=false;
-			return;
+			return false;
 			}
 		finally
 			{
 			IOUtils.close(httpIn);
 			IOUtils.close(response);
 			}
-		final Set<String> new_images_url = new HashSet<>();
 		final String thumbnail_src= "\"thumbnail_src\":\"";
 		for(;;)
 			{
@@ -132,7 +141,7 @@ public class InstagramToAtom extends Launcher {
 				if(image_url.startsWith("https://") &&
 					(image_url.endsWith(".png") || image_url.endsWith(".jpg")))
 					{
-					new_images_url.add(image_url);
+					q.new_images_urls.add(image_url);
 					}
 				html = html.substring(j);
 				}
@@ -142,31 +151,16 @@ public class InstagramToAtom extends Launcher {
 				}
 			}
 		
-		if(new_images_url.isEmpty()) {
+		if(q.new_images_urls.isEmpty()) {
 			LOG.warning("No image found for "+q.query);
 		}
 		
-		 MessageDigest md;
-		 try {
-			 md = MessageDigest.getInstance("MD5");
-		 } catch (final Exception err) {
-			LOG.error(err);
-			throw new RuntimeException(err);
-		 	}
-		 md.update(String.join(" ", new_images_url).getBytes());
-		 final String new_md5 = new BigInteger(1,md.digest()).toString(16);
-		if(new_images_url.isEmpty() || new_md5.equals(q.md5)) {
-			q.changed_flag =false;
-		} 
-		else
-		{
-			q.images_urls.clear();
-			q.images_urls.addAll(new_images_url);
-			q.changed_flag =true;
+		final String new_md5 = md5(String.join(" ", q.new_images_urls));
+		if(!new_md5.equals(q.md5)) {
 			q.md5 = new_md5;
 			q.date = new Date();
-		}
-		
+			}
+		return true;
 		}
 	
 	
@@ -182,7 +176,8 @@ public class InstagramToAtom extends Launcher {
 		try(final PrintWriter pw = new PrintWriter(cacheFile))
 			{
 			pw.println("#Date: "+dateFormatter.format(new Date()));
-			cache.stream().forEach(Q->pw.println(Q.query+"\t"+dateFormatter.format(Q.date)+"\t"+Q.md5+"\t"+String.join(" ", Q.images_urls)));
+			cache.stream().forEach(Q->pw.println(
+					Q.query+"\t"+dateFormatter.format(Q.date)+"\t"+Q.md5+"\t"+String.join(" ", Q.new_images_urls)));
 			pw.flush();
 			}
 		catch(final IOException err) {
@@ -215,8 +210,8 @@ public class InstagramToAtom extends Launcher {
 							}
 						q.md5 = A[2];
 						if(A.length>3 && !A[3].trim().isEmpty()) {
-							q.images_urls.clear();
-							q.images_urls.addAll(Arrays.asList(A[3].split("[ ]")));
+							q.old_images_urls.clear();
+							q.old_images_urls.addAll(Arrays.asList(A[3].split("[ ]")));
 							}
 						}
 					return q;
@@ -274,48 +269,55 @@ public class InstagramToAtom extends Launcher {
 			for(int idx=0;idx < cache.size();++idx) {
 				final Query q=cache.get(idx);
 				w.writeComment(q.query);
-				query(q);
-				if(q.images_urls.isEmpty()) continue;
-				if(!this.force_print_flag &&  !q.changed_flag) continue;
+				if(!query(q)) continue;
 				
-				w.writeStartElement("entry");
+				final Set<String> images_to_print = new HashSet<>();
+				images_to_print.addAll(q.new_images_urls);
 				
-				w.writeStartElement("title");
-					w.writeCharacters(q.query);
-				w.writeEndElement();
-
-				w.writeStartElement("id");
-				w.writeCharacters(q.md5);
-				w.writeEndElement();
-
+				if(this.force_print_new_only)
+					{
+					images_to_print.removeAll(q.old_images_urls);
+					}
+			
+				if(images_to_print.isEmpty()) continue;
 				
-				w.writeEmptyElement("link");
-				w.writeAttribute("href", q.getUrl());
-				
-				w.writeStartElement("updated");
-					w.writeCharacters(dateFormatter.format(q.date));
-				w.writeEndElement();
-				
-				w.writeStartElement("author");
-					w.writeStartElement("name");
+				for(final String image_url : images_to_print) {
+					w.writeStartElement("entry");
+					
+					w.writeStartElement("title");
 						w.writeCharacters(q.query);
 					w.writeEndElement();
-				w.writeEndElement();
-				
-				w.writeStartElement("content"); 
-				w.writeAttribute("type","html");
-				w.writeCharacters("<div><p>");
-				for(final String thumb: q.images_urls) {
-					w.writeCharacters(
+	
+					w.writeStartElement("id");
+					w.writeCharacters(md5(image_url));
+					w.writeEndElement();
+	
+					
+					w.writeEmptyElement("link");
+					w.writeAttribute("href", q.getUrl()+"?m="+md5(image_url));
+					
+					w.writeStartElement("updated");
+						w.writeCharacters(this.dateFormatter.format(q.date));
+					w.writeEndElement();
+					
+					w.writeStartElement("author");
+						w.writeStartElement("name");
+							w.writeCharacters(q.query);
+						w.writeEndElement();
+					w.writeEndElement();
+					
+					w.writeStartElement("content"); 
+					w.writeAttribute("type","html");
+					w.writeCharacters("<div><p>" +
 						"<a target=\"_blank\" href=\""+q.getUrl()+"\"><img src=\"" +
-								thumb+
-						"\" width=\""+thumb_size+"\" height=\""+this.thumb_size+"\"/></a>"
+								image_url +
+						"\" width=\""+this.thumb_size+"\" height=\""+this.thumb_size+"\"/></a>" +
+						"</p></div>"
 						);
+					w.writeEndElement();//content
+					
+					w.writeEndElement();//entry
 					}
-				w.writeCharacters("</p></div>");
-				w.writeEndElement();//content
-				
-				w.writeEndElement();//entry
 				
 				if(idx>0) Thread.sleep(this.sleep_seconds*1000);
 				}
