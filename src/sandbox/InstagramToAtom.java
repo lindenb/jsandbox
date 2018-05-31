@@ -13,7 +13,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -53,13 +52,17 @@ public class InstagramToAtom extends Launcher {
 	@Parameter(names={"-t","--tumb-size"},description="Thumb size.")
 	private int thumb_size =256;
 	@Parameter(names={"-f","--force"},description="Force print only new items, discard the non-updated.")
-	private boolean force_print_new_only=true;
+	private boolean force_print_new_only = false;
 	@Parameter(names={"-s","--seconds"},description="Sleep s seconds between each calls.")
 	private int sleep_seconds = 5;
 	@Parameter(names={"-d","--directory"},description="Cache directory. default: ${HOME}/.insta2atom ")
 	private File cacheDirectory  = null;
 	@Parameter(names={"-c","--cookies"},description=CookieStoreUtils.OPT_DESC)
 	private File cookieStoreFile  = null;
+	@Parameter(names={"-g","--group"},description="group items per query")
+	private boolean group_flag =false;
+
+	
 	
 	private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	CloseableHttpClient client = null;
@@ -131,9 +134,8 @@ public class InstagramToAtom extends Launcher {
 			{
 			int i= html.indexOf(thumbnail_src);
 			if(i==-1) {
-				
 				break;
-			}
+				}
 			i+= thumbnail_src.length();
 			int j=  html.indexOf("\"",i);
 			if(j!=-1) {
@@ -271,8 +273,7 @@ public class InstagramToAtom extends Launcher {
 				w.writeComment(q.query);
 				if(!query(q)) continue;
 				
-				final Set<String> images_to_print = new HashSet<>();
-				images_to_print.addAll(q.new_images_urls);
+				final Set<String> images_to_print = new TreeSet<>(q.new_images_urls);
 				
 				if(this.force_print_new_only)
 					{
@@ -281,7 +282,8 @@ public class InstagramToAtom extends Launcher {
 			
 				if(images_to_print.isEmpty()) continue;
 				
-				for(final String image_url : images_to_print) {
+				if(group_flag)
+					{
 					w.writeStartElement("entry");
 					
 					w.writeStartElement("title");
@@ -289,12 +291,12 @@ public class InstagramToAtom extends Launcher {
 					w.writeEndElement();
 	
 					w.writeStartElement("id");
-					w.writeCharacters(md5(image_url));
+					w.writeCharacters(q.md5);
 					w.writeEndElement();
 	
 					
 					w.writeEmptyElement("link");
-					w.writeAttribute("href", q.getUrl()+"?m="+md5(image_url));
+					w.writeAttribute("href", q.getUrl()+"?m="+q.md5);
 					
 					w.writeStartElement("updated");
 						w.writeCharacters(this.dateFormatter.format(q.date));
@@ -308,15 +310,57 @@ public class InstagramToAtom extends Launcher {
 					
 					w.writeStartElement("content"); 
 					w.writeAttribute("type","html");
-					w.writeCharacters("<div><p>" +
-						"<a target=\"_blank\" href=\""+q.getUrl()+"\"><img src=\"" +
+					w.writeCharacters("<div><p>");
+					for(final String image_url:images_to_print) {
+						w.writeCharacters("<a target=\"_blank\" href=\""+q.getUrl()+"\"><img src=\"" +
 								image_url +
-						"\" width=\""+this.thumb_size+"\" height=\""+this.thumb_size+"\"/></a>" +
-						"</p></div>"
+						"\" width=\""+this.thumb_size+"\" height=\""+this.thumb_size+"\"/></a>"
 						);
+					}
+					w.writeCharacters("</p></div>");
 					w.writeEndElement();//content
 					
 					w.writeEndElement();//entry
+					}
+				else
+					{
+					for(final String image_url : images_to_print) {
+						w.writeStartElement("entry");
+						
+						w.writeStartElement("title");
+							w.writeCharacters(q.query);
+						w.writeEndElement();
+		
+						w.writeStartElement("id");
+						w.writeCharacters(md5(image_url));
+						w.writeEndElement();
+		
+						
+						w.writeEmptyElement("link");
+						w.writeAttribute("href", q.getUrl()+"?m="+md5(image_url));
+						
+						w.writeStartElement("updated");
+							w.writeCharacters(this.dateFormatter.format(q.date));
+						w.writeEndElement();
+						
+						w.writeStartElement("author");
+							w.writeStartElement("name");
+								w.writeCharacters(q.query);
+							w.writeEndElement();
+						w.writeEndElement();
+						
+						w.writeStartElement("content"); 
+						w.writeAttribute("type","html");
+						w.writeCharacters("<div><p>" +
+							"<a target=\"_blank\" href=\""+q.getUrl()+"\"><img src=\"" +
+									image_url +
+							"\" width=\""+this.thumb_size+"\" height=\""+this.thumb_size+"\"/></a>" +
+							"</p></div>"
+							);
+						w.writeEndElement();//content
+						
+						w.writeEndElement();//entry
+						}
 					}
 				
 				if(idx>0) Thread.sleep(this.sleep_seconds*1000);
