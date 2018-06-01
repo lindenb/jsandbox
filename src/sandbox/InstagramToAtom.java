@@ -274,17 +274,26 @@ public class InstagramToAtom extends Launcher {
 			w.writeEndElement();
 			
 			w.writeStartElement("content"); 
-			w.writeAttribute("type","html");
-			w.writeCharacters("<div><p>");
+			
+			w.writeAttribute("type","xhtml");
+			w.writeStartElement("div");
+			w.writeDefaultNamespace("http://www.w3.org/1999/xhtml");
+			w.writeStartElement("p");  
+			
+	
 			for(final Image image_url:images_to_print) {
-				w.writeCharacters("<a target=\"_blank\" href=\""+
-						(image_url.shortcode.isEmpty()?this.getUrl():image_url.getPageHref())+
-						"\"><img src=\"" +
-						image_url.url +
-				"\" width=\""+InstagramToAtom.this.thumb_size+"\" height=\""+InstagramToAtom.this.thumb_size+"\"/></a>"
-				);
+				w.writeStartElement("a");
+				w.writeAttribute("target", "_blank");
+				w.writeAttribute("href", image_url.shortcode.isEmpty()?this.getUrl():image_url.getPageHref());
+				w.writeEmptyElement("img");
+				w.writeAttribute("src", image_url.url);
+				w.writeAttribute("width",String.valueOf(InstagramToAtom.this.thumb_size));
+				w.writeAttribute("height",String.valueOf(InstagramToAtom.this.thumb_size));
+				w.writeEndElement();//a
 				}
-			w.writeCharacters("</p></div>");
+			w.writeEndElement();//p
+			w.writeEndElement();//div
+
 			w.writeEndElement();//content
 			
 			w.writeEndElement();//entry
@@ -321,17 +330,23 @@ public class InstagramToAtom extends Launcher {
 				w.writeEndElement();
 				
 				w.writeStartElement("content"); 
-				w.writeAttribute("type","html");
-				w.writeCharacters("<div><p>" +
-					"<a target=\"_blank\" href=\""+
-							(image_url.shortcode.isEmpty()?
-							this.getUrl()+"?m="+md5(image_url.url):
-							image_url.getPageHref()
-							)+"\"><img src=\"" +
-							image_url.url +
-					"\" width=\""+InstagramToAtom.this.thumb_size+"\" height=\""+InstagramToAtom.this.thumb_size+"\"/></a>" +
-					"</p></div>"
-					);
+				w.writeAttribute("type","xhtml");
+				
+				w.writeStartElement("div");
+				w.writeDefaultNamespace("http://www.w3.org/1999/xhtml");
+				w.writeStartElement("p");  
+				
+				w.writeStartElement("a");
+				w.writeAttribute("target", "_blank");
+				w.writeAttribute("href", image_url.shortcode.isEmpty()?this.getUrl()+"?m="+md5(image_url.url):image_url.getPageHref());
+				w.writeEmptyElement("img");
+				w.writeAttribute("src", image_url.url);
+				w.writeAttribute("width",String.valueOf(InstagramToAtom.this.thumb_size));
+				w.writeAttribute("height",String.valueOf(InstagramToAtom.this.thumb_size));
+				w.writeEndElement();//a
+				
+				w.writeEndElement();//p
+				w.writeEndElement();//div
 				w.writeEndElement();//content
 				
 				w.writeEndElement();//entry
