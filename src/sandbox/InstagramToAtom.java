@@ -12,6 +12,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -48,7 +49,7 @@ java -jar ${HOME}/src/jsandbox/dist/insta2atom.jar |\
  */
 public class InstagramToAtom extends Launcher {
 	private static final Logger LOG = Logger.builder(InstagramToAtom.class).build();
-	
+	private int ID_GENERATOR=0;
 	@Parameter(names={"-t","--tumb-size"},description="Thumb size.")
 	private int thumb_size =256;
 	@Parameter(names={"-f","--force"},description="Force print only new items, discard the non-updated.")
@@ -102,7 +103,15 @@ public class InstagramToAtom extends Launcher {
 			public String getPageHref() {
 				return "https://www.instagram.com/p/"+this.shortcode+"/";
 				}
-			
+			void write(final XMLStreamWriter w) throws XMLStreamException
+				{
+				w.writeEmptyElement("img");
+				w.writeAttribute("id", this.shortcode.isEmpty()?String.valueOf(++ID_GENERATOR):this.shortcode);
+				w.writeAttribute("alt", this.url);
+				w.writeAttribute("src", this.url);
+				w.writeAttribute("width",String.valueOf(InstagramToAtom.this.thumb_size));
+				w.writeAttribute("height",String.valueOf(InstagramToAtom.this.thumb_size));
+				}
 			@Override
 			public boolean equals(final Object obj)
 				{
@@ -283,12 +292,10 @@ public class InstagramToAtom extends Launcher {
 	
 			for(final Image image_url:images_to_print) {
 				w.writeStartElement("a");
+				w.writeAttribute("id",String.valueOf(++ID_GENERATOR));
 				w.writeAttribute("target", "_blank");
 				w.writeAttribute("href", image_url.shortcode.isEmpty()?this.getUrl():image_url.getPageHref());
-				w.writeEmptyElement("img");
-				w.writeAttribute("src", image_url.url);
-				w.writeAttribute("width",String.valueOf(InstagramToAtom.this.thumb_size));
-				w.writeAttribute("height",String.valueOf(InstagramToAtom.this.thumb_size));
+				image_url.write(w);
 				w.writeEndElement();//a
 				}
 			w.writeEndElement();//p
@@ -337,12 +344,10 @@ public class InstagramToAtom extends Launcher {
 				w.writeStartElement("p");  
 				
 				w.writeStartElement("a");
+				w.writeAttribute("id",String.valueOf(++ID_GENERATOR));
 				w.writeAttribute("target", "_blank");
 				w.writeAttribute("href", image_url.shortcode.isEmpty()?this.getUrl()+"?m="+md5(image_url.url):image_url.getPageHref());
-				w.writeEmptyElement("img");
-				w.writeAttribute("src", image_url.url);
-				w.writeAttribute("width",String.valueOf(InstagramToAtom.this.thumb_size));
-				w.writeAttribute("height",String.valueOf(InstagramToAtom.this.thumb_size));
+				image_url.write(w);
 				w.writeEndElement();//a
 				
 				w.writeEndElement();//p
@@ -380,8 +385,10 @@ public class InstagramToAtom extends Launcher {
 	
 
 	
-	private void saveCache(final List<Query> cache) {
+	private void saveCache(final List<Query> cache) throws IOException {
 		final File cacheFile = getCacheFile();
+		final File tmpFile = File.createTempFile("insta2atom.",".tmp",cacheFile.getParentFile());
+		
 		if(!cacheFile.getParentFile().exists()) {
 			LOG.info("creating "+cacheFile.getParent());
 			if(!cacheFile.getParentFile().mkdir()) {
@@ -389,20 +396,32 @@ public class InstagramToAtom extends Launcher {
 				return;
 				}
 			}
-		try(final PrintWriter pw = new PrintWriter(cacheFile))
+		try(final PrintWriter pw = new PrintWriter(tmpFile))
 			{
 			pw.println("#Date: "+dateFormatter.format(new Date()));
-			cache.stream().forEach(Q->pw.println(
-					Q.query+"\t"+dateFormatter.format(Q.date)+"\t"+Q.md5+"\t"+
-					Q.new_images_urls.
-					stream().
-					map(I->I.url+(I.shortcode.isEmpty()?"":"|"+I.shortcode)).
-					collect(Collectors.joining(" "))));
+			cache.stream().forEach(Q->{
+					Q.old_images_urls.removeAll(Q.new_images_urls);
+					while((Q.new_images_urls.size()+Q.old_images_urls.size()) >100) {
+						final Iterator<Query.Image> iter = Q.old_images_urls.iterator();
+						if(!iter.hasNext())  break;
+						iter.next();
+						iter.remove();
+						}
+					Q.new_images_urls.addAll(Q.old_images_urls);
+					pw.println(
+							Q.query+"\t"+dateFormatter.format(Q.date)+"\t"+Q.md5+"\t"+
+							Q.new_images_urls.
+							stream().
+							map(I->I.url+(I.shortcode.isEmpty()?"":"|"+I.shortcode)).
+							collect(Collectors.joining(" ")));
+					});
 			pw.flush();
 			}
 		catch(final IOException err) {
 			LOG.error(err);
+			return;
 			}
+		tmpFile.renameTo(cacheFile);
 		}
 	
 	private List<Query> readCache() {
