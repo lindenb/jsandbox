@@ -145,28 +145,6 @@
 	<delete dir="tmp"/>
 </target>
 
-<target name="gimpprocparser">
-	<mkdir dir="dist"/>
-	<mkdir dir="tmp"/>
-	<mkdir dir="tmp/sandbox"/>
-	<exec executable="javacc">
-		<arg value="-OUTPUT_DIRECTORY=tmp/sandbox"/>
-		<arg value="src/sandbox/GimpProcedures.jj"/>
-	</exec>
-	<javac srcdir="tmp" destdir="tmp" debug="true" includeantruntime="no">
-		<include name="**/GimpProcParser.java" />
-	</javac>
-	<jar destfile="dist/gimpprocparser.jar" basedir="tmp">
-		<manifest>
-			<attribute name="Built-By" value="${user.name}"/>
-			<attribute name="Main-Class" value="sandbox.GimpProcParser"/>
-		</manifest>
-	</jar>
-	<delete dir="tmp"/>
-</target>
-
-
-
 
 <target name="flickrss">
 	<mkdir dir="dist"/>

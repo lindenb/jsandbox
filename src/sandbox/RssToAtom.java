@@ -3,15 +3,11 @@ package sandbox;
 import java.io.File;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
@@ -36,6 +32,8 @@ public class RssToAtom extends Launcher
 			{
 			private Document atomDoc = null;
 			private String prefix="atom";
+			private Predicate<Element> itemFilter = (E)->true;
+			private Predicate<Element> atomFilter = E->true;
 			
 			private boolean hasName(final Element E,final String s) {
 				return s.equals(E.getNodeName()) || s.equals(E.getLocalName());
@@ -138,8 +136,10 @@ public class RssToAtom extends Launcher
 					filter(N->N.getNodeType()==Node.ELEMENT_NODE).
 					map(N->Element.class.cast(N)).
 					filter(E->hasName(E,"item")).
+					filter(E->itemFilter.test(E)).
 					map(E->matchItem(E)).
 					filter(N->N!=null).
+					filter(E->this.atomFilter.test(E)).
 					forEach(E->{frag.appendChild(E);})
 					;
 				
@@ -187,10 +187,23 @@ public class RssToAtom extends Launcher
 				}
 			}
 		
+		private Predicate<Element> atomFilter = E->true;
+		
+		public void setAtomFilter(Predicate<Element> filter)
+			{
+			this.atomFilter = filter;
+			}
+		
+		public Predicate<Element> getAtomFilter()
+			{
+			return atomFilter;
+			}
+		
 		@Override
 		public Function<Document, Document> get()
 			{
 			final Converter converter = new Converter();
+			converter.atomFilter = this.getAtomFilter();
 			return converter;
 			}
 		}
@@ -213,10 +226,10 @@ public class RssToAtom extends Launcher
 				{
 				rss = db.parse(new File(input));
 				}
-			final Document atom = this.factory.get().apply(rss);
-		    final TransformerFactory tFactory =  TransformerFactory.newInstance();
-		    final Transformer transformer =  tFactory.newTransformer();
-		    transformer.transform(new DOMSource(atom), new StreamResult(System.out));
+		    new XMLSerializer().serialize(
+		    		this.factory.get().apply(rss),
+		    		System.out
+		    		);
 		    return 0;
 			}
 		catch(Exception err)

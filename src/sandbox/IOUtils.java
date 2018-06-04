@@ -66,6 +66,12 @@ public static BufferedReader openBufferedReaderFromFile(final File path) throws 
 	return new BufferedReader(new FileReader(path));
 	}
 
+public static String slurp(final String fileOrUrl) throws IOException {
+	Reader r=null;
+	try { r = openReader(fileOrUrl); return readReaderContent(r);} 
+	finally {close(r);}
+	}
+
 public static String readFileContent(final File path) throws IOException {
 	if(!path.exists()) throw new FileNotFoundException("not existing file "+path);
 	if(!path.canRead()) throw new IOException("canRead==false : file "+path);
@@ -189,5 +195,9 @@ public static void close(final Object...array)
 		catch (Exception e) {
 			}
 		}
+	}
+
+public static String getUserAgent() {
+	return "Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:60.0) Gecko/20100101 Firefox/60.0";
 	}
 }
