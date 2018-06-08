@@ -212,6 +212,7 @@ $(eval $(call compile,rss2atom,sandbox.RssToAtom,${jcommander.jar}))
 $(eval $(call compile,atom500px,sandbox.Atom500px,${jcommander.jar}))
 $(eval $(call compile,insta2atom,sandbox.InstagramToAtom,${jcommander.jar} ${apache.httpclient.jars}))
 $(eval $(call compile,fileserver,sandbox.FileServer,${jcommander.jar} ${jetty.jars}))
+$(eval $(call compile,atomxhtml,sandbox.AtomXhtmlContent,${jcommander.jar} ${jtidy.jars}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
