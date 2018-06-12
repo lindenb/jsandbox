@@ -169,7 +169,7 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
-	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom fileserver
+	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom fileserver xmlpath
 
 
 $(eval $(call compile,miniivy,sandbox.MiniIvy,${jcommander.jar}))
@@ -210,9 +210,10 @@ $(eval $(call compile,aksum,sandbox.Aksum,))
 $(eval $(call compile,images2base64,sandbox.ImagesToBase64,${jcommander.jar}))
 $(eval $(call compile,rss2atom,sandbox.RssToAtom,${jcommander.jar}))
 $(eval $(call compile,atom500px,sandbox.Atom500px,${jcommander.jar}))
-$(eval $(call compile,insta2atom,sandbox.InstagramToAtom,${jcommander.jar} ${apache.httpclient.jars}))
+$(eval $(call compile,insta2atom,sandbox.InstagramToAtom,${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,fileserver,sandbox.FileServer,${jcommander.jar} ${jetty.jars}))
 $(eval $(call compile,atomxhtml,sandbox.AtomXhtmlContent,${jcommander.jar} ${jtidy.jars}))
+$(eval $(call compile,xmlpath,sandbox.XmlPath,${jcommander.jar} ${jtidy.jars}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.text.ParseException;
@@ -30,6 +31,12 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
 import com.beust.jcommander.Parameter;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.stream.JsonReader;
 /**
 ```
 $ crontab -e
@@ -164,27 +171,123 @@ public class InstagramToAtom extends Launcher {
 					this.query +
 					(this.query.endsWith("/")?"":"/");
 			}
-		private boolean  query()
-			{
-			String html;
+		
+		private String queryHtml() throws IOException {
 			CloseableHttpResponse response = null;
 			InputStream httpIn = null;
 			try
 				{
 				response = InstagramToAtom.this.client.execute(new HttpGet(this.getUrl()));
 				httpIn = response.getEntity().getContent();
-				html = IOUtils.readStreamContent(httpIn);
+				final String html = IOUtils.readStreamContent(httpIn);
+				return html;
 				}
 			catch(final IOException err)
 				{
 				LOG.error(err);
-				return false;
+				throw err;
 				}
 			finally
 				{
 				IOUtils.close(httpIn);
 				IOUtils.close(response);
 				}
+			}
+		
+		private JsonArray queryEdges(JsonElement o) {
+			if(o==null || !o.isJsonObject() || !o.getAsJsonObject().has("entry_data")) return null;
+			o = o.getAsJsonObject().get("entry_data");
+
+			if(o==null || !o.isJsonObject()) return null;
+			if(o==null || !o.isJsonObject() || !o.getAsJsonObject().has("TagPage")) return null;
+			o = o.getAsJsonObject().get("TagPage");
+
+			if(o==null || !o.isJsonArray()) return null;
+			if(o==null || !o.isJsonArray() ||  o.getAsJsonArray().size() <= 0 ) return null;
+			o = o.getAsJsonArray().get(0);
+
+			if(o==null || !o.isJsonObject()) return null;
+			if(o==null || !o.isJsonObject() || !o.getAsJsonObject().has("graphql")) return null;
+			o = o.getAsJsonObject().get("graphql");
+
+			if(o==null || !o.isJsonObject()) return null;
+			if(o==null || !o.isJsonObject() || !o.getAsJsonObject().has("hashtag")) return null;
+			o = o.getAsJsonObject().get("hashtag");
+
+			if(o==null || !o.isJsonObject()) return null;
+			if(o==null || !o.isJsonObject() || !o.getAsJsonObject().has("edge_hashtag_to_media")) return null;
+			o = o.getAsJsonObject().get("edge_hashtag_to_media");
+
+			if(o==null || !o.isJsonObject()) return null;
+			if(o==null || !o.isJsonObject() || !o.getAsJsonObject().has("edges")) return null;
+			o = o.getAsJsonObject().get("edges");
+
+			if(o==null || !o.isJsonArray()) return null;
+			if(o==null || !o.isJsonArray() ||  o.getAsJsonArray().size() <= 0 ) return null;
+			return o.getAsJsonArray();
+			}
+		
+		private JsonObject queryJsonObject() throws IOException
+			{
+			final String windowSharedData = "window._sharedData";
+			final String endObject="};";
+			String html = queryHtml();
+			int i= html.indexOf(windowSharedData);
+			if(i==-1) {
+				LOG.error("cannot find "+windowSharedData+" in "+getUrl());
+				return null;
+				}
+			html=html.substring(i+windowSharedData.length());
+			i= html.indexOf("{");
+			if(i==-1)
+				{
+				LOG.error("cannot find '{' after "+windowSharedData+" in "+getUrl());
+				return null;
+				}
+			html=html.substring(i);
+			i = html.indexOf(endObject);
+			if(i==-1)
+				{
+				LOG.error("cannot find  "+endObject+" in "+getUrl());
+				return null;
+				}
+			html=html.substring(0, i+1);
+			final JsonReader jsr = new JsonReader(new StringReader(html));
+			jsr.setLenient(true);
+			final JsonParser parser = new JsonParser();
+			JsonElement root;
+			try {
+				root = parser.parse(jsr);
+				}
+			catch(final JsonSyntaxException err) {
+				LOG.error(err);
+				return null;
+				}
+			finally
+				{
+				jsr.close();
+				}
+			if(!root.isJsonObject())
+				{
+				LOG.error("root is not json object in "+getUrl());
+				return null;
+				}
+			return root.getAsJsonObject();
+			}
+		
+		private boolean  query()
+			{
+			String html;
+			try
+				{
+				html = queryHtml();
+				}
+			catch(final IOException err)
+				{
+				LOG.error(err);
+				return false;
+				}
+			
 			final String thumbnail_src= "\"thumbnail_src\":\"";
 			final String shortcode_src= "\"shortcode\":\"";
 			for(;;)
