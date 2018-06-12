@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -44,6 +45,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 
@@ -157,6 +160,64 @@ public final class Json2Dom {
 		}
 	}
 	
+	private void _jsonParse(
+			final Document owner,
+			final Node root, 
+			final String label,
+			final JsonElement js
+			) throws Exception {
+			if(js.isJsonNull())
+				{
+				final Element E = owner.createElementNS(NS, "jsonx:null");
+				if (label != null)
+					E.setAttribute("name", label);
+				root.appendChild(E);
+				}
+			else if(js.isJsonArray())
+				{
+				final Element E = owner.createElementNS(NS, "jsonx:array");
+				root.appendChild(E);
+				if (label != null) E.setAttribute("name", label);
+				for(final JsonElement c:js.getAsJsonArray()) {
+					_jsonParse(owner,E,null,c);
+					}
+				}
+			else if(js.isJsonObject())
+				{
+				final Element E = owner.createElementNS(NS, "jsonx:object");
+				root.appendChild(E);
+				if (label != null) E.setAttribute("name", label);
+				for(final Map.Entry<String,JsonElement> kv:js.getAsJsonObject().entrySet()) {
+					_jsonParse(owner,E,kv.getKey(),kv.getValue());
+					}
+				}
+			else if(js.isJsonPrimitive())
+				{
+				final JsonPrimitive sp = js.getAsJsonPrimitive();
+				final Element E;
+				if(sp.isNumber())
+					{
+					E=owner.createElementNS(NS, "jsonx:number");
+					}
+				else if(sp.isBoolean())
+					{
+					E=owner.createElementNS(NS, "jsonx:boolean");
+					}
+				else
+					{
+					E=owner.createElementNS(NS, "jsonx:string");
+					}
+				if (label != null) E.setAttribute("name", label);
+				root.appendChild(E);
+				}
+			else
+				{
+				throw new IllegalStateException("unknown json node type.");
+				}
+			}
+
+	
+	
 	public Document parse(final InputStream is) throws IOException
 		{
 		return parse(new InputStreamReader(is, "UTF-8"));
@@ -165,7 +226,7 @@ public final class Json2Dom {
 	
 	public Document parse(final Reader r) throws IOException
 		{
-		JsonReader jr = new JsonReader(r);
+		final JsonReader jr = new JsonReader(r);
 		jr.setLenient(true);
 		return parse(jr);
 		}
@@ -180,18 +241,30 @@ public final class Json2Dom {
 			this._jsonParse(dom, dom,null, r);
 			return dom;
 			}
-		catch(IOException err) {
+		catch(final IOException err) {
 			throw err;
 			}
-		catch(Exception err) {
+		catch(final Exception err) {
 			throw new RuntimeException(err);
 			}
 		}
-
-	public static void main(String[] args) {
+	public Document parse(final JsonElement root) {
 		try {
-			
-			
+			final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+			dbf.setNamespaceAware(true);
+			final DocumentBuilder db = dbf.newDocumentBuilder();
+			final Document dom = db.newDocument();
+			this._jsonParse(dom, dom,null,root);
+			return dom;
+			}
+		catch(final Exception err) {
+			throw new RuntimeException(err);
+			}
+		}
+	
+	
+	public static void main(final String[] args) {
+		try {
 			Json2Dom app = new Json2Dom();
 			Reader r = null;
 			if (args.length == 0) {
