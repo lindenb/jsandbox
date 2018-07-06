@@ -1,8 +1,6 @@
 package sandbox;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
@@ -13,12 +11,13 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
@@ -29,6 +28,9 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 import com.beust.jcommander.Parameter;
 import com.google.gson.JsonArray;
@@ -76,35 +78,148 @@ public class InstagramToAtom extends Launcher {
 	private CloseableHttpClient client = null;
 	
 
+	private static class Thumbnail extends Dimension
+		{
+		String src;
+		}
+	
+	private static class Dimension
+		{
+		int width=0;
+		int height=0;
+		}
+	
 	
 	private class Query
 		{
 		String query = "";
 		Date date = new Date();
 		String md5 = "";
-		final Set<Image> old_images_urls = new TreeSet<>();
-		final Set<Image> new_images_urls = new TreeSet<>();
-		
-		
-		class Image implements Comparable<Image>
+		Integer max_likes=null;
+		final Set<INode> old_images_urls = new TreeSet<>();
+		final Set<INode> new_images_urls = new TreeSet<>();
+		Query(final Element root)
 			{
-			final String url;
-			final String shortcode;
-			
-			Image(final String url,final String shortcode) {
-				this.url = url;
-				this.shortcode = shortcode.trim();
+			this.query=root.getAttribute("name");
+			LOG.debug("found query "+this.query);
+			if(root.hasAttribute("date"))
+				{
+				try {
+					this.date = dateFormatter.parse(root.getAttribute("date"));
+					}
+				catch(final ParseException err) {
+					this.date = new Date();
+					}
+				}
+			if(root.hasAttribute("max_likes"))
+				{
+				try {
+					this.max_likes = new Integer(root.getAttribute("max_likes"));
+					}
+				catch(final Exception err) {
+					this.max_likes = null;
+					}
+				}
+			if(root.hasAttribute("md5"))
+				{
+				this.md5 = root.getAttribute("date");
 				}
 			
-			@Override
-			public int compareTo(final Image o)
+			for(Node c=root.getFirstChild();c!=null;c=c.getNextSibling()) {
+				if(c.getNodeType()!=Node.ELEMENT_NODE) continue;
+				final Element ce=(Element)c;
+				if(!ce.getTagName().equals("image")) continue;
+				final INode img = new INode(ce);
+				this.old_images_urls.add(img);
+				}
+			}	
+		
+		
+		void saveCache(final XMLStreamWriter w) throws XMLStreamException {
+			w.writeStartElement("query");
+			w.writeAttribute("name", this.query);
+			w.writeAttribute("md5", this.md5);
+			if(max_likes!=null) w.writeAttribute("max_likes",String.valueOf(this.max_likes));
+			w.writeAttribute("date",dateFormatter.format(this.date));
+			for(final INode img:this.new_images_urls)
 				{
-				return this.url.compareTo(o.url);
+				img.saveCache(w);
+				}
+			w.writeEndElement();
+			}
+		
+		class INode implements Comparable<INode>
+			{
+			Dimension dimension=null;
+			String display_url;
+			String owner_id;
+			String shortcode="";
+			String taken_at_timestamp;
+			String id;
+			Integer edge_liked_by;
+			final List<Thumbnail> thumbnails = new ArrayList<>();
+			String thumbnail_src="";
+			
+			INode() {
+				
+				}
+			INode(final Element root)
+				{
+				if(root.hasAttribute("display_url"))
+					{
+					this.display_url = root.getAttribute("display_url");
+					}
+				if(root.hasAttribute("owner_id"))
+					{
+					this.owner_id = root.getAttribute("owner_id");
+					}
+				if(root.hasAttribute("id"))
+					{
+					this.id = root.getAttribute("id");
+					}
+				if(root.hasAttribute("taken_at_timestamp"))
+					{
+					this.taken_at_timestamp = root.getAttribute("taken_at_timestamp");
+					}
+				if(root.hasAttribute("shortcode"))
+					{
+					this.shortcode = root.getAttribute("shortcode");
+					}
+				if(root.hasAttribute("thumbnail_src"))
+					{
+					this.thumbnail_src = root.getAttribute("thumbnail_src");
+					}
+				if(root.hasAttribute("edge_liked_by"))
+					{
+					this.edge_liked_by = Integer.parseInt(root.getAttribute("edge_liked_by"));
+					}
+				}
+			
+			void saveCache(final XMLStreamWriter w) throws XMLStreamException {
+				w.writeStartElement("image");
+				if(edge_liked_by!=null) w.writeAttribute("edge_liked_by",""+edge_liked_by);
+				if(id!=null) w.writeAttribute("id",id);
+				if(shortcode!=null) w.writeAttribute("shortcode",shortcode);
+				w.writeAttribute("thumbnail_src",thumbnail_src);
+				w.writeAttribute("display_url",display_url);
+				if(owner_id!=null) w.writeAttribute("owner_id",owner_id);
+				if(taken_at_timestamp!=null) w.writeAttribute("taken_at_timestamp",taken_at_timestamp);
+				w.writeEndElement();
+				}
+			
+			public String getSrc() {
+				return this.thumbnail_src;
+			}
+			
+			@Override
+			public int compareTo(final INode o)
+				{
+				return this.getSrc().compareTo(o.getSrc());
 				}
 			@Override
 			public int hashCode()
 				{
-				return this.url.hashCode();
+				return this.getSrc().hashCode();
 				}
 			
 			public String getPageHref() {
@@ -114,8 +229,8 @@ public class InstagramToAtom extends Launcher {
 				{
 				w.writeEmptyElement("img");
 				w.writeAttribute("id", this.shortcode.isEmpty()?String.valueOf(++ID_GENERATOR):this.shortcode);
-				w.writeAttribute("alt", this.url);
-				w.writeAttribute("src", this.url);
+				w.writeAttribute("alt", this.getSrc());
+				w.writeAttribute("src", this.getSrc());
 				w.writeAttribute("width",String.valueOf(InstagramToAtom.this.thumb_size));
 				w.writeAttribute("height",String.valueOf(InstagramToAtom.this.thumb_size));
 				}
@@ -123,47 +238,17 @@ public class InstagramToAtom extends Launcher {
 			public boolean equals(final Object obj)
 				{
 				if(obj==this) return true;
-				if(obj==null || !(this instanceof Image)) return false;
-				return compareTo(Image.class.cast(obj))==0;
+				if(obj==null || !(this instanceof INode)) return false;
+				return compareTo(INode.class.cast(obj))==0;
 				}
 			@Override
 			public String toString()
 				{
-				return this.url;
+				return this.getSrc();
 				}
 			}
 		
 		
-		Query(final String A[]) {
-			this.query=A[0].trim();
-			if(this.query.isEmpty()) return;
-			if(A.length<=2) return; 
-			try {
-				this.date = dateFormatter.parse(A[1]);
-				}
-			catch(final ParseException err) {
-				this.date = new Date();
-				}
-			this.md5 = A[2];
-			if(A.length==3) return;
-			for(final String S:A[3].split("[ ]"))
-				{
-				if(S.isEmpty()) continue;
-				final int pipe = S.indexOf("|");
-				final Image img;
-				if(pipe==-1) {
-					img =  new Image(S,"");
-					}
-				else
-					{
-					img = new Image(
-							S.substring(0,pipe),
-							S.substring(pipe+1).trim()
-							);
-					}
-				this.old_images_urls.add(img);
-				}
-			}
 		
 		String getUrl() {
 			return "https://www.instagram.com"+
@@ -194,40 +279,85 @@ public class InstagramToAtom extends Launcher {
 				}
 			}
 		
-		private JsonArray queryEdges(JsonElement o) {
-			if(o==null || !o.isJsonObject() || !o.getAsJsonObject().has("entry_data")) return null;
-			o = o.getAsJsonObject().get("entry_data");
-
-			if(o==null || !o.isJsonObject()) return null;
-			if(o==null || !o.isJsonObject() || !o.getAsJsonObject().has("TagPage")) return null;
-			o = o.getAsJsonObject().get("TagPage");
-
-			if(o==null || !o.isJsonArray()) return null;
-			if(o==null || !o.isJsonArray() ||  o.getAsJsonArray().size() <= 0 ) return null;
-			o = o.getAsJsonArray().get(0);
-
-			if(o==null || !o.isJsonObject()) return null;
-			if(o==null || !o.isJsonObject() || !o.getAsJsonObject().has("graphql")) return null;
-			o = o.getAsJsonObject().get("graphql");
-
-			if(o==null || !o.isJsonObject()) return null;
-			if(o==null || !o.isJsonObject() || !o.getAsJsonObject().has("hashtag")) return null;
-			o = o.getAsJsonObject().get("hashtag");
-
-			if(o==null || !o.isJsonObject()) return null;
-			if(o==null || !o.isJsonObject() || !o.getAsJsonObject().has("edge_hashtag_to_media")) return null;
-			o = o.getAsJsonObject().get("edge_hashtag_to_media");
-
-			if(o==null || !o.isJsonObject()) return null;
-			if(o==null || !o.isJsonObject() || !o.getAsJsonObject().has("edges")) return null;
-			o = o.getAsJsonObject().get("edges");
-
-			if(o==null || !o.isJsonArray()) return null;
-			if(o==null || !o.isJsonArray() ||  o.getAsJsonArray().size() <= 0 ) return null;
-			return o.getAsJsonArray();
+		private Integer parseCount(final JsonElement je)
+			{
+			if(je==null ||!je.isJsonObject()) return null;
+			final JsonObject jObject = je.getAsJsonObject();
+			if(!jObject.has("count")) return null;
+			return jObject.get("count").getAsInt();
+			}
+		private String parseOwner(final JsonElement je)
+			{
+			if(je==null ||!je.isJsonObject()) return null;
+			final JsonObject jObject = je.getAsJsonObject();
+			if(!jObject.has("id")) return null;
+			return jObject.get("id").getAsString();
 			}
 		
-		private JsonObject queryJsonObject() throws IOException
+		private Dimension parseDimension(final JsonObject jObject)
+			{
+			Dimension n = new Dimension();
+			n.width = jObject.get("width").getAsInt();
+			n.height = jObject.get("height").getAsInt();
+			return n;
+			}
+		
+		private Thumbnail parseThumbail(final JsonObject jObject) {
+			final Thumbnail th = new Thumbnail();
+			th.width = jObject.get("config_width").getAsInt();
+			th.height = jObject.get("config_height").getAsInt();
+			th.src = jObject.get("src").getAsString();
+			return th;
+			}
+		
+		private INode parseNode(final JsonObject jObject)
+			{
+			INode n = new INode();
+			n.dimension = parseDimension(jObject.get("dimensions").getAsJsonObject());
+			n.display_url = jObject.get("display_url").getAsString();
+			n.edge_liked_by = parseCount(jObject.get("edge_liked_by"));
+			n.shortcode = jObject.get("shortcode").getAsString();
+			n.taken_at_timestamp = jObject.get("taken_at_timestamp").getAsString();
+			n.thumbnail_src = jObject.get("thumbnail_src").getAsString();
+			n.id = jObject.get("id").getAsString();
+			n.owner_id = parseOwner(jObject.get("owner"));
+			if(jObject.has("thumbnail_resources")) {
+				for(final JsonElement c: jObject.getAsJsonArray("thumbnail_resources"))
+					{
+					n.thumbnails.add(parseThumbail(c.getAsJsonObject()));
+					}
+				}
+			return n;
+			}
+		
+		private void searchNodes(final List<INode> nodes,final String key,final JsonElement elt)
+			{
+			if(elt.isJsonArray())
+				{
+				final JsonArray jArray = elt.getAsJsonArray();
+				for(final JsonElement item:jArray) {
+					searchNodes(nodes,key,item);
+					}
+				}
+			else if(elt.isJsonObject())
+				{
+				final JsonObject jObject = elt.getAsJsonObject();
+				if("node".equals(key) && jObject.has("display_url"))
+					{
+					final INode n = parseNode(jObject);
+					if(n!=null) nodes.add(n);
+					}
+				else
+					{
+					for(final Map.Entry<String, JsonElement> kv: jObject.entrySet())
+						{
+						if(kv.getKey().equals("edge_hashtag_to_top_posts")) continue;
+						searchNodes(nodes,kv.getKey(),kv.getValue());
+						}
+					}
+				}
+			}
+		private boolean query() throws IOException
 			{
 			final String windowSharedData = "window._sharedData";
 			final String endObject="};";
@@ -235,21 +365,21 @@ public class InstagramToAtom extends Launcher {
 			int i= html.indexOf(windowSharedData);
 			if(i==-1) {
 				LOG.error("cannot find "+windowSharedData+" in "+getUrl());
-				return null;
+				return false;
 				}
 			html=html.substring(i+windowSharedData.length());
 			i= html.indexOf("{");
 			if(i==-1)
 				{
 				LOG.error("cannot find '{' after "+windowSharedData+" in "+getUrl());
-				return null;
+				return false;
 				}
 			html=html.substring(i);
 			i = html.indexOf(endObject);
 			if(i==-1)
 				{
 				LOG.error("cannot find  "+endObject+" in "+getUrl());
-				return null;
+				return false;
 				}
 			html=html.substring(0, i+1);
 			final JsonReader jsr = new JsonReader(new StringReader(html));
@@ -261,7 +391,7 @@ public class InstagramToAtom extends Launcher {
 				}
 			catch(final JsonSyntaxException err) {
 				LOG.error(err);
-				return null;
+				return false;
 				}
 			finally
 				{
@@ -270,70 +400,20 @@ public class InstagramToAtom extends Launcher {
 			if(!root.isJsonObject())
 				{
 				LOG.error("root is not json object in "+getUrl());
-				return null;
-				}
-			return root.getAsJsonObject();
-			}
-		
-		private boolean  query()
-			{
-			String html;
-			try
-				{
-				html = queryHtml();
-				}
-			catch(final IOException err)
-				{
-				LOG.error(err);
 				return false;
 				}
-			
-			final String thumbnail_src= "\"thumbnail_src\":\"";
-			final String shortcode_src= "\"shortcode\":\"";
-			for(;;)
+			final List<INode> nodes =  new ArrayList<>();
+			searchNodes(nodes,null,root.getAsJsonObject());
+			if(nodes.isEmpty()) 
 				{
-				int i= html.indexOf(thumbnail_src);
-				
-				if(i==-1) {
-					break;
-					}
-				int h=i;
-				i+= thumbnail_src.length();
-				final int j=  html.indexOf("\"",i);
-				if(j!=-1) {
-					String shortcode="";
-					while(h>=0 && h+shortcode_src.length() < html.length()) {
-						if(html.substring(h,h+shortcode_src.length()).equals(shortcode_src)) {
-							h+=shortcode_src.length();
-							final int k = html.indexOf("\"",h);
-							if(k!=-1) {
-								shortcode =  html.substring(h, k);;
-								}
-							break;
-							}
-						--h;
-						}
-					
-					final String image_url = html.substring(i, j);
-					if(image_url.startsWith("https://") &&
-						(image_url.endsWith(".png") || image_url.endsWith(".jpg")))
-						{
-						this.new_images_urls.add(new Image(image_url,shortcode));
-						}
-					html = html.substring(j);
-					}
-				else
-					{
-					html = html.substring(i);
-					}
+				LOG.warning("No image found for "+this.query+".");
 				}
-			
-			if(this.new_images_urls.isEmpty()) {
-				LOG.warning("No image found for "+this.query);
-			}
+			if(this.max_likes!=null) nodes.removeIf(N->N.edge_liked_by!=null && N.edge_liked_by>this.max_likes);
+			nodes.removeIf(N->N.getSrc()==null && N.getSrc().isEmpty());
+			this.new_images_urls.addAll(nodes);
 			
 			final String new_md5 = md5(this.new_images_urls.stream().
-					map(I->I.url).
+					map(I->I.getSrc()).
 					collect(Collectors.joining(" ")));
 			if(!new_md5.equals(this.md5)) {
 				this.md5 = new_md5;
@@ -341,8 +421,9 @@ public class InstagramToAtom extends Launcher {
 				}
 			return true;
 			}
+		
 		void writeAtom(final XMLStreamWriter w) throws XMLStreamException {
-			final Set<Image> images_to_print = new TreeSet<>(this.new_images_urls);
+			final Set<INode> images_to_print = new TreeSet<>(this.new_images_urls);
 			
 			if(InstagramToAtom.this.force_print_new_only)
 				{
@@ -360,7 +441,7 @@ public class InstagramToAtom extends Launcher {
 				}
 			}
 		
-		void writeGroupedImages(final XMLStreamWriter w,Set<Image> images_to_print) throws XMLStreamException {
+		void writeGroupedImages(final XMLStreamWriter w,Set<INode> images_to_print) throws XMLStreamException {
 			w.writeStartElement("entry");
 			
 			w.writeStartElement("title");
@@ -393,7 +474,7 @@ public class InstagramToAtom extends Launcher {
 			w.writeStartElement("p");  
 			
 	
-			for(final Image image_url:images_to_print) {
+			for(final INode image_url:images_to_print) {
 				w.writeStartElement("a");
 				w.writeAttribute("id",String.valueOf(++ID_GENERATOR));
 				w.writeAttribute("target", "_blank");
@@ -409,8 +490,8 @@ public class InstagramToAtom extends Launcher {
 			w.writeEndElement();//entry
 		}
 		
-		void writeSoloImages(final XMLStreamWriter w,Set<Image> images_to_print) throws XMLStreamException {
-			for(final Image image_url : images_to_print) {
+		void writeSoloImages(final XMLStreamWriter w,Set<INode> images_to_print) throws XMLStreamException {
+			for(final INode image_url : images_to_print) {
 				w.writeStartElement("entry");
 				
 				w.writeStartElement("title");
@@ -418,14 +499,14 @@ public class InstagramToAtom extends Launcher {
 				w.writeEndElement();
 
 				w.writeStartElement("id");
-				w.writeCharacters(md5(image_url.url));
+				w.writeCharacters(md5(image_url.getSrc()));
 				w.writeEndElement();
 
 				
 				w.writeEmptyElement("link");
 				w.writeAttribute("href", 
 						image_url.shortcode.isEmpty()?
-						this.getUrl()+"?m="+md5(image_url.url):
+						this.getUrl()+"?m="+md5(image_url.getSrc()):
 						image_url.getPageHref()
 						);
 				
@@ -449,7 +530,7 @@ public class InstagramToAtom extends Launcher {
 				w.writeStartElement("a");
 				w.writeAttribute("id",String.valueOf(++ID_GENERATOR));
 				w.writeAttribute("target", "_blank");
-				w.writeAttribute("href", image_url.shortcode.isEmpty()?this.getUrl()+"?m="+md5(image_url.url):image_url.getPageHref());
+				w.writeAttribute("href", image_url.shortcode.isEmpty()?this.getUrl()+"?m="+md5(image_url.getSrc()):image_url.getPageHref());
 				image_url.write(w);
 				w.writeEndElement();//a
 				
@@ -481,15 +562,15 @@ public class InstagramToAtom extends Launcher {
 			}
 		return this.cacheDirectory;
 		}
-	private File getCacheFile() {
-	
-		return new File(getPreferenceDir(),"cache.tsv");
+
+	private File getCacheXmlFile() {
+		
+		return new File(getPreferenceDir(),"cache.xml");
 		}
-	
 
 	
-	private void saveCache(final List<Query> cache) throws IOException {
-		final File cacheFile = getCacheFile();
+	private void saveCacheXml(final List<Query> cache) throws IOException {
+		final File cacheFile = getCacheXmlFile();
 		final File tmpFile = File.createTempFile("insta2atom.",".tmp",cacheFile.getParentFile());
 		
 		if(!cacheFile.getParentFile().exists()) {
@@ -499,55 +580,61 @@ public class InstagramToAtom extends Launcher {
 				return;
 				}
 			}
-		try(final PrintWriter pw = new PrintWriter(tmpFile))
+		try
 			{
-			pw.println("#Date: "+dateFormatter.format(new Date()));
-			cache.stream().forEach(Q->{
-					Q.old_images_urls.removeAll(Q.new_images_urls);
-					while((Q.new_images_urls.size()+Q.old_images_urls.size()) >100) {
-						final Iterator<Query.Image> iter = Q.old_images_urls.iterator();
-						if(!iter.hasNext())  break;
-						iter.next();
-						iter.remove();
-						}
-					Q.new_images_urls.addAll(Q.old_images_urls);
-					pw.println(
-							Q.query+"\t"+dateFormatter.format(Q.date)+"\t"+Q.md5+"\t"+
-							Q.new_images_urls.
-							stream().
-							map(I->I.url+(I.shortcode.isEmpty()?"":"|"+I.shortcode)).
-							collect(Collectors.joining(" ")));
-					});
+			final PrintWriter pw = new PrintWriter(tmpFile,"UTF-8");
+			XMLStreamWriter w = XMLOutputFactory.newInstance().createXMLStreamWriter(pw);
+			w.writeStartDocument("UTF-8", "1.0");
+			w.writeStartElement("cache");
+			w.writeAttribute("date",this.dateFormatter.format(new Date()));
+			w.writeCharacters("\n");
+			
+			for(final Query q: cache)
+				{
+				q.saveCache(w);
+				w.writeCharacters("\n");
+				}
+			
+			
+			w.writeEndElement();
+			w.writeEndDocument();
+			w.flush();
+			w.close();
 			pw.flush();
+			pw.close();
 			}
-		catch(final IOException err) {
+		catch(final Exception err) {
 			LOG.error(err);
 			return;
 			}
 		tmpFile.renameTo(cacheFile);
 		}
 	
-	private List<Query> readCache() {
+	private List<Query> readCacheXml() {
 		final List<Query> cache = new ArrayList<>();
-		final File cacheFile = getCacheFile();
+		final File cacheFile = getCacheXmlFile();
 		if(!cacheFile.exists()) {
 			LOG.warning("Cannot find cache "+cacheFile);
 			return cache;
 			}
-		try(final FileReader fr=new FileReader(cacheFile)) {
-			cache.addAll(new BufferedReader(fr).lines().
-				filter(L->!(L.trim().isEmpty() || L.startsWith("#"))).
-				map(L->L.split("[\t]")).
-				map(A->  new Query(A)).
-				filter(Q->Q!=null &&  !Q.query.isEmpty()).
-				collect(Collectors.toList())
-				);
+		try {
+			final Document dom=DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(cacheFile);
+			final Element rootE=dom.getDocumentElement();
+			for(Node c=rootE.getFirstChild();c!=null;c=c.getNextSibling())
+				{
+				if(c.getNodeType()!=Node.ELEMENT_NODE) continue;
+				Element ce=(Element)c;
+				if(!(ce.getTagName().equals("query") && ce.hasAttribute("name"))) continue;
+				final Query query = new Query(ce);
+				cache.add(query);
+				}
 			}
-		catch(final IOException err) {
+		catch(final Exception err) {
 			LOG.error(err);
 			}
 		return cache;
 		}
+	
 	
 	@Override
 	public int doWork(final List<String> args) {
@@ -588,7 +675,7 @@ public class InstagramToAtom extends Launcher {
 			w.writeCharacters(this.dateFormatter.format(new Date()));
 			w.writeEndElement();
 			
-			final List<Query> cache = readCache();
+			final List<Query> cache = readCacheXml();
 			for(int idx=0;idx < cache.size();++idx) {
 				final Query q=cache.get(idx);
 				w.writeComment(q.query);
@@ -604,7 +691,7 @@ public class InstagramToAtom extends Launcher {
 			w.writeEndDocument();
 			w.flush();
 			w.close();
-			saveCache(cache);
+			saveCacheXml(cache);
 			this.client.close();this.client=null;
 			return 0;
 			}
