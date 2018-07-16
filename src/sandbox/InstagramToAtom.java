@@ -58,6 +58,7 @@ java -jar ${HOME}/src/jsandbox/dist/insta2atom.jar |\
  */
 public class InstagramToAtom extends Launcher {
 	private static final Logger LOG = Logger.builder(InstagramToAtom.class).build();
+	private static final int MAX_IMG_PER_QUERY=100;
 	private int ID_GENERATOR=0;
 	@Parameter(names={"-t","--tumb-size"},description="Thumb size.")
 	private int thumb_size =256;
@@ -71,6 +72,8 @@ public class InstagramToAtom extends Launcher {
 	private File cookieStoreFile  = null;
 	@Parameter(names={"-g","--group"},description="group items per query")
 	private boolean group_flag =false;
+	@Parameter(names={"--timestamp"},description="timestamp in seconds. If > 0, read images newer than timestamps seconds.")
+	private long diff_timestamp = -1l;
 
 	
 	
@@ -141,7 +144,17 @@ public class InstagramToAtom extends Launcher {
 			w.writeAttribute("md5", this.md5);
 			if(max_likes!=null) w.writeAttribute("max_likes",String.valueOf(this.max_likes));
 			w.writeAttribute("date",dateFormatter.format(this.date));
-			for(final INode img:this.new_images_urls)
+			
+			final Set<INode> saveImgs = new TreeSet<>(this.new_images_urls);
+			saveImgs.addAll(this.old_images_urls);
+			final List<INode> array=new ArrayList<>(saveImgs);
+			array.sort((I1,I2)->Long.compare(I1.getTimestampMs(), I2.getTimestampMs()));
+			while(!array.isEmpty() && array.size()>MAX_IMG_PER_QUERY)
+				{
+				array.remove(0);
+				}
+			
+			for(final INode img:array)
 				{
 				img.saveCache(w);
 				}
@@ -211,6 +224,27 @@ public class InstagramToAtom extends Launcher {
 				return this.thumbnail_src;
 			}
 			
+			long getTimestampMs()
+				{
+				try {
+					return Long.parseLong(this.taken_at_timestamp);
+					}
+				catch(final NumberFormatException err)
+					{
+					return 0L;
+					}
+				}
+			
+			boolean hasValidTimeStamp() {
+				if(InstagramToAtom.this.diff_timestamp >0L ) return true;
+				final long epoch_image_ms = 1000L * getTimestampMs();
+				final long now_ms = System.currentTimeMillis();
+				if(now_ms -  epoch_image_ms > InstagramToAtom.this.diff_timestamp*1000L) {
+					return false;
+					}
+				return true;
+				}
+			
 			@Override
 			public int compareTo(final INode o)
 				{
@@ -239,7 +273,11 @@ public class InstagramToAtom extends Launcher {
 				{
 				if(obj==this) return true;
 				if(obj==null || !(this instanceof INode)) return false;
-				return compareTo(INode.class.cast(obj))==0;
+				final INode other=INode.class.cast(obj);
+				if (compareTo(other)==0)return true;
+				if(this.id!=null && other.id!=null && this.id.equals(other.id)) return true;
+				if(this.shortcode!=null && other.shortcode!=null && this.shortcode.equals(other.shortcode)) return true;
+				return false;
 				}
 			@Override
 			public String toString()
@@ -327,6 +365,7 @@ public class InstagramToAtom extends Launcher {
 					n.thumbnails.add(parseThumbail(c.getAsJsonObject()));
 					}
 				}
+			
 			return n;
 			}
 		
@@ -423,13 +462,19 @@ public class InstagramToAtom extends Launcher {
 			}
 		
 		void writeAtom(final XMLStreamWriter w) throws XMLStreamException {
-			final Set<INode> images_to_print = new TreeSet<>(this.new_images_urls);
+			final Set<INode> images_to_print = new TreeSet<>(
+					this.new_images_urls.stream().
+						filter(I->I.hasValidTimeStamp()).
+						collect(Collectors.toSet())
+					);
 			
 			if(InstagramToAtom.this.force_print_new_only)
 				{
 				images_to_print.removeAll(this.old_images_urls);
 				}
 		
+			
+			
 			if(images_to_print.isEmpty()) return;
 			if(InstagramToAtom.this.group_flag)
 				{
