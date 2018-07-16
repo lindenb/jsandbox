@@ -72,9 +72,6 @@ public class InstagramToAtom extends Launcher {
 	private File cookieStoreFile  = null;
 	@Parameter(names={"-g","--group"},description="group items per query")
 	private boolean group_flag =false;
-	@Parameter(names={"--timestamp"},description="timestamp in seconds. If > 0, read images newer than timestamps seconds.")
-	private long diff_timestamp = -1l;
-
 	
 	
 	private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -99,6 +96,7 @@ public class InstagramToAtom extends Launcher {
 		Date date = new Date();
 		String md5 = "";
 		Integer max_likes=null;
+		long max_diff_sec = -1L;
 		final Set<INode> old_images_urls = new TreeSet<>();
 		final Set<INode> new_images_urls = new TreeSet<>();
 		Query(final Element root)
@@ -114,6 +112,16 @@ public class InstagramToAtom extends Launcher {
 					this.date = new Date();
 					}
 				}
+			
+			if(root.hasAttribute("max-diff-sec")) {
+				try {
+					this.max_diff_sec = Long.parseLong(root.getAttribute("max-diff-sec"));
+					}
+				catch(final NumberFormatException err) {
+				this.max_diff_sec = -1L;
+				}
+			}
+			
 			if(root.hasAttribute("max_likes"))
 				{
 				try {
@@ -143,12 +151,13 @@ public class InstagramToAtom extends Launcher {
 			w.writeAttribute("name", this.query);
 			w.writeAttribute("md5", this.md5);
 			if(max_likes!=null) w.writeAttribute("max_likes",String.valueOf(this.max_likes));
+			if(max_diff_sec>0) w.writeAttribute("max-diff-sec", String.valueOf(this.max_diff_sec));
 			w.writeAttribute("date",dateFormatter.format(this.date));
 			
 			final Set<INode> saveImgs = new TreeSet<>(this.new_images_urls);
 			saveImgs.addAll(this.old_images_urls);
 			final List<INode> array=new ArrayList<>(saveImgs);
-			array.sort((I1,I2)->Long.compare(I1.getTimestampMs(), I2.getTimestampMs()));
+			array.sort((I1,I2)->Long.compare(I1.getTimestampSec(), I2.getTimestampSec()));
 			while(!array.isEmpty() && array.size()>MAX_IMG_PER_QUERY)
 				{
 				array.remove(0);
@@ -224,7 +233,7 @@ public class InstagramToAtom extends Launcher {
 				return this.thumbnail_src;
 			}
 			
-			long getTimestampMs()
+			long getTimestampSec()
 				{
 				try {
 					return Long.parseLong(this.taken_at_timestamp);
@@ -235,15 +244,6 @@ public class InstagramToAtom extends Launcher {
 					}
 				}
 			
-			boolean hasValidTimeStamp() {
-				if(InstagramToAtom.this.diff_timestamp >0L ) return true;
-				final long epoch_image_ms = 1000L * getTimestampMs();
-				final long now_ms = System.currentTimeMillis();
-				if(now_ms -  epoch_image_ms > InstagramToAtom.this.diff_timestamp*1000L) {
-					return false;
-					}
-				return true;
-				}
 			
 			@Override
 			public int compareTo(final INode o)
@@ -447,8 +447,14 @@ public class InstagramToAtom extends Launcher {
 				{
 				LOG.warning("No image found for "+this.query+".");
 				}
-			if(this.max_likes!=null) nodes.removeIf(N->N.edge_liked_by!=null && N.edge_liked_by>this.max_likes);
+			if(this.max_likes!=null) {
+				nodes.removeIf(N->N.edge_liked_by!=null && N.edge_liked_by>this.max_likes);
+				}
 			nodes.removeIf(N->N.getSrc()==null && N.getSrc().isEmpty());
+			if(this.max_diff_sec>0L){
+				final long now=System.currentTimeMillis();
+				nodes.removeIf(N->(N.getTimestampSec()*1000L-now)>this.max_diff_sec*1000L);
+				}
 			this.new_images_urls.addAll(nodes);
 			
 			final String new_md5 = md5(this.new_images_urls.stream().
@@ -464,7 +470,6 @@ public class InstagramToAtom extends Launcher {
 		void writeAtom(final XMLStreamWriter w) throws XMLStreamException {
 			final Set<INode> images_to_print = new TreeSet<>(
 					this.new_images_urls.stream().
-						filter(I->I.hasValidTimeStamp()).
 						collect(Collectors.toSet())
 					);
 			
