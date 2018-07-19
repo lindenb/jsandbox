@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Function;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -162,6 +163,8 @@ public abstract class Gribouille extends Launcher
 		}
 	
 	protected Random rand=new Random();
+	
+	
 	
 	@Parameter(names= {"-o","--output"},required=true)
 	protected File outputFile = null;
@@ -533,36 +536,54 @@ public abstract class Gribouille extends Launcher
 		protected abstract PointPlotter getPointPlotter();
 		}
 	
-	
-	
-	
-	private static class Kirby01 extends Gribouille
+	private static abstract class AbstractKirby extends Gribouille
 		{
 		@Parameter(names= {"-alpha"},converter=MinMaxConverter.class)
-		private MinMax alpha=new MinMax(0.5,1.0);
+		protected MinMax alpha=new MinMax(0.5,1.0);
 		@Parameter(names= {"-radius"},converter=MinMaxConverter.class)
-		private MinMax radius=new MinMax(0.5,50.0);
+		protected MinMax radius=new MinMax(0.5,50.0);
 		@Parameter(names= {"-p"},converter=ProbaConverter.class)
-		private double proba = 0.001;
+		protected double proba = 0.001;
+	
+		
+		
+		private Function<Dimension,Point2D.Double> _pointSupplier;
+		
+		AbstractKirby() {
+			_pointSupplier  = (D)->{
+				final double cx = rand.nextInt( D.width ) ;
+				final double cy = rand.nextInt( D.height ) ;
+				return new Point2D.Double(cx, cy);
+				};
+			}
+		
+		public Function<Dimension,Point2D.Double> getPointSupplier() {
+			return this._pointSupplier;
+			}
+		
+		
+		}
+	
+	private static class Kirby01 extends AbstractKirby
+		{
+		
 		
 		
 		@Override
 		protected void paint(final Graphics2D g) {
 			long occurences = (long)(((imgDimension.width)*(imgDimension.height))*this.proba);
 			while(occurences>0) {
-		  		double cy= rand.nextInt( this.image.getHeight() ) ;
-				double cx ;
+		  		Point2D.Double pt= getPointSupplier().apply(imgDimension);
 				double r;
 				double a;
 				
-					cx = rand.nextInt( this.image.getWidth() ) ;
 					r = this.radius.rnd(this.rand);
 					a = this.alpha.rnd(this.rand);
 					
 				
 				Color c = this.black(a);
 				g.setColor(c);
-				g.fill(new java.awt.geom.Ellipse2D.Double((cx-r), (cy-r),(r*2),(r*2)));
+				g.fill(new java.awt.geom.Ellipse2D.Double((pt.x-r), (pt.y-r),(r*2),(r*2)));
 				
 				occurences--;
 				}
