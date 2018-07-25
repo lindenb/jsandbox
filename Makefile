@@ -160,7 +160,11 @@ jgit.jars  =  \
 jcommander.jar= \
 	$(lib.dir)/com/beust/jcommander/1.64/jcommander-1.64.jar
 
-all_maven_jars = $(sort ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} )
+berkeleydb.jar= \
+	$(lib.dir)/com/sleepycat/je/5.0.73/je-5.0.73.jar
+
+
+all_maven_jars = $(sort ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar})
 
 
 
@@ -215,6 +219,7 @@ $(eval $(call compile,fileserver,sandbox.FileServer,${jcommander.jar} ${jetty.ja
 $(eval $(call compile,atomxhtml,sandbox.AtomXhtmlContent,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,xmlpath,sandbox.XmlPath,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,imagemap,sandbox.ImageMap,${jcommander.jar}))
+$(eval $(call compile,dccomicsscraper,sandbox.DcComicsScraper,${jcommander.jar} ${google.gson.jars} ${jtidy.jars} ${apache.httpclient.jars} ${berkeleydb.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
