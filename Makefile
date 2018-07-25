@@ -94,7 +94,7 @@ jetty.jars=\
 	$(lib.dir)/org/eclipse/jetty/jetty-server/9.3.7.v20160115/jetty-server-9.3.7.v20160115.jar \
 	$(lib.dir)/org/eclipse/jetty/jetty-io/9.3.7.v20160115/jetty-io-9.3.7.v20160115.jar \
 	$(lib.dir)/org/eclipse/jetty/jetty-util/9.3.7.v20160115/jetty-util-9.3.7.v20160115.jar
-	
+
 jtidy.jars=\
 	$(lib.dir)/net/sf/jtidy/jtidy/r938/jtidy-r938.jar
 
@@ -169,7 +169,7 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
-	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom fileserver xmlpath
+	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom fileserver xmlpath imagemap
 
 
 $(eval $(call compile,miniivy,sandbox.MiniIvy,${jcommander.jar}))
@@ -214,6 +214,7 @@ $(eval $(call compile,insta2atom,sandbox.InstagramToAtom,${jcommander.jar} ${apa
 $(eval $(call compile,fileserver,sandbox.FileServer,${jcommander.jar} ${jetty.jars}))
 $(eval $(call compile,atomxhtml,sandbox.AtomXhtmlContent,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,xmlpath,sandbox.XmlPath,${jcommander.jar} ${jtidy.jars}))
+$(eval $(call compile,imagemap,sandbox.ImageMap,${jcommander.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
