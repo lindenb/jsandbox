@@ -55,23 +55,27 @@ public class DcComicsScraper extends Launcher {
 	private CloseableHttpClient client = null;
 
 	private class JsonBinding extends TupleBinding<JsonElement> {
+		private final JsonParser parser =new JsonParser();
+		private final Gson gson = new GsonBuilder().create();
+		private JsonBinding() {
+		}
+		
 		@Override
-		public JsonElement entryToObject(TupleInput in) {
-			int n=in.readInt();
-			JsonReader r=new JsonReader(new StringReader(in.readString(n)));
-			JsonParser p=new JsonParser();
-			return p.parse(r);
+		public JsonElement entryToObject(final TupleInput in) {
+			final int n=in.readInt();
+			JsonReader r=new JsonReader(new StringReader(in.readChars(n)));
+			return this.parser.parse(r);
 			}
 		@Override
-		public void objectToEntry(JsonElement e, TupleOutput out) {
-		      Gson gson = new GsonBuilder().create();
-		      String s=gson.toJson(e);
-		      out.writeInt(s.length());
-		      out.writeString(s.toCharArray());
+		public void objectToEntry(JsonElement e, TupleOutput out) {		     
+			final String s= this.gson.toJson(e);
+		      final char array[]=s.toCharArray();
+		      out.writeInt(array.length);
+		      out.writeChars(array);
 			}
 		}
 	
-	final JsonBinding jsonBinding = new JsonBinding();
+	private final JsonBinding jsonBinding = new JsonBinding();
 	
 	private void openBdb() throws IOException{
 		LOG.info("open bdb");
@@ -122,7 +126,7 @@ public class DcComicsScraper extends Launcher {
 			}
 	}
 	
-	private void insertComics(JsonObject root) throws IOException {
+	private void insertComics(final JsonObject root) throws IOException {
 		final String nid = root.get("nid").getAsString();
 		final String type = root.get("type").getAsString();
 		final String keystr = type+"~"+nid;
