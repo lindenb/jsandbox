@@ -33,7 +33,7 @@ public class HtmlInXml extends Launcher {
 			}
 		
 		@Override
-		public Node apply(Node t)
+		public Node apply(final Node t)
 			{
 			return clone(t);
 			}
@@ -104,7 +104,7 @@ public class HtmlInXml extends Launcher {
 			tidy.setXmlOut(true);
 			tidy.setShowErrors(0);
 			tidy.setShowWarnings(false);
-			StringReader sr = new StringReader(root.getTextContent());
+			final StringReader sr = new StringReader(root.getTextContent());
 			final Document newdoc = tidy.parseDOM(sr, null);
 			sr.close();
 			if(newdoc!=null && newdoc.getDocumentElement()!=null)

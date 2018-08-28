@@ -3,6 +3,12 @@ package sandbox;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
+
+/**
+
+Wrapper of javax.xml.stream.XMLStreamWriter that don't throw exceptions
+
+*/
 public interface XmlStreamWriter {
 public static XmlStreamWriter wrap(final XMLStreamWriter delegate) {
 	return new XmlStreamWriterImpl(delegate);
@@ -17,6 +23,7 @@ public void writeEndDocument();
 public void writeCharacters(final Object text);
 public void close();
 public void flush();
+
 
 static class XmlStreamWriterImpl implements XmlStreamWriter
 	{

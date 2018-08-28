@@ -12,25 +12,40 @@ import java.lang.reflect.Type;
 import java.lang.reflect.WildcardType;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamWriter;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
 
 
 /**
- * Java2Xml
- *
+
+## Example
+
+```
+find /home/lindenb/package/gephi-0.9.2/gephi/modules/ /home/lindenb/package/gephi-0.9.2/platform/core /home/lindenb/package/gephi-0.9.2/platform/lib/ -type f -name "*.jar" > jeter.list
+ java -jar dist/java2xml.jar -j jeter.list  org.gephi.layout.plugin.forceAtlas2.ForceAtlas2 | xmllint --format -
+ ```
+
  */
-public class Java2Xml extends AbstractApplication
+public class Java2Xml extends Launcher
 	{
+	private static final Logger LOG = Logger.builder(Launcher.class).build();
+	@com.beust.jcommander.Parameter(
+			names= {"-j","--jar"},
+			description="one *.jar file or a *.list file with one jar per line."
+			)
+	private File userJarFile = null;
+	
+
+	
 	private XMLStreamWriter out=null;
 	private ClassLoader classLoader=null;
 	
@@ -174,15 +189,28 @@ public class Java2Xml extends AbstractApplication
 			out.writeStartElement("beans");
 			for(Method m1 : clazz.getMethods())
 				{
-				if(!Modifier.isPublic(m1.getModifiers())) continue;
-				if(Modifier.isStatic(m1.getModifiers())) continue;
-				if(m1.getReturnType()!=Void.TYPE) continue;
 				final String name= m1.getName();
-				if(name.length()<4 || !name.startsWith("set")) continue;
-				if(m1.getParameterCount()!=1) continue;
+				if(!Modifier.isPublic(m1.getModifiers())) {
+					continue;
+				}
+				if(Modifier.isStatic(m1.getModifiers())) {
+					continue;
+				}
+				if(m1.getReturnType()!=Void.TYPE) {
+					continue;
+				}
+				
+				
+				if(!(name.length()>3 && name.startsWith("set"))) {
+					continue;
+				}
+				if(m1.getParameterCount()!=1) {
+					continue;
+					}
 				Type arg = m1.getParameterTypes()[0];
+
 				String name2;
-				if( arg == Boolean.TYPE)
+				if( arg == Boolean.TYPE || arg.getTypeName().equals("java.lang.Boolean"))
 					{
 					name2="is"+name.substring(3);
 					}
@@ -191,7 +219,7 @@ public class Java2Xml extends AbstractApplication
 					name2="get"+name.substring(3);
 					}
 				try {
-				Method m2 = clazz.getMethod(name2,new Class[0]);
+				final Method m2 = clazz.getMethod(name2,new Class[0]);
 				if(m2.getReturnType()!=arg) continue;
 				out.writeStartElement("bean");
 				out.writeAttribute("name",
@@ -292,11 +320,8 @@ public class Java2Xml extends AbstractApplication
 			out.writeEndElement();
 			}
 	
-	@Override
-	protected void fillOptions(Options options) {
-		options.addOption(Option.builder("j").longOpt("jar").desc("jar file or dir containing jars").hasArgs().build());
-		super.fillOptions(options);
-		}
+	
+	
 	
 	private void addJarFile(final File jarFile,final Collection<URL> set)
 		throws Exception
@@ -326,26 +351,39 @@ public class Java2Xml extends AbstractApplication
 			set.add(jarFile.toURI().toURL());
 			}
 		}
-	
 	@Override
-	protected int execute(final CommandLine cmd) {
+	public int doWork(List<String> args) {
+		
 		try {
 			List<URL> urls = new ArrayList<>();
-			if(cmd.hasOption("j")) {
-				for(String j:cmd.getOptionValues("j"))
+			if(this.userJarFile!=null) {
+				final Set<File> extJarFiles = new HashSet<>();
+				if(userJarFile.getName().endsWith(".list"))
 					{
-					for(String jarName:j.split("[:]"))
-						{
-						jarName=jarName.trim();
-						if(jarName.isEmpty()) continue;
-						addJarFile(new File(jarName),urls);
-						}
+					extJarFiles.addAll(Files.lines(this.userJarFile.toPath()).
+							map(L->L.trim()).
+							filter(L->L.endsWith(".jar")).
+							map(L->new File(L)).
+							collect(Collectors.toSet()))
+							;
+					}
+				else if(this.userJarFile.getName().endsWith(".jar"))
+					{
+					extJarFiles.add(this.userJarFile);
+					}
+				else
+					{
+					LOG.error("bad jar file "+this.userJarFile);
+					return -1;
+					}
+				for(final File jf: extJarFiles)
+					{
+					addJarFile(jf,urls);
 					}				
 				}
 			
 			this.classLoader = new URLClassLoader(urls.toArray(new URL[urls.size()]),ClassLoader.getSystemClassLoader());
 			
-			final List<String> args = cmd.getArgList();
 		
 		    
 		    final HashSet<String> setOfClasses=new HashSet<String>();
@@ -374,14 +412,14 @@ public class Java2Xml extends AbstractApplication
 		   this.out.flush();
 		   this.out.close();
 		   return 0;
-		} catch(Exception err) {
+		} catch(final Throwable err) {
 			err.printStackTrace();
-			LOG.severe(err.getMessage());
+			LOG.error(err.getMessage());
 			return -1;
 		}
 	}
 
-	public static void main(String[] args)
+	public static void main(final String[] args)
 		{
 		new Java2Xml().instanceMainWithExit(args);
 		}
