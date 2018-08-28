@@ -190,6 +190,7 @@ $(eval $(call compile,flickrrss,sandbox.FlickrRss,${apache.commons.cli} ${slf4j.
 $(eval $(call compile,mosaicofpictures,sandbox.MosaicOfPictures,${jcommander.jar}))
 $(eval $(call compile,java2xml,sandbox.Java2Xml,${apache.commons.cli} ${slf4j.jars}))
 $(eval $(call compile,xslserver,sandbox.XslHandler,${google.gson.jars} ${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars} ${spring-beans.jars}))
+$(eval $(call compile,divandb,sandbox.DivanDB,${google.gson.jars} ${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars}))
 $(eval $(call compile,packageeclipsejars,sandbox.PackageEclipseJars,${apache.commons.cli}))
 $(eval $(call compile,htmlinxml,sandbox.HtmlInXml,${jcommander.jar}  ${jtidy.jars}))
 $(eval $(call compile,pubmedtrending,sandbox.PubmedTrending,${apache.commons.cli} ${slf4j.jars} ))
@@ -220,6 +221,7 @@ $(eval $(call compile,atomxhtml,sandbox.AtomXhtmlContent,${jcommander.jar} ${jti
 $(eval $(call compile,xmlpath,sandbox.XmlPath,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,imagemap,sandbox.ImageMap,${jcommander.jar}))
 $(eval $(call compile,dccomicsscraper,sandbox.DcComicsScraper,${jcommander.jar} ${google.gson.jars} ${jtidy.jars} ${apache.httpclient.jars} ${berkeleydb.jar}))
+$(eval $(call compile,image2ascii,sandbox.ImageToAscii,${jcommander.jar}))
 $(eval $(call compile,cepicdcscraper,sandbox.CepicDcScraper,${jcommander.jar} ${apache.httpclient.jars}))
 $(eval $(call compile,htmlparser,sandbox.HtmlParser,${jcommander.jar} ${jtidy.jars}))
 
