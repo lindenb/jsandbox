@@ -42,28 +42,10 @@ public class ImageMap extends Launcher {
 	private File outputImageFile = null;
 	@Parameter(names={"-t","--table"},description="output table")
 	private File outputTableFile = null;
-	
-	private Color parseColor(final String s) {
-		if(s.equalsIgnoreCase("BLACK")) return Color.BLACK;
-		if(s.equalsIgnoreCase("BLUE")) return Color.BLUE;
-		if(s.equalsIgnoreCase("CYAN")) return Color.CYAN;
-		if(s.equalsIgnoreCase("GRAY")) return Color.GRAY;
-		if(s.equalsIgnoreCase("GREEN")) return Color.GREEN;
-		if(s.equalsIgnoreCase("MAGENTA")) return Color.MAGENTA;
-		if(s.equalsIgnoreCase("ORANGE")) return Color.ORANGE;
-		if(s.equalsIgnoreCase("PINK")) return Color.PINK;
-		if(s.equalsIgnoreCase("RED")) return Color.RED;
-		if(s.equalsIgnoreCase("WHITE")) return Color.WHITE;
-		if(s.equalsIgnoreCase("YELLOW")) return Color.YELLOW;
+	@Parameter(names={"-ho","--horizontal"},description="horizontal table layout")
+	private boolean horizontal_table_layout = false;
 
-		final String tokens[]=s.split("[,]");
-		if(tokens.length!=3) throw new IllegalArgumentException("bad rgb color components:"+s);
-		return new Color(
-				Integer.parseInt(tokens[0]),
-				Integer.parseInt(tokens[1]),
-				Integer.parseInt(tokens[2])
-				);
-	}
+	private final ColorParser colorParser = ColorParser.getInstance();
 	
 	private List<Color> getPalette() {
 		final Set<Color> colorset=new HashSet<>();
@@ -75,7 +57,7 @@ public class ImageMap extends Launcher {
 				colorset.addAll(
 					r.lines().
 					filter(L->!(L.startsWith("#") || L.trim().isEmpty())).
-					map(L->parseColor(L)).
+					map(colorParser).
 					filter(C->C!=null).
 					collect(Collectors.toSet())
 					);
@@ -100,15 +82,15 @@ public class ImageMap extends Launcher {
 			}
 		else if( paletteName.equalsIgnoreCase("rainbow"))
 			{
-			colorset.addAll(Arrays.asList(Color.blue, Color.cyan, Color.green, Color.yellow, Color.orange, Color.red));
+			colorset.addAll(Arrays.asList(Color.BLACK,Color.blue, Color.cyan, Color.green, Color.yellow, Color.orange, Color.red,Color.WHITE));
 			}
 		else if( paletteName.equalsIgnoreCase("cool"))
 			{
-			colorset.addAll(Arrays.asList(Color.green, Color.blue, new Color(255, 0, 255)));
+			colorset.addAll(Arrays.asList(Color.BLACK,Color.green, Color.blue, new Color(255, 0, 255),Color.WHITE));
 			}
 		else if( paletteName.equalsIgnoreCase("warm"))
 			{
-			colorset.addAll(Arrays.asList(Color.red, Color.orange, Color.yellow));
+			colorset.addAll(Arrays.asList(Color.BLACK,Color.red, Color.orange, Color.yellow,Color.WHITE));
 			}
 		else if( paletteName.equalsIgnoreCase("thermal"))
 			{
@@ -122,14 +104,14 @@ public class ImageMap extends Launcher {
 			final String tokens[]=paletteName.split("[;]");
 			for(final String s:tokens) {
 				if(s.trim().isEmpty()) continue;
-				final Color c=parseColor(s);
+				final Color c= this.colorParser.apply(s);
 				if(c==null) continue;
 				colorset.add(c);
 				}
 			}
 		final List<Color> array=new ArrayList<>(colorset);
 		if(array.size()<=1) throw new IllegalArgumentException("no enough colors defined");
-		if(array.size()>255) throw new IllegalArgumentException("too many indexed points");
+		if(array.size()>255) throw new IllegalArgumentException("too many indexed colors");
 		return array;
 	}
 
@@ -161,75 +143,124 @@ public class ImageMap extends Launcher {
 
 	@Override
 	public int doWork(final List<String> args) {
+		PrintWriter pw = null;
 		try
-		{
-			final String imgPath = oneFileOrNull(args);
-			final File imgIn=new File(imgPath);
-			final List<Color>  colors = getPalette();
-			final Map<Color, Long> colorUsage = new HashMap<>(colors.size());
-			for(final Color c:colors) {
-				colorUsage.put(c, 0L);
-				}
-			
-			
-			final BufferedImage img = ImageIO.read(imgIn);
-			if(img.getWidth()==0 || img.getHeight()==0) {
-				LOG.error("empty image " + imgPath);
+			{
+			if(args.isEmpty()) {
+				LOG.error("path missing");
 				return -1;
 				}
-			final IndexColorModel indexColorModel = createColorModel(colors) ;
+			if(this.outputImageFile!=null && args.size()!=1) {
+				LOG.error("cannot save image if args != 1");
+				return -1;
+				}
+			final List<Color>  colors = getPalette();
 
-
-			final BufferedImage lImage=new BufferedImage(
-					img.getWidth(),
-					img.getHeight(),
-					BufferedImage.TYPE_BYTE_INDEXED,
-					indexColorModel
-					);
-			
-			final Graphics2D g=lImage.createGraphics();
-			g.drawImage(img, 0, 0,null);
-			g.dispose();
-			
-			
-			 for (int x = 0; x < lImage.getWidth(); x++) {
-		            for (int y = 0; y < lImage.getHeight(); y++) {
-		            	final Color c = new Color(lImage.getRGB(x, y));
-		            	if(!colorUsage.containsKey(c)) continue;
-		            	colorUsage.put(c, 1L + colorUsage.getOrDefault(c, 0L));
-		            }
-		        }
-			 
-			 if(this.outputTableFile!=null) {
-				final double total = colorUsage.values().stream().mapToLong(L->L.longValue()).sum();
-				final PrintWriter pw = new PrintWriter(this.outputTableFile);
-				pw.println("#R\tG\tB\tcount\tfraction");
-				 for(final Color col: colorUsage.keySet())
-				 	{
-					 pw.println(
-							 col.getRed()+"\t"+ 
-							 col.getGreen()+"\t"+ 
-							 col.getBlue()+"\t"+ 
-							 colorUsage.get(col)+"\t"+ 
-							 (total==0.0?0.0:colorUsage.get(col)/total)
-							 );
-				 	}
-				 pw.flush();
-				 pw.close();
+			 if(this.outputTableFile!=null)
+			 	{
+				pw = new PrintWriter(this.outputTableFile);
+				if(this.horizontal_table_layout)
+					{
+					pw.print("#");
+					for(final Color C:colors)
+						{
+						pw.print("C");
+						pw.print(String.format("0%3d",C.getRed()));
+						pw.print("_");
+						pw.print(String.format("0%3d",C.getGreen()));
+						pw.print("_");
+						pw.print(String.format("0%3d",C.getBlue()));
+						pw.print("\t");
+						}
+					pw.println("FILE");
+					}
+				else
+					{
+					pw.println("#R\tG\tB\tcount\tfraction\tfile");
+					}
 			 	}
-			 
 			
-			if(this.outputImageFile!=null) {
-				LOG.info("saving to "+outputImageFile);
-				if(outputImageFile.equals(imgIn)) {
-					LOG.error("Cannot overwrite input image");
+
+			for(final String imgPath: args) {
+				final File imgIn=new File(imgPath);
+				final Map<Color, Long> colorUsage = new HashMap<>(colors.size());
+				for(final Color c:colors) {
+					colorUsage.put(c, 0L);
+					}
+				
+				
+				final BufferedImage img = ImageIO.read(imgIn);
+				if(img.getWidth()==0 || img.getHeight()==0) {
+					LOG.error("empty image " + imgPath);
 					return -1;
 					}
-				if(!outputImageFile.getName().toLowerCase().endsWith(".png")) {
-					LOG.error("output image must end with '.png'");
-					return -1;
+				final IndexColorModel indexColorModel = createColorModel(colors) ;
+	
+	
+				final BufferedImage lImage=new BufferedImage(
+						img.getWidth(),
+						img.getHeight(),
+						BufferedImage.TYPE_BYTE_INDEXED,
+						indexColorModel
+						);
+				
+				final Graphics2D g=lImage.createGraphics();
+				g.drawImage(img, 0, 0,null);
+				g.dispose();
+				
+				
+				 for (int x = 0; x < lImage.getWidth(); x++) {
+			            for (int y = 0; y < lImage.getHeight(); y++) {
+			            	final Color c = new Color(lImage.getRGB(x, y));
+			            	if(!colorUsage.containsKey(c)) continue;
+			            	colorUsage.put(c, 1L + colorUsage.getOrDefault(c, 0L));
+			            }
+			        }
+				 
+				 if(this.outputTableFile!=null) {
+					final double total = colorUsage.values().stream().mapToLong(L->L.longValue()).sum();
+					
+					if(this.horizontal_table_layout)
+						{
+						for(final Color col: colors)
+						 	{
+							pw.print((total==0.0?0.0:colorUsage.get(col)/total));
+							pw.print("\t");
+						 	}
+						pw.println(imgPath);
+						}
+					else
+						{
+						
+						 for(final Color col: colorUsage.keySet())
+						 	{
+							 pw.print(
+									 col.getRed()+"\t"+ 
+									 col.getGreen()+"\t"+ 
+									 col.getBlue()+"\t"+ 
+									 colorUsage.get(col)+"\t"+ 
+									 (total==0.0?0.0:colorUsage.get(col)/total)
+									 );
+							 pw.println("\t"+imgPath);
+						 	}
+						}
+					 pw.flush();
+					 pw.close();
+				 	}
+				 
+				
+				if(this.outputImageFile!=null) {
+					LOG.info("saving to "+outputImageFile);
+					if(outputImageFile.equals(imgIn)) {
+						LOG.error("Cannot overwrite input image");
+						return -1;
+						}
+					if(!outputImageFile.getName().toLowerCase().endsWith(".png")) {
+						LOG.error("output image must end with '.png'");
+						return -1;
+						}
+					ImageIO.write(lImage,"PNG",outputImageFile);
 					}
-				ImageIO.write(lImage,"PNG",outputImageFile);
 				}
 			return 0;
 		}
