@@ -16,6 +16,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
@@ -106,7 +107,7 @@ public static InputStream openStream(final String path) throws IOException {
 		in = new java.net.URL(path).openStream();
 	}
 	else {
-		in = new FileInputStream(path);
+		in = Files.newInputStream(Paths.get(path));
 	}
 	return mayGzipInputStream(in);
 }
