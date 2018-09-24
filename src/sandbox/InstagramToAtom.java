@@ -2,7 +2,6 @@ package sandbox;
 
 import java.io.File;
 import java.io.FileFilter;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -10,6 +9,7 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
@@ -19,14 +19,12 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
-import javax.xml.stream.events.Attribute;
-import javax.xml.stream.events.StartElement;
+import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
@@ -76,8 +74,8 @@ public class InstagramToAtom extends Launcher {
 	private int ID_GENERATOR=0;
 	@Parameter(names={"-t","--tumb-size"},description="Thumb size.")
 	private int thumb_size =256;
-	@Parameter(names={"-f","--force"},description="Force print only new items, discard the non-updated.")
-	private boolean force_print_new_only = false;
+	@Parameter(names={"-H","--hours"},description="print items published less than 'x' hours. negative: don't use.")
+	private int filter_last_xx_hours = -1;
 	@Parameter(names={"-s","--seconds"},description="Sleep s seconds between each calls.")
 	private int sleep_seconds = 5;
 	@Parameter(names={"-d","--directory"},description="Cache directory. default: ${HOME}/.insta2atom ")
@@ -94,15 +92,6 @@ public class InstagramToAtom extends Launcher {
 
 	
 	
-	private static String getAttribute(final StartElement root,final String name) {
-		final Attribute att = root.getAttributeByName(new QName(name));
-		return att==null?"":att.getValue();
-		}
-	
-	private static boolean hasAttribute(final StartElement root,final String name) {
-		return root.getAttributeByName(new QName(name))!=null;
-		}
-		
 		
 	private String getUrl(final String queryName) {
 		return "https://www.instagram.com"+
@@ -140,15 +129,16 @@ public class InstagramToAtom extends Launcher {
 			if(!jObject.has("count")) return null;
 			return jObject.get("count").getAsInt();
 			}
-		private String parseOwner(final JsonElement je)
+		private void parseOwner(final Image img,final JsonElement je)
 			{
-			if(je==null ||!je.isJsonObject()) return null;
+			if(je==null ||!je.isJsonObject()) return ;
 			final JsonObject jObject = je.getAsJsonObject();
-			if(!jObject.has("id")) return null;
-			return jObject.get("id").getAsString();
+			if(jObject.has("id")) {
+				img.setData("owner",jObject.get("id").getAsString());
+				}
 			}
 		
-		
+		/*
 		private Element parseThumbail(final Document owner,final JsonObject jObject) {
 			final Element th = owner.createElement("img");
 			th.setAttribute("class", "thumbail");
@@ -156,7 +146,7 @@ public class InstagramToAtom extends Launcher {
 			th.setAttribute("height",""+jObject.get("config_height").getAsInt());
 			th.setAttribute("src", jObject.get("src").getAsString());
 			return th;
-			}
+			}*/
 		
 		private Image parseNode(final Document owner,final JsonObject jObject)
 			{
@@ -168,19 +158,25 @@ public class InstagramToAtom extends Launcher {
 			n.setData("taken_at_timestamp",jObject.get("taken_at_timestamp").getAsString());
 			n.setData("thumbnail_src",jObject.get("thumbnail_src").getAsString());
 			n.setData("id", jObject.get("id").getAsString());
-			n.setData("owner",parseOwner(jObject.get("owner")));
-			if(jObject.has("thumbnail_resources")) {
+			parseOwner(n,jObject.get("owner"));
+			
+			/*if(jObject.has("thumbnail_resources")) {
 				for(final JsonElement c: jObject.getAsJsonArray("thumbnail_resources"))
 					{
-					//n.div.appendChild(parseThumbail(owner,c.getAsJsonObject()));
+					n.div.appendChild(parseThumbail(owner,c.getAsJsonObject()));
 					}
-				}
-			n.div.setAttribute("id", n.getId());
+				}*/
+			n.span.setAttribute("id", n.getId());
+			n.anchor.setAttribute("target", "_blank");
+			n.anchor.setAttribute("href", n.getPageHref());
+			n.anchor.setAttribute("title",
+					dateFormatter.format(new Date(n.getTimestampSec()*1000L))+" liked by : "+n.getLikedBy());
 			n.img.setAttribute("src", n.getData("thumbnail_src"));
 			n.img.setAttribute("alt", n.getData("thumbnail_src"));
 			n.img.setAttribute("width", ""+InstagramToAtom.this.thumb_size);
 			return n;
 			}
+		
 		
 		private void searchNodes(final Document owner,final Set<Image> nodes,final String key,final JsonElement elt)
 			{
@@ -269,7 +265,7 @@ public class InstagramToAtom extends Launcher {
 		
 	void writeAtom(
 		final String query,
-		Set<Image> images,	
+		final Set<Image> images,	
 		final XMLStreamWriter w) throws XMLStreamException {
 		if(InstagramToAtom.this.group_flag)
 			{
@@ -316,7 +312,7 @@ public class InstagramToAtom extends Launcher {
 			w.writeStartElement("p");  
 			
 	
-			for(final Image image_url:images_to_print.stream().sorted((I1,I2)->I1.compareTime(I2)).collect(Collectors.toList())) {
+			for(final Image image_url:images_to_print.stream().sorted().collect(Collectors.toList())) {
 				w.writeStartElement("a");
 				w.writeAttribute("id",String.valueOf(++ID_GENERATOR));
 				w.writeAttribute("target", "_blank");
@@ -335,7 +331,7 @@ public class InstagramToAtom extends Launcher {
 		void writeSoloImages(
 			final String query,	
 			final XMLStreamWriter w,Set<Image> images_to_print) throws XMLStreamException {
-			for(final Image image_url:images_to_print.stream().sorted((I1,I2)->I1.compareTime(I2)).collect(Collectors.toList())) {
+			for(final Image image_url:images_to_print.stream().sorted().collect(Collectors.toList())) {
 				w.writeStartElement("entry");
 				
 				w.writeStartElement("title");
@@ -424,20 +420,26 @@ public class InstagramToAtom extends Launcher {
 	private class Image
 		implements Comparable<Image>
 		{
-		final Element div;
+		final Element span;
+		final Element anchor;
 		final Element img;
-		Image(final Document dom,final Element div) {
-			if(div==null)
+		Image(final Document dom,final Element span) {
+			if(span==null)
 				{
-				this.div = dom.createElement("div");
+				this.span = dom.createElement("span");
 				this.img = dom.createElement("img");
-				this.div.appendChild(this.img);
+				this.anchor = dom.createElement("a");
+				this.anchor.setAttribute("target","_blank");
+
+				this.span.appendChild(this.anchor);
+				this.anchor.appendChild(this.img);
 				}
 			else
 				{
-				this.div = div;
+				this.span = span;
 				try {
-					this.img=(Element)xpath.evaluate("img", this.div, XPathConstants.NODE);
+					this.anchor=(Element)xpath.evaluate("a", this.span, XPathConstants.NODE);
+					this.img=(Element)xpath.evaluate("img", this.anchor, XPathConstants.NODE);
 					} catch(XPathExpressionException err) {
 					throw new RuntimeException(err);
 					}
@@ -464,14 +466,22 @@ public class InstagramToAtom extends Launcher {
            w.writeAttribute("id",getShortCode());
            w.writeAttribute("alt", this.getSrc());
            w.writeAttribute("src", this.getSrc());
-           w.writeAttribute("width",getData("width"));
-           w.writeAttribute("height",getData("height"));
+           w.writeAttribute("width",String.valueOf(InstagramToAtom.this.thumb_size));
+           //w.writeAttribute("height",getData("height"));
            }
 		
 		public String getId() {
 			return getData("id");
 		}
 
+		public int getLikedBy() {
+			try {
+				return Integer.parseInt(getData("edge_liked_by"));
+			} catch(Throwable err) {
+				LOG.error(err);
+				return 0;
+			}
+		}
 
 		public String getSrc() {
 			return getData("thumbnail_src");
@@ -488,6 +498,7 @@ public class InstagramToAtom extends Launcher {
 				}
 			catch(final NumberFormatException err)
 				{
+				LOG.warning("bad taken_at_timestamp");
 				return 0L;
 				}
 			}
@@ -497,14 +508,16 @@ public class InstagramToAtom extends Launcher {
 				o.getTimestampSec(),
 				this.getTimestampSec()
 				);
-			return i!=0?i:compareTo(o);
+			return i!=0?i:this.getShortCode().compareTo(o.getShortCode());
 		}
 		
 		
 		@Override
 		public int compareTo(final Image o)
 			{
-			return this.getSrc().compareTo(o.getSrc());
+			if(o==this) return 0;
+			if(this.getShortCode().equals(o.getShortCode())) return 0;
+			return this.compareTime(o);
 			}
 		@Override
 		public int hashCode()
@@ -518,7 +531,7 @@ public class InstagramToAtom extends Launcher {
 
 		public String getData(String att) {
 			final String attName="data-"+att;
-			return this.div.getAttribute(attName);
+			return this.span.getAttribute(attName);
 		}
 		
 		void setData(final String att,Object o)
@@ -526,11 +539,11 @@ public class InstagramToAtom extends Launcher {
 			final String attName="data-"+att;
 			if(o==null)
 				{
-				this.div.removeAttribute(attName);
+				this.span.removeAttribute(attName);
 				}
 			else
 				{
-				this.div.setAttribute("data-"+att, String.valueOf(o));
+				this.span.setAttribute("data-"+att, String.valueOf(o));
 				}
 			}
 		
@@ -541,17 +554,25 @@ public class InstagramToAtom extends Launcher {
 			this.setData("width",w);
 			this.setData("height",h);
 			}
-
+		boolean isLessThanXXHours() {
+			if(filter_last_xx_hours<=0) return true;
+			final Calendar cal = Calendar.getInstance();
+			// remove next line if you're always using the current time.
+			cal.setTime(new Date());
+			cal.add(Calendar.HOUR, -1 * filter_last_xx_hours);
+			final Date xxxHourBack = cal.getTime();
+			final Date imgDate = new Date(getTimestampSec()*1000);
+			return imgDate.compareTo(xxxHourBack) >= 0;
+			}
 		}
 	
-	private int query(final File htmlFile,XMLStreamWriter w) throws Exception
+	private int query(final File htmlFile,XMLStreamWriter watom) throws Exception
 		{
 		final DocumentBuilderFactory dbf=DocumentBuilderFactory.newInstance();
 		final DocumentBuilder db;
 		final Document dom;
 		try {
 			db = dbf.newDocumentBuilder();
-			
 			}
 		catch(final Exception err) {
 			LOG.error(err);
@@ -574,14 +595,22 @@ public class InstagramToAtom extends Launcher {
 		
 		final String qName=(String)xpath.evaluate("/html/head/title/text()",dom, XPathConstants.STRING);
 		if(qName==null || qName.isEmpty()) return -1;
-		Element body = (Element)xpath.evaluate("/html/body", dom, XPathConstants.NODE);
+		LOG.info("query is "+qName+" "+htmlFile);
+		final Element body = (Element)xpath.evaluate("/html/body", dom, XPathConstants.NODE);
 		
-		final Set<Image> oldImages = new TreeSet<>((I1,I2)->I1.compareTime(I2));
-		final NodeList nodeList = (NodeList)xpath.evaluate("div[img]", body, XPathConstants.NODESET);
+		final Set<Image> oldImages = new TreeSet<>();
+
+		final NodeList txtList = (NodeList)xpath.evaluate("span/text()", body, XPathConstants.NODESET);
+		
+		for(int x=0;x< txtList.getLength();++x) {
+			final Node c1= txtList.item(x);
+			c1.getParentNode().removeChild(c1);
+			}
+		
+		final NodeList nodeList = (NodeList)xpath.evaluate("span[a/img]", body, XPathConstants.NODESET);
 		
 		for(int x=0;x< nodeList.getLength();++x) {
 			final Node c1= nodeList.item(x);
-			if(c1.getNodeType()!=Node.ELEMENT_NODE) continue;
 			final Element e1=Element.class.cast(c1);
 			oldImages.add(new Image(dom,e1));
 			e1.getParentNode().removeChild(e1);
@@ -594,14 +623,27 @@ public class InstagramToAtom extends Launcher {
 			{
 			list.removeLast();
 			}
-		LOG.info(list);
+		
 		for(final Image img:list) {
-			body.appendChild(img.div);
+			body.appendChild(img.span);
 		}
+		
+		
+		final Set<Image> atomizableImages = new TreeSet<>(list.
+				stream().
+				filter(I->I.isLessThanXXHours()).
+				collect(Collectors.toSet()));
+		if(!atomizableImages.isEmpty()) {
+			LOG.info("saving "+atomizableImages.size()+" images");
+			writeAtom(qName, atomizableImages, watom);
+		} 
 		
 		final TransformerFactory xft=TransformerFactory.newInstance();
 		final Transformer tr = xft.newTransformer();
-		File tmpFile = File.createTempFile("tmp.", ".xml",htmlFile.getParentFile());
+		tr.setOutputProperty(OutputKeys.METHOD,"xml");
+		tr.setOutputProperty(OutputKeys.INDENT,"yes");
+		final File tmpFile = File.createTempFile("tmp.", ".html",htmlFile.getParentFile());
+		tmpFile.deleteOnExit();
 		tr.transform(new DOMSource(dom), new StreamResult(tmpFile));;
 		tmpFile.renameTo(htmlFile);
 		tmpFile.delete();
@@ -613,8 +655,6 @@ public class InstagramToAtom extends Launcher {
 	public int doWork(final List<String> args) {
 		
 		XMLStreamWriter w = null;
-		XMLStreamWriter writeCache = null;
-		FileOutputStream writeCacheFileWriter = null;
 		try
 			{			
 			final HttpClientBuilder builder = HttpClientBuilder.create();
@@ -635,18 +675,10 @@ public class InstagramToAtom extends Launcher {
 			
 			this.client = builder.build();
 			
-			final File tmpFile = File.createTempFile("insta2atom.",".tmp",getCacheDir());
-			tmpFile.deleteOnExit();
-			writeCacheFileWriter = new FileOutputStream(tmpFile);
 
 			final XMLOutputFactory xof = XMLOutputFactory.newInstance();
 			
 			
-			writeCache = xof.createXMLStreamWriter(writeCacheFileWriter,"UTF-8");
-			writeCache.writeStartDocument("UTF-8", "1.0");
-			writeCache.writeStartElement("cache");
-			writeCache.writeAttribute("date",this.dateFormatter.format(new Date()));
-			writeCache.writeCharacters("\n");
 			
 			
 			w = xof.createXMLStreamWriter(System.out, "UTF-8");
@@ -667,6 +699,7 @@ public class InstagramToAtom extends Launcher {
 				{
 				LOG.info("query file "+queryFile);
 				query(queryFile,w);
+				Thread.sleep(this.sleep_seconds*1000);
 				}
 				
 			w.writeEndElement();
@@ -674,11 +707,6 @@ public class InstagramToAtom extends Launcher {
 			w.flush();
 			w.close();
 			
-			writeCache.writeEndElement();//cache
-			writeCache.writeEndDocument();
-			writeCache.flush();
-			writeCache.close();
-			writeCacheFileWriter.close();
 			this.client.close();this.client=null;
 			return 0;
 			}
