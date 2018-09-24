@@ -84,7 +84,8 @@ public class InstagramToAtom extends Launcher {
 	private File cookieStoreFile  = null;
 	@Parameter(names={"-g","--group"},description="group items per query")
 	private boolean group_flag =false;
-
+	@Parameter(names={"-N","--max-items"},description="max-items")
+	private int max_images_per_qery = 50;
 	
 	private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	private CloseableHttpClient client = null;
@@ -619,7 +620,7 @@ public class InstagramToAtom extends Launcher {
 		final Set<Image> newImages = query(dom, qName);
 		newImages.addAll(oldImages);
 		final LinkedList<Image> list = new LinkedList<>(newImages);
-		while(list.size()>100 )
+		while(list.size()>this.max_images_per_qery )
 			{
 			list.removeLast();
 			}
