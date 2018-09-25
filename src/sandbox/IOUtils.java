@@ -67,6 +67,13 @@ public static BufferedReader openBufferedReaderFromFile(final File path) throws 
 	return new BufferedReader(new FileReader(path));
 	}
 
+public static String slurp(final File file) throws IOException {
+	Reader r=null;
+	try { r = openReader(file); return readReaderContent(r);} 
+	finally {close(r);}
+	}
+
+
 public static String slurp(final String fileOrUrl) throws IOException {
 	Reader r=null;
 	try { r = openReader(fileOrUrl); return readReaderContent(r);} 

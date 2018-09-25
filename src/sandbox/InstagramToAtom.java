@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
 import java.io.StringReader;
 import java.math.BigInteger;
 import java.security.MessageDigest;
@@ -418,6 +419,47 @@ public class InstagramToAtom extends Launcher {
 		}));
 		}
 
+	private void convertIgFilesToHtml()
+		{
+		final File dir= this.getCacheDir();
+		if(dir==null ||!dir.exists() || !dir.isDirectory() ) return;
+		final File igFiles[]=dir.listFiles(new FileFilter() {
+			@Override
+			public boolean accept(final File f) {
+				return f!=null && f.canRead() && f.isFile() &&
+						f.getName().endsWith(".ig");
+			}
+			});
+		if(igFiles==null ||igFiles.length==0) return;
+		for(final File igFile:igFiles)
+				{
+				PrintWriter pw = null;
+				try
+					{
+					final String name = igFile.getName();
+					final File htmlFile = new File(dir,name.substring(0,name.length()-3)+".html");
+					if(htmlFile.exists()) continue;
+					final String query= IOUtils.slurp(igFile).trim();
+					if(query.isEmpty()) continue;
+					LOG.info("converting "+igFile+" to "+htmlFile+" "+query);
+					pw=  new PrintWriter(htmlFile);
+					pw.println("<html><head><title>"+query+"</title></head><body></body></html>");
+					pw.flush();
+					pw.close();
+					pw=null;
+					igFile.delete();
+					}
+				catch(IOException err)
+					{
+					LOG.warning(err);
+					}
+				finally
+					{
+					if(pw!=null) pw.close();	
+					}
+				}
+		}
+	
 	private class Image
 		implements Comparable<Image>
 		{
@@ -677,6 +719,8 @@ public class InstagramToAtom extends Launcher {
 			this.client = builder.build();
 			
 
+			convertIgFilesToHtml();
+			
 			final XMLOutputFactory xof = XMLOutputFactory.newInstance();
 			
 			
