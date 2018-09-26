@@ -87,7 +87,9 @@ public class InstagramToAtom extends Launcher {
 	private boolean group_flag =false;
 	@Parameter(names={"-N","--max-items"},description="max-items")
 	private int max_images_per_qery = 50;
-	
+	@Parameter(names={"-new","--new"},description="Only show new items since last call of this tool")
+	private boolean what_is_new_flag = false;
+
 	private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	private CloseableHttpClient client = null;
 	private final XPath xpath = XPathFactory.newInstance().newXPath();
@@ -172,7 +174,9 @@ public class InstagramToAtom extends Launcher {
 			n.anchor.setAttribute("target", "_blank");
 			n.anchor.setAttribute("href", n.getPageHref());
 			n.anchor.setAttribute("title",
-					dateFormatter.format(new Date(n.getTimestampSec()*1000L))+" liked by : "+n.getLikedBy());
+					dateFormatter.format(new Date(n.getTimestampSec()*1000L))+
+					" liked by : "+n.getLikedBy()+" new:"+n.is_new
+					);
 			n.img.setAttribute("src", n.getData("thumbnail_src"));
 			n.img.setAttribute("alt", n.getData("thumbnail_src"));
 			n.img.setAttribute("width", ""+InstagramToAtom.this.thumb_size);
@@ -253,7 +257,7 @@ public class InstagramToAtom extends Launcher {
 			LOG.error("root is not json object in "+getUrl(queryName));
 			return null;
 			}
-		final Set<Image> nodes =  new TreeSet<>((I1,I2)->I1.compareTime(I2));
+		final Set<Image> nodes =  new TreeSet<>();
 		searchNodes(owner,nodes,null,root.getAsJsonObject());
 		nodes.removeIf(N->N.getSrc()==null && N.getSrc().isEmpty());
 		if(nodes.isEmpty()) 
@@ -466,6 +470,7 @@ public class InstagramToAtom extends Launcher {
 		final Element span;
 		final Element anchor;
 		final Element img;
+		final boolean is_new;
 		Image(final Document dom,final Element span) {
 			if(span==null)
 				{
@@ -476,10 +481,12 @@ public class InstagramToAtom extends Launcher {
 
 				this.span.appendChild(this.anchor);
 				this.anchor.appendChild(this.img);
+				this.is_new = true;
 				}
 			else
 				{
 				this.span = span;
+				this.is_new = false;
 				try {
 					this.anchor=(Element)xpath.evaluate("a", this.span, XPathConstants.NODE);
 					this.img=(Element)xpath.evaluate("img", this.anchor, XPathConstants.NODE);
@@ -507,9 +514,11 @@ public class InstagramToAtom extends Launcher {
           {
            w.writeEmptyElement("img");
            w.writeAttribute("id",getShortCode());
-           w.writeAttribute("alt", this.getSrc());
+           w.writeAttribute("alt", "liked by : "+ this.getLikedBy()+" new:"+this.is_new);
            w.writeAttribute("src", this.getSrc());
            w.writeAttribute("width",String.valueOf(InstagramToAtom.this.thumb_size));
+           
+         
            //w.writeAttribute("height",getData("height"));
            }
 		
@@ -643,13 +652,14 @@ public class InstagramToAtom extends Launcher {
 		
 		final Set<Image> oldImages = new TreeSet<>();
 
+		//remove text
 		final NodeList txtList = (NodeList)xpath.evaluate("span/text()", body, XPathConstants.NODESET);
 		
 		for(int x=0;x< txtList.getLength();++x) {
 			final Node c1= txtList.item(x);
 			c1.getParentNode().removeChild(c1);
 			}
-		
+		// get imaes
 		final NodeList nodeList = (NodeList)xpath.evaluate("span[a/img]", body, XPathConstants.NODESET);
 		
 		for(int x=0;x< nodeList.getLength();++x) {
@@ -660,6 +670,9 @@ public class InstagramToAtom extends Launcher {
 			}
 		
 		final Set<Image> newImages = query(dom, qName);
+		
+		
+		
 		newImages.addAll(oldImages);
 		final LinkedList<Image> list = new LinkedList<>(newImages);
 		while(list.size()>this.max_images_per_qery )
@@ -675,6 +688,7 @@ public class InstagramToAtom extends Launcher {
 		final Set<Image> atomizableImages = new TreeSet<>(list.
 				stream().
 				filter(I->I.isLessThanXXHours()).
+				filter(I->!this.what_is_new_flag || I.is_new).
 				collect(Collectors.toSet()));
 		if(!atomizableImages.isEmpty()) {
 			LOG.info("saving "+atomizableImages.size()+" images");
