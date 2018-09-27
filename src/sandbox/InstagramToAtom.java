@@ -669,8 +669,13 @@ public class InstagramToAtom extends Launcher {
 			e1.getParentNode().removeChild(e1);
 			}
 		
-		final Set<Image> newImages = query(dom, qName);
-		
+		final Set<Image> newImages ;
+		try {
+		    newImages = query(dom, qName);
+		    }
+		catch(final Exception err) {
+			return -1;
+			}
 		
 		
 		newImages.addAll(oldImages);
