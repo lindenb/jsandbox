@@ -28,6 +28,14 @@ public class IOUtils {
 private IOUtils(){
 }
 
+public static File assertDirectoryExist(final File f) {
+	if( f==null || !f.exists() ||!f.isDirectory())
+		{
+		throw new IllegalStateException("Not an existing directory "+f);
+		}
+	return f;
+	}
+
 public static boolean isURL(final String s) 
 	{
 	try  {new java.net.URL(s); return true;}
