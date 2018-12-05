@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StreamTokenizer;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -26,8 +28,9 @@ public class TimeLineMaker  extends Launcher
 	private static final Logger LOG = Logger.builder(TimeLineMaker.class).build();
 	@Parameter(names={"-o","--output"},description="Output directory",required=true)
 	private File outputDir = null;
+	@Parameter(names={"-lib","--lib"},description="library path")
+	private String libpath="..";
 
-	
 	
 	private class TDate
 		{
@@ -85,9 +88,10 @@ public class TimeLineMaker  extends Launcher
 			final int colon = line.indexOf(':');
 			if(colon==-1) throw new IllegalArgumentException("no colon in "+line);
 			if(colon==0) throw new IllegalArgumentException("no key in "+line);
-			final String key = line.substring(0, colon).trim().toLowerCase();
+			final String key = line.substring(0, colon).trim().toLowerCase().replace(' ', '_').replace('-', '_');
 			if(key.isEmpty()) throw new IllegalArgumentException("empty/no key in "+line);
-			this.add(key,line.substring(colon+1).replace(' ', '_').replace('-', '_'));
+			final String v=line.substring(colon+1).trim();
+			this.add(key,v);
 			}
 		}
 	
@@ -152,8 +156,9 @@ public class TimeLineMaker  extends Launcher
 			XMLOutputFactory xof = XMLOutputFactory.newInstance();
 			
 			PrintWriter pw = new PrintWriter(index_html);
+			pw.println("<!DOCTYPE html>\n");
 			XMLStreamWriter w = xof.createXMLStreamWriter(pw);
-			w.writeDTD("DOCTYPE html");
+			
 			w.writeStartElement("html");
 			w.writeAttribute("lang","en");
 			
@@ -171,11 +176,11 @@ public class TimeLineMaker  extends Launcher
 			
 			w.writeEmptyElement("link");
 			w.writeAttribute("rel", "stylesheet");
-			w.writeAttribute("href", "../css/timeline.css?v1");
+			w.writeAttribute("href", TimeLineMaker.this.libpath+"/css/timeline.css?v1");
 			
 			w.writeEmptyElement("link");
 			w.writeAttribute("rel", "stylesheet");
-			w.writeAttribute("href", "../css/fonts/font.default.css?v1");
+			w.writeAttribute("href", TimeLineMaker.this.libpath+"/css/fonts/font.default.css?v1");
 			
 			w.writeStartElement("style");
 			w.writeCharacters("html, body {"
@@ -194,7 +199,7 @@ public class TimeLineMaker  extends Launcher
 			w.writeEndElement();//div
 			
 			w.writeStartElement("script");
-			w.writeAttribute("src","../js/timeline.js");
+			w.writeAttribute("src",TimeLineMaker.this.libpath + "/js/timeline.js");
 			w.writeCharacters("");
 			w.writeEndElement();//script
 			
@@ -241,64 +246,36 @@ public class TimeLineMaker  extends Launcher
 			}
 		}
 	
+	private static final String MEDIA_KEYS[]=new String[]{
+			"url","link_target","link","title","alt",
+			"thumbnail","credit","caption"
+			};
 	private class TMedia extends Entity
 		{
-		String url = null;
-		String link_target = null;
-		String link = null;
-		String title = null;
-		String alt = null;
-		String thumbnail = null;
-		String credit = null;
-		String caption = null;
-		void writeJson(JsonWriter w) throws IOException {
+		final Map<String,String> properties = new HashMap<>(MEDIA_KEYS.length);
+		void writeJson(final JsonWriter w) throws IOException {
 			w.beginObject();
-			w.name("url");
-			w.value(this.url);
-			if(this.link!=null) {
-				w.name("link");
-				w.value(this.link);
-			}
-			if(this.link_target!=null) {
-				w.name("link_target");
-				w.value(this.link_target);
-			}
-			if(this.title!=null) {
-				w.name("title");
-				w.value(this.title);
-			}
-			if(this.alt!=null) {
-				w.name("alt");
-				w.value(this.alt);
-			}
-			if(this.credit!=null) {
-				w.name("credit");
-				w.value(this.credit);
-			}
-			if(this.caption!=null) {
-				w.name("caption");
-				w.value(this.caption);
-			}
-			if(this.thumbnail!=null) {
-				w.name("thumbnail");
-				w.value(this.thumbnail);
-			}
+			for(final String key:MEDIA_KEYS)
+				{
+				if(!this.properties.containsKey(key)) continue;
+				final String v = this.properties.get(key);
+				if(v==null || v.trim().isEmpty()) continue;
+				w.name(key);
+				w.value(this.properties.get(key));
+				}
+			
 			w.endObject();
 			}
 		@Override
 		void add(String key, String value) {
-			if(key.equals("url")) { this.url = value; }
-			else if(key.equals("link_target")) { this.link_target = value; }
-			else if(key.equals("link")) { this.link = value; }
-			else if(key.equals("title")) { this.title = value; }
-			else if(key.equals("alt")) { this.alt = value; }
-			else if(key.equals("caption")) { this.caption = value; }
-			else if(key.equals("credit")) { this.credit = value; }
-			else if(key.equals("thumbnail")) { this.thumbnail = value; }
-			else
+			for(final String k:MEDIA_KEYS)
 				{
-				LOG.error("unknown key "+key);
+				if(k.equals(key)) {
+					this.properties.put(k,value);
+					return;
+					}
 				}
+			LOG.error("unknown key "+key);	
 			}
 		}
 	
@@ -375,9 +352,6 @@ public class TimeLineMaker  extends Launcher
 	extends EraEntity
 		{
 		String display_date="";
-		String background="";
-		boolean autolink = false;
-		String id = null;
 		Supplier<TMedia> mediaSupplier = ()->null;
 		
 		@Override
@@ -385,7 +359,10 @@ public class TimeLineMaker  extends Launcher
 			if(key.equals("media")) {
 				this.mediaSupplier = parseMedia(value);
 				}
-			 else
+			else if(key.equals("display_date")) {
+				this.display_date =value;
+				}
+			else
 			 	{
 				super.add(key, value); 
 			 	}
@@ -393,6 +370,10 @@ public class TimeLineMaker  extends Launcher
 		void writeJson(JsonWriter w) throws IOException {
 			w.beginObject();
 			writeJsonBody(w);
+			if(this.display_date!=null) {
+				w.name("display_date");
+				w.value(this.display_date);
+			}
 			if(this.mediaSupplier.get()!=null)
 				{
 				w.name("media");
@@ -420,15 +401,35 @@ public class TimeLineMaker  extends Launcher
 		else if(IOUtils.isURL(s))
 			{
 			final TMedia m = new TMedia();
-			m.url = s;
+			m.properties.put("url" , s);
 			return ()->m;
 			}
 		else
 			{
-			LOG.info("cannot parse media "+s);
-			return ()->null;
+			final TMedia m = new TMedia();
+			try {
+				final StreamTokenizer st = new StreamTokenizer(new StringReader(s));
+				st.wordChars('_', '_');
+				final List<String> array = new ArrayList<>();
+				while(st.nextToken() != StreamTokenizer.TT_EOF) {
+						switch(st.ttype) {
+							case StreamTokenizer.TT_NUMBER: array.add(String.valueOf(st.nval));break;
+							case '"': case '\'' : case StreamTokenizer.TT_WORD: array.add(st.sval);break;
+							case ';': case ':' : break;
+							default:break;
+							}
+						if(array.size()==2) {
+							m.properties.put(array.get(0), array.get(1));
+							array.clear();
+							}
+						}
+				return ()->m;
+				}
+			catch(final IOException err) {
+				throw new IllegalArgumentException(err);
+				}
 			}
-	}
+		}
 	
 	private TDate parseDate(final String s) {
 		TDate td=new TDate();
