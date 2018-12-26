@@ -226,6 +226,7 @@ $(eval $(call compile,dccomicsscraper,sandbox.DcComicsScraper,${jcommander.jar} 
 $(eval $(call compile,image2ascii,sandbox.ImageToAscii,${jcommander.jar}))
 $(eval $(call compile,cepicdcscraper,sandbox.CepicDcScraper,${jcommander.jar} ${apache.httpclient.jars}))
 $(eval $(call compile,htmlparser,sandbox.HtmlParser,${jcommander.jar} ${jtidy.jars}))
+$(eval $(call compile,osm2svg,sandbox.OsmToSvg,${jcommander.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
