@@ -5,6 +5,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.Flushable;
 import java.io.IOException;
@@ -22,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPOutputStream;
 
 public class IOUtils {
 
@@ -129,6 +131,28 @@ public static InputStream openStream(final String path) throws IOException {
 
 public static InputStream openStream(final File path) throws IOException {
 	return mayGzipInputStream( new FileInputStream(path));
+	}
+
+/**
+ * return stdout if argument is null
+ * return gzip compressed file if argument ends with gz
+ * @param pathOrNull
+ * @return
+ * @throws IOException
+ */
+public static OutputStream openFileAsOutputStream(final File pathOrNull) throws IOException {
+	if(pathOrNull==null) return System.out;
+	OutputStream os = new FileOutputStream(pathOrNull);
+	if(pathOrNull.getName().endsWith(".gz")) {
+		return new GZIPOutputStream(os) {
+			@Override
+			public void close() throws IOException {
+				finish();
+				super.close();
+				}
+			};
+		}
+	return os;
 	}
 
 

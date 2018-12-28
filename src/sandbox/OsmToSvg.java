@@ -1,6 +1,8 @@
 package sandbox;
 
+import java.io.File;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,10 +21,18 @@ import javax.xml.stream.events.Attribute;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 
+import com.beust.jcommander.Parameter;
+
 public class OsmToSvg extends Launcher {
 	private static final Logger LOG = Logger.builder(OsmToSvg.class).build();
 	private final Map<String, Node> id2node = new HashMap<>();
 	private final List<Way> ways = new ArrayList<>();
+	
+	@Parameter(names={"-o","--out"},description="output file")
+	private File output=null;
+	@Parameter(names={"-w","--width"},description="output file")
+	private double width=1000;
+
 	
 	private static class LatLon
 		{
@@ -71,6 +81,27 @@ public class OsmToSvg extends Launcher {
 			if(obj==this) return true;
 			if(obj==null || !(obj instanceof Way )) return false;
 			return id.equals(Node.class.cast(obj).id);
+			}
+		public double getPerimeter() {
+			double t=0;
+			if(nodes.size()>1) {
+			for(int i=0;i< nodes.size();i++) {
+				final Node n1 = nodes.get(i);
+				final Node n2 = nodes.get(i+1==nodes.size()?0:i+1);
+				final double dx = n1.coord.longitude-n2.coord.longitude;
+				final double dy = n1.coord.latitude-n2.coord.latitude;
+				t+= Math.sqrt(Math.pow(dx, 2)+Math.pow(dy, 2));
+				}
+			}
+			if(t==0) LOG.error("??"+id);
+			return t;
+			}
+		@SuppressWarnings("unused")
+		public LatLon getLatLonCenter() {
+			LatLon ll=new LatLon();
+			ll.longitude = nodes.stream().mapToDouble(N->N.coord.longitude).average().orElse(0);
+			ll.latitude = nodes.stream().mapToDouble(N->N.coord.latitude).average().orElse(0);
+			return ll;
 			}
 		}
 	private final QName ID_ATT = new QName("id");
@@ -126,6 +157,7 @@ public class OsmToSvg extends Launcher {
 	
 @Override
 public int doWork(final List<String> args) {
+	OutputStream outs = System.out;
 	Reader r = null;
 	try {
 		final XMLInputFactory xif = XMLInputFactory.newFactory();
@@ -134,7 +166,8 @@ public int doWork(final List<String> args) {
 		r = input==null?
 			new InputStreamReader(System.in, "UTF-8"):
 			IOUtils.openReader(input);
-		
+		final LatLon bounds_min= new LatLon();
+		final LatLon bounds_max= new LatLon();
 		XMLEventReader in=	xif.createXMLEventReader(r);
 		while(in.hasNext())
 			{
@@ -149,66 +182,118 @@ public int doWork(final List<String> args) {
 				else if(name.equals("way")){
 					parseWay(in,E);
 					}
+				else if(name.equals("bounds")){
+					bounds_max.longitude = Double.parseDouble(E.getAttributeByName(new QName("maxlon")).getValue());
+					bounds_min.longitude = Double.parseDouble(E.getAttributeByName(new QName("minlon")).getValue());
+					bounds_max.latitude = Double.parseDouble(E.getAttributeByName(new QName("maxlat")).getValue());
+					bounds_min.latitude = Double.parseDouble(E.getAttributeByName(new QName("minlat")).getValue());
+					}
 				}
 			}
 		in.close();
-		if(this.ways.isEmpty()) {
+		if(this.ways.isEmpty() ) {
 			LOG.error("no point");
 			return -1;
 		}
 		
 		
 		
-		final  double min_lat = this.id2node.values().stream().mapToDouble(N->N.coord.latitude).min().orElse(0);
-		final  double max_lat = this.id2node.values().stream().mapToDouble(N->N.coord.latitude).max().orElse(0);
-		final  double min_lon = this.id2node.values().stream().mapToDouble(N->N.coord.longitude).min().orElse(0);
-		final  double max_lon = this.id2node.values().stream().mapToDouble(N->N.coord.longitude).max().orElse(0);
-		final double width=1000;
-		final double height=1000;
-		final double scalex = width/(max_lon-min_lon);
-		final double scaley = height/(max_lat-min_lat);
+		final double scalex = this.width/(bounds_max.longitude-bounds_min.longitude);
+		final double height= scalex * (bounds_max.latitude-bounds_min.latitude);
+		final double scaley = height/(bounds_max.latitude-bounds_min.latitude);
 		
-		Function<LatLon,Point> coord2pt = C-> {
+		final Function<LatLon,Point> coord2pt = C-> {
 			final Point pt = new Point();
-			pt.x = (C.longitude - min_lon)* scalex;
-			pt.y = height - (C.latitude - min_lat)* scaley;
+			pt.x = (C.longitude - bounds_min.longitude)* scalex;
+			pt.y = height - (C.latitude - bounds_min.latitude)* scaley;
 			return pt;
 			};
-		
+		final Point view_min = coord2pt.apply(bounds_min);
+		final Point view_max = coord2pt.apply(bounds_max);
+			
 		XMLOutputFactory xof=XMLOutputFactory.newFactory();
-		XMLStreamWriter w=xof.createXMLStreamWriter(System.out, "UTF-8");
+		XMLStreamWriter w;
+		
+		outs=IOUtils.openFileAsOutputStream(this.output);
+		w=xof.createXMLStreamWriter(outs, "UTF-8");
 		w.writeStartDocument("UTF-8", "1.0");
 		w.writeStartElement("svg");
 		w.writeDefaultNamespace("http://www.w3.org/2000/svg");
+		w.writeAttribute("viewBox",
+				String.valueOf(view_min.x)+" "+String.valueOf(view_min.y)+" "+
+					String.valueOf(view_max.x-view_min.x)+" "+String.valueOf(view_max.y-view_min.y)
+				);
 		w.writeAttribute("width",String.valueOf(width));
 		w.writeAttribute("height",String.valueOf(height));
+		
+		this.ways.sort((A,B)->Double.compare(B.getPerimeter(),A.getPerimeter()));
+		
+		w.writeStartElement("style");
+		w.writeCharacters(
+				"polyline {fill:gray;fill-opacity:0.5; stroke:darkgray;}"
+				+ ".water {fill:blue;}"
+				+ ".route {fill:brown;}"
+				+ ".building {fill.yellow;}"
+				+ ".grass {fill:green;}");
+		w.writeEndElement();
+		
+		w.writeStartElement("g");
 		for(final Way way: this.ways)
 			{
 			w.writeStartElement("polyline");
-			w.writeAttribute("style", "fill:none;stroke:black;");
+			
+			if(way.tags.containsKey("water") || way.tags.containsKey("waterway")) {
+				w.writeAttribute("class","water");
+				}
+			else if(way.tags.containsKey("route") || way.tags.containsKey("highway")) {
+				w.writeAttribute("class","route");
+				}
+			else if((way.tags.containsKey("type") &&  way.tags.get("type").equals("building")) || way.tags.values().stream().anyMatch(S->S.equals("building"))) {
+				w.writeAttribute("class","building");
+				}
+			else if(way.tags.values().stream().anyMatch(S->S.equals("park")) ||
+					way.tags.values().stream().anyMatch(S->S.equals("garden"))) {
+				w.writeAttribute("class","grass");
+				}
 			
 			w.writeAttribute("points",
 					way.nodes.stream().map(P->coord2pt.apply(P.coord)).map(n->String.valueOf(n.x)+","+(n.y)).
 					collect(Collectors.joining(" "))
 					);
+			final String title;
+			if(way.tags.containsKey("name")) {
+				title = way.tags.get("name");
+				}
+			else if(way.tags.containsKey("title")) {
+				title = way.tags.get("title");
+				}
+			else
+				{
+				title = String.valueOf(way.id);
+				}
 			w.writeStartElement("title");
-			w.writeCharacters(way.tags.getOrDefault("name", ""));
+			w.writeCharacters(title);
 			w.writeEndElement();
 			w.writeEndElement();
 			}
+		w.writeEndElement();//g
 	
 		
 		w.writeEndElement();
 		w.writeEndDocument();
 		w.flush();
+		w.close();
+		outs.close();
+		outs=null;
 		return 0;
 		}
-	catch(Throwable err) {
+	catch(final Throwable err) {
 		LOG.error(err);
 		return -1;
 		}
 	finally
 		{
+		IOUtils.close(outs);
 		IOUtils.close(r);
 		}
 	}	
