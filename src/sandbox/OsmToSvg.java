@@ -240,6 +240,7 @@ public int doWork(final List<String> args) {
 		w.writeStartElement("g");
 		for(final Way way: this.ways)
 			{
+			if(way.nodes.isEmpty()) continue;
 			w.writeStartElement("polyline");
 			
 			if(way.tags.containsKey("water") || way.tags.containsKey("waterway")) {
@@ -254,6 +255,11 @@ public int doWork(final List<String> args) {
 			else if(way.tags.values().stream().anyMatch(S->S.equals("park")) ||
 					way.tags.values().stream().anyMatch(S->S.equals("garden"))) {
 				w.writeAttribute("class","grass");
+				}
+			
+			if(!way.nodes.get(0).equals(way.nodes.get(way.nodes.size()-1)))
+				{
+				w.writeAttribute("style","fill:none;");
 				}
 			
 			w.writeAttribute("points",
