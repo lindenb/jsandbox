@@ -44,18 +44,46 @@ public class OsmToSvg extends Launcher {
 		double x=0;
 		double y=0;
 		}
-	
-	private static class Node
+	private static class WithTag
 		{
-		final LatLon coord = new LatLon();
 		final String id;
-		Node(final String id) {
-			this.id = id;
-			}
+		final Map<String,String> tags = new HashMap<>();
+		WithTag(final String id) {
+			this.id =id;
+		}
+		
 		@Override
 		public int hashCode() {
 			return id.hashCode();
 			}
+		
+		void writeTitle(final XMLStreamWriter w) throws XMLStreamException {
+			final String title;
+			if(this.tags.containsKey("name")) {
+				title = this.tags.get("name");
+				}
+			else if(this.tags.containsKey("title")) {
+				title = this.tags.get("title");
+				}
+			else
+				{
+				title = String.valueOf(this.id);
+				}
+			w.writeStartElement("title");
+			w.writeCharacters(title);
+			w.writeEndElement();
+			}
+		}
+	
+	private static class Node extends WithTag
+		{
+		final LatLon coord = new LatLon();
+		
+		boolean in_way = false;
+		Node(final String id) {
+			super(id);
+			}
+		
 		@Override
 		public boolean equals(Object obj) {
 			if(obj==this) return true;
@@ -64,18 +92,14 @@ public class OsmToSvg extends Launcher {
 			}
 		}
 	
-	private static class Way
+	private static class Way extends WithTag
 		{
-		final String id;
 		final List<Node> nodes = new ArrayList<>();
-		final Map<String,String> tags = new HashMap<>();
+		
 		Way(final String id) {
-			this.id = id;
+			super(id);
 			}
-		@Override
-		public int hashCode() {
-			return id.hashCode();
-			}
+		
 		@Override
 		public boolean equals(Object obj) {
 			if(obj==this) return true;
@@ -120,6 +144,26 @@ public class OsmToSvg extends Launcher {
 		node.coord.longitude = Double.parseDouble(root.getAttributeByName(LON_ATT).getValue());
 		
 		this.id2node.put(node.id,node);
+		
+		while(r.hasNext())
+			{
+			final XMLEvent evt = r.nextEvent();
+			if(evt.isStartElement())
+				{
+				final StartElement E = evt.asStartElement();
+				final String name = E.getName().getLocalPart();
+				if(name.equals("tag")) {
+					String k = E.getAttributeByName(K_ATT).getValue();
+					String v = E.getAttributeByName(V_ATT).getValue();
+					node.tags.put(k, v);
+					}
+				}
+			else if(evt.isEndElement())
+				{
+				final String name = evt.asEndElement().getName().getLocalPart();
+				if(name.equals("node")) break;
+				}
+			}
 		}
 	private void parseWay(final XMLEventReader r,final StartElement root) throws XMLStreamException
 		{
@@ -138,7 +182,8 @@ public class OsmToSvg extends Launcher {
 					if(att==null) throw new XMLStreamException("no @ref", E.getLocation());
 					final Node n = id2node.get(att.getValue());
 					if(n==null) throw new XMLStreamException("no node with id "+att.getValue(), E.getLocation());
-					way.nodes.add(id2node.get(att.getValue()));
+					n.in_way = true;
+					way.nodes.add(n);
 					}
 				else if(name.equals("tag")) {
 					String k = E.getAttributeByName(K_ATT).getValue();
@@ -230,7 +275,8 @@ public int doWork(final List<String> args) {
 		
 		w.writeStartElement("style");
 		w.writeCharacters(
-				"polyline {fill:gray;fill-opacity:0.5; stroke:darkgray;}"
+				 ".nodealone  {fill:none;stroke-width:0.2;fill-opacity:0.5; stroke:red;}"
+				+ "polyline {fill:gray;fill-opacity:0.5; stroke:darkgray;}"
 				+ ".water {fill:blue;}"
 				+ ".route {fill:brown;}"
 				+ ".building {fill.yellow;}"
@@ -266,22 +312,23 @@ public int doWork(final List<String> args) {
 					way.nodes.stream().map(P->coord2pt.apply(P.coord)).map(n->String.valueOf(n.x)+","+(n.y)).
 					collect(Collectors.joining(" "))
 					);
-			final String title;
-			if(way.tags.containsKey("name")) {
-				title = way.tags.get("name");
-				}
-			else if(way.tags.containsKey("title")) {
-				title = way.tags.get("title");
-				}
-			else
-				{
-				title = String.valueOf(way.id);
-				}
-			w.writeStartElement("title");
-			w.writeCharacters(title);
-			w.writeEndElement();
+			way.writeTitle(w);
 			w.writeEndElement();
 			}
+		w.writeStartElement("g");
+		for(final Node n:this.id2node.values()) {
+			if(n.in_way) continue;
+			final Point pt=coord2pt.apply(n.coord);
+			w.writeStartElement("circle");
+			w.writeAttribute("class","nodealone");
+			w.writeAttribute("cx",String.valueOf(pt.x));
+			w.writeAttribute("cy",String.valueOf(pt.y));
+			w.writeAttribute("r","1");
+			n.writeTitle(w);
+			w.writeEndElement();
+		}
+		w.writeEndElement();//g
+		
 		w.writeEndElement();//g
 	
 		

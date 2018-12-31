@@ -18,8 +18,13 @@ public class Lexer implements Closeable {
 	}
 	
 	/** @return true if no more input is available */
-	public boolean eof() {
+	public boolean isEof() throws IOException {
 		return this.peek() == EOF ;
+	}
+	
+	/** same as isEof */
+	public final boolean eof() throws IOException {
+		return isEof() ;
 	}
 	
 	/** @return next byte in stream. -1 on EOF */
@@ -83,15 +88,13 @@ public class Lexer implements Closeable {
 		r.close();
 		}
 	
-	public char nextChar()  throws IOException {
-		
-	}
+	
 	
 	private static final Pattern BIGINTEGER = Pattern.compile("[+-]?[0-9]+");
 	public java.math.BigInteger nextBigInteger(int pos) throws IOException {
 		final String s = peek(pos,BIGINTEGER);
 		if(s==null) return null;
-		java.math.BigInteger bi = new java.math.BigInteger(s);
+		final java.math.BigInteger bi = new java.math.BigInteger(s);
 		consume(pos,s.length());
 		return bi;
 	}

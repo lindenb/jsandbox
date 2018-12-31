@@ -69,6 +69,11 @@ public static Collection<String> expandList(Collection<String> files) throws IOE
 }
 
 
+
+public static BufferedReader openBufferedReader(final InputStream is) throws IOException {
+	return new BufferedReader(new InputStreamReader(is, "UTF-8"));
+	}
+
 public static BufferedReader openBufferedReader(final String path) throws IOException {
 	return new BufferedReader(openReader(path));
 	}
