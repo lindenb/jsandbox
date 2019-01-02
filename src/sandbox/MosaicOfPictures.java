@@ -1,5 +1,6 @@
 package sandbox;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -10,7 +11,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 import javax.imageio.ImageIO;
 import com.beust.jcommander.Parameter;
@@ -51,12 +51,19 @@ public class MosaicOfPictures extends Launcher
 	private File outFile=null;
 	@Parameter(names={"-x","--extend"},description="square INSIDE picture")
 	private boolean squareinside=false;
-	
+	@Parameter(names={"-b","--background"},description="background color")
+	private String backgroundStr="black";
+
+	@Override
 	public int doWork(final java.util.List<String> args) {
 			try
 			{
-			Set<String>  picts=null;	
-			
+			final Set<String>  picts;	
+			final Color background= ColorParser.getInstance().apply(this.backgroundStr);
+			if(background==null) {
+				LOG.error("Bad background color : "+this.backgroundStr);
+				return -1;
+				}
 			if(this.outFile==null)
 				{
 				LOG.error("No output file");
@@ -93,10 +100,13 @@ public class MosaicOfPictures extends Launcher
 					image_size,
 					BufferedImage.TYPE_INT_RGB
 					);
-			Graphics2D g=img.createGraphics();
+			final Graphics2D g=img.createGraphics();
 			g.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
 			g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-	
+			g.setColor(background);
+			g.fillRect(0,0,image_size,image_size);
+			
+			
 			int y=0;
 			int x=0;
 			int nReads=0;
@@ -105,9 +115,7 @@ public class MosaicOfPictures extends Launcher
 				++nReads;
 				LOG.info(file+" "+nReads+"/"+picts.size());
 				BufferedImage img2 = null;
-				if( file.startsWith("http://") ||
-					file.startsWith("https://") ||
-					file.startsWith("ftp://"))
+				if( IOUtils.isURL(file))
 					{
 					img2=ImageIO.read(new URL(file));
 					}
@@ -160,10 +168,10 @@ public class MosaicOfPictures extends Launcher
 				}
 			g.dispose();
 			LOG.info("Saving");
-			ImageIO.write(img, "JPG", outFile);
+			ImageIO.write(img, outFile.getName().toLowerCase().endsWith(".png")?"PNG":"JPG", outFile);
 			return 0;
 			}
-		catch(Exception err)
+		catch(final Exception err)
 			{
 			LOG.error(err.getMessage());
 			return -1;
