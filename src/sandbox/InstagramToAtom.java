@@ -17,6 +17,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -220,21 +221,21 @@ public class InstagramToAtom extends Launcher {
 		int i= html.indexOf(windowSharedData);
 		if(i==-1) {
 			LOG.error("cannot find "+windowSharedData+" in "+getUrl(queryName));
-			return null;
+			return new HashSet<>();
 			}
 		html=html.substring(i+windowSharedData.length());
 		i= html.indexOf("{");
 		if(i==-1)
 			{
-			LOG.error("cannot find '{' after "+windowSharedData+" in "+getUrl(queryName));
-			return null;
+			LOG.error("cannot find '{' after "+windowSharedData+" in "+getUrl(queryName)+" after "+html);
+			return new HashSet<>();
 			}
 		html=html.substring(i);
 		i = html.indexOf(endObject);
 		if(i==-1)
 			{
 			LOG.error("cannot find  "+endObject+" in "+getUrl(queryName));
-			return null;
+			return new HashSet<>();
 			}
 		html=html.substring(0, i+1);
 		final JsonReader jsr = new JsonReader(new StringReader(html));
@@ -246,7 +247,7 @@ public class InstagramToAtom extends Launcher {
 			}
 		catch(final JsonSyntaxException err) {
 			LOG.error(err);
-			return null;
+			return new HashSet<>();
 			}
 		finally
 			{
@@ -255,23 +256,21 @@ public class InstagramToAtom extends Launcher {
 		if(!root.isJsonObject())
 			{
 			LOG.error("root is not json object in "+getUrl(queryName));
-			return null;
+			return new HashSet<>();
 			}
 		final Set<Image> nodes =  new TreeSet<>();
 		searchNodes(owner,nodes,null,root.getAsJsonObject());
 		nodes.removeIf(N->N.getSrc()==null && N.getSrc().isEmpty());
-		if(nodes.isEmpty()) 
+		if(nodes.isEmpty())
 			{
 			LOG.warning("No image found for "+queryName+".");
 			}
 		return nodes;
 		}
-	
-	
-		
+
 	void writeAtom(
 		final String query,
-		final Set<Image> images,	
+		final Set<Image> images,
 		final XMLStreamWriter w) throws XMLStreamException {
 		if(InstagramToAtom.this.group_flag)
 			{
