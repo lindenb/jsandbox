@@ -185,6 +185,7 @@ $(eval $(call compile,twitteruserlookup,sandbox.TwitterUserLookup, ${apache.comm
 $(eval $(call compile,twittergraph,sandbox.TwitterGraph, ${sqlite3.jdbc.jar} ${jcommander.jar} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,json2xml,sandbox.Json2Xml,${google.gson.jars}))
 $(eval $(call compile,json2dom,sandbox.Json2Dom,${google.gson.jars}))
+$(eval $(call compile,timelinemaker,sandbox.TimeLineMaker,${google.gson.jars} ${jcommander.jar}))
 $(eval $(call compile,geneticpainting,sandbox.GeneticPainting,${apache.commons.cli}))
 $(eval $(call compile,flickrrss,sandbox.FlickrRss,${apache.commons.cli} ${slf4j.jars} ${org.scribe.jars}))
 $(eval $(call compile,mosaicofpictures,sandbox.MosaicOfPictures,${jcommander.jar}))
@@ -225,6 +226,8 @@ $(eval $(call compile,dccomicsscraper,sandbox.DcComicsScraper,${jcommander.jar} 
 $(eval $(call compile,image2ascii,sandbox.ImageToAscii,${jcommander.jar}))
 $(eval $(call compile,cepicdcscraper,sandbox.CepicDcScraper,${jcommander.jar} ${apache.httpclient.jars}))
 $(eval $(call compile,htmlparser,sandbox.HtmlParser,${jcommander.jar} ${jtidy.jars}))
+$(eval $(call compile,osm2svg,sandbox.OsmToSvg,${jcommander.jar}))
+$(eval $(call compile,img2palette,sandbox.ImageToPalette,${jcommander.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

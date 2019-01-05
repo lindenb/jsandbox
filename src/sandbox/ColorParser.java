@@ -9,10 +9,8 @@ public static ColorParser getInstance() {
 	}
 static class ColorParserImpl implements ColorParser
 	{
-	
 	@Override
 	public Color apply(final String s) {
-
 		if(s.equalsIgnoreCase("BLACK")) return Color.BLACK;
 		if(s.equalsIgnoreCase("BLUE")) return Color.BLUE;
 		if(s.equalsIgnoreCase("CYAN")) return Color.CYAN;
@@ -26,12 +24,23 @@ static class ColorParserImpl implements ColorParser
 		if(s.equalsIgnoreCase("YELLOW")) return Color.YELLOW;
 
 		final String tokens[]=s.split("[,]");
-		if(tokens.length!=3) throw new IllegalArgumentException("bad rgb color components:"+s);
-		return new Color(
-				Integer.parseInt(tokens[0]),
-				Integer.parseInt(tokens[1]),
-				Integer.parseInt(tokens[2])
-				);	
+		switch(tokens.length){
+			case 3:
+				return new Color(
+					Integer.parseInt(tokens[0]),
+					Integer.parseInt(tokens[1]),
+					Integer.parseInt(tokens[2])
+					);
+			case 4:
+				return new Color(
+						Integer.parseInt(tokens[0]),
+						Integer.parseInt(tokens[1]),
+						Integer.parseInt(tokens[2]),
+						Integer.parseInt(tokens[3])
+						);
+			default:
+				throw new IllegalArgumentException("bad rgb color components:"+s);
+			}
 		}
 	}
 

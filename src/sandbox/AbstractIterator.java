@@ -1,9 +1,12 @@
 package sandbox;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public abstract class AbstractIterator<T> implements Iterator<T>,Closeable {
 	private T _next=null;
@@ -12,6 +15,7 @@ public abstract class AbstractIterator<T> implements Iterator<T>,Closeable {
 	public boolean hasNext() {
 		if(_next==null) {
 			_next = advance();
+			if(_next==null) close();
 			}
 		return _next!=null;
 		}
@@ -24,8 +28,19 @@ public abstract class AbstractIterator<T> implements Iterator<T>,Closeable {
 		return old;
 		}
 	
+	public T peek() {
+		if(!hasNext()) return null;
+		return this._next;
+		}
+	
 	@Override
-	public void close() throws IOException {
+	public void close() {
 		
+		}
+	
+	public Stream<T> stream() {
+		return  StreamSupport.stream(
+		          Spliterators.spliteratorUnknownSize(this, Spliterator.ORDERED),
+		          false);
 		}
 	}

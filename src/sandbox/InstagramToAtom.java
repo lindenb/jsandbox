@@ -676,7 +676,7 @@ public class InstagramToAtom extends Launcher {
 			return -1;
 			}
 		
-		
+		if(newImages==null) return -1;
 		newImages.addAll(oldImages);
 		final LinkedList<Image> list = new LinkedList<>(newImages);
 		while(list.size()>this.max_images_per_qery )

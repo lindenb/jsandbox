@@ -5,6 +5,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.Flushable;
 import java.io.IOException;
@@ -22,11 +23,20 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPOutputStream;
 
 public class IOUtils {
 
 private IOUtils(){
 }
+
+public static File assertDirectoryExist(final File f) {
+	if( f==null || !f.exists() ||!f.isDirectory())
+		{
+		throw new IllegalStateException("Not an existing directory "+f);
+		}
+	return f;
+	}
 
 public static boolean isURL(final String s) 
 	{
@@ -58,6 +68,11 @@ public static Collection<String> expandList(Collection<String> files) throws IOE
 	return L;
 }
 
+
+
+public static BufferedReader openBufferedReader(final InputStream is) throws IOException {
+	return new BufferedReader(new InputStreamReader(is, "UTF-8"));
+	}
 
 public static BufferedReader openBufferedReader(final String path) throws IOException {
 	return new BufferedReader(openReader(path));
@@ -121,6 +136,28 @@ public static InputStream openStream(final String path) throws IOException {
 
 public static InputStream openStream(final File path) throws IOException {
 	return mayGzipInputStream( new FileInputStream(path));
+	}
+
+/**
+ * return stdout if argument is null
+ * return gzip compressed file if argument ends with gz
+ * @param pathOrNull
+ * @return
+ * @throws IOException
+ */
+public static OutputStream openFileAsOutputStream(final File pathOrNull) throws IOException {
+	if(pathOrNull==null) return System.out;
+	OutputStream os = new FileOutputStream(pathOrNull);
+	if(pathOrNull.getName().endsWith(".gz")) {
+		return new GZIPOutputStream(os) {
+			@Override
+			public void close() throws IOException {
+				finish();
+				super.close();
+				}
+			};
+		}
+	return os;
 	}
 
 
