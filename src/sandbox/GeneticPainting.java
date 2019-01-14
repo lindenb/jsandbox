@@ -49,7 +49,7 @@ import com.beust.jcommander.Parameter;
 public class GeneticPainting extends Launcher
 	{
 	protected static final Logger LOG=Logger.builder(GeneticPainting.class).build();
-
+	private final int IMAGE_TYPE=BufferedImage.TYPE_INT_ARGB;
 	private BufferedImage sourceImage=null;
 	private Random random=new Random();
 	@Parameter(names="-o",description="output file")
@@ -58,6 +58,9 @@ public class GeneticPainting extends Launcher
 	private int shape_min_size=10;
 	@Parameter(names="-n6",description="shape max size")
 	private int shape_max_size=20;
+	@Parameter(names="-n0",description="scale image to this size")
+	private int image_scaled_size=200;
+
 	private char shape_type='c';
 	private int n_threads=3;
 	
@@ -728,7 +731,7 @@ public class GeneticPainting extends Launcher
 		BufferedImage tmpImage=new BufferedImage(
 				this.sourceImage.getWidth(),
 				this.sourceImage.getHeight(),
-				BufferedImage.TYPE_INT_ARGB
+				IMAGE_TYPE
 				);
 		
 		BufferedImage mosaicImage=new BufferedImage(
@@ -927,8 +930,34 @@ public class GeneticPainting extends Launcher
 			{
 			final String filename=args.get(0);
 			LOG.info("reading "+filename);
-			this.sourceImage=ImageIO.read(new File(filename));
-				
+			this.sourceImage = ImageIO.read(new File(filename));
+			if(this.sourceImage.getWidth()>image_scaled_size ||
+				this.sourceImage.getHeight()>image_scaled_size ||
+				this.sourceImage.getType()!=IMAGE_TYPE)
+				{
+				final int w,h;
+				if(this.sourceImage.getWidth()<=image_scaled_size && this.sourceImage.getHeight()<=image_scaled_size) {
+					w = this.sourceImage.getWidth();
+					h= this.sourceImage.getHeight();
+					}
+				else if(this.sourceImage.getWidth()>this.sourceImage.getHeight() )
+					{
+					w=image_scaled_size;
+					h=(int)(this.sourceImage.getHeight()*(w/(double)this.sourceImage.getWidth()));
+					}
+				else
+					{
+					h=image_scaled_size;
+					w=(int)(this.sourceImage.getWidth()*(h/(double)this.sourceImage.getHeight()));
+					}
+				final BufferedImage img2=new BufferedImage(w, h, IMAGE_TYPE);
+				Graphics2D g=img2.createGraphics();
+				g.setColor(Color.WHITE);
+				g.fillRect(0, 0, w, h);
+				g.drawImage(this.sourceImage, 0, 0,w,h,null);
+				g.dispose();
+				this.sourceImage=img2;
+				}
 				
 			return this.run();
 			}
@@ -940,7 +969,7 @@ public class GeneticPainting extends Launcher
 		}
 	
 	
-	public static void main(String[] args) {
+	public static void main(final String[] args) {
 		new GeneticPainting().instanceMainWithExit(args);
 	}
 	
