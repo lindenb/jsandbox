@@ -586,7 +586,7 @@ public class NucleicAcidsResearch404
 						return;
 						}
 					else if(args[optind].equals("-q"))
-						{
+						{anne-sophie 
 						app.query=args[++optind];
 						}
 					else if(args[optind].equals("-L"))

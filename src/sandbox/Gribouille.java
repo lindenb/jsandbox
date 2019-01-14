@@ -18,8 +18,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Properties;
 import java.util.Random;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -30,10 +32,16 @@ import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 
-public abstract class Gribouille extends Launcher 
+public class Gribouille
 	{
 	private static final Logger LOG = Logger.builder(Gribouille.class).build();
-
+	private Properties properties = new Properties();
+	
+	private abstract class Renderer
+		{
+		
+		}
+	
 	private static class GrayImageMap
 		{
 		private final Dimension dim;
@@ -291,7 +299,7 @@ public abstract class Gribouille extends Launcher
 	protected abstract void paint(Graphics2D g);
 	
 	
-	@Override
+
 	public int doWork(List<String> args) {
 		if(this.imgDimension==null) {
 			LOG.error("undefined dimension.");
@@ -593,38 +601,38 @@ public abstract class Gribouille extends Launcher
 	
 	
 	
-
+	private Supplier<Dimension> imageDimensionSupplier = ()->null;
+		
 	
 	
-	private static void printAvailableTools(PrintStream out) {
-	out.println("Available engines: ");
-	out.println("  eng01  loads a graymap, plot cross-point.");
-	out.println("  dot01  random points.");
-	out.println("  kirby01  kirby01.");
-	}
+	
+	private int doWork(final String[] args) {
+		final List<String> array = new ArrayList<>(Arrays.asList(args));
+		int i=0;
+		while(i< array.size())
+			{
+			final String arg = array.get(i);
+			
+			if(i+1 < array.size() && arg.startsWith("-") && !arg.startsWith("--") && arg.length()>1)
+				{
+				final String value = array.remove(i);
+				this.properties.put(arg.substring(1),value);
+				}
+			else if(arg.equals("--")) {
+				i++;
+				break;
+				}
+			else
+				{
+				i++;
+				}
+			}
+		
+		return 0;
+		}		
 	
 	public static void main(final String[] args) {
-		Gribouille app = null;
-		if(args.length==0) {
-			System.err.println("Illegal number of arguments");
-			System.exit(-1);
-		} else if(args[0].equals("kirby01")) {
-			app = new Kirby01();
-		} else if(args[0].equals("x01")) {
-			app = new X01();
-		}else if(args[0].equals("x02")) {
-			app = new X02();
-		} else if(args[0].equals("h1")) {
-			app = new Hatching01();
+		Gribouille app = new Gribouille();
+		System.exit(app.doWork(args));
 		}
-		if(app!=null) {
-			app.instanceMainWithExit( Arrays.copyOfRange(args, 1, args.length));
-			}
-		else
-			{
-			System.err.println("Illegal sub program");
-			printAvailableTools(System.err);
-			System.exit(-1);
-			}
-		}		
 	}
