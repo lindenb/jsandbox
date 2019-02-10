@@ -56,7 +56,9 @@ public class MosaicOfPictures extends Launcher
 
 	@Override
 	public int doWork(final java.util.List<String> args) {
-			try
+		
+		final ImageUtils imageUtils = ImageUtils.getInstance();
+		try
 			{
 			final Set<String>  picts;	
 			final Color background= ColorParser.getInstance().apply(this.backgroundStr);
@@ -114,15 +116,8 @@ public class MosaicOfPictures extends Launcher
 				{
 				++nReads;
 				LOG.info(file+" "+nReads+"/"+picts.size());
-				BufferedImage img2 = null;
-				if( IOUtils.isURL(file))
-					{
-					img2=ImageIO.read(new URL(file));
-					}
-				else
-					{
-					img2=ImageIO.read(new File(file));
-					}
+				BufferedImage img2 = imageUtils.read(file);
+			
 				if(img2==null)
 					{
 					LOG.error("Cannot read "+file);

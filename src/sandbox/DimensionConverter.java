@@ -1,11 +1,24 @@
 package sandbox;
-import com.beust.jcommander.IStringConverter;
-import com.beust.jcommander.ParameterException;
 import java.awt.Dimension;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.function.Function;
+
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 
 public class DimensionConverter
 	implements Function<String,Dimension>
 	{
+	private static final Logger LOG = Logger.builder(DimensionConverter.class).build();
+
 	@Override
 	public Dimension apply(final String dimStr) {
 		if(dimStr.toLowerCase().matches("\\d+x\\d+")) {
@@ -16,13 +29,13 @@ public class DimensionConverter
 					);
 			}
 	
-		final File f= new File(dimStr);
-		if(!f.exists() || !f.isFile()) {
+		final Path f= Paths.get(dimStr);
+		if(!Files.exists(f) || !Files.isRegularFile(f)) {
 			throw new IllegalArgumentException("not an existing file: "+f);
 			}
-		if(f.getName().endsWith(".xcf"))
+		if(f.getFileName().endsWith(".xcf"))
 				{
-				try(FileInputStream fis=new FileInputStream(f))
+				try(InputStream fis=Files.newInputStream(f))
 					{
 					byte array[]=new byte[9];
 					fis.read(array);
@@ -68,6 +81,6 @@ public class DimensionConverter
 			catch(final IOException err) {
 				throw new IllegalArgumentException(err);
 				}
+			throw new IllegalArgumentException("cannot get dimension from "+dimStr);
 			}
 		}
-	}

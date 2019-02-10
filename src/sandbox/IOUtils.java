@@ -21,7 +21,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 
@@ -29,6 +31,22 @@ public class IOUtils {
 
 private IOUtils(){
 }
+
+public static List<String> unroll(final List<String> args) throws IOException {
+	if(args.isEmpty()) return Collections.emptyList();
+	if(args.size()==1 && args.get(0).endsWith(".list")) {
+		try(BufferedReader br =openBufferedReader(args.get(0))) {
+			return br.lines().filter(S->!StringUtils.isBlank(S)).collect(Collectors.toList());
+			}
+		}
+	return args;
+	}
+
+public static List<File> unrollFiles(final List<String> args) throws IOException {
+	return unroll(args).stream().map(G->new File(G)).collect(Collectors.toList());
+	}
+
+
 
 public static File assertDirectoryExist(final File f) {
 	if( f==null || !f.exists() ||!f.isDirectory())
