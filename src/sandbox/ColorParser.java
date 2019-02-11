@@ -2,8 +2,18 @@ package sandbox;
 
 import java.awt.Color;
 import java.util.function.Function;
+import com.beust.jcommander.IStringConverter;
 
 public interface ColorParser extends Function<String,Color>{
+
+public static class Converter implements IStringConverter<Color> {
+	@Override
+	public Color convert(final String s) {
+		return getInstance().apply(s);
+		}
+	}
+
+
 public static ColorParser getInstance() {
 	return new ColorParserImpl();
 	}

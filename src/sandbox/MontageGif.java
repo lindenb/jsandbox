@@ -1,3 +1,5 @@
+/* for P in in {1..50} ; do wget -q -O  - "http://<site>.tumblr.com/page/${P}" | tr '"' '\n' | grep  https | grep media | grep -F '_500.jpg'  | grep -v 0afe983308d5f82323f9006f85dcaafe | sort | uniq ; done | sort | uniq > jeter.list 
+ */
 package sandbox;
 
 import java.awt.Color;
@@ -10,6 +12,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.WeakHashMap;
 
 import javax.imageio.ImageIO;
 
@@ -20,13 +23,13 @@ public class MontageGif extends Launcher
 	private static final Logger LOG = Logger.builder(MontageGif.class).build();
 	private static final String ITERWORD="._ITER_.";
 	@Parameter(names={"-s","--size"},description="One square size.")
-	private int squareSize=100;
+	private int squareSize= 70;
 	@Parameter(names={"-n"},description="number of images per side")
-	private int imagePerSide=3;
+	private int imagePerSide = 5;
 	@Parameter(names={"-o","--output"},description="output files. Must end with .png and contain '"+ITERWORD+"'",required=true)
 	private File outputFile=null;
 	@Parameter(names={"-S","--steps"},description="number of steps between two transitions")
-	private int numSteps = 5;
+	private int numSteps = 10;
 	@Parameter(names={"-b","--background"},description="background color.",converter=ColorParser.Converter.class)
 	private Color backgroundColor = Color.BLACK;
 
@@ -35,6 +38,7 @@ public class MontageGif extends Launcher
 	private final List<String> all_urls = new ArrayList<>();
 	private int image_index = 0;
 	private int count_complete = 0;
+	private final WeakHashMap<String,Image> imageCache = new WeakHashMap<>();
 	
 	private class StepInfo
 		{
@@ -74,20 +78,20 @@ public class MontageGif extends Launcher
 					//left to right
 					case 0:
 						g.drawImage(img1,-1 * (dxy1),0,null);
-						g.drawImage(img2,-1 * (dxy1 + squareSize),0,null);
+						g.drawImage(img2,-1 * (dxy1) + squareSize,0,null);
 						break;
 					//right to left
 					case 1:
 						g.drawImage(img1, 1 * (dxy1),0,null);
-						g.drawImage(img2, 1 * (dxy1 - squareSize),0,null);
+						g.drawImage(img2, 1 * (dxy1) - squareSize,0,null);
 						break;
 					case 2:
 						g.drawImage(img1,0,-1 * (dxy1),null);
-						g.drawImage(img2,0,-1 * (dxy1 + squareSize),null);
+						g.drawImage(img2,0,-1 * (dxy1) + squareSize,null);
 						break;
 					default:
 						g.drawImage(img1,0, 1 * (dxy1),null);
-						g.drawImage(img2,0, 1 * (dxy1 - squareSize),null);
+						g.drawImage(img2,0, 1 * (dxy1) - squareSize,null);
 						break;
 					}
 				
@@ -99,15 +103,8 @@ public class MontageGif extends Launcher
 				if(this.stepIdx>numSteps) {
 					this.stepIdx=0;
 					//update index1
-					this.imageIdx1=this.imageIdx2;
-					
-					//update index2
-					MontageGif.this.image_index++;
-					if(MontageGif.this.image_index >= MontageGif.this.all_urls.size()) {
-						MontageGif.this.image_index++;
-						MontageGif.this.count_complete++;
-						}
-					this.imageIdx2=MontageGif.this.image_index;
+					this.imageIdx1 = this.imageIdx2;
+					this.imageIdx2 = MontageGif.this.nextIndex();
 					
 					this.direction = rand.nextInt(4);
 					}
@@ -121,6 +118,9 @@ public class MontageGif extends Launcher
 		}
 	
 	private Image getScaledImage(final String url) throws IOException {
+		Image cached = this.imageCache.get(url);
+		if(cached!=null) return cached;
+	
 		LOG.info("loading "+url);
 		final BufferedImage img = imageUtils.read(url);
 		
@@ -132,8 +132,20 @@ public class MontageGif extends Launcher
 			    w*=0.99999;
 			    h=w/ratio;
 			    }
-		return img.getScaledInstance((int)w,(int)h, Image.SCALE_SMOOTH);
+		cached =  img.getScaledInstance((int)w,(int)h, Image.SCALE_SMOOTH);
+		this.imageCache.put(url,cached);
+		return cached;
 		}	
+	
+	private int nextIndex() {
+		final int i= this.image_index;
+		this.image_index++;
+		if(this.image_index>=this.all_urls.size()) {
+			this.image_index=0;
+			this.count_complete++;
+			}
+		return i;
+		}
 	
 	@Override
 	public int doWork(final List<String> args)
@@ -162,26 +174,13 @@ public class MontageGif extends Launcher
 					final StepInfo info = new StepInfo();
 					info.x=x*this.squareSize;
 					info.y=y*this.squareSize;
-					info.imageIdx1 = this.image_index;
 					
-					this.image_index++;
-					if(this.image_index>=this.all_urls.size()) {
-						this.image_index=0;
-						this.count_complete++;
-						}
-					
-					info.imageIdx2 = this.image_index;
-					
-					this.image_index++;
-					if(this.image_index>=this.all_urls.size()) {
-						this.image_index=0;
-						this.count_complete++;
-						}
-					
+					info.imageIdx1 = nextIndex();
+					info.imageIdx2 = nextIndex();
 					steps.add(info);
 					}
 				}
-			
+			int file_out_index = 0;
 			while(this.count_complete==0) {
 				for(int step=0;step <= this.numSteps;++step) {
 					LOG.info("step " +(1+step)+"/"+ this.numSteps);
@@ -195,9 +194,10 @@ public class MontageGif extends Launcher
 						}
 									
 					g.dispose();
-					final File stepFile = new File(outputFile.getParentFile(),outputFile.getName().replace(ITERWORD, String.format(".%03d.", step)));
+					final File stepFile = new File(outputFile.getParentFile(),outputFile.getName().replace(ITERWORD, String.format(".%05d.", file_out_index)));
 					LOG.info("saving to "+stepFile);
 					ImageIO.write(img, "PNG", stepFile);
+					file_out_index++;
 					}
 				}
 			
