@@ -27,54 +27,67 @@ public class MontageGif extends Launcher
 	private File outputFile=null;
 	@Parameter(names={"-S","--steps"},description="number of steps between two transitions")
 	private int numSteps = 5;
+	@Parameter(names={"-b","--background"},description="background color.",converter=ColorParser.Converter.class)
+	private Color backgroundColor = Color.BLACK;
 
 	private final Random rand=new Random(System.currentTimeMillis());
 	private final ImageUtils imageUtils = ImageUtils.getInstance();
+	private final List<String> all_urls = new ArrayList<>();
+	private int image_index = 0;
+	private int count_complete = 0;
+	
 	private class StepInfo
 		{
 		int x=0;
 		int y=0;
 		int stepIdx=0;
-		int imageIdx=0;
+		int imageIdx1=0;
+		int imageIdx2=0;
 		int direction=rand.nextInt(4);
-		List<String> imageUrls=new ArrayList<>();
+	
 		
 		Image get(int step) throws IOException {
-			if(imageUrls.isEmpty()) {
+			if(MontageGif.this.all_urls.isEmpty()) {
 				final BufferedImage img=new BufferedImage(squareSize, squareSize, BufferedImage.TYPE_INT_RGB);
 				final Graphics2D g=img.createGraphics();
-				g.setColor(Color.BLACK);
+				g.setColor(backgroundColor);
 				g.fillRect(0, 0, squareSize, squareSize);
 				g.dispose();
 				return img;
 				}
-			else if(imageUrls.size()==1) {
-				return getScaledImage(imageUrls.get(0));
+			else if(MontageGif.this.all_urls.size()==1) {
+				return getScaledImage(0);
 				}
 			else
 				{
-				final Image img1 = getScaledImage(this.imageUrls.get((imageIdx  )%this.imageUrls.size()));
-				final Image img2 = getScaledImage(this.imageUrls.get((imageIdx+1)%this.imageUrls.size()));
-				int sizeStep = (int)(this.stepIdx*(squareSize/(double)numSteps));
-				
+				final Image img1 = getScaledImage(this.imageIdx1);
+				final Image img2 = getScaledImage(this.imageIdx2);
+				final int dxy1 = (int)(this.stepIdx*(squareSize/(double)numSteps));
 				
 				final BufferedImage img=new BufferedImage(squareSize, squareSize, BufferedImage.TYPE_INT_RGB);
 				final Graphics2D g=img.createGraphics();
 				g.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
 				g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+				
 				switch(this.direction)
 					{
 					//left to right
 					case 0:
+						g.drawImage(img1,-1 * (dxy1),0,null);
+						g.drawImage(img2,-1 * (dxy1 + squareSize),0,null);
+						break;
+					//right to left
+					case 1:
+						g.drawImage(img1, 1 * (dxy1),0,null);
+						g.drawImage(img2, 1 * (dxy1 - squareSize),0,null);
+						break;
+					case 2:
+						g.drawImage(img1,0,-1 * (dxy1),null);
+						g.drawImage(img2,0,-1 * (dxy1 + squareSize),null);
+						break;
 					default:
-						g.drawImage(
-								img1,
-								0, 0, sizeStep , squareSize,
-								squareSize-sizeStep, 0,squareSize,squareSize, null);
-						g.drawImage(
-								img2,
-								sizeStep, 0, squareSize , squareSize,
-								0, 0,squareSize-sizeStep,squareSize, null);
+						g.drawImage(img1,0, 1 * (dxy1),null);
+						g.drawImage(img2,0, 1 * (dxy1 - squareSize),null);
 						break;
 					}
 				
@@ -84,14 +97,27 @@ public class MontageGif extends Launcher
 				
 				this.stepIdx++;
 				if(this.stepIdx>numSteps) {
-					LOG.info("REDOOO");
 					this.stepIdx=0;
-					this.imageIdx++;
+					//update index1
+					this.imageIdx1=this.imageIdx2;
+					
+					//update index2
+					MontageGif.this.image_index++;
+					if(MontageGif.this.image_index >= MontageGif.this.all_urls.size()) {
+						MontageGif.this.image_index++;
+						MontageGif.this.count_complete++;
+						}
+					this.imageIdx2=MontageGif.this.image_index;
+					
 					this.direction = rand.nextInt(4);
 					}
 				return img;
 				}
 			}
+		}
+	
+	private Image getScaledImage(final int index) throws IOException {
+		return getScaledImage(all_urls.get(index%this.all_urls.size()));
 		}
 	
 	private Image getScaledImage(final String url) throws IOException {
@@ -117,8 +143,11 @@ public class MontageGif extends Launcher
 				LOG.error("bad output file");
 				return -1;
 				}
-			final List<String> imgUrls = IOUtils.unroll(args);			
-			
+			this.all_urls.addAll(IOUtils.unroll(args));			
+			if(this.all_urls.isEmpty()) {
+				LOG.error("no input");
+				return -1;
+			}
 			
 			final BufferedImage img=new BufferedImage(
 					this.squareSize*this.imagePerSide,
@@ -126,37 +155,50 @@ public class MontageGif extends Launcher
 					BufferedImage.TYPE_INT_RGB
 					);
 			
+			
 			final List<StepInfo> steps=new ArrayList<>();
 			for(int x=0;x< this.imagePerSide;x++) {
 				for(int y=0;y< this.imagePerSide;y++) {
 					final StepInfo info = new StepInfo();
 					info.x=x*this.squareSize;
 					info.y=y*this.squareSize;
+					info.imageIdx1 = this.image_index;
+					
+					this.image_index++;
+					if(this.image_index>=this.all_urls.size()) {
+						this.image_index=0;
+						this.count_complete++;
+						}
+					
+					info.imageIdx2 = this.image_index;
+					
+					this.image_index++;
+					if(this.image_index>=this.all_urls.size()) {
+						this.image_index=0;
+						this.count_complete++;
+						}
+					
 					steps.add(info);
 					}
 				}
 			
-			int img_idx =0;
-			for(final String imFile : imgUrls) {
-				steps.get(img_idx%steps.size()).imageUrls.add(imFile);
-				img_idx++;
-				}
-			
-			for(int step=0;step <= this.numSteps;++step) {
-				LOG.info("step " +(1+step)+"/"+ this.numSteps);
-				final Graphics2D g=img.createGraphics();
-				g.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
-				g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-				
-				for(final StepInfo stepInfo: steps) {
-					Image img2=stepInfo.get(step);
-					g.drawImage(img2,stepInfo.x,stepInfo.y,squareSize,squareSize,null);
+			while(this.count_complete==0) {
+				for(int step=0;step <= this.numSteps;++step) {
+					LOG.info("step " +(1+step)+"/"+ this.numSteps);
+					final Graphics2D g=img.createGraphics();
+					g.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
+					g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+					
+					for(final StepInfo stepInfo: steps) {
+						final Image img2=stepInfo.get(step);
+						g.drawImage(img2,stepInfo.x,stepInfo.y,squareSize,squareSize,null);
+						}
+									
+					g.dispose();
+					final File stepFile = new File(outputFile.getParentFile(),outputFile.getName().replace(ITERWORD, String.format(".%03d.", step)));
+					LOG.info("saving to "+stepFile);
+					ImageIO.write(img, "PNG", stepFile);
 					}
-								
-				g.dispose();
-				final File stepFile = new File(outputFile.getParentFile(),outputFile.getName().replace(ITERWORD, String.format(".%03d.", step)));
-				LOG.info("saving to "+stepFile);
-				ImageIO.write(img, "PNG", stepFile);
 				}
 			
 			
