@@ -5,19 +5,20 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
@@ -164,9 +165,13 @@ public static InputStream openStream(final File path) throws IOException {
  * @throws IOException
  */
 public static OutputStream openFileAsOutputStream(final File pathOrNull) throws IOException {
+	return openPathAsOutputStream(pathOrNull==null?null:pathOrNull.toPath());
+	}
+
+public static OutputStream openPathAsOutputStream(final Path pathOrNull) throws IOException {
 	if(pathOrNull==null) return System.out;
-	OutputStream os = new FileOutputStream(pathOrNull);
-	if(pathOrNull.getName().endsWith(".gz")) {
+	OutputStream os = Files.newOutputStream(pathOrNull);
+	if(pathOrNull.getFileName().toString().endsWith(".gz")) {
 		return new GZIPOutputStream(os) {
 			@Override
 			public void close() throws IOException {
@@ -176,6 +181,14 @@ public static OutputStream openFileAsOutputStream(final File pathOrNull) throws 
 			};
 		}
 	return os;
+	}
+
+public static Writer openPathAsWriter(final Path pathOrNull) throws IOException {
+	if(pathOrNull==null) return new PrintWriter(System.out);
+	if(pathOrNull.getFileName().toString().endsWith(".gz")) {
+		 return new PrintWriter(openPathAsOutputStream(pathOrNull));
+		}
+	return Files.newBufferedWriter(pathOrNull);
 	}
 
 

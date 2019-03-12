@@ -14,13 +14,25 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 
+import com.beust.jcommander.IStringConverter;
+
 public class DimensionConverter
 	implements Function<String,Dimension>
 	{
 	private static final Logger LOG = Logger.builder(DimensionConverter.class).build();
-
+	public static final String OPT_DESC="";
+	
+	public static class StringConverter implements IStringConverter<Dimension> {
+		@Override
+		public Dimension convert(final String dimStr) {
+			return new DimensionConverter().apply(dimStr);
+			}
+	}
+	
+	
 	@Override
 	public Dimension apply(final String dimStr) {
+		if(StringUtils.isBlank(dimStr)) throw new IllegalArgumentException("empty string");
 		if(dimStr.toLowerCase().matches("\\d+x\\d+")) {
 			final int x_symbol = dimStr.toLowerCase().indexOf("x");
 			return new Dimension(
@@ -33,7 +45,7 @@ public class DimensionConverter
 		if(!Files.exists(f) || !Files.isRegularFile(f)) {
 			throw new IllegalArgumentException("not an existing file: "+f);
 			}
-		if(f.getFileName().endsWith(".xcf"))
+		if(f.getFileName().toString().endsWith(".xcf"))
 				{
 				try(InputStream fis=Files.newInputStream(f))
 					{
@@ -66,17 +78,19 @@ public class DimensionConverter
 					}
 				}
 			
-			try(ImageInputStream in = ImageIO.createImageInputStream(f)){
-			    final Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
-			    if (readers.hasNext()) {
-			        final ImageReader reader = readers.next();
-			        try {
-			            reader.setInput(in);
-			           return new Dimension(reader.getWidth(0), reader.getHeight(0));
-			        } finally {
-			            reader.dispose();
-				        }
-				    }
+			try(ImageInputStream in = ImageIO.createImageInputStream(f.toFile())){
+				if(in!=null) {
+				    final Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
+				    if (readers.hasNext()) {
+				        final ImageReader reader = readers.next();
+				        try {
+				            reader.setInput(in);
+				           return new Dimension(reader.getWidth(0), reader.getHeight(0));
+				        } finally {
+				            reader.dispose();
+					        }
+					    }
+					}
 				} 			
 			catch(final IOException err) {
 				throw new IllegalArgumentException(err);
