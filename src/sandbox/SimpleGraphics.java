@@ -5,12 +5,14 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Shape;
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.GeneralPath;
 import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -76,6 +78,7 @@ public abstract class SimpleGraphics implements Closeable {
 	public abstract void circle(double cx,double cy,double r);
 	public abstract void line(double x1,double y1,double x2,double y2);
 	public abstract void rect(double x,double y,double width,double height);
+	public abstract void polygon(double x[],double y[]);
 
 	public void setFill(Color c) { getStyle().fill(c);}
 	public void setStroke(Color c) { getStyle().stroke(c);}
@@ -125,6 +128,19 @@ public abstract class SimpleGraphics implements Closeable {
 		public void rect(double x, double y, double width, double height) {
 			this.shape(new Rectangle2D.Double(x,y,width,height));
 			}
+		
+		@Override
+		public void polygon(double[] x, double[] y) {
+			if(x.length<2 || y.length<2 || x.length!=y.length) return;
+			GeneralPath path = new GeneralPath(GeneralPath.WIND_EVEN_ODD);
+			path.moveTo(x[0], y[0]);
+			for(int i=1;i< x.length;++i) {
+				path.lineTo(x[i], y[i]);
+				}
+			path.closePath();
+			this.shape(path);
+			}
+		
 		
 		@Override
 		public void close() {
@@ -214,9 +230,28 @@ public abstract class SimpleGraphics implements Closeable {
 			}
 		
 		@Override
+		public void polygon(double[] x, double[] y) {
+			if(x.length<2 || y.length<2 || x.length!=y.length) return;
+			try {
+				this.w.writeEmptyElement("polygon");
+				final StringBuilder sb=new StringBuilder();
+				for(int i=0;i< x.length;++i) {
+					if(i>0) sb.append(" ");
+					sb.append(x[i]).append(",").append(y[i]);
+					}
+				
+				this.w.writeAttribute("points",sb.toString());
+				writeStyle();
+				} 
+			catch(XMLStreamException err) {
+				
+				}
+			}
+		
+		@Override
 		public void rect(double x, double y, double width, double height) {
 			try {
-				this.w.writeEmptyElement("line");
+				this.w.writeEmptyElement("rect");
 				this.w.writeAttribute("x", String.valueOf(x));
 				this.w.writeAttribute("y", String.valueOf(y));
 				this.w.writeAttribute("width", String.valueOf(width));
@@ -244,7 +279,97 @@ public abstract class SimpleGraphics implements Closeable {
 			}
 		}
 	
-	
+	private static class SimplePostscript
+	extends SimpleGraphics
+		{
+		PrintWriter pw;
+		
+		SimplePostscript(Path p,int width,int height) throws IOException {
+			super(width,height);
+			this.pw = (p==null?new PrintWriter(System.out):new PrintWriter(Files.newBufferedWriter(p)));
+			this.pw.println("%!PS-Adobe-3.0 EPSF-3.0");
+			this.pw.println("%%Creator: "+SimpleGraphics.class.getName());
+			this.pw.println("%%BoundingBox: 0 0 " + toInch(width)+" "+toInch(height));
+			this.pw.println("%%Pages: 1");
+			this.pw.println("%%Page: 1 1");
+			}
+		
+		private double flipY(double y) {
+			return this.getHeight()-y;
+			}
+		private double toInch(double v) {
+			return v/72.0;
+			}
+		private boolean before(int side) {
+			Style st= getStyle();
+			Color c = (side==0?st.getFill():st.getStroke());
+			if(c==null)return false;
+			return true;
+			}
+		@Override
+		public void line(double x1, double y1, double x2, double y2) {
+			if(!before(1)) return;
+			pw.print(toInch(x1));
+			pw.print(" ");
+			pw.print(toInch(flipY(y1)));
+			pw.print(" ");
+			pw.print(toInch(x2));
+			pw.print(" ");
+			pw.print(toInch(flipY(y2)));
+			pw.print(" stroke ");
+			}
+		
+		@Override
+		public void rect(double x, double y, double width, double height) {
+			if(width<=0 || height<=0) return;
+			double xv[]=new double[] {x,x+width,x+width,x};
+			double yv[]=new double[] {y,y,y+height,y+height};
+			polygon(xv, yv);
+			}
+		
+		@Override
+		public void circle(double cx, double cy, double r) {
+			for(int i=0;i<2;i++) {
+				if(!before(i)) continue;
+				pw.print(toInch(cx));
+				pw.print(" ");
+				pw.print(toInch(flipY(cy)));
+				pw.print(" ");
+				pw.print(toInch(r));
+				pw.print(" 0 360 arc ");
+				pw.print(i==0?" fill ":" stroke ");
+				}
+			}
+		
+		@Override
+		public void polygon(double[] x, double[] y) {
+			if(x.length<2 || y.length<2 || x.length!=y.length) return;
+			for(int i=0;i<2;i++) {
+				if(!before(i)) continue;
+				for(int j=0;j< x.length;++j) {
+					pw.print(toInch(x[j]));
+					pw.print(" ");
+					pw.print(toInch(flipY(y[j])));
+					pw.print(j==0?" moveto ":" lineto ");
+					}
+				pw.print(" closepath ");
+				pw.print(i==0?" fill ":" stroke ");
+				}
+			
+			
+		}
+		
+		@Override
+		public void close() throws IOException {
+			this.pw.println("showpage");
+			this.pw.println("%EOF");
+			pw.flush();
+			pw.close();
+			}
+		}
+	public static SimpleGraphics openPathForPostScript(Path path,int width,int height) throws IOException {
+		return new SimplePostscript(path, width, height);
+		}
 	public static SimpleGraphics openPathForRaster(Path path,int width,int height) throws IOException {
 		return new SimpleGraphics2D(path, width, height);
 		}
@@ -268,6 +393,10 @@ public abstract class SimpleGraphics implements Closeable {
 			if(suffix.endsWith(".svg") || suffix.endsWith(".svg.gz"))
 				{
 				return openPathForSvg(path, width, height);
+				}
+			if(suffix.endsWith(".ps") || suffix.endsWith(".eps"))
+				{
+				return openPathForPostScript(path, width, height);
 				}
 			return openPathForRaster(path, width, height);
 		}

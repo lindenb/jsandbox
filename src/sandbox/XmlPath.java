@@ -33,22 +33,8 @@ public class XmlPath extends Launcher {
 		final LinkedList<State> stacks = new LinkedList<>();
 		
 		private String escape(final String s) {
-			final StringBuilder sb = new StringBuilder(s.length());
-			for(int i=0;i< s.length();i++)
-				{
-				final char c = s.charAt(i);
-				switch(c) {
-					case '\n' : sb.append("\\n");break;
-					case '\r' : sb.append("\\r");break;
-					case '\t' : sb.append("\\t");break;
-					case '\\' : sb.append("\\\\");break;
-					case '\'' : sb.append("\\\'");break;
-					case '\"' : sb.append("\\\"");break;
-					default:sb.append(c);break;
-					}
-				}
-			return sb.toString();
-		}
+			return StringUtils.escapeC(s);
+			}
 		
 		private String path() {
 			final StringBuilder sb=new StringBuilder();

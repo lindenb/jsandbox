@@ -4,11 +4,14 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.function.DoubleSupplier;
 
+import com.beust.jcommander.DynamicParameter;
 import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.Parameter;
 
@@ -48,7 +51,7 @@ public class Halftone extends Launcher {
 				final double d= Double.parseDouble(s);
 				return ()->d;
 				}
-			catch(NumberFormatException err) {
+			catch(final NumberFormatException err) {
 				throw new IllegalArgumentException(err);
 				}
 			}
@@ -57,6 +60,7 @@ public class Halftone extends Launcher {
 	enum MarkShape {
 		circle,square,random
 	}
+	
 	
 	@Parameter(names= {"-d","--size","--dim","--dimension"},converter=DimensionConverter.StringConverter.class,description=DimensionConverter.OPT_DESC,required=true)
 	private Dimension dimIn = null;
@@ -76,34 +80,19 @@ public class Halftone extends Launcher {
 	private boolean trace_background = false;
 	@Parameter(names= {"-m","--mark",},description="markShape")
 	private MarkShape markhape = MarkShape.circle;
-
+	@DynamicParameter(names = "-D", description = "Dynamic parameters go here")
+	private Map<String, String> dynParams = new HashMap<>();
 	
 	private interface Pattern {
-		int getWidth();
-		int getHeight();
 		String getName();
 		String getDescription();
 		void paint(SimpleGraphics ctx);
 		}
-	private class PatternMatrix implements Pattern {
-		final float array[][];
+	
+	private abstract class AbstractPattern implements Pattern {
 		final String name;
 		final String desc;
-		PatternMatrix(final String name,final String desc,float array[][])  {
-			this.array=array;
-			this.name = name;
-			this.desc=desc;
-			}
-		PatternMatrix(final String name,final String desc,String...array)  {
-			this.array=new float[array.length][];
-			for(int y=0;y< array.length;y++)
-				{
-				this.array[y]=new float[array[y].length()];
-				for(int x=0;x< array[y].length();++x)
-					{
-					this.array[y][x]=Character.isWhitespace(array[y].charAt(x)) || array[y].charAt(x)=='.'?0f:1f;
-					}
-				}
+		AbstractPattern(final String name,final String desc){
 			this.name = name;
 			this.desc=desc;
 			}
@@ -113,46 +102,57 @@ public class Halftone extends Launcher {
 			}
 		@Override
 		public String getDescription() {
-			return desc;
+			return desc==null?this.name:this.desc;
+			}
+
+		}
+	
+	private class RandomMatrix extends AbstractPattern {
+		RandomMatrix(final String name,final String desc)  {
+			super(name,desc);
 			}
 		@Override
+		public void paint(SimpleGraphics ctx) {
+			double n = (long)ctx.getWidth()*(long)ctx.getHeight();
+			n = n*(1.0/Double.valueOf(dynParams.getOrDefault("density",String.valueOf(1000.0))));
+			while(n>0) {
+				n--;
+				double r = 1.0*scaleFactor2.getAsDouble();
+				if(r<=0) continue;
+				double cx = random.nextInt(ctx.getWidth());
+				double cy = random.nextInt(ctx.getHeight());
+				mark(ctx,cx,cy,r);
+				}
+			}
+		}
+	
+	private class PatternMatrix extends AbstractPattern {
+		final float array[][];
+		PatternMatrix(final String name,final String desc,float array[][])  {
+			super(name,desc);
+			this.array=array;
+			}
+		PatternMatrix(final String name,final String desc,String...array)  {
+			super(name,desc);
+			this.array=new float[array.length][];
+			for(int y=0;y< array.length;y++)
+				{
+				this.array[y]=new float[array[y].length()];
+				for(int x=0;x< array[y].length();++x)
+					{
+					this.array[y][x]=Character.isWhitespace(array[y].charAt(x)) || array[y].charAt(x)=='.'?0f:1f;
+					}
+				}
+			}
 		public int getWidth() {
 			return array[0].length;
 			}
-		@Override
 		public int getHeight() {
 			return array.length;
 			}
 		
-		private void mark(SimpleGraphics ctx,double cx,double cy,double cr)
-			{
-			float a = (float)alphaSupplier.getAsDouble();
-			if(a<0f) a=0f;
-			if(a>1f) a=1f;
-			
-			ctx.setAlpha(a);
-			
-			MarkShape x = Halftone.this.markhape;
-			if(x.equals(MarkShape.random))
-				{
-				switch(random.nextInt(2))
-					{
-					case 0: x= MarkShape.circle;break;
-					default: x= MarkShape.square;break;
-					}
-				}
-			
-			switch(x)
-				{
-				case circle: ctx.circle(cx, cy, cr); break;
-				case square: ctx.rect(cx-cr, cy-cr, cr*2,cr*2); break;
-				default:break;
-				}
-			
-			}
-		
 		@Override
-		public void paint(SimpleGraphics ctx) {
+		public void paint(final SimpleGraphics ctx) {
 			double y =0;
 			while(y<ctx.getHeight()) {
 				double x =0;
@@ -178,6 +178,33 @@ public class Halftone extends Launcher {
 	
 	private final List<Pattern> patterns = new ArrayList<>();
 	private final Random random = new Random(System.currentTimeMillis());
+	
+	private void mark(SimpleGraphics ctx,double cx,double cy,double cr)
+		{
+		float a = (float)alphaSupplier.getAsDouble();
+		if(a<0f) a=0f;
+		if(a>1f) a=1f;
+		
+		ctx.setAlpha(a);
+		
+		MarkShape x = Halftone.this.markhape;
+		if(x.equals(MarkShape.random))
+			{
+			switch(random.nextInt(2))
+				{
+				case 0: x= MarkShape.circle;break;
+				default: x= MarkShape.square;break;
+				}
+			}
+		
+		switch(x)
+			{
+			case circle: ctx.circle(cx, cy, cr); break;
+			case square: ctx.rect(cx-cr, cy-cr, cr*2,cr*2); break;
+			default:break;
+			}
+		
+		}
 	
 	@Override
 	public int doWork(final List<String> args) {
@@ -206,6 +233,9 @@ public class Halftone extends Launcher {
 				" X X X X"
 				);
 		patterns.add(m);
+		
+		patterns.add(new RandomMatrix("rnd0",null));
+		
 		
 		if(list_patterns) {
 			patterns.forEach(P->{

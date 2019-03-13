@@ -17,4 +17,24 @@ public static int strpbrk(final String s,final String accept) {
 		}
 	return -1;
 	}
+
+/** escape C string */
+public static String escapeC(final CharSequence s) {
+	final StringBuilder sb = new StringBuilder(s.length());
+	for(int i=0;i< s.length();i++)
+		{
+		final char c = s.charAt(i);
+		switch(c) {
+			case '\n' : sb.append("\\n");break;
+			case '\r' : sb.append("\\r");break;
+			case '\t' : sb.append("\\t");break;
+			case '\\' : sb.append("\\\\");break;
+			case '\'' : sb.append("\\\'");break;
+			case '\"' : sb.append("\\\"");break;
+			default:sb.append(c);break;
+			}
+		}
+	return sb.toString();
+	}
+
 }
