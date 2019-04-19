@@ -63,6 +63,10 @@ public abstract class Launcher
 		if(args.size()==1) return args.get(0);
 		throw new IllegalArgumentException("expected one zero file one input but got "+args.size());
 		}
+	protected String oneAndOnlyOneFile(final List<String> args) {
+		if(args.size()==1) return args.get(0);
+		throw new IllegalArgumentException("expected one file as argument got "+args.size());
+		}
 	
 	public void instanceMainWithExit(final String args[]) {
 		final int ret =  instanceMain(args);
