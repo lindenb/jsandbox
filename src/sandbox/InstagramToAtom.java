@@ -1,26 +1,40 @@
 package sandbox;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.math.BigInteger;
 import java.security.MessageDigest;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
-import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -28,8 +42,18 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import com.beust.jcommander.Parameter;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.stream.JsonReader;
 /**
 ```
 $ crontab -e
@@ -52,8 +76,8 @@ public class InstagramToAtom extends Launcher {
 	private int ID_GENERATOR=0;
 	@Parameter(names={"-t","--tumb-size"},description="Thumb size.")
 	private int thumb_size =256;
-	@Parameter(names={"-f","--force"},description="Force print only new items, discard the non-updated.")
-	private boolean force_print_new_only = false;
+	@Parameter(names={"-H","--hours"},description="print items published less than 'x' hours. negative: don't use.")
+	private int filter_last_xx_hours = -1;
 	@Parameter(names={"-s","--seconds"},description="Sleep s seconds between each calls.")
 	private int sleep_seconds = 5;
 	@Parameter(names={"-d","--directory"},description="Cache directory. default: ${HOME}/.insta2atom ")
@@ -62,223 +86,226 @@ public class InstagramToAtom extends Launcher {
 	private File cookieStoreFile  = null;
 	@Parameter(names={"-g","--group"},description="group items per query")
 	private boolean group_flag =false;
+	@Parameter(names={"-N","--max-items"},description="max-items")
+	private int max_images_per_qery = 50;
+	@Parameter(names={"-new","--new"},description="Only show new items since last call of this tool")
+	private boolean what_is_new_flag = false;
 
-	
-	
 	private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	private CloseableHttpClient client = null;
-	
+	private final XPath xpath = XPathFactory.newInstance().newXPath();
 
 	
-	private class Query
-		{
-		String query = "";
-		Date date = new Date();
-		String md5 = "";
-		final Set<Image> old_images_urls = new TreeSet<>();
-		final Set<Image> new_images_urls = new TreeSet<>();
+	
 		
+	private String getUrl(final String queryName) {
+		return "https://www.instagram.com"+
+				(queryName.startsWith("/")?"":"/") + 
+				queryName +
+				(queryName.endsWith("/")?"":"/");
+		}
 		
-		class Image implements Comparable<Image>
+	private String queryHtml(final String queryName) throws IOException {
+		CloseableHttpResponse response = null;
+		InputStream httpIn = null;
+		try
 			{
-			final String url;
-			final String shortcode;
-			
-			Image(final String url,final String shortcode) {
-				this.url = url;
-				this.shortcode = shortcode.trim();
-				}
-			
-			@Override
-			public int compareTo(final Image o)
-				{
-				return this.url.compareTo(o.url);
-				}
-			@Override
-			public int hashCode()
-				{
-				return this.url.hashCode();
-				}
-			
-			public String getPageHref() {
-				return "https://www.instagram.com/p/"+this.shortcode+"/";
-				}
-			void write(final XMLStreamWriter w) throws XMLStreamException
-				{
-				w.writeEmptyElement("img");
-				w.writeAttribute("id", this.shortcode.isEmpty()?String.valueOf(++ID_GENERATOR):this.shortcode);
-				w.writeAttribute("alt", this.url);
-				w.writeAttribute("src", this.url);
-				w.writeAttribute("width",String.valueOf(InstagramToAtom.this.thumb_size));
-				w.writeAttribute("height",String.valueOf(InstagramToAtom.this.thumb_size));
-				}
-			@Override
-			public boolean equals(final Object obj)
-				{
-				if(obj==this) return true;
-				if(obj==null || !(this instanceof Image)) return false;
-				return compareTo(Image.class.cast(obj))==0;
-				}
-			@Override
-			public String toString()
-				{
-				return this.url;
+			response = InstagramToAtom.this.client.execute(new HttpGet(this.getUrl( queryName)));
+			httpIn = response.getEntity().getContent();
+			final String html = IOUtils.readStreamContent(httpIn);
+			return html;
+			}
+		catch(final IOException err)
+			{
+			LOG.error(err);
+			throw err;
+			}
+		finally
+			{
+			IOUtils.close(httpIn);
+			IOUtils.close(response);
+			}
+		}
+		
+		private Integer parseCount(final JsonElement je)
+			{
+			if(je==null ||!je.isJsonObject()) return null;
+			final JsonObject jObject = je.getAsJsonObject();
+			if(!jObject.has("count")) return null;
+			return jObject.get("count").getAsInt();
+			}
+		private void parseOwner(final Image img,final JsonElement je)
+			{
+			if(je==null ||!je.isJsonObject()) return ;
+			final JsonObject jObject = je.getAsJsonObject();
+			if(jObject.has("id")) {
+				img.setData("owner",jObject.get("id").getAsString());
 				}
 			}
 		
+		/*
+		private Element parseThumbail(final Document owner,final JsonObject jObject) {
+			final Element th = owner.createElement("img");
+			th.setAttribute("class", "thumbail");
+			th.setAttribute("width",""+jObject.get("config_width").getAsInt());
+			th.setAttribute("height",""+jObject.get("config_height").getAsInt());
+			th.setAttribute("src", jObject.get("src").getAsString());
+			return th;
+			}*/
 		
-		Query(final String A[]) {
-			this.query=A[0].trim();
-			if(this.query.isEmpty()) return;
-			if(A.length<=2) return; 
-			try {
-				this.date = dateFormatter.parse(A[1]);
-				}
-			catch(final ParseException err) {
-				this.date = new Date();
-				}
-			this.md5 = A[2];
-			if(A.length==3) return;
-			for(final String S:A[3].split("[ ]"))
+		private Image parseNode(final Document owner,final JsonObject jObject)
+			{
+			final Image n = new Image(owner,null);
+			n.parseDimension(jObject.get("dimensions").getAsJsonObject());
+			n.setData("display_url", jObject.get("display_url").getAsString());
+			n.setData("edge_liked_by",parseCount(jObject.get("edge_liked_by")));
+			n.setData("shortcode", jObject.get("shortcode").getAsString());
+			n.setData("taken_at_timestamp",jObject.get("taken_at_timestamp").getAsString());
+			n.setData("thumbnail_src",jObject.get("thumbnail_src").getAsString());
+			n.setData("id", jObject.get("id").getAsString());
+			parseOwner(n,jObject.get("owner"));
+			
+			/*if(jObject.has("thumbnail_resources")) {
+				for(final JsonElement c: jObject.getAsJsonArray("thumbnail_resources"))
+					{
+					n.div.appendChild(parseThumbail(owner,c.getAsJsonObject()));
+					}
+				}*/
+			n.span.setAttribute("id", n.getId());
+			n.anchor.setAttribute("target", "_blank");
+			n.anchor.setAttribute("href", n.getPageHref());
+			n.anchor.setAttribute("title",
+					dateFormatter.format(new Date(n.getTimestampSec()*1000L))+
+					" liked by : "+n.getLikedBy()+" new:"+n.is_new
+					);
+			n.img.setAttribute("src", n.getData("thumbnail_src"));
+			n.img.setAttribute("alt", n.getData("thumbnail_src"));
+			n.img.setAttribute("width", ""+InstagramToAtom.this.thumb_size);
+			return n;
+			}
+		
+		
+		private void searchNodes(final Document owner,final Set<Image> nodes,final String key,final JsonElement elt)
+			{
+			if(elt.isJsonArray())
 				{
-				if(S.isEmpty()) continue;
-				final int pipe = S.indexOf("|");
-				final Image img;
-				if(pipe==-1) {
-					img =  new Image(S,"");
+				final JsonArray jArray = elt.getAsJsonArray();
+				for(final JsonElement item:jArray) {
+					searchNodes(owner,nodes,key,item);
+					}
+				}
+			else if(elt.isJsonObject())
+				{
+				final JsonObject jObject = elt.getAsJsonObject();
+				if("node".equals(key) && jObject.has("display_url"))
+					{
+					final Image n = parseNode(owner,jObject);
+					if(n!=null) nodes.add(n);
 					}
 				else
 					{
-					img = new Image(
-							S.substring(0,pipe),
-							S.substring(pipe+1).trim()
-							);
-					}
-				this.old_images_urls.add(img);
-				}
-			}
-		
-		String getUrl() {
-			return "https://www.instagram.com"+
-					(this.query.startsWith("/")?"":"/") + 
-					this.query +
-					(this.query.endsWith("/")?"":"/");
-			}
-		private boolean  query()
-			{
-			String html;
-			CloseableHttpResponse response = null;
-			InputStream httpIn = null;
-			try
-				{
-				response = InstagramToAtom.this.client.execute(new HttpGet(this.getUrl()));
-				httpIn = response.getEntity().getContent();
-				html = IOUtils.readStreamContent(httpIn);
-				}
-			catch(final IOException err)
-				{
-				LOG.error(err);
-				return false;
-				}
-			finally
-				{
-				IOUtils.close(httpIn);
-				IOUtils.close(response);
-				}
-			final String thumbnail_src= "\"thumbnail_src\":\"";
-			final String shortcode_src= "\"shortcode\":\"";
-			for(;;)
-				{
-				int i= html.indexOf(thumbnail_src);
-				
-				if(i==-1) {
-					break;
-					}
-				int h=i;
-				i+= thumbnail_src.length();
-				final int j=  html.indexOf("\"",i);
-				if(j!=-1) {
-					String shortcode="";
-					while(h>=0 && h+shortcode_src.length() < html.length()) {
-						if(html.substring(h,h+shortcode_src.length()).equals(shortcode_src)) {
-							h+=shortcode_src.length();
-							final int k = html.indexOf("\"",h);
-							if(k!=-1) {
-								shortcode =  html.substring(h, k);;
-								}
-							break;
-							}
-						--h;
-						}
-					
-					final String image_url = html.substring(i, j);
-					if(image_url.startsWith("https://") &&
-						(image_url.endsWith(".png") || image_url.endsWith(".jpg")))
+					for(final Map.Entry<String, JsonElement> kv: jObject.entrySet())
 						{
-						this.new_images_urls.add(new Image(image_url,shortcode));
+						if(kv.getKey().equals("edge_hashtag_to_top_posts")) continue;
+						searchNodes(owner,nodes,kv.getKey(),kv.getValue());
 						}
-					html = html.substring(j);
-					}
-				else
-					{
-					html = html.substring(i);
 					}
 				}
-			
-			if(this.new_images_urls.isEmpty()) {
-				LOG.warning("No image found for "+this.query);
 			}
-			
-			final String new_md5 = md5(this.new_images_urls.stream().
-					map(I->I.url).
-					collect(Collectors.joining(" ")));
-			if(!new_md5.equals(this.md5)) {
-				this.md5 = new_md5;
-				this.date = new Date();
-				}
-			return true;
+	
+	private Set<Image> query(final Document owner,final String queryName) throws Exception
+		{
+		final String windowSharedData = "window._sharedData";
+		final String endObject="};";
+		String html = queryHtml(queryName);
+		int i= html.indexOf(windowSharedData);
+		if(i==-1) {
+			LOG.error("cannot find "+windowSharedData+" in "+getUrl(queryName));
+			return new HashSet<>();
 			}
-		void writeAtom(final XMLStreamWriter w) throws XMLStreamException {
-			final Set<Image> images_to_print = new TreeSet<>(this.new_images_urls);
-			
-			if(InstagramToAtom.this.force_print_new_only)
-				{
-				images_to_print.removeAll(this.old_images_urls);
-				}
+		html=html.substring(i+windowSharedData.length());
+		i= html.indexOf("{");
+		if(i==-1)
+			{
+			LOG.error("cannot find '{' after "+windowSharedData+" in "+getUrl(queryName)+" after "+html);
+			return new HashSet<>();
+			}
+		html=html.substring(i);
+		i = html.indexOf(endObject);
+		if(i==-1)
+			{
+			LOG.error("cannot find  "+endObject+" in "+getUrl(queryName));
+			return new HashSet<>();
+			}
+		html=html.substring(0, i+1);
+		final JsonReader jsr = new JsonReader(new StringReader(html));
+		jsr.setLenient(true);
+		final JsonParser parser = new JsonParser();
+		JsonElement root;
+		try {
+			root = parser.parse(jsr);
+			}
+		catch(final JsonSyntaxException err) {
+			LOG.error(err);
+			return new HashSet<>();
+			}
+		finally
+			{
+			jsr.close();
+			}
+		if(!root.isJsonObject())
+			{
+			LOG.error("root is not json object in "+getUrl(queryName));
+			return new HashSet<>();
+			}
+		final Set<Image> nodes =  new TreeSet<>();
+		searchNodes(owner,nodes,null,root.getAsJsonObject());
+		nodes.removeIf(N->N.getSrc()==null && N.getSrc().isEmpty());
+		if(nodes.isEmpty())
+			{
+			LOG.warning("No image found for "+queryName+".");
+			}
+		return nodes;
+		}
+
+	void writeAtom(
+		final String query,
+		final Set<Image> images,
+		final XMLStreamWriter w) throws XMLStreamException {
+		if(InstagramToAtom.this.group_flag)
+			{
+			writeGroupedImages(query,w,images);
+			}
+		else
+			{
+			writeSoloImages(query,w,images);
+			}
+		}
 		
-			if(images_to_print.isEmpty()) return;
-			if(InstagramToAtom.this.group_flag)
-				{
-				writeGroupedImages(w,images_to_print);
-				}
-			else
-				{
-				writeSoloImages(w,images_to_print);
-				}
-			}
-		
-		void writeGroupedImages(final XMLStreamWriter w,Set<Image> images_to_print) throws XMLStreamException {
+		void writeGroupedImages(
+			final String query,
+			final XMLStreamWriter w,Set<Image> images_to_print) throws XMLStreamException {
 			w.writeStartElement("entry");
 			
 			w.writeStartElement("title");
-				w.writeCharacters(this.query);
+				w.writeCharacters(query);
 			w.writeEndElement();
 
 			w.writeStartElement("id");
-			w.writeCharacters(this.md5);
+			w.writeCharacters(md5(query));
 			w.writeEndElement();
 
 			
 			w.writeEmptyElement("link");
-			w.writeAttribute("href", this.getUrl()+"?m="+this.md5);
+			w.writeAttribute("href", this.getUrl(query)+"?m="+md5(query));
 			
 			w.writeStartElement("updated");
-				w.writeCharacters(InstagramToAtom.this.dateFormatter.format(this.date));
+				w.writeCharacters(InstagramToAtom.this.dateFormatter.format(new Date()));
 			w.writeEndElement();
 			
 			w.writeStartElement("author");
 				w.writeStartElement("name");
-					w.writeCharacters(this.query);
+					w.writeCharacters(query);
 				w.writeEndElement();
 			w.writeEndElement();
 			
@@ -290,11 +317,11 @@ public class InstagramToAtom extends Launcher {
 			w.writeStartElement("p");  
 			
 	
-			for(final Image image_url:images_to_print) {
+			for(final Image image_url:images_to_print.stream().sorted().collect(Collectors.toList())) {
 				w.writeStartElement("a");
 				w.writeAttribute("id",String.valueOf(++ID_GENERATOR));
 				w.writeAttribute("target", "_blank");
-				w.writeAttribute("href", image_url.shortcode.isEmpty()?this.getUrl():image_url.getPageHref());
+				w.writeAttribute("href", image_url.getShortCode().isEmpty()?this.getUrl(query):image_url.getPageHref());
 				image_url.write(w);
 				w.writeEndElement();//a
 				}
@@ -306,33 +333,35 @@ public class InstagramToAtom extends Launcher {
 			w.writeEndElement();//entry
 		}
 		
-		void writeSoloImages(final XMLStreamWriter w,Set<Image> images_to_print) throws XMLStreamException {
-			for(final Image image_url : images_to_print) {
+		void writeSoloImages(
+			final String query,	
+			final XMLStreamWriter w,Set<Image> images_to_print) throws XMLStreamException {
+			for(final Image image_url:images_to_print.stream().sorted().collect(Collectors.toList())) {
 				w.writeStartElement("entry");
 				
 				w.writeStartElement("title");
-					w.writeCharacters(this.query);
+					w.writeCharacters(query);
 				w.writeEndElement();
 
 				w.writeStartElement("id");
-				w.writeCharacters(md5(image_url.url));
+				w.writeCharacters(md5(image_url.getSrc()));
 				w.writeEndElement();
 
 				
 				w.writeEmptyElement("link");
 				w.writeAttribute("href", 
-						image_url.shortcode.isEmpty()?
-						this.getUrl()+"?m="+md5(image_url.url):
+						image_url.getShortCode().isEmpty()?
+						getUrl(query)+"?m="+md5(image_url.getSrc()):
 						image_url.getPageHref()
 						);
 				
 				w.writeStartElement("updated");
-					w.writeCharacters(InstagramToAtom.this.dateFormatter.format(this.date));
+					w.writeCharacters(InstagramToAtom.this.dateFormatter.format(new Date()));
 				w.writeEndElement();
 				
 				w.writeStartElement("author");
 					w.writeStartElement("name");
-						w.writeCharacters(this.query);
+						w.writeCharacters(query);
 					w.writeEndElement();
 				w.writeEndElement();
 				
@@ -346,7 +375,7 @@ public class InstagramToAtom extends Launcher {
 				w.writeStartElement("a");
 				w.writeAttribute("id",String.valueOf(++ID_GENERATOR));
 				w.writeAttribute("target", "_blank");
-				w.writeAttribute("href", image_url.shortcode.isEmpty()?this.getUrl()+"?m="+md5(image_url.url):image_url.getPageHref());
+				w.writeAttribute("href", image_url.getShortCode().isEmpty()?this.getUrl(query)+"?m="+md5(image_url.getSrc()):image_url.getPageHref());
 				image_url.write(w);
 				w.writeEndElement();//a
 				
@@ -357,7 +386,7 @@ public class InstagramToAtom extends Launcher {
 				w.writeEndElement();//entry
 				}
 			}
-		}
+		
 		
 	
 	private String md5(final String s) {
@@ -371,80 +400,317 @@ public class InstagramToAtom extends Launcher {
 		return new BigInteger(1,md.digest()).toString(16);
 		}
 	
-	private File getPreferenceDir() {
+	private File getCacheDir() {
 		if(this.cacheDirectory==null) {
 			final File userDir = new File(System.getProperty("user.home","."));
 			this.cacheDirectory =  new File(userDir,".insta2atom");
 			}
 		return this.cacheDirectory;
 		}
-	private File getCacheFile() {
-	
-		return new File(getPreferenceDir(),"cache.tsv");
+
+	private List<File> getQueryFiles() {
+		final File dir= this.getCacheDir();
+		if(dir==null ||!dir.exists() || !dir.isDirectory() ) {
+			return Collections.emptyList();
+			}
+		return Arrays.asList(dir.listFiles(new FileFilter() {
+			@Override
+			public boolean accept(final File f) {
+				return f!=null && f.canRead() && f.isFile() &&
+						f.getName().endsWith(".html");
+			}
+		}));
+		}
+
+	private void convertIgFilesToHtml()
+		{
+		final File dir= this.getCacheDir();
+		if(dir==null ||!dir.exists() || !dir.isDirectory() ) return;
+		final File igFiles[]=dir.listFiles(new FileFilter() {
+			@Override
+			public boolean accept(final File f) {
+				return f!=null && f.canRead() && f.isFile() &&
+						f.getName().endsWith(".ig");
+			}
+			});
+		if(igFiles==null ||igFiles.length==0) return;
+		for(final File igFile:igFiles)
+				{
+				PrintWriter pw = null;
+				try
+					{
+					final String name = igFile.getName();
+					final File htmlFile = new File(dir,name.substring(0,name.length()-3)+".html");
+					if(htmlFile.exists()) continue;
+					final String query= IOUtils.slurp(igFile).trim();
+					if(query.isEmpty()) continue;
+					LOG.info("converting "+igFile+" to "+htmlFile+" "+query);
+					pw=  new PrintWriter(htmlFile);
+					pw.println("<html><head><title>"+query+"</title></head><body></body></html>");
+					pw.flush();
+					pw.close();
+					pw=null;
+					igFile.delete();
+					}
+				catch(IOException err)
+					{
+					LOG.warning(err);
+					}
+				finally
+					{
+					if(pw!=null) pw.close();	
+					}
+				}
 		}
 	
+	private class Image
+		implements Comparable<Image>
+		{
+		final Element span;
+		final Element anchor;
+		final Element img;
+		final boolean is_new;
+		Image(final Document dom,final Element span) {
+			if(span==null)
+				{
+				this.span = dom.createElement("span");
+				this.img = dom.createElement("img");
+				this.anchor = dom.createElement("a");
+				this.anchor.setAttribute("target","_blank");
 
-	
-	private void saveCache(final List<Query> cache) throws IOException {
-		final File cacheFile = getCacheFile();
-		final File tmpFile = File.createTempFile("insta2atom.",".tmp",cacheFile.getParentFile());
-		
-		if(!cacheFile.getParentFile().exists()) {
-			LOG.info("creating "+cacheFile.getParent());
-			if(!cacheFile.getParentFile().mkdir()) {
-				LOG.error("Cannot create "+cacheFile.getParentFile());
-				return;
+				this.span.appendChild(this.anchor);
+				this.anchor.appendChild(this.img);
+				this.is_new = true;
+				}
+			else
+				{
+				this.span = span;
+				this.is_new = false;
+				try {
+					this.anchor=(Element)xpath.evaluate("a", this.span, XPathConstants.NODE);
+					this.img=(Element)xpath.evaluate("img", this.anchor, XPathConstants.NODE);
+					} catch(XPathExpressionException err) {
+					throw new RuntimeException(err);
+					}
 				}
 			}
-		try(final PrintWriter pw = new PrintWriter(tmpFile))
+		
+		@Override
+       public boolean equals(final Object obj)
+               {
+               if(obj==this) return true;
+               if(obj==null || !(this instanceof Image)) return false;
+               final Image other=Image.class.cast(obj);
+               if (compareTo(other)==0)return true;
+               if(this.getId()!=null && other.getId()!=null && this.getId().equals(other.getId())) return true;
+               if(this.getShortCode()!=null && other.getShortCode()!=null &&
+            		   	getShortCode().equals(other.getShortCode())) return true;
+               return false;
+               }
+
+		
+		void write(final XMLStreamWriter w) throws XMLStreamException
+          {
+           w.writeEmptyElement("img");
+           w.writeAttribute("id",getShortCode());
+           w.writeAttribute("alt", "liked by : "+ this.getLikedBy()+" new:"+this.is_new);
+           w.writeAttribute("src", this.getSrc());
+           w.writeAttribute("width",String.valueOf(InstagramToAtom.this.thumb_size));
+           
+         
+           //w.writeAttribute("height",getData("height"));
+           }
+		
+		public String getId() {
+			return getData("id");
+		}
+
+		public int getLikedBy() {
+			try {
+				return Integer.parseInt(getData("edge_liked_by"));
+			} catch(Throwable err) {
+				LOG.error(err);
+				return 0;
+			}
+		}
+
+		public String getSrc() {
+			return getData("thumbnail_src");
+		}
+		
+		String getShortCode(){
+			return getData("shortcode");
+		}
+		
+		long getTimestampSec()
 			{
-			pw.println("#Date: "+dateFormatter.format(new Date()));
-			cache.stream().forEach(Q->{
-					Q.old_images_urls.removeAll(Q.new_images_urls);
-					while((Q.new_images_urls.size()+Q.old_images_urls.size()) >100) {
-						final Iterator<Query.Image> iter = Q.old_images_urls.iterator();
-						if(!iter.hasNext())  break;
-						iter.next();
-						iter.remove();
-						}
-					Q.new_images_urls.addAll(Q.old_images_urls);
-					pw.println(
-							Q.query+"\t"+dateFormatter.format(Q.date)+"\t"+Q.md5+"\t"+
-							Q.new_images_urls.
-							stream().
-							map(I->I.url+(I.shortcode.isEmpty()?"":"|"+I.shortcode)).
-							collect(Collectors.joining(" ")));
-					});
-			pw.flush();
+			try {
+				return Long.parseLong(getData("taken_at_timestamp"));
+				}
+			catch(final NumberFormatException err)
+				{
+				LOG.warning("bad taken_at_timestamp");
+				return 0L;
+				}
 			}
-		catch(final IOException err) {
-			LOG.error(err);
-			return;
+		
+		public int compareTime(final Image o) {
+			final int i = Long.compare(
+				o.getTimestampSec(),
+				this.getTimestampSec()
+				);
+			return i!=0?i:this.getShortCode().compareTo(o.getShortCode());
+		}
+		
+		
+		@Override
+		public int compareTo(final Image o)
+			{
+			if(o==this) return 0;
+			if(this.getShortCode().equals(o.getShortCode())) return 0;
+			return this.compareTime(o);
 			}
-		tmpFile.renameTo(cacheFile);
+		@Override
+		public int hashCode()
+			{
+			return this.getSrc().hashCode();
+			}
+		
+		public String getPageHref() {
+			return "https://www.instagram.com/p/"+getData("shortcode")+"/";
+			}
+
+		public String getData(String att) {
+			final String attName="data-"+att;
+			return this.span.getAttribute(attName);
+		}
+		
+		void setData(final String att,Object o)
+			{
+			final String attName="data-"+att;
+			if(o==null)
+				{
+				this.span.removeAttribute(attName);
+				}
+			else
+				{
+				this.span.setAttribute("data-"+att, String.valueOf(o));
+				}
+			}
+		
+		void parseDimension(final JsonObject jObject)
+			{
+			int w = jObject.get("width").getAsInt();
+			int h = jObject.get("height").getAsInt();
+			this.setData("width",w);
+			this.setData("height",h);
+			}
+		boolean isLessThanXXHours() {
+			if(filter_last_xx_hours<=0) return true;
+			final Calendar cal = Calendar.getInstance();
+			// remove next line if you're always using the current time.
+			cal.setTime(new Date());
+			cal.add(Calendar.HOUR, -1 * filter_last_xx_hours);
+			final Date xxxHourBack = cal.getTime();
+			final Date imgDate = new Date(getTimestampSec()*1000);
+			return imgDate.compareTo(xxxHourBack) >= 0;
+			}
 		}
 	
-	private List<Query> readCache() {
-		final List<Query> cache = new ArrayList<>();
-		final File cacheFile = getCacheFile();
-		if(!cacheFile.exists()) {
-			LOG.warning("Cannot find cache "+cacheFile);
-			return cache;
+	private int query(final File htmlFile,XMLStreamWriter watom) throws Exception
+		{
+		final DocumentBuilderFactory dbf=DocumentBuilderFactory.newInstance();
+		final DocumentBuilder db;
+		final Document dom;
+		try {
+			db = dbf.newDocumentBuilder();
 			}
-		try(final FileReader fr=new FileReader(cacheFile)) {
-			cache.addAll(new BufferedReader(fr).lines().
-				filter(L->!(L.trim().isEmpty() || L.startsWith("#"))).
-				map(L->L.split("[\t]")).
-				map(A->  new Query(A)).
-				filter(Q->Q!=null &&  !Q.query.isEmpty()).
-				collect(Collectors.toList())
-				);
-			}
-		catch(final IOException err) {
+		catch(final Exception err) {
 			LOG.error(err);
+			return -1;
 			}
-		return cache;
+		try
+			{
+			dom = db.parse(htmlFile);
+			}
+		catch(final Exception err) {
+			LOG.error(err);
+			return -1;
+			}
+		final Element root= dom.getDocumentElement();
+		if(!root.getNodeName().equals("html")) {
+			LOG.warning("root is not <html>");
+			return -1;
 		}
+		
+		
+		final String qName=(String)xpath.evaluate("/html/head/title/text()",dom, XPathConstants.STRING);
+		if(qName==null || qName.isEmpty()) return -1;
+		LOG.info("query is "+qName+" "+htmlFile);
+		final Element body = (Element)xpath.evaluate("/html/body", dom, XPathConstants.NODE);
+		
+		final Set<Image> oldImages = new TreeSet<>();
+
+		//remove text
+		final NodeList txtList = (NodeList)xpath.evaluate("span/text()", body, XPathConstants.NODESET);
+		
+		for(int x=0;x< txtList.getLength();++x) {
+			final Node c1= txtList.item(x);
+			c1.getParentNode().removeChild(c1);
+			}
+		// get imaes
+		final NodeList nodeList = (NodeList)xpath.evaluate("span[a/img]", body, XPathConstants.NODESET);
+		
+		for(int x=0;x< nodeList.getLength();++x) {
+			final Node c1= nodeList.item(x);
+			final Element e1=Element.class.cast(c1);
+			oldImages.add(new Image(dom,e1));
+			e1.getParentNode().removeChild(e1);
+			}
+		
+		final Set<Image> newImages ;
+		try {
+		    newImages = query(dom, qName);
+		    }
+		catch(final Exception err) {
+			return -1;
+			}
+		
+		if(newImages==null) return -1;
+		newImages.addAll(oldImages);
+		final LinkedList<Image> list = new LinkedList<>(newImages);
+		while(list.size()>this.max_images_per_qery )
+			{
+			list.removeLast();
+			}
+		
+		for(final Image img:list) {
+			body.appendChild(img.span);
+		}
+		
+		
+		final Set<Image> atomizableImages = new TreeSet<>(list.
+				stream().
+				filter(I->I.isLessThanXXHours()).
+				filter(I->!this.what_is_new_flag || I.is_new).
+				collect(Collectors.toSet()));
+		if(!atomizableImages.isEmpty()) {
+			LOG.info("saving "+atomizableImages.size()+" images");
+			writeAtom(qName, atomizableImages, watom);
+		} 
+		
+		final TransformerFactory xft=TransformerFactory.newInstance();
+		final Transformer tr = xft.newTransformer();
+		tr.setOutputProperty(OutputKeys.METHOD,"xml");
+		tr.setOutputProperty(OutputKeys.INDENT,"yes");
+		final File tmpFile = File.createTempFile("tmp.", ".html",htmlFile.getParentFile());
+		tmpFile.deleteOnExit();
+		tr.transform(new DOMSource(dom), new StreamResult(tmpFile));;
+		tmpFile.renameTo(htmlFile);
+		tmpFile.delete();
+		return 0;
+		}
+	
 	
 	@Override
 	public int doWork(final List<String> args) {
@@ -469,9 +735,15 @@ public class InstagramToAtom extends Launcher {
 			}
 			
 			this.client = builder.build();
-					
+			
+
+			convertIgFilesToHtml();
 			
 			final XMLOutputFactory xof = XMLOutputFactory.newInstance();
+			
+			
+			
+			
 			w = xof.createXMLStreamWriter(System.out, "UTF-8");
 			w.writeStartDocument("UTF-8", "1.0");
 			w.writeStartElement("feed");
@@ -485,23 +757,19 @@ public class InstagramToAtom extends Launcher {
 			w.writeCharacters(this.dateFormatter.format(new Date()));
 			w.writeEndElement();
 			
-			final List<Query> cache = readCache();
-			for(int idx=0;idx < cache.size();++idx) {
-				final Query q=cache.get(idx);
-				w.writeComment(q.query);
-				if(!q.query()) continue;
-				q.writeAtom(w);
-				
-				
-				
-				if(idx>0) Thread.sleep(this.sleep_seconds*1000);
-				}
 			
+			for(final File queryFile : getQueryFiles())
+				{
+				LOG.info("query file "+queryFile);
+				query(queryFile,w);
+				Thread.sleep(this.sleep_seconds*1000);
+				}
+				
 			w.writeEndElement();
 			w.writeEndDocument();
 			w.flush();
 			w.close();
-			saveCache(cache);
+			
 			this.client.close();this.client=null;
 			return 0;
 			}
@@ -515,6 +783,7 @@ public class InstagramToAtom extends Launcher {
 			IOUtils.close(w);
 			IOUtils.close(this.client);
 			}
+		
 		}
 	
 	public static void main(final String[] args) {

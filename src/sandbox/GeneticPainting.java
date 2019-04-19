@@ -26,7 +26,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -35,29 +34,33 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
+import com.beust.jcommander.Parameter;
 
 /**
  * GeneticPainting
  *
  */
-public class GeneticPainting extends AbstractApplication
+public class GeneticPainting extends Launcher
 	{
-	protected static final Logger LOG=Logger.getLogger("jsandbox");
-
+	protected static final Logger LOG=Logger.builder(GeneticPainting.class).build();
+	private final int IMAGE_TYPE=BufferedImage.TYPE_INT_ARGB;
 	private BufferedImage sourceImage=null;
 	private Random random=new Random();
+	@Parameter(names="-o",description="output file")
 	private String fileout="_painting";
+	@Parameter(names="-n5",description="shape min size")
 	private int shape_min_size=10;
+	@Parameter(names="-n6",description="shape max size")
 	private int shape_max_size=20;
+	@Parameter(names="-n0",description="scale image to this size")
+	private int image_scaled_size=200;
+
 	private char shape_type='c';
 	private int n_threads=3;
 	
@@ -594,7 +597,9 @@ public class GeneticPainting extends AbstractApplication
 		}
 	
 	private int parent_count=5;
+	@Parameter(names="-n1",description="Max num shape per solution")
 	private int max_shape_per_solution=3000;
+	@Parameter(names="-n2",description="Min num shape per solution")
 	private int min_shape_per_solution=100;
 	
 	private int plusMinus(int n)
@@ -726,7 +731,7 @@ public class GeneticPainting extends AbstractApplication
 		BufferedImage tmpImage=new BufferedImage(
 				this.sourceImage.getWidth(),
 				this.sourceImage.getHeight(),
-				BufferedImage.TYPE_INT_ARGB
+				IMAGE_TYPE
 				);
 		
 		BufferedImage mosaicImage=new BufferedImage(
@@ -913,110 +918,58 @@ public class GeneticPainting extends AbstractApplication
 		if(a<0) a=-a;
 		return a*a;
 		}
-	protected void fillOptions(Options options)
-		{
-		options.addOption(Option.builder("o").
-					desc("file prefix").
-					hasArg().
-					argName("OUTPUT").
-					build());
-		options.addOption(Option.builder("n1").
-				desc("parent count").
-				hasArg().
-				argName("NUM").
-				build());
-		options.addOption(Option.builder("n2").
-				desc("min shape per solution").
-				hasArg().
-				argName("NUM").
-				build());
-		options.addOption(Option.builder("n3").
-				desc("max shape per solution").
-				hasArg().
-				argName("NUM").
-				build());
-		options.addOption(Option.builder("n4").
-				desc("min shape size").
-				hasArg().
-				argName("NUM").
-				build());
-		options.addOption(Option.builder("n5").
-				desc("max shape size").
-				hasArg().
-				argName("NUM").
-				build());
-		options.addOption(Option.builder("t").
-				desc("shape type c:circle l:line").
-				hasArg().
-				argName("TYPE").
-				build());
-		super.fillOptions(options);
-		}
 	@Override
-	protected int execute(org.apache.commons.cli.CommandLine cmd) {
-		if(cmd.hasOption("t"))
-			{	
-			this.shape_type= cmd.getOptionValue("t").toLowerCase().charAt(0);
-			}
-		if(cmd.hasOption("n1"))
-			{	
-			this.parent_count= Integer.parseInt(cmd.getOptionValue("n1"));
-			}
-		if(cmd.hasOption("n2"))
-			{	
-			this.min_shape_per_solution= Integer.parseInt(cmd.getOptionValue("n2"));
-			}
-		if(cmd.hasOption("n3"))
-			{	
-			this.max_shape_per_solution= Integer.parseInt(cmd.getOptionValue("n3"));
-			}
-		if(cmd.hasOption("n4"))
-			{	
-			this.shape_min_size= Integer.parseInt(cmd.getOptionValue("n4"));
-			}
-		if(cmd.hasOption("n5"))
-			{	
-			this.shape_max_size= Integer.parseInt(cmd.getOptionValue("n5"));
-			}
+	public int doWork(List<String> args) {
 		
-		if(cmd.hasOption("o"))
-			{	
-			this.fileout= cmd.getOptionValue("o");
-			}
-		
-		final List<String> args = cmd.getArgList();
 		if(args.size()!=1)
 				{
-				System.err.println("Illegal number of arguments");
+				LOG.error("Illegal number of arguments");
 				return -1;
 				}
 		try
 			{
 			final String filename=args.get(0);
-			if( filename.startsWith("http://") ||
-				filename.startsWith("https://") ||
-				filename.startsWith("ftp://"))
+			LOG.info("reading "+filename);
+			this.sourceImage = ImageIO.read(new File(filename));
+			if(this.sourceImage.getWidth()>image_scaled_size ||
+				this.sourceImage.getHeight()>image_scaled_size ||
+				this.sourceImage.getType()!=IMAGE_TYPE)
 				{
-				LOG.info("reading "+filename);
-				this.sourceImage=ImageIO.read(new URL(filename));
-				}
-			else
-				{
-				LOG.info("reading "+filename);
-				this.sourceImage=ImageIO.read(new File(filename));
+				final int w,h;
+				if(this.sourceImage.getWidth()<=image_scaled_size && this.sourceImage.getHeight()<=image_scaled_size) {
+					w = this.sourceImage.getWidth();
+					h= this.sourceImage.getHeight();
+					}
+				else if(this.sourceImage.getWidth()>this.sourceImage.getHeight() )
+					{
+					w=image_scaled_size;
+					h=(int)(this.sourceImage.getHeight()*(w/(double)this.sourceImage.getWidth()));
+					}
+				else
+					{
+					h=image_scaled_size;
+					w=(int)(this.sourceImage.getWidth()*(h/(double)this.sourceImage.getHeight()));
+					}
+				final BufferedImage img2=new BufferedImage(w, h, IMAGE_TYPE);
+				Graphics2D g=img2.createGraphics();
+				g.setColor(Color.WHITE);
+				g.fillRect(0, 0, w, h);
+				g.drawImage(this.sourceImage, 0, 0,w,h,null);
+				g.dispose();
+				this.sourceImage=img2;
 				}
 				
 			return this.run();
 			}
-		catch (Exception e)
+		catch (final Exception e)
 			{
-			e.printStackTrace();
+			LOG.error(e);
 			return -1;
 			}
 		}
 	
 	
-	public static void main(String[] args) {
+	public static void main(final String[] args) {
 		new GeneticPainting().instanceMainWithExit(args);
 	}
 	

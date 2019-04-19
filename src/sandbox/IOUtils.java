@@ -11,21 +11,51 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPOutputStream;
 
 public class IOUtils {
 
 private IOUtils(){
 }
+
+public static List<String> unroll(final List<String> args) throws IOException {
+	if(args.isEmpty()) return Collections.emptyList();
+	if(args.size()==1 && args.get(0).endsWith(".list")) {
+		try(BufferedReader br =openBufferedReader(args.get(0))) {
+			return br.lines().filter(S->!StringUtils.isBlank(S)).collect(Collectors.toList());
+			}
+		}
+	return args;
+	}
+
+public static List<File> unrollFiles(final List<String> args) throws IOException {
+	return unroll(args).stream().map(G->new File(G)).collect(Collectors.toList());
+	}
+
+
+
+public static File assertDirectoryExist(final File f) {
+	if( f==null || !f.exists() ||!f.isDirectory())
+		{
+		throw new IllegalStateException("Not an existing directory "+f);
+		}
+	return f;
+	}
 
 public static boolean isURL(final String s) 
 	{
@@ -58,6 +88,11 @@ public static Collection<String> expandList(Collection<String> files) throws IOE
 }
 
 
+
+public static BufferedReader openBufferedReader(final InputStream is) throws IOException {
+	return new BufferedReader(new InputStreamReader(is, "UTF-8"));
+	}
+
 public static BufferedReader openBufferedReader(final String path) throws IOException {
 	return new BufferedReader(openReader(path));
 	}
@@ -65,6 +100,13 @@ public static BufferedReader openBufferedReader(final String path) throws IOExce
 public static BufferedReader openBufferedReaderFromFile(final File path) throws IOException {
 	return new BufferedReader(new FileReader(path));
 	}
+
+public static String slurp(final File file) throws IOException {
+	Reader r=null;
+	try { r = openReader(file); return readReaderContent(r);} 
+	finally {close(r);}
+	}
+
 
 public static String slurp(final String fileOrUrl) throws IOException {
 	Reader r=null;
@@ -106,13 +148,47 @@ public static InputStream openStream(final String path) throws IOException {
 		in = new java.net.URL(path).openStream();
 	}
 	else {
-		in = new FileInputStream(path);
+		in = Files.newInputStream(Paths.get(path));
 	}
 	return mayGzipInputStream(in);
 }
 
 public static InputStream openStream(final File path) throws IOException {
 	return mayGzipInputStream( new FileInputStream(path));
+	}
+
+/**
+ * return stdout if argument is null
+ * return gzip compressed file if argument ends with gz
+ * @param pathOrNull
+ * @return
+ * @throws IOException
+ */
+public static OutputStream openFileAsOutputStream(final File pathOrNull) throws IOException {
+	return openPathAsOutputStream(pathOrNull==null?null:pathOrNull.toPath());
+	}
+
+public static OutputStream openPathAsOutputStream(final Path pathOrNull) throws IOException {
+	if(pathOrNull==null) return System.out;
+	OutputStream os = Files.newOutputStream(pathOrNull);
+	if(pathOrNull.getFileName().toString().endsWith(".gz")) {
+		return new GZIPOutputStream(os) {
+			@Override
+			public void close() throws IOException {
+				finish();
+				super.close();
+				}
+			};
+		}
+	return os;
+	}
+
+public static Writer openPathAsWriter(final Path pathOrNull) throws IOException {
+	if(pathOrNull==null) return new PrintWriter(System.out);
+	if(pathOrNull.getFileName().toString().endsWith(".gz")) {
+		 return new PrintWriter(openPathAsOutputStream(pathOrNull));
+		}
+	return Files.newBufferedWriter(pathOrNull);
 	}
 
 

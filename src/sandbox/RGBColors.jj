@@ -17,6 +17,7 @@
 options {
 STATIC=false;
 LOOKAHEAD=2;
+FORCE_LA_CHECK=true;
 }
 
 

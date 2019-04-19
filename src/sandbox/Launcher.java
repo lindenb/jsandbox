@@ -1,5 +1,7 @@
 package sandbox;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,7 +47,17 @@ public abstract class Launcher
 			return -1;
 			}
 		}
-
+	protected BufferedReader  openBufferedReader(final List<String> args) throws IOException {
+		final String input = oneFileOrNull(args);
+		if(input==null)
+			{
+			return IOUtils.openBufferedReader(System.in);
+			}
+		else
+			{
+			return IOUtils.openBufferedReader(input);
+			}
+		}	
 	protected String oneFileOrNull(final List<String> args) {
 		if(args.isEmpty()) return null;
 		if(args.size()==1) return args.get(0);

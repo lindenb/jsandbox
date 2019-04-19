@@ -77,7 +77,21 @@ public class RssToAtom extends Launcher
 					limit(1L).
 					forEach(E->{entry.appendChild(E);});
 
-				// pubDate
+				//enclosure
+				XmlUtils.stream(fragment).
+					filter(N->N.getNodeType()==Node.ELEMENT_NODE).
+					map(N->Element.class.cast(N)).
+					filter(E->hasName(E,"enclosure") && E.hasAttribute("url") && E.getAttribute("type").startsWith("image/")).
+					map(E->E.getAttribute("url")).
+					filter(U->IOUtils.isURL(U)).
+					findFirst().ifPresent(U-> {
+						final Element E = createElement("content");
+						E.setAttribute("type", "html");
+						E.appendChild(createText("<span><img src=\"" + U+ "\"/></span>"));
+						entry.appendChild(E);
+						});
+				
+				// description
 				XmlUtils.stream(fragment).
 					filter(N->N.getNodeType()==Node.ELEMENT_NODE).
 					map(N->Element.class.cast(N)).
@@ -90,7 +104,8 @@ public class RssToAtom extends Launcher
 						}).
 					limit(1L).
 					forEach(E->{entry.appendChild(E);});
-
+					
+			
 				
 				return entry;
 

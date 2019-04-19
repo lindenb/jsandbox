@@ -94,7 +94,7 @@ jetty.jars=\
 	$(lib.dir)/org/eclipse/jetty/jetty-server/9.3.7.v20160115/jetty-server-9.3.7.v20160115.jar \
 	$(lib.dir)/org/eclipse/jetty/jetty-io/9.3.7.v20160115/jetty-io-9.3.7.v20160115.jar \
 	$(lib.dir)/org/eclipse/jetty/jetty-util/9.3.7.v20160115/jetty-util-9.3.7.v20160115.jar
-	
+
 jtidy.jars=\
 	$(lib.dir)/net/sf/jtidy/jtidy/r938/jtidy-r938.jar
 
@@ -160,7 +160,11 @@ jgit.jars  =  \
 jcommander.jar= \
 	$(lib.dir)/com/beust/jcommander/1.64/jcommander-1.64.jar
 
-all_maven_jars = $(sort ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} )
+berkeleydb.jar= \
+	$(lib.dir)/com/sleepycat/je/5.0.73/je-5.0.73.jar
+
+
+all_maven_jars = $(sort ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar})
 
 
 
@@ -169,7 +173,7 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
-	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom fileserver
+	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom fileserver xmlpath imagemap
 
 
 $(eval $(call compile,miniivy,sandbox.MiniIvy,${jcommander.jar}))
@@ -181,11 +185,15 @@ $(eval $(call compile,twitteruserlookup,sandbox.TwitterUserLookup, ${apache.comm
 $(eval $(call compile,twittergraph,sandbox.TwitterGraph, ${sqlite3.jdbc.jar} ${jcommander.jar} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,json2xml,sandbox.Json2Xml,${google.gson.jars}))
 $(eval $(call compile,json2dom,sandbox.Json2Dom,${google.gson.jars}))
+$(eval $(call compile,timelinemaker,sandbox.TimeLineMaker,${google.gson.jars} ${jcommander.jar}))
 $(eval $(call compile,geneticpainting,sandbox.GeneticPainting,${apache.commons.cli}))
 $(eval $(call compile,flickrrss,sandbox.FlickrRss,${apache.commons.cli} ${slf4j.jars} ${org.scribe.jars}))
 $(eval $(call compile,mosaicofpictures,sandbox.MosaicOfPictures,${jcommander.jar}))
-$(eval $(call compile,java2xml,sandbox.Java2Xml,${apache.commons.cli} ${slf4j.jars}))
+$(eval $(call compile,montagegif,sandbox.MontageGif,${jcommander.jar}))
+$(eval $(call compile,java2xml,sandbox.Java2Xml,${jcommander.jar}))
+$(eval $(call compile,html2tty,sandbox.HtmlToTTY,${jcommander.jar}))
 $(eval $(call compile,xslserver,sandbox.XslHandler,${google.gson.jars} ${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars} ${spring-beans.jars}))
+$(eval $(call compile,divandb,sandbox.DivanDB,${google.gson.jars} ${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars}))
 $(eval $(call compile,packageeclipsejars,sandbox.PackageEclipseJars,${apache.commons.cli}))
 $(eval $(call compile,htmlinxml,sandbox.HtmlInXml,${jcommander.jar}  ${jtidy.jars}))
 $(eval $(call compile,pubmedtrending,sandbox.PubmedTrending,${apache.commons.cli} ${slf4j.jars} ))
@@ -199,7 +207,7 @@ $(eval $(call compile,nashornserver,sandbox.NashornServer,${apache.commons.cli} 
 $(eval $(call compile,githistory,sandbox.GitHistory,${apache.commons.cli}  ))
 $(eval $(call compile,xml2xsd,sandbox.XmlToXsd,${apache.commons.cli}  ))
 $(eval $(call compile,java2graph,sandbox.Java2Graph,${apache.commons.cli}  ))
-$(eval $(call compile,gribouille,sandbox.Gribouille,${apache.commons.cli}  ))
+$(eval $(call compile,gribouille,sandbox.Gribouille,${jcommander.jar}  ))
 $(eval $(call compile,weatherarchive,sandbox.WeatherArchive,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}  ${apache.httpclient.jars} ))
 $(eval $(call compile,velocityjson,sandbox.VelocityJson,${apache.commons.cli}  ${velocity.jars} ${gogle.gson.jars}  ))
 $(eval $(call compile,treemapviewer,sandbox.TreeMapViewer,  ))
@@ -210,8 +218,18 @@ $(eval $(call compile,aksum,sandbox.Aksum,))
 $(eval $(call compile,images2base64,sandbox.ImagesToBase64,${jcommander.jar}))
 $(eval $(call compile,rss2atom,sandbox.RssToAtom,${jcommander.jar}))
 $(eval $(call compile,atom500px,sandbox.Atom500px,${jcommander.jar}))
-$(eval $(call compile,insta2atom,sandbox.InstagramToAtom,${jcommander.jar} ${apache.httpclient.jars}))
+$(eval $(call compile,insta2atom,sandbox.InstagramToAtom,${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,fileserver,sandbox.FileServer,${jcommander.jar} ${jetty.jars}))
+$(eval $(call compile,atomxhtml,sandbox.AtomXhtmlContent,${jcommander.jar} ${jtidy.jars}))
+$(eval $(call compile,xmlpath,sandbox.XmlPath,${jcommander.jar} ${jtidy.jars}))
+$(eval $(call compile,imagemap,sandbox.ImageMap,${jcommander.jar}))
+$(eval $(call compile,dccomicsscraper,sandbox.DcComicsScraper,${jcommander.jar} ${google.gson.jars} ${jtidy.jars} ${apache.httpclient.jars} ${berkeleydb.jar}))
+$(eval $(call compile,image2ascii,sandbox.ImageToAscii,${jcommander.jar}))
+$(eval $(call compile,cepicdcscraper,sandbox.CepicDcScraper,${jcommander.jar} ${apache.httpclient.jars}))
+$(eval $(call compile,htmlparser,sandbox.HtmlParser,${jcommander.jar} ${jtidy.jars}))
+$(eval $(call compile,osm2svg,sandbox.OsmToSvg,${jcommander.jar}))
+$(eval $(call compile,img2palette,sandbox.ImageToPalette,${jcommander.jar}))
+$(eval $(call compile,halftone,sandbox.Halftone,${jcommander.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

@@ -10,24 +10,38 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.Raster;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Properties;
 import java.util.Random;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
 
-public abstract class Gribouille extends AbstractApplication 
+import com.beust.jcommander.IStringConverter;
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParameterException;
+
+public class Gribouille
 	{
+	private static final Logger LOG = Logger.builder(Gribouille.class).build();
+	private Properties properties = new Properties();
+	
+	private abstract class Renderer
+		{
+		
+		}
+	
 	private static class GrayImageMap
 		{
 		private final Dimension dim;
@@ -41,6 +55,24 @@ public abstract class Gribouille extends AbstractApplication
 			}
 		}
 	
+	private interface PositionProvider
+		{
+		public double get();
+		}
+	
+	private class FixedPositionProvider implements PositionProvider
+		{
+		private final double p;
+		FixedPositionProvider(double p) {
+			this.p = p;
+			}
+		public double get() 
+			{
+			return p;
+			}
+		}
+	
+	
 	private class ProbabilityFunction
 		{
 		final int array[];
@@ -49,7 +81,6 @@ public abstract class Gribouille extends AbstractApplication
 			Arrays.sort(this.array);
 			int m = Integer.MAX_VALUE;
 			int M = Integer.MIN_VALUE;
-			
 			}
 		public int nextInt(int max) {
 			double v = Gribouille.this.rand.nextDouble();
@@ -83,7 +114,7 @@ public abstract class Gribouille extends AbstractApplication
 			}
 		}
 	
-	private class MinMax
+	public static class MinMax
 		{
 		double m,M;
 		
@@ -92,27 +123,63 @@ public abstract class Gribouille extends AbstractApplication
 			this.M = M;
 		}
 		
-		void parse(final String s) {
+		void parse(final String s) {}
+		
+		double min() { return Math.min(m, M);}
+		double max() { return Math.max(m, M);}
+		double distance() { return this.max()-this.min();}
+		double rnd(final Random r) { return this.min()+ r.nextDouble()*this.distance();}
+		@Override
+		public String toString() {
+			return ""+m+"x"+M;
+			}
+		}
+	
+	public static class MinMaxConverter implements IStringConverter<MinMax>
+		{
+		@Override
+		public MinMax convert(final String s) {
+			double m=0.0,M=1.0;
 			int slash = s.indexOf('/');
 			if(slash==-1) slash=s.lastIndexOf('x');
 			if(slash==-1) slash=s.lastIndexOf('X');
 			if(slash==-1) slash=s.lastIndexOf(',');
 			if(slash==-1) throw new IllegalArgumentException("bad min/max "+s);
 			
-			if(slash>0) this.m = Double.parseDouble(s.substring(0,slash));
-			if(slash+1<s.length()) this.M= Double.parseDouble(s.substring(slash+1));
+			if(slash>0) m = Double.parseDouble(s.substring(0,slash));
+			if(slash+1<s.length()) M= Double.parseDouble(s.substring(slash+1));
+			return new MinMax(m, M);
 			}
-		
-		double min() { return Math.min(m, M);}
-		double max() { return Math.max(m, M);}
-		double distance() { return this.max()-this.min();}
-		double rnd(final Random r) { return this.min()+ r.nextDouble()*this.distance();}
 		}
 	
+	public static class ProbaConverter implements IStringConverter<Double> {
+		@Override
+		public Double convert(String s) {
+			s= s.trim();
+			double divided = 1.0;
+			if(s.endsWith("%"))
+				{
+				s=s.substring(0, s.length()-1);
+				divided  = 100.0;
+				}
+			double v = Double.parseDouble(s);
+			v =  v/divided;
+			if(v<0) v=0;
+			if(v>1.0) v=1.0;
+			return v;
+			}
+		}
 	
 	protected Random rand=new Random();
+	
+	
+	
+	@Parameter(names= {"-o","--output"},required=true)
 	protected File outputFile = null;
+	@Parameter(names= {"-dim"},required=true,converter=DimensionConverter.class)
 	protected Dimension imgDimension=new Dimension(100,100);
+	
+	
 	protected BufferedImage image = null;
 	
 	protected Gribouille() {
@@ -156,69 +223,90 @@ public abstract class Gribouille extends AbstractApplication
 			}
 		}
 	
-	@Override
-	protected void fillOptions(Options options) {
-		options.addOption(Option.builder("seed").longOpt("seed").hasArg(true).desc("(long) random seed generator").build());
-		options.addOption(Option.builder("dim").longOpt("dimension").hasArg(true).desc("output dimension. Can be either a numberXnumber expression or an existing image file.").build());
-		options.addOption(Option.builder("o").longOpt("output").hasArg(true).desc("output file").build());
-		super.fillOptions(options);
-		}
-	
-	
-	
-	@Override
-	protected Status decodeOptions(final CommandLine cmd)
+	public static class DimensionConverter
+		implements IStringConverter<Dimension>
 		{
-		if(cmd.hasOption("seed")) {
-			this.rand = new Random(Long.parseLong(cmd.getOptionValue("seed")));
-		}
-		if(cmd.hasOption("o")) {
-			this.outputFile = new File(cmd.getOptionValue("o"));
-		}
-		if(cmd.hasOption("dim")) {
-			String dimStr = cmd.getOptionValue("dim");
-			if(dimStr.toLowerCase().matches("\\d+x\\d+")) {
-				int x_symbol = dimStr.toLowerCase().indexOf("x");
-				this.imgDimension = new Dimension(
-						Integer.parseInt(dimStr.substring(0,x_symbol)),
-						Integer.parseInt(dimStr.substring(1+x_symbol))
-						);
-			} else {
-				final File f= new File(dimStr);
-				if(!f.exists() || !f.isFile()) {
-					throw new IllegalArgumentException("not an existing file: "+f);
-				}
-				try(ImageInputStream in = ImageIO.createImageInputStream(f)){
-				    final Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
-				    if (readers.hasNext()) {
-				        ImageReader reader = readers.next();
-				        try {
-				            reader.setInput(in);
-				            this.imgDimension =  new Dimension(reader.getWidth(0), reader.getHeight(0));
-				        } finally {
-				            reader.dispose();
-				        }
-				    }
-				} 			
-			catch(IOException err) {
-				throw new IllegalArgumentException(err);
+		@Override
+		public Dimension convert(final String dimStr) {
+			 if(dimStr.toLowerCase().matches("\\d+x\\d+")) {
+					int x_symbol = dimStr.toLowerCase().indexOf("x");
+					return new Dimension(
+							Integer.parseInt(dimStr.substring(0,x_symbol)),
+							Integer.parseInt(dimStr.substring(1+x_symbol))
+							);
+				} else {
+					final File f= new File(dimStr);
+					if(!f.exists() || !f.isFile()) {
+						throw new IllegalArgumentException("not an existing file: "+f);
+					}
+					
+					if(f.getName().endsWith(".xcf"))
+						{
+						try(FileInputStream fis=new FileInputStream(f))
+							{
+							byte array[]=new byte[9];
+							fis.read(array);
+							if(!Arrays.equals(array, "gimp xcf ".getBytes()))
+								{
+								throw new IOException("bad gimp xcf header");
+								}
+							
+							array=new byte[5];
+							if(fis.read(array)!=array.length) {
+								throw new IOException("bad gimp xcf header");
+								}
+							LOG.info("version "+new String(array));
+							array=new byte[8];
+							if(fis.read(array)!=array.length) {
+								throw new IOException("bad gimp xcf header");
+								}
+							final ByteBuffer buf = ByteBuffer.wrap(array); // big endian by default
+						    buf.put(array);
+						    buf.position(0);
+						    final int w= buf.getInt();
+						    final int h= buf.getInt();
+						    LOG.info("width of "+f+" is "+w+"x"+h);
+						    return new Dimension(w,h);
+							}
+						catch(final IOException err) {
+							throw new IllegalArgumentException(err);
+							}
+						}
+					
+					try(ImageInputStream in = ImageIO.createImageInputStream(f)){
+					    final Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
+					    if (readers.hasNext()) {
+					        final ImageReader reader = readers.next();
+					        try {
+					            reader.setInput(in);
+					           return new Dimension(reader.getWidth(0), reader.getHeight(0));
+					        } finally {
+					            reader.dispose();
+						        }
+						    }
+						} 			
+					catch(final IOException err) {
+						throw new IllegalArgumentException(err);
+						}
+					}
+				 throw new ParameterException("cannot convert "+dimStr+" to Dimension");
 				}
 			}
-		}	
-	return super.decodeOptions(cmd);
-	}
+		
+	
+	
 	
 	protected abstract void paint(Graphics2D g);
 	
-	@Override
-	protected int execute(final CommandLine cmd)
-		{
+	
+
+	public int doWork(List<String> args) {
 		if(this.imgDimension==null) {
-			LOG.severe("undefined dimension.");
+			LOG.error("undefined dimension.");
 			return -1;
 		}
 		if(this.outputFile==null) {
-			LOG.severe("undefined output.");
+			LOG.error("undefined output.");
 			return -1;
 		}
 		try {
@@ -261,31 +349,7 @@ public abstract class Gribouille extends AbstractApplication
 		private MinMax len=new MinMax(80,100);
 		private double proba = 0.001;
 		private boolean use_log=false;
-		@Override
-		protected void fillOptions(Options options) {
-			options.addOption(Option.builder("alpha").longOpt("alpha").hasArg(true).desc("min/max alpha").build());
-			options.addOption(Option.builder("radius").longOpt("radius").hasArg(true).desc("min/max radius").build());
-			options.addOption(Option.builder("p").longOpt("proba").hasArg(true).desc("Propability").build());
-			options.addOption(Option.builder("log").hasArg(false).desc("use log scale drawing").build());
-			super.fillOptions(options);
-			}
-		@Override
-		protected Status decodeOptions(CommandLine cmd) {
-			if(cmd.hasOption("alpha")) {
-				this.alpha.parse(cmd.getOptionValue("alpha"));
-			}
-			if(cmd.hasOption("radius")) {
-				this.radius.parse(cmd.getOptionValue("radius"));
-			}
-			if(cmd.hasOption("p")) {
-				this.proba =Double.parseDouble(cmd.getOptionValue("p"));
-			}
-			
-			if(cmd.hasOption("log")) {
-				this.use_log = true;
-			}
-			return super.decodeOptions(cmd);
-			}
+		
 		
 		@Override
 		protected void paint(final Graphics2D g) {
@@ -352,28 +416,8 @@ public abstract class Gribouille extends AbstractApplication
 		private MinMax radius=new MinMax(0.5,50.0);
 		private MinMax len=new MinMax(80,100);
 		private double proba = 0.001;
-		@Override
-		protected void fillOptions(Options options) {
-			options.addOption(Option.builder("alpha").longOpt("alpha").hasArg(true).desc("min/max alpha").build());
-			options.addOption(Option.builder("radius").longOpt("radius").hasArg(true).desc("min/max radius").build());
-			options.addOption(Option.builder("p").longOpt("proba").hasArg(true).desc("Propability").build());
-			super.fillOptions(options);
-			}
-		@Override
-		protected Status decodeOptions(CommandLine cmd) {
-			if(cmd.hasOption("alpha")) {
-				this.alpha.parse(cmd.getOptionValue("alpha"));
-			}
-			if(cmd.hasOption("radius")) {
-				this.radius.parse(cmd.getOptionValue("radius"));
-			}
-			if(cmd.hasOption("p")) {
-				this.proba =Double.parseDouble(cmd.getOptionValue("p"));
-			}
-			
-			
-			return super.decodeOptions(cmd);
-			}
+		
+		
 		
 		@Override
 		protected void paint(final Graphics2D g) {
@@ -408,28 +452,8 @@ public abstract class Gribouille extends AbstractApplication
 		private MinMax radius=new MinMax(0.5,50.0);
 		private MinMax len=new MinMax(80,100);
 		private double proba = 0.001;
-		@Override
-		protected void fillOptions(Options options) {
-			options.addOption(Option.builder("alpha").longOpt("alpha").hasArg(true).desc("min/max alpha").build());
-			options.addOption(Option.builder("radius").longOpt("radius").hasArg(true).desc("min/max radius").build());
-			options.addOption(Option.builder("p").longOpt("proba").hasArg(true).desc("Propability").build());
-			super.fillOptions(options);
-			}
-		@Override
-		protected Status decodeOptions(CommandLine cmd) {
-			if(cmd.hasOption("alpha")) {
-				this.alpha.parse(cmd.getOptionValue("alpha"));
-			}
-			if(cmd.hasOption("radius")) {
-				this.radius.parse(cmd.getOptionValue("radius"));
-			}
-			if(cmd.hasOption("p")) {
-				this.proba =Double.parseDouble(cmd.getOptionValue("p"));
-			}
-			
-			
-			return super.decodeOptions(cmd);
-			}
+		
+		
 		
 		@Override
 		protected void paint(final Graphics2D g) {
@@ -507,27 +531,6 @@ public abstract class Gribouille extends AbstractApplication
 			}
 		
 		@Override
-		protected void fillOptions(Options options) {
-			options.addOption(Option.builder("alpha").longOpt("alpha").hasArg(true).desc("min/max alpha").build());
-			options.addOption(Option.builder("radius").longOpt("radius").hasArg(true).desc("min/max radius").build());
-			options.addOption(Option.builder("p").longOpt("proba").hasArg(true).desc("Propability").build());
-			super.fillOptions(options);
-			}
-		@Override
-		protected Status decodeOptions(CommandLine cmd) {
-			if(cmd.hasOption("alpha")) {
-				this.alpha.parse(cmd.getOptionValue("alpha"));
-			}
-			if(cmd.hasOption("radius")) {
-				this.radius.parse(cmd.getOptionValue("radius"));
-			}
-			if(cmd.hasOption("p")) {
-				this.proba =Double.parseDouble(cmd.getOptionValue("p"));
-			}
-			
-			return super.decodeOptions(cmd);
-			}
-		@Override
 		protected void paint(final Graphics2D g) {
 			final PointPlotter plotter = getPointPlotter();
 			long occurences = (long)(((imgDimension.width)*(imgDimension.height))*this.proba);
@@ -541,53 +544,54 @@ public abstract class Gribouille extends AbstractApplication
 		protected abstract PointPlotter getPointPlotter();
 		}
 	
-	
-	
-	
-	private static class Kirby01 extends Gribouille
+	private static abstract class AbstractKirby extends Gribouille
 		{
-		private MinMax alpha=new MinMax(0.5,1.0);
-		private MinMax radius=new MinMax(0.5,50.0);
-		private double proba = 0.001;
-		@Override
-		protected void fillOptions(Options options) {
-			options.addOption(Option.builder("alpha").longOpt("alpha").hasArg(true).desc("min/max alpha").build());
-			options.addOption(Option.builder("radius").longOpt("radius").hasArg(true).desc("min/max radius").build());
-			options.addOption(Option.builder("p").longOpt("proba").hasArg(true).desc("Propability").build());
-			super.fillOptions(options);
+		@Parameter(names= {"-alpha"},converter=MinMaxConverter.class)
+		protected MinMax alpha=new MinMax(0.5,1.0);
+		@Parameter(names= {"-radius"},converter=MinMaxConverter.class)
+		protected MinMax radius=new MinMax(0.5,50.0);
+		@Parameter(names= {"-p"},converter=ProbaConverter.class)
+		protected double proba = 0.001;
+	
+		
+		
+		private Function<Dimension,Point2D.Double> _pointSupplier;
+		
+		AbstractKirby() {
+			_pointSupplier  = (D)->{
+				final double cx = rand.nextInt( D.width ) ;
+				final double cy = rand.nextInt( D.height ) ;
+				return new Point2D.Double(cx, cy);
+				};
 			}
-		@Override
-		protected Status decodeOptions(CommandLine cmd) {
-			if(cmd.hasOption("alpha")) {
-				this.alpha.parse(cmd.getOptionValue("alpha"));
+		
+		public Function<Dimension,Point2D.Double> getPointSupplier() {
+			return this._pointSupplier;
 			}
-			if(cmd.hasOption("radius")) {
-				this.radius.parse(cmd.getOptionValue("radius"));
-			}
-			if(cmd.hasOption("p")) {
-				this.proba =Double.parseDouble(cmd.getOptionValue("p"));
-			}
-			
-			return super.decodeOptions(cmd);
-			}
+		
+		
+		}
+	
+	private static class Kirby01 extends AbstractKirby
+		{
+		
+		
 		
 		@Override
 		protected void paint(final Graphics2D g) {
 			long occurences = (long)(((imgDimension.width)*(imgDimension.height))*this.proba);
 			while(occurences>0) {
-		  		double cy= rand.nextInt( this.image.getHeight() ) ;
-				double cx ;
+		  		Point2D.Double pt= getPointSupplier().apply(imgDimension);
 				double r;
 				double a;
 				
-					cx = rand.nextInt( this.image.getWidth() ) ;
 					r = this.radius.rnd(this.rand);
 					a = this.alpha.rnd(this.rand);
 					
 				
 				Color c = this.black(a);
 				g.setColor(c);
-				g.fill(new java.awt.geom.Ellipse2D.Double((cx-r), (cy-r),(r*2),(r*2)));
+				g.fill(new java.awt.geom.Ellipse2D.Double((pt.x-r), (pt.y-r),(r*2),(r*2)));
 				
 				occurences--;
 				}
@@ -595,115 +599,40 @@ public abstract class Gribouille extends AbstractApplication
 		
 		}
 	
-	private abstract class  PointPlotter01 implements PointPlotter
-		{
-		public PointPlotter01() {
-			
-			}
-		public abstract double getRadius();
-		public abstract Color getColor();
+	
+	
+	private Supplier<Dimension> imageDimensionSupplier = ()->null;
 		
-		@Override
-		public void paint(Graphics2D g, double cx, double cy) {
-			final double r = this.getRadius();
-			g.setColor(getColor());
-			g.fill(new java.awt.geom.Ellipse2D.Double((cx-r), (cy-r),(r*2),(r*2)));
-
-			}
-		}
-	
-	/**
-	 * Dot01
-	 */
-	private static class Dot01 extends AbstractDot {
-		@Override
-		protected PointPlotter getPointPlotter() {
-			return new PointPlotter01() {
-				@Override
-				public double getRadius() {
-					return Dot01.this.radius.rnd(Dot01.this.rand);
-					}
-				@Override
-				public java.awt.Color getColor() {
-					final double a = Dot01.this.alpha.rnd(Dot01.this.rand);
-					return Dot01.this.black(a);
-					}
-				};
-			}
-		}
-	
-	/**
-	 * 
-	 */
-	private static class Engine01 extends Gribouille {
-	private GrayImageMap grayMap=null;
-
-	@Override
-	protected void fillOptions(Options options) {
-	options.addOption(Option.builder("gm").longOpt("graymap").hasArg(true).desc("Gray map image file. Used for probability").build());
-		super.fillOptions(options);
-		}
-	@Override
-	protected Status decodeOptions(final CommandLine cmd) {
-		if(!cmd.hasOption("gm")) {
-			LOG.severe("gray map missing");
-			return Status.EXIT_ERROR;
-		} else {
-			this.grayMap = loadGrayMap(new File(cmd.getOptionValue("gm")));
-		}
-		return super.decodeOptions(cmd);
-		}
-	@Override
-	protected void paint(final Graphics2D g)
-		{
-		// TODO Auto-generated method stub
-		
-		}
-	}
-	
-	@Override
-	protected void usage()
-		{
-		super.usage();
-		printAvailableTools(System.out);
-		}
 	
 	
-	private static void printAvailableTools(PrintStream out) {
-	out.println("Available engines: ");
-	out.println("  eng01  loads a graymap, plot cross-point.");
-	out.println("  dot01  random points.");
-	}
 	
-	public static void main(String[] args) {
-		Gribouille app = null;
-		if(args.length==0) {
-			System.err.println("Illegal number of arguments");
-			System.exit(-1);
-		} else if(args[0].equals("kirby01")) {
-			app = new Kirby01();
-		} else if(args[0].equals("x01")) {
-			app = new X01();
-		}else if(args[0].equals("x02")) {
-			app = new X02();
-		} else if(args[0].equals("h1")) {
-			app = new Hatching01();
-		}
-		 else if(args[0].equals("eng01")) {
-			app = new Engine01();
-		}
-		 else if(args[0].equals("dot01")) {
-			app = new Dot01();
-		}
-		if(app!=null) {
-			app.instanceMainWithExit( Arrays.copyOfRange(args, 1, args.length));
-			}
-		else
+	private int doWork(final String[] args) {
+		final List<String> array = new ArrayList<>(Arrays.asList(args));
+		int i=0;
+		while(i< array.size())
 			{
-			System.err.println("Illegal sub program");
-			printAvailableTools(System.err);
-			System.exit(-1);
+			final String arg = array.get(i);
+			
+			if(i+1 < array.size() && arg.startsWith("-") && !arg.startsWith("--") && arg.length()>1)
+				{
+				final String value = array.remove(i);
+				this.properties.put(arg.substring(1),value);
+				}
+			else if(arg.equals("--")) {
+				i++;
+				break;
+				}
+			else
+				{
+				i++;
+				}
 			}
-		}
+		
+		return 0;
+		}		
 	
-}
+	public static void main(final String[] args) {
+		Gribouille app = new Gribouille();
+		System.exit(app.doWork(args));
+		}
+	}

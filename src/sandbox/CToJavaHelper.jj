@@ -1,6 +1,7 @@
 options {
 STATIC=false;
 LOOKAHEAD=3;
+FORCE_LA_CHECK=true;
 }
 
 
