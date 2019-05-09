@@ -8,39 +8,68 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
+import com.beust.jcommander.Parameter;
+
 public class InstaPanorama extends Launcher {
-	private static final String TOKEN="__ID__";
+	private static final String TOKEN="__TOKEN__";
 	private static final Logger LOG = Logger.builder(InstaPanorama.class).build();
 
+	@Parameter(names={"-o","--output"},description="Output file pattern. MUST contain \""+TOKEN+"\" .",required=true)
+	private String output;
+	@Parameter(names={"--size"},description="Output size")
+	private int ig_size = 1080;
+	@Parameter(names={"-b","--background"},description="background Color",converter=ColorParser.Converter.class,splitter=NoSplitter.class)
+	private Color bckgColor = Color.WHITE;
+
+
+	
 	private ImageUtils imageUtils = ImageUtils.getInstance();
-	private static final int IG_SIZE = 500;
 	@Override
 	public int doWork(List<String> args) {
 		try {
-			BufferedImage img = this.imageUtils.read(oneFileOrNull(args));
-			img = imageUtils.scaleForHeight(img,IG_SIZE);
+			if(StringUtils.isBlank(this.output) || !this.output.contains(TOKEN)) {
+				LOG.error("output "+ this.output+" must contain "+TOKEN);
+				return -1;
+			}
 			
-			BufferedImage sliceImg = new BufferedImage(IG_SIZE, IG_SIZE, BufferedImage.TYPE_INT_RGB);
+			if(ig_size < 100) {
+				LOG.error("IG height is too small");
+				return -1;
+			}
+			
+			BufferedImage img = this.imageUtils.read(oneFileOrNull(args));
+			img = imageUtils.scaleForHeight(img,this.ig_size);
+			final BufferedImage sliceImg = new BufferedImage(this.ig_size,this.ig_size, BufferedImage.TYPE_INT_RGB);
 			
 			int x=0;
+			int n = 1;
 			while(x< img.getWidth()) {
-				Graphics2D g = imageUtils.createGraphics(sliceImg);
-				g.setColor(Color.WHITE);
-				g.fillRect(0, 0, IG_SIZE, IG_SIZE);
+				final Graphics2D g = imageUtils.createGraphics(sliceImg);
+				g.setColor(this.bckgColor);
+				g.fillRect(0, 0, this.ig_size, this.ig_size);
+				
+				System.err.println("dx2 "+Math.min(img.getWidth()-(x+this.ig_size), this.ig_size));
+				
 				g.drawImage(img,
-						x, 0, 
-						Math.min(x+IG_SIZE, img.getWidth()),IG_SIZE,
-						Math.min(0, 0),0,
-						0,IG_SIZE,
+						//destination
+						0,0,
+						Math.min((x+this.ig_size)-img.getWidth(), this.ig_size),
+						this.ig_size,
+						//source
+						x,
+						0, 
+						Math.min(x+this.ig_size, img.getWidth()),
+						this.ig_size,
+						
 						null
 						);
 				
 				g.dispose();
-				String filename=".png";
+				final String filename= this.output.replaceAll(TOKEN, String.format("%02d", n));
 				LOG.info(filename);
-				filename.replaceAll("", String.format("%02d", x)));
 				ImageIO.write(sliceImg, imageUtils.formatForFile(filename), new File(filename));
-				x += IG_SIZE;
+				x += this.ig_size;
+				n++;
 			}
 			
 			return 0;

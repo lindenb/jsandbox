@@ -230,6 +230,7 @@ $(eval $(call compile,htmlparser,sandbox.HtmlParser,${jcommander.jar} ${jtidy.ja
 $(eval $(call compile,osm2svg,sandbox.OsmToSvg,${jcommander.jar}))
 $(eval $(call compile,img2palette,sandbox.ImageToPalette,${jcommander.jar}))
 $(eval $(call compile,halftone,sandbox.Halftone,${jcommander.jar}))
+$(eval $(call compile,igpano,sandbox.InstaPanorama,${jcommander.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

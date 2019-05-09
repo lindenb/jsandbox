@@ -18,8 +18,8 @@ public class ImageUtils
 		}
 	
 	public String formatForFile(String s) {
-		if(s!=null && s.toLowerCase().endsWith(".png")) return "JPG";
-		return "PNG";
+		if(s!=null && s.toLowerCase().endsWith(".png")) return "PNG";
+		return "JPG";
 	}
 	
 	public BufferedImage read(final String nullOrfileOrUrl) throws IOException {
