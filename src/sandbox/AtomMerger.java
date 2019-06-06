@@ -25,13 +25,15 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import com.beust.jcommander.Parameter;
 
+import sandbox.feed.Atom;
+
 
 
 public class AtomMerger extends Launcher
 	{
 	private static final Logger LOG=Logger.builder(AtomMerger.class).build();
 
-	private static final String ATOM="http://www.w3.org/2005/Atom";
+	
 	private static final String DATE_FORMATS[]={
 		"yyyy-MM-dd'T'HH:mm:ssXXX",
 		"EEE, dd MMM yyyy HH:mm:ss"
@@ -99,7 +101,7 @@ public class AtomMerger extends Launcher
 	private static boolean isAtom(final Document dom)
 		{
 		final Element root= dom.getDocumentElement();
-		return root!=null && root.getLocalName().equals("feed") && root.getNamespaceURI().equals(ATOM);
+		return root!=null && root.getLocalName().equals("feed") && root.getNamespaceURI().equals(Atom.NS);
 		}
 
 	private static String getId(final Element root)
@@ -134,14 +136,14 @@ public class AtomMerger extends Launcher
 			dbf.setNamespaceAware(true);
 			final DocumentBuilder db = dbf.newDocumentBuilder();
 			Document outdom = db.newDocument();
-			Element feedRoot = outdom.createElementNS(ATOM,"feed");
+			Element feedRoot = outdom.createElementNS(Atom.NS,"feed");
 			outdom.appendChild(feedRoot);
 			
-			Element c = outdom.createElementNS(ATOM,"title");
+			Element c = outdom.createElementNS(Atom.NS,"title");
 			c.appendChild(outdom.createTextNode("AtomMerger"));
 			feedRoot.appendChild(c);
 			
-			c = outdom.createElementNS(ATOM,"updated");
+			c = outdom.createElementNS(Atom.NS,"updated");
 			c.appendChild(outdom.createTextNode(
 					new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z").format(new Date())
 					));
