@@ -231,6 +231,7 @@ $(eval $(call compile,osm2svg,sandbox.OsmToSvg,${jcommander.jar}))
 $(eval $(call compile,img2palette,sandbox.ImageToPalette,${jcommander.jar}))
 $(eval $(call compile,halftone,sandbox.Halftone,${jcommander.jar}))
 $(eval $(call compile,instapanorama,sandbox.InstaPanorama,${jcommander.jar}))
+$(eval $(call compile,flickr2atom,sandbox.flickr.FlickrToAtom,${jcommander.jar} ${google.gson.jars} ${apache.httpclient.jars}))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 
