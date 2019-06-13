@@ -17,7 +17,8 @@ public class ImageUtils
 		return new ImageUtils();
 		}
 	
-	public String formatForFile(String s) {
+	
+	public String formatForFile(final String s) {
 		if(s!=null && s.toLowerCase().endsWith(".png")) return "PNG";
 		return "JPG";
 	}

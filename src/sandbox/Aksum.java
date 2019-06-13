@@ -18,7 +18,7 @@ class AngleDeg
 	//private members
 		private int value=0;
 		private int sens=1;
-		private int pas=1,senspas=1;
+		private int pas=1;
 		int minimal=0,maximal=360;
 	//constructor
 	public AngleDeg()
@@ -179,6 +179,7 @@ class Face
 	}
 
 
+@SuppressWarnings("serial")
 public class Aksum extends JFrame  implements Runnable
 {
 	JPanel			drawingArea;
@@ -255,9 +256,8 @@ public class Aksum extends JFrame  implements Runnable
 	public void paintDrawingArea(Graphics2D g)
 		{
 		long  now;
-		Color c;
 		int i;
-		double theCos,theSin,ouverture;
+		double theCos,theSin;
 
 		
 		if(this.buffer==null ||

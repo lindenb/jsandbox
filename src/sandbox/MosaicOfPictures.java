@@ -116,20 +116,7 @@ public class MosaicOfPictures extends Launcher
 				{
 				++nReads;
 				LOG.info(file+" "+nReads+"/"+picts.size());
-<<<<<<< HEAD
-				BufferedImage img2 = null;
-				if( IOUtils.isURL(file))
-					{
-					img2=ImageIO.read(new URL(file));
-					}
-				else
-					{
-					img2=ImageIO.read(new File(file));
-					}
-=======
 				BufferedImage img2 = imageUtils.read(file);
-			
->>>>>>> b8c868c1477358f1e66488629a84008bcbeeac23
 				if(img2==null)
 					{
 					LOG.error("Cannot read "+file);

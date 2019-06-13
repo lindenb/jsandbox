@@ -204,6 +204,7 @@ public abstract class SimpleGraphics implements Closeable {
 		@Override
 		public void circle(double cx, double cy, double r) {
 			try {
+				if(r<=0) return;
 				this.w.writeEmptyElement("circle");
 				this.w.writeAttribute("cx", String.valueOf(cx));
 				this.w.writeAttribute("cy", String.valueOf(cy));

@@ -7,11 +7,11 @@ import java.nio.file.Path;
 import com.beust.jcommander.Parameter;
 
 import sandbox.ColorParser;
-import sandbox.DimensionConverter;
 import sandbox.IOUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.SimpleGraphics;
+import sandbox.jcommander.DimensionConverter;
 
 public abstract class AbstractKirbyLauncher extends Launcher {
 	private static final Logger LOG = Logger.builder(AbstractKirbyLauncher.class).build();

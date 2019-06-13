@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.jcommander;
 import java.awt.Dimension;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,6 +15,9 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 
 import com.beust.jcommander.IStringConverter;
+
+import sandbox.Logger;
+import sandbox.StringUtils;
 
 public class DimensionConverter
 	implements Function<String,Dimension>
