@@ -71,9 +71,9 @@ slf4j.jars  = \
 
 
 apache.httpclient.jars  = \
-	$(lib.dir)/org/apache/httpcomponents/httpclient/4.5.1/httpclient-4.5.1.jar \
-	$(lib.dir)/commons-codec/commons-codec/1.10/commons-codec-1.10.jar \
-	$(lib.dir)/org/apache/httpcomponents/httpcore/4.4.4/httpcore-4.4.4.jar \
+	$(lib.dir)/org/apache/httpcomponents/httpclient/4.5.9/httpclient-4.5.9.jar \
+	$(lib.dir)/commons-codec/commons-codec/1.11/commons-codec-1.11.jar \
+	$(lib.dir)/org/apache/httpcomponents/httpcore/4.4.11/httpcore-4.4.11.jar \
 	$(lib.dir)/commons-logging/commons-logging/1.2/commons-logging-1.2.jar
 
 spring-beans.jars = \
