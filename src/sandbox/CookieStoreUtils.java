@@ -157,7 +157,9 @@ public class CookieStoreUtils  {
 				att = tokens[column2index.get("path")];
 				cookie.setPath(att);
 				att = tokens[column2index.get("expiry")];
-				cookie.setExpiryDate(new Date(1000L*Long.parseLong(att)));
+				final Date date = new Date(1000L*Long.parseLong(att));
+				
+				cookie.setExpiryDate(date);
 				att = tokens[column2index.get("isSecure")];
 				cookie.setSecure(att.equals("1"));
 				cookie.setVersion(1);

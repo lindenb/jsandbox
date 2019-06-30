@@ -19,6 +19,7 @@ import java.io.File;
 import java.util.Map;
 import java.util.List;
 import java.util.Set;
+import java.util.LinkedHashSet;
 import java.util.HashSet;
 import java.util.Date;
 
@@ -39,12 +40,15 @@ import sandbox.IOUtils;
 import sandbox.Launcher;
 import sandbox.CookieStoreUtils;
 
+
 public class FlickrToAtom extends Launcher
 	{
 	private static final sandbox.Logger LOG = sandbox.Logger.builder(FlickrToAtom.class).build();
 	
     @Parameter(names={"-c","--cookies"},description=CookieStoreUtils.OPT_DESC)
 	private File cookieStoreFile  = null;
+    @Parameter(names={"-s","--seconds"},description="wait 's' seconds between each call.")
+	private int seconds = 5;
 	
 	private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	
@@ -55,7 +59,9 @@ public class FlickrToAtom extends Launcher
 		String title;
 		String username;
 		String displayUrl;
-		
+		String license;	
+		String width;
+		String height;	
 					
 		@Override
 		public int hashCode() { return id.hashCode();}
@@ -65,78 +71,40 @@ public class FlickrToAtom extends Launcher
 			if(o==this) return true;
 			return this.id.equals(Entry.class.cast(o).id);
 			}
-			
-		void write( final XMLStreamWriter w) throws XMLStreamException {
-			
-				w.writeStartElement("entry");
-				
-				w.writeStartElement("title");
-					w.writeCharacters(this.title);
-				w.writeEndElement();
 
-				w.writeStartElement("id");
-				w.writeCharacters(this.id);
-				w.writeEndElement();
-
-				
-				w.writeEmptyElement("link");
-				w.writeAttribute("href", 
-						"https://www.flickr.com/photos/"+ ownerNsid +"/"+ id +"/"
-						);
-				
-				w.writeStartElement("updated");
-					w.writeCharacters(FlickrToAtom.this.dateFormatter.format(new Date()));
-				w.writeEndElement();
-				
-				w.writeStartElement("author");
-					w.writeStartElement("name");
-						w.writeCharacters(username);
-					w.writeEndElement();
-				w.writeEndElement();
-				
-				w.writeStartElement("content"); 
-				w.writeAttribute("type","xhtml");
-				
-				w.writeStartElement("div");
-				w.writeDefaultNamespace("http://www.w3.org/1999/xhtml");
-				w.writeStartElement("p");  
-				
-				w.writeStartElement("a");
-				w.writeAttribute("id",id);
-				w.writeAttribute("target", "_blank");
-				w.writeAttribute("href","https://www.flickr.com/photos/"+ ownerNsid +"/"+ id +"/");
-				
-				 w.writeEmptyElement("img");
-           		w.writeAttribute("alt", title);
-           		w.writeAttribute("src", displayUrl);
-           		w.writeAttribute("width",String.valueOf(75));
-				
-				w.writeEndElement();//a
-				
-				w.writeEndElement();//p
-				w.writeEndElement();//div
-				w.writeEndElement();//content
-				
-				w.writeEndElement();//entry
-				}	
-			
 		}
-	final Set<Entry> entries = new HashSet<>();
 	
-	private void addImage(final JsonObject elt) {
+	
+	private Entry addImage(final JsonObject elt) {
 		final Entry entry=new Entry();
 		entry.id = elt.getAsJsonPrimitive("id").getAsString();
 		entry.ownerNsid = elt.getAsJsonPrimitive("ownerNsid").getAsString();
-		entry.title = elt.getAsJsonPrimitive("title").getAsString();
+		if(elt.get("title")!=null) {
+			entry.title = elt.getAsJsonPrimitive("title").getAsString();
+			}
+		else
+			{
+			entry.title="";
+			}
+		entry.license = elt.getAsJsonPrimitive("license").getAsString();
 		entry.username = elt.getAsJsonPrimitive("username").getAsString();
 		JsonObject sizes = elt.getAsJsonObject("sizes");
-		JsonObject sq = sizes.getAsJsonObject("sq");
+		JsonObject sq = sizes.getAsJsonObject("t");
+		if(sq==null) sq = sizes.getAsJsonObject("sq");
 		entry.displayUrl = sq.getAsJsonPrimitive("displayUrl").getAsString();
-		
-		this.entries.add(entry);
+		entry.width = sq.getAsJsonPrimitive("width").getAsString();
+		entry.height = sq.getAsJsonPrimitive("height").getAsString();
+		return entry;
 		}
 	
-	private void searchNodes(final String name,final JsonElement elt)
+	private Set<Entry> searchNodes(final String name,final JsonElement elt)
+		{
+		final Set<Entry> set = new LinkedHashSet<>();
+		_searchNodes(name,elt,set);
+		return set;
+		}
+	
+	private void _searchNodes(final String name,final JsonElement elt,final Set<Entry> set)
 			{
 			if(elt.isJsonArray())
 				{
@@ -144,13 +112,13 @@ public class FlickrToAtom extends Launcher
 				if("_data".equals(name))
 					{
 					for(final JsonElement item:jArray) {
-						if(item.isJsonObject()) addImage(item.getAsJsonObject());
+						if(item.isJsonObject()) set.add(addImage(item.getAsJsonObject()));
 						}
 					}
 				else
 					{
 					for(final JsonElement item:jArray) {
-						searchNodes(null,item);
+						_searchNodes(null,item,set);
 						}
 					}
 				}
@@ -159,7 +127,7 @@ public class FlickrToAtom extends Launcher
 				for(final Map.Entry<String, JsonElement> kv: elt.getAsJsonObject().entrySet())
 					{
 					//if(kv.getKey().equals("edge_hashtag_to_top_posts")) continue;
-					searchNodes(kv.getKey(),kv.getValue());
+					_searchNodes(kv.getKey(),kv.getValue(),set);
 					}	
 				}
 			}
@@ -171,7 +139,9 @@ public class FlickrToAtom extends Launcher
 			try 
 			{
 				
-				HttpClientBuilder builder =  HttpClientBuilder.create().setUserAgent(IOUtils.getUserAgent());
+				HttpClientBuilder builder =  HttpClientBuilder.create().
+					setDefaultRequestConfig( org.apache.http.client.config .RequestConfig.custom().setCookieSpec(  org.apache.http.client.config.CookieSpecs.STANDARD).build()).
+					setUserAgent(IOUtils.getUserAgent());
 				
 				if(this.cookieStoreFile!=null) {
 					final BasicCookieStore cookies =  sandbox.CookieStoreUtils.readTsv(this.cookieStoreFile);
@@ -180,11 +150,38 @@ public class FlickrToAtom extends Launcher
 					
 				
 				client = builder.build();
+				
+				
+				
+				final XMLOutputFactory xof = XMLOutputFactory.newInstance();
+				XMLStreamWriter w = xof.createXMLStreamWriter(System.out, "UTF-8");
+				w.writeStartDocument("UTF-8", "1.0");
+				w.writeStartElement("feed");
+				w.writeAttribute("xmlns", "http://www.w3.org/2005/Atom");
 			
-				for(final String arg:args) {
-					HttpGet httpGet = new HttpGet(arg);
-					ResponseHandler<String> responseHandler = new BasicResponseHandler();
-					final String content = client.execute(httpGet,responseHandler);
+				w.writeStartElement("title");
+				w.writeCharacters("Flickr2Atom");
+				w.writeEndElement();
+			
+				w.writeStartElement("updated");
+				w.writeCharacters(this.dateFormatter.format(new Date()));
+				w.writeEndElement();
+			
+			
+				for(int idx=0;idx< args.size();++idx) {
+					final Set<Entry> entries = new HashSet<>();
+					if(idx>0) Thread.sleep(seconds *  1_000);
+					final String arg = args.get(idx);
+					final HttpGet httpGet = new HttpGet(arg);
+					final ResponseHandler<String> responseHandler = new BasicResponseHandler();
+					final String content;
+					try {
+						content = client.execute(httpGet,responseHandler);
+						}
+					catch(Throwable err) {
+						LOG.warning(err);
+						continue;
+						}
 					final String modelExport="modelExport:";
 					boolean found=false;
 					for(String line:content.split("[\n]"))
@@ -206,8 +203,8 @@ public class FlickrToAtom extends Launcher
 								}
 							else
 								{
-								searchNodes(null,root.getAsJsonObject());
-								}
+								entries.addAll(searchNodes(null,root.getAsJsonObject()));
+ 								}
 							}
 						catch(Throwable err) {
 							err.printStackTrace();
@@ -215,32 +212,74 @@ public class FlickrToAtom extends Launcher
 						break;
 						}
 					
-					if(!found) System.err.println("Not found in "+ arg);
+					if(!found || entries.isEmpty()) {System.err.println("Not found in "+ arg); continue;}
+					
+				w.writeStartElement("entry");
+				
+				w.writeStartElement("title");
+					w.writeCharacters(java.util.Arrays.stream(arg.split("[\\?&]")).
+						filter(S->S.startsWith("text=")).
+						map(S->S.substring(5).
+						replace('+',' ')).
+						findFirst().orElse(arg) );
+				w.writeEndElement();
+
+				w.writeStartElement("id");
+				w.writeCharacters(arg);
+				w.writeEndElement();
+
+				
+				w.writeEmptyElement("link");
+				w.writeAttribute("href", arg );
+				
+				w.writeStartElement("updated");
+					w.writeCharacters(FlickrToAtom.this.dateFormatter.format(new Date()));
+				w.writeEndElement();
+				
+				w.writeStartElement("author");
+					w.writeStartElement("name");
+						w.writeCharacters("flickr");
+					w.writeEndElement();
+				w.writeEndElement();
+				
+				w.writeStartElement("content"); 
+				w.writeAttribute("type","xhtml");
+				
+				w.writeStartElement("div");
+				w.writeDefaultNamespace("http://www.w3.org/1999/xhtml");
+				w.writeStartElement("p");  
+				
+				for(final Entry entry: entries ) {
+					if(entry.license.equals("1")) w.writeCharacters("[");
+					w.writeStartElement("a");
+					w.writeAttribute("id",entry.id);
+					w.writeAttribute("target", "_blank");
+					w.writeAttribute("href","https://www.flickr.com/photos/"+ entry.ownerNsid +"/"+ entry.id +"/");
+				
+					w.writeEmptyElement("img");
+		       		w.writeAttribute("alt", entry.title);
+		       		w.writeAttribute("src", entry.displayUrl);
+		       		w.writeAttribute("width",String.valueOf(entry.width));
+		       		w.writeAttribute("height",String.valueOf(entry.height));
+					if(entry.license.equals("1")) w.writeCharacters("]");
+				
+					w.writeEndElement();//a
+					}
+				
+				w.writeEndElement();//p
+				w.writeEndElement();//div
+				w.writeEndElement();//content
+				
+				w.writeEndElement();//entry
+					
 					}
 				
 				client.close();client=null;
-				
-			
-			final XMLOutputFactory xof = XMLOutputFactory.newInstance();
-			XMLStreamWriter w = xof.createXMLStreamWriter(System.out, "UTF-8");
-			w.writeStartDocument("UTF-8", "1.0");
-			w.writeStartElement("feed");
-			w.writeAttribute("xmlns", "http://www.w3.org/2005/Atom");
-			
-			w.writeStartElement("title");
-			w.writeCharacters("Flickr2Atom");
-			w.writeEndElement();
-			
-			w.writeStartElement("updated");
-			w.writeCharacters(this.dateFormatter.format(new Date()));
-			w.writeEndElement();
-			
-			for(Entry e:entries) e.write(w);
-			
-			w.writeEndElement();
-			w.writeEndDocument();
-			w.flush();
-			w.close();
+				w.writeEndElement();
+				w.writeEndDocument();
+				w.flush();
+				w.close();
+		
 				
 			return 0;
 			}	 
