@@ -1,44 +1,35 @@
 package sandbox.flickr;
 
+import java.io.File;
+import java.io.StringReader;
 import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamWriter;
+
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 
 import com.beust.jcommander.Parameter;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
 
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.StringReader;
-import java.io.File;
-import java.util.Map;
-import java.util.List;
-import java.util.Set;
-import java.util.LinkedHashSet;
-import java.util.HashSet;
-import java.util.Date;
-
-import org.apache.http.HttpEntity;
-import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicResponseHandler;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.BasicCookieStore;
-
-import javax.xml.stream.XMLOutputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamWriter;
-
+import sandbox.CookieStoreUtils;
 import sandbox.IOUtils;
 import sandbox.Launcher;
-import sandbox.CookieStoreUtils;
 
 
 public class FlickrToAtom extends Launcher
@@ -57,6 +48,7 @@ public class FlickrToAtom extends Launcher
 		String id;
 		String ownerNsid;
 		String title;
+		@SuppressWarnings("unused")
 		String username;
 		String displayUrl;
 		String license;	
@@ -67,7 +59,7 @@ public class FlickrToAtom extends Launcher
 		public int hashCode() { return id.hashCode();}
 		
 		@Override
-		public boolean equals(Object o) {
+		public boolean equals(final Object o) {
 			if(o==this) return true;
 			return this.id.equals(Entry.class.cast(o).id);
 			}
@@ -133,13 +125,13 @@ public class FlickrToAtom extends Launcher
 			}
 	
 	@Override
-	public int doWork(List<String> args)
+	public int doWork(final List<String> args)
 		{
 		CloseableHttpClient client = null;
 			try 
 			{
 				
-				HttpClientBuilder builder =  HttpClientBuilder.create().
+			final HttpClientBuilder builder =  HttpClientBuilder.create().
 					setDefaultRequestConfig( org.apache.http.client.config .RequestConfig.custom().setCookieSpec(  org.apache.http.client.config.CookieSpecs.STANDARD).build()).
 					setUserAgent(IOUtils.getUserAgent());
 				
@@ -173,6 +165,9 @@ public class FlickrToAtom extends Launcher
 					if(idx>0) Thread.sleep(seconds *  1_000);
 					final String arg = args.get(idx);
 					final HttpGet httpGet = new HttpGet(arg);
+					httpGet.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+					httpGet.setHeader("Connection", "keep-alive");
+					httpGet.setHeader("Accept-Language", "en-US,en;q=0.5");
 					final ResponseHandler<String> responseHandler = new BasicResponseHandler();
 					final String content;
 					try {
@@ -283,7 +278,7 @@ public class FlickrToAtom extends Launcher
 				
 			return 0;
 			}	 
-			catch(Exception err) {
+			catch(final Exception err) {
 				err.printStackTrace();
 			return -1;
 			}
@@ -291,7 +286,7 @@ public class FlickrToAtom extends Launcher
 				IOUtils.close(client);
 			}
 		}
-	public static void main(String[] args)
+	public static void main(final String[] args)
 		{
 		new FlickrToAtom().instanceMainWithExit(args);
 

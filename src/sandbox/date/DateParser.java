@@ -12,9 +12,9 @@ import sandbox.StringUtils;
 
 public class DateParser implements Function<String, Optional<Date>> {
 	private final List< Function<String,Date>> delegates = new ArrayList<>();
-	DateParser() {
-		delegates.add(new SimpleDateFormatParser("yyyy-MM-dd'T'HH:mm:ssXXX"));
-		delegates.add(new SimpleDateFormatParser("EEE, dd MMM yyyy HH:mm:ss"));
+	public DateParser() {
+		this.delegates.add(new SimpleDateFormatParser("yyyy-MM-dd'T'HH:mm:ssXXX"));
+		this.delegates.add(new SimpleDateFormatParser("EEE, dd MMM yyyy HH:mm:ss"));
 		}
 	@Override
 	public Optional<Date> apply(final String t) {
