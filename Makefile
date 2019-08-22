@@ -71,9 +71,9 @@ slf4j.jars  = \
 
 
 apache.httpclient.jars  = \
-	$(lib.dir)/org/apache/httpcomponents/httpclient/4.5.1/httpclient-4.5.1.jar \
-	$(lib.dir)/commons-codec/commons-codec/1.10/commons-codec-1.10.jar \
-	$(lib.dir)/org/apache/httpcomponents/httpcore/4.4.4/httpcore-4.4.4.jar \
+	$(lib.dir)/org/apache/httpcomponents/httpclient/4.5.9/httpclient-4.5.9.jar \
+	$(lib.dir)/commons-codec/commons-codec/1.11/commons-codec-1.11.jar \
+	$(lib.dir)/org/apache/httpcomponents/httpcore/4.4.11/httpcore-4.4.11.jar \
 	$(lib.dir)/commons-logging/commons-logging/1.2/commons-logging-1.2.jar
 
 spring-beans.jars = \
@@ -232,6 +232,7 @@ $(eval $(call compile,img2palette,sandbox.ImageToPalette,${jcommander.jar}))
 $(eval $(call compile,halftone,sandbox.Halftone,${jcommander.jar}))
 $(eval $(call compile,igpano,sandbox.InstaPanorama,${jcommander.jar}))
 $(eval $(call compile,drawinggrid,sandbox.drawing.DrawingGrid,${jcommander.jar}))
+$(eval $(call compile,flickr2atom,sandbox.flickr.FlickrToAtom,${jcommander.jar} ${google.gson.jars} ${apache.httpclient.jars}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
@@ -246,26 +247,26 @@ $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	$(foreach F,alleleAnnotationmethods  alleleAnnotations  annotateAllelemethods beacon  genotypephenotype common metadata, echo "${F}" && curl -L -o "${F}.avdl" "https://raw.githubusercontent.com/ga4gh/schemas/master/src/main/resources/avro/${F}.avdl" && cat   "${F}.avdl" | java -cp $@ sandbox.Avdl2Xml  | xmllint --format - ; )
 
 src/sandbox/AutoLexYacc.java : src/sandbox/AutoLexYacc.jj
-	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<	
+	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<
 
 
 gimpprocs2xml: ./src/sandbox/GimpProcedures.jj
 	mkdir -p ${tmp.dir}/sandbox ${tmp.dir}/META-INF ${bin.dir}
 	${javacc.exe} -OUTPUT_DIRECTORY=tmp/sandbox $<
 	javac -d ${tmp.dir} ${tmp.dir}/sandbox/*.java
-	mkdir -p ${tmp.dir}/META-INF 
+	mkdir -p ${tmp.dir}/META-INF
 	echo "Manifest-Version: 1.0" > ${tmp.dir}/tmp.mf
 	echo "Main-Class: sandbox.GimpProcParser" >> ${tmp.dir}/tmp.mf
 	${JAR} cfm ${bin.dir}/gimpprocs2xml.jar ${tmp.dir}/tmp.mf  -C ${tmp.dir} .
-	rm -rf ${tmp.dir}	
+	rm -rf ${tmp.dir}
 
 textlet : src/sandbox/TextletParser.jj
-	${javacc.exe} -OUTPUT_DIRECTORY=src/sandbox $<	
+	${javacc.exe} -OUTPUT_DIRECTORY=src/sandbox $<
 	javac -sourcepath src src/sandbox/Textlet.java
 	echo "aa (<%@ include file='azda'  %>) aa <%= 2 %> <%!  int i=0; public int getI() { return this.i;} %>" | java -cp src sandbox.Textlet
 
 x : src/sandbox/EmfModelParser.jj ${emf.core.jars}
-	${javacc.exe} -OUTPUT_DIRECTORY=src/sandbox $<	
+	${javacc.exe} -OUTPUT_DIRECTORY=src/sandbox $<
 	javac -cp $(subst $(SPACE),:,${emf.core.jars}) -sourcepath src src/sandbox/EmfModel.java
 	echo "package x1 { class x2 {int a int b String c } }" | java -cp $(subst $(SPACE),:,${emf.core.jars}):src sandbox.EmfModel
 
@@ -282,11 +283,10 @@ download_maven_jars : ${all_maven_jars}
 
 clean_maven_jars :
 	rm -f ${all_maven_jars}
-	
-	
+
 ## JNLP
 
-ifneq (${webstart.remotedir},)	
+ifneq (${webstart.remotedir},)
 
 define sign_with_jarsigner
 	jarsigner $(if ${FASTJARSIGN},,-tsa http://timestamp.digicert.com ) \
@@ -311,8 +311,7 @@ compile-webstart : .secret.keystore treemapviewer
 
 
 endif
-	
-	
+
 .secret.keystore :
 	-keytool -genkeypair -keystore $@ -alias secret \
 	       	-keypass "$(if ${keytool.keypass},${keytool.keypass},KEYTOOLPASS)" \

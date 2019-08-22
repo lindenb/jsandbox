@@ -5,7 +5,7 @@ import java.util.function.Function;
 import com.beust.jcommander.IStringConverter;
 
 public interface ColorParser extends Function<String,Color>{
-
+public static final String OPT_DESC="";
 public static class Converter implements IStringConverter<Color> {
 	@Override
 	public Color convert(final String s) {

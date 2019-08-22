@@ -206,7 +206,7 @@ public class InstagramToAtom extends Launcher {
 					{
 					for(final Map.Entry<String, JsonElement> kv: jObject.entrySet())
 						{
-						if(kv.getKey().equals("edge_hashtag_to_top_posts")) continue;
+						//if(kv.getKey().equals("edge_hashtag_to_top_posts")) continue;
 						searchNodes(owner,nodes,kv.getKey(),kv.getValue());
 						}
 					}
@@ -263,7 +263,7 @@ public class InstagramToAtom extends Launcher {
 		nodes.removeIf(N->N.getSrc()==null && N.getSrc().isEmpty());
 		if(nodes.isEmpty())
 			{
-			LOG.warning("No image found for "+queryName+".");
+			LOG.warning("No image found for "+queryName+"."+root);
 			}
 		return nodes;
 		}

@@ -1,7 +1,6 @@
 package sandbox;
 
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -17,7 +16,8 @@ public class ImageUtils
 		return new ImageUtils();
 		}
 	
-	public String formatForFile(String s) {
+	
+	public String formatForFile(final String s) {
 		if(s!=null && s.toLowerCase().endsWith(".png")) return "PNG";
 		return "JPG";
 	}
