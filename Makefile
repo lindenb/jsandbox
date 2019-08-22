@@ -231,6 +231,7 @@ $(eval $(call compile,osm2svg,sandbox.OsmToSvg,${jcommander.jar}))
 $(eval $(call compile,img2palette,sandbox.ImageToPalette,${jcommander.jar}))
 $(eval $(call compile,halftone,sandbox.Halftone,${jcommander.jar}))
 $(eval $(call compile,igpano,sandbox.InstaPanorama,${jcommander.jar}))
+$(eval $(call compile,drawinggrid,sandbox.drawing.DrawingGrid,${jcommander.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
