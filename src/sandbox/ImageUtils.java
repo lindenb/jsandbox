@@ -5,18 +5,33 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 
 public class ImageUtils
 	{
+	public final List<String> SUFFIXES = Arrays.asList(".jpg",".jpeg",".JPG",".JPEG",".png",".PNG");
+	
 	private ImageUtils() {
 		}
 	public static ImageUtils getInstance() {
 		return new ImageUtils();
 		}
 	
+	public boolean hasImageSuffix(final File f) {
+		return hasImageSuffix(f.toPath());
+	}
 	
+	public boolean hasImageSuffix(final Path f) {
+		return hasImageSuffix(f.getFileName().toString());
+	}
+	public boolean hasImageSuffix(final String f) {
+		return SUFFIXES.stream().anyMatch(FX->f.endsWith(FX));
+	}
+	/** return format PNG or JPG (default) */
 	public String formatForFile(final String s) {
 		if(s!=null && s.toLowerCase().endsWith(".png")) return "PNG";
 		return "JPG";
