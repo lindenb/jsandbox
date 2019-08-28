@@ -2,9 +2,12 @@ package sandbox;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.RenderedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
@@ -62,6 +65,13 @@ public class ImageUtils
 		g.drawImage(img, 0, 0, width, height, null);
 		g.dispose();
 		return dest;
+		}
+	
+	public void saveToPathOrStandout(final RenderedImage im,final Path out) throws IOException {
+		final OutputStream os = (out==null?System.out:Files.newOutputStream(out));
+		ImageIO.write(im,out==null?"PNG":formatForFile(out.getFileName().toString()), os);
+		os.flush();
+		os.close();
 		}
 	
 	}

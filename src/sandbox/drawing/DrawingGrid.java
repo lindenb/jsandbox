@@ -225,7 +225,6 @@ public class DrawingGrid extends JFrame {
 				g.setColor(Color.BLUE);
 				}
 			
-			
 			int x= bounds.x + (int)(i*(bounds.width/(double)num1));
 			int y= bounds.y + (int)(i*(bounds.height/(double)num1));
 			g.drawLine(x, bounds.y, x, bounds.y+bounds.height);

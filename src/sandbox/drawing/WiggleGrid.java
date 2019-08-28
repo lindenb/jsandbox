@@ -9,16 +9,17 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
+import java.awt.geom.AffineTransform;
 import java.awt.geom.Line2D;
 import java.awt.image.BufferedImage;
-import java.io.File;
+import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
-import javax.imageio.ImageIO;
 
 import com.beust.jcommander.Parameter;
 
@@ -27,6 +28,7 @@ import sandbox.ImageUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.NoSplitter;
+import sandbox.StringUtils;
 import sandbox.jcommander.DimensionConverter;
 import sandbox.jcommander.DoubleParamSupplier;
 
@@ -35,11 +37,9 @@ public class WiggleGrid extends Launcher {
 	@Parameter(names= {"-D","--size","--dim","--dimension"},converter=DimensionConverter.StringConverter.class,description=DimensionConverter.OPT_DESC,required=true)
 	protected Dimension dimIn = null;
 	@Parameter(names= {"-b","--background","--paper"},description="background-color. "+ColorParser.OPT_DESC,converter=ColorParser.Converter.class,splitter=NoSplitter.class)
-	protected Color bckg = null;
-	@Parameter(names= {"-f","--foreground","--pen"},description="foreground-color. "+ColorParser.OPT_DESC,converter=ColorParser.Converter.class,splitter=NoSplitter.class)
-	protected Color penColor = Color.DARK_GRAY;
+	protected Color bckg = Color.WHITE;
 	@Parameter(names= {"-o","--output",},description="output")
-	protected File output = null;
+	protected Path output = null;
 	
 	@Parameter(names= {"-p","--precision",},description="precision",converter=DoubleParamSupplier.class,splitter=NoSplitter.class)
 	protected DoubleSupplier precision = DoubleParamSupplier.createDefault(5);
@@ -49,10 +49,18 @@ public class WiggleGrid extends Launcher {
 	protected DoubleSupplier strokeWidth = DoubleParamSupplier.createDefault(1);
 	@Parameter(names= {"-n","--hand",},description="hand distance",converter=DoubleParamSupplier.class,splitter=NoSplitter.class)
 	protected DoubleSupplier handDistance = DoubleParamSupplier.createDefault(100);
-	@Parameter(names= {"-a","--alpha",},description="alpha",converter=DoubleParamSupplier.class,splitter=NoSplitter.class)
+	@Parameter(names= {"-t","--alpha",},description="alpha",converter=DoubleParamSupplier.class,splitter=NoSplitter.class)
 	protected DoubleSupplier alpha = DoubleParamSupplier.createDefault(1);
 	@Parameter(names= {"-B","--blockSize",},description="block",converter=DoubleParamSupplier.class,splitter=NoSplitter.class)
 	protected DoubleSupplier blockSize = DoubleParamSupplier.createDefault(200);
+	@Parameter(names= {"-a","--angles"},description="angles in degree")
+	protected String anglesStr="0,90,45,-45";
+	@Parameter(names= {"-ai","--angle-precision"},description="angle precision in degree",converter=DoubleParamSupplier.class,splitter=NoSplitter.class)
+	protected DoubleSupplier anglePrecisionDeg =DoubleParamSupplier.createRandomBetween(1,2);
+	@Parameter(names= {"-gray","--gray"},description="gray value",converter=DoubleParamSupplier.class,splitter=NoSplitter.class)
+	protected DoubleSupplier grayValue =DoubleParamSupplier.createRandomBetween(0,0.1);
+	@Parameter(names= {"-hatching","--hatching"},description="hatching mode")
+	protected boolean hatching = false;
 
 	
 	private final Random rnd=new Random(System.currentTimeMillis());
@@ -70,17 +78,10 @@ public class WiggleGrid extends Launcher {
 			final BufferedImage img= new BufferedImage(dimIn.width, dimIn.height, BufferedImage.TYPE_INT_RGB);
 			final Graphics2D g=img.createGraphics();
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g.setColor(bckg);
+			g.fillRect(0, 0, img.getWidth(), img.getHeight());
+				
 			
-			if(bckg==null && this.output!=null && !this.output.getName().toString().toLowerCase().endsWith(".png")) {
-				bckg = Color.WHITE;
-				}
-			
-			if(bckg!=null) {
-				g.setColor(bckg);
-				g.fillRect(0, 0, img.getWidth(), img.getHeight());
-				}
-			
-			g.setColor(penColor);
 			
 			
 			Supplier<Stroke> strokeSupplier=()->
@@ -103,6 +104,8 @@ public class WiggleGrid extends Launcher {
 				for(;;) {
 					double d = Point.distance(x1, y1, x2, y2);
 
+					float gray = Math.max(0,Math.min(1f,(float)grayValue.getAsDouble()));
+					g.setColor(new Color(gray,gray,gray));
 					g.setStroke(strokeSupplier.get());
 					g.setComposite(alphaSupplier.get());
 					
@@ -122,58 +125,53 @@ public class WiggleGrid extends Launcher {
 					}
 				};
 			
-			// vertical
-			double y1 = delta();
-			for(;;) {
-				if( y1>=this.dimIn.height) break;
-				double x1= delta();
+			final double centerX = dimIn.getWidth()/2.0;
+			final double centerY = dimIn.getHeight()/2.0;
+	
+			for(double radian : Arrays.stream(this.anglesStr.split("[,; ]")).
+					filter(S->!StringUtils.isBlank(S)).
+					mapToDouble(S->Double.parseDouble(S)).
+					map(Math::toRadians).
+					toArray())
+				{
 				
-				double x2 = img.getWidth()+delta();
-				double y2 = y1 + delta();
+				final double maxD= Point.distance(0, 0, dimIn.getWidth(), dimIn.getHeight());
+				double y1 = centerY - maxD + delta();
+				for(;;) {
+					if( y1>= centerY + maxD) break;
+					final AffineTransform oldtr= g.getTransform();
+					final AffineTransform tr= new AffineTransform();
+					tr.concatenate(AffineTransform.getTranslateInstance(
+							centerX ,
+							centerY
+							));
+					tr.concatenate(AffineTransform.getRotateInstance(radian + (rnd.nextBoolean()?-1:1)*Math.toRadians(this.anglePrecisionDeg.getAsDouble())));
+					g.setTransform(tr);
 				
-				paint.accept(new Line2D.Double(x1,y1,x2,y2));
-				y1= Math.max(y1,y2)+this.distanceBetweenLines.getAsDouble() + delta();
+					
+					double x1 = centerX - maxD + delta();
+					double x2 = centerX + maxD + delta();
+					double y2 = y1 + delta();
+					double y_next= Math.max(y1,y2)+this.distanceBetweenLines.getAsDouble() + delta() ;
+					if(hatching) {
+						while(x1 < x2) {
+							paint.accept(new Line2D.Double(x1,y1,x1+delta(),y_next));
+							x1+=Math.max(0.1,this.precision.getAsDouble());
+							}
+						}
+					else
+						{
+						paint.accept(new Line2D.Double(x1,y1,x2,y2));
+						}
+					y1= y_next;
+					
+					g.setTransform(oldtr);
+					}
 				}
-			
-			// horizontal
-			double x1 = delta();
-			for(;;) {
-				if(x1>=this.dimIn.width) break;
-				y1= delta();
-				double y2 = img.getHeight()+delta();
-				double x2 = x1 + delta();
-				
-				paint.accept(new Line2D.Double(x1,y1,x2,y2));
-				x1= Math.max(x1,x2) + this.distanceBetweenLines.getAsDouble() + delta();
-				}
-			
-			// diag1
-			y1 =  delta()- dimIn.width;
-			for(;;) {
-				if( y1>=this.dimIn.height+dimIn.width) break;
-				x1= delta();
-				double x2 = img.getWidth()+delta();
-				double y2 = y1 + dimIn.width + delta();
-				
-				paint.accept(new Line2D.Double(x1,y1,x2,y2));
-				y1 += Math.max(1,this.distanceBetweenLines.getAsDouble() + delta());
-				}
-			// diag2
-			y1 =  delta()- dimIn.width;
-			for(;;) {
-				if( y1>=this.dimIn.height+dimIn.width) break;
-				x1= delta();
-				double x2 = img.getWidth()+delta();
-				double y2 = y1 - dimIn.width + delta();
-				
-				paint.accept(new Line2D.Double(x1,y1,x2,y2));
-				y1 += Math.max(1,this.distanceBetweenLines.getAsDouble() + delta());
-				}
-			
 			
 			g.dispose();
 			
-			ImageIO.write(img, imageUtils.formatForFile(output.getName()), output);
+			imageUtils.saveToPathOrStandout(img, output);
 			return 0;
 			}
 		catch(final Throwable err) {

@@ -233,6 +233,7 @@ $(eval $(call compile,halftone,sandbox.Halftone,${jcommander.jar}))
 $(eval $(call compile,igpano,sandbox.InstaPanorama,${jcommander.jar}))
 $(eval $(call compile,drawinggrid,sandbox.drawing.DrawingGrid,${jcommander.jar}))
 $(eval $(call compile,flickr2atom,sandbox.flickr.FlickrToAtom,${jcommander.jar} ${google.gson.jars} ${apache.httpclient.jars}))
+$(eval $(call compile,wigglegrid,sandbox.drawing.WiggleGrid,${jcommander.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
