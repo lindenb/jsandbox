@@ -3,7 +3,6 @@ package sandbox.drawing;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Composite;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -108,12 +107,14 @@ public class DrawingGrid extends JFrame {
 			mouseStart = new Point(e.getX(),e.getY());
 			e.getComponent().setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
 			}
-		public void mouseDragged(MouseEvent e) {
-			Graphics2D g=(Graphics2D)e.getComponent().getGraphics();
+		public void mouseDragged(final MouseEvent e) {
+			final Graphics2D g=(Graphics2D)e.getComponent().getGraphics();
 			g.setXORMode(g.getBackground());
 			for(int side=0;side<2;++side) {
 				if(mousePrev!=null) {
-					g.fillRect(mouseStart.x,mouseStart.y,
+					g.fillRect(
+							Math.min(mouseStart.x,mousePrev.x),
+							Math.min(mouseStart.y,mousePrev.y),
 							Math.abs(mouseStart.x-mousePrev.x),
 							Math.abs(mouseStart.y-mousePrev.y)
 							);
@@ -122,10 +123,10 @@ public class DrawingGrid extends JFrame {
 				}
 			g.setPaintMode();
 			}
-		public void mouseReleased(MouseEvent e){
+		public void mouseReleased(final MouseEvent e){
 			if(mousePrev==null) return;
 			e.getComponent().setCursor(Cursor.getDefaultCursor());
-			AffineTransform tr= getTransform();
+			final AffineTransform tr= getTransform();
 			if(tr==null) return;
 			final Rectangle bounds =tr.createTransformedShape(new Rectangle(0,0,
 					DrawingGrid.this.srcImage.getWidth(),
@@ -181,19 +182,19 @@ public class DrawingGrid extends JFrame {
 		}
 		
 		if(imgWidth!= panelWidth || imgHeight!=panelHeight) {
-			double r1 = (double)panelWidth/imgWidth;
-			double r2 = (double)panelHeight/imgHeight;
-			double r = Math.min(r1, r2);
-			AffineTransform tr2 = AffineTransform.getScaleInstance(r, r);
+			final double r1 = (double)panelWidth/imgWidth;
+			final double r2 = (double)panelHeight/imgHeight;
+			final double r = Math.min(r1, r2);
+			final AffineTransform tr2 = AffineTransform.getScaleInstance(r, r);
 			tr2.concatenate(tr);
 			tr=tr2;
 			imgWidth = (int)(imgWidth*r);
 			imgHeight =(int)(imgHeight*r);
 			}
 		
-		int dx=(panelWidth-imgWidth)/2;
-		int dy=(panelHeight-imgHeight)/2;
-		AffineTransform tr3 = AffineTransform.getTranslateInstance(dx,dy);
+		final int dx=(panelWidth-imgWidth)/2;
+		final int dy=(panelHeight-imgHeight)/2;
+		final AffineTransform tr3 = AffineTransform.getTranslateInstance(dx,dy);
 				;
 		tr3.concatenate(tr);
 		tr=tr3;
@@ -204,10 +205,7 @@ public class DrawingGrid extends JFrame {
 		{
 		AffineTransform tr=getTransform();
 		if(tr==null) return;
-		final Composite oldComposite = g.getComposite();
-		//g.setComposite(AlphaComposite.getInstance(AlphaComposite.XOR));
 		g.drawImage(this.srcImage,tr,null);
-		g.setComposite(oldComposite);
 		
 		g.setXORMode(Color.YELLOW);
 		final Stroke stroke=g.getStroke();
