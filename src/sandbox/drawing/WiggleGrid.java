@@ -72,6 +72,10 @@ public class WiggleGrid extends Launcher {
 	
 	@Override
 	public int doWork(final List<String> args) {
+		if(!args.isEmpty()) {
+			LOG.error("illagel number of arguments "+String.join(",",args));
+			return -1;
+			}
 		final ImageUtils imageUtils = ImageUtils.getInstance();
 		try
 			{

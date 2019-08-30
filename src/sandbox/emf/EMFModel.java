@@ -4,16 +4,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-
-import org.eclipse.emf.ecore.EAttribute;
+/*import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.emf.ecore.EcoreFactory;
 import org.eclipse.emf.ecore.EcorePackage;
+*/
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -22,6 +24,72 @@ import org.w3c.dom.Node;
 import sandbox.XmlUtils;
 
 public class EMFModel {
+	
+	public interface EObject {
+		public EMFModel getEMFModel();
+	}
+	
+	public interface ENamed extends  EObject {
+		public String getName();
+	}
+	public interface EPackage extends ENamed{
+		public List<EClass> getEClasses();
+	}
+	
+	public interface EType {
+		
+	}
+	
+	public interface EClass extends EType {
+		
+		public EPackage getPackage();
+		
+		public Stream<EStructuralFeature> getStructuralFeatures();
+		
+		public default Stream<EAttribute> getAttributes() {
+			return getStructuralFeatures().
+					filter(SF->SF instanceof EAttribute).
+					map(SF->EAttribute.class.cast(SF));
+		}
+		public default Optional<EAttribute> getAttributeByName(final String name) {
+			return getAttributes().
+					filter(E->E.getName().equals(name)).
+					findFirst();
+		}
+		public default Stream<EReference> getEReferences() {
+			return getStructuralFeatures().
+					filter(SF->SF instanceof EReference).
+					map(SF->EReference.class.cast(SF));
+		}
+		public default Optional<EReference> getEReferenceByName(final String name) {
+			return getEReferences().
+					filter(E->E.getName().equals(name)).
+					findFirst();
+		}
+		
+	}
+	
+	
+	
+	public interface EPrimitive extends EType{
+		
+	}
+	
+	public interface EStructuralFeature extends ENamed {
+		public EClass getEClass();
+		}
+	
+	public interface EAttribute extends EStructuralFeature {
+		}
+	
+	public interface EReference extends EStructuralFeature{
+		}
+	
+	public static final EPrimitive EINT= new EPrimitive() {
+		
+		};
+	
+	
 	
 	private static class Att2Type {
 		final EReference ref;
@@ -36,8 +104,6 @@ public class EMFModel {
 public static EMFModel parse(final Document dom) {
 	final Map<String,EClass> qName2eclass = new HashMap<>();
 	final Map<String,EReference> qName2ereference = new HashMap<>();
-	final EcorePackage ecorePackage  = EcorePackage.eINSTANCE;
-	final EcoreFactory ecoreFactory = EcoreFactory.eINSTANCE;
 	final List<EPackage> packages = new ArrayList<>();
 	final List<Att2Type> att2types = new ArrayList<>();
 	final List<Att2Type> opposites = new ArrayList<>();
