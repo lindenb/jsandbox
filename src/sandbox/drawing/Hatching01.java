@@ -70,7 +70,7 @@ public class Hatching01 extends AbstractDrawingProgram {
 		}
 	
 	@Override
-protected void paint(BufferedImage img, Graphics2D g) {
+protected int paint(BufferedImage img, Graphics2D g) {
 	
 	Supplier<Composite> alphaSupplier=()->AlphaComposite.getInstance(
 			AlphaComposite.SRC_OVER,
@@ -153,6 +153,7 @@ protected void paint(BufferedImage img, Graphics2D g) {
 		
 		g.setTransform(oldtr);
 		}
+	return 0;
 	}
 	
 	public static void main(final String[] args) {
