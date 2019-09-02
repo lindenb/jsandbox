@@ -27,6 +27,8 @@ public class RandomDots01 extends AbstractDrawingProgram {
 	private DoubleSupplier grayValue =DoubleParamSupplier.createRandomBetween(0,0.2);
 	@Parameter(names= {"-N","--num"},description="Number of dot . Integer: absolute count. FLoat: fraction of area")
 	private String countStr ="0.0001";
+	@Parameter(names= {"-s","--shape"},description="shape")
+	private ShapeFactory shapeFactory = ShapeFactory.circle;
 
 
 	
@@ -64,7 +66,7 @@ public class RandomDots01 extends AbstractDrawingProgram {
 			g.setComposite(AlphaComposite.getInstance(
 					AlphaComposite.SRC_OVER,
 					Math.min(1f,Math.max(0f,(float)alpha.getAsDouble()))));
-			g.fill(new Arc2D.Double(cx-cr/2, cy-cr/2, cr, cr, 0, 360, Arc2D.CHORD));
+			g.fill(this.shapeFactory.create(cx, cy, cr));
 			
 			n_dots--;
 		}
