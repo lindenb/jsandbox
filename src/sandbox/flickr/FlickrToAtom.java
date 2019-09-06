@@ -168,6 +168,7 @@ public class FlickrToAtom extends Launcher
 					httpGet.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
 					httpGet.setHeader("Connection", "keep-alive");
 					httpGet.setHeader("Accept-Language", "en-US,en;q=0.5");
+					httpGet.setHeader("Referer", "https://www.flickr.com/");
 					final ResponseHandler<String> responseHandler = new BasicResponseHandler();
 					final String content;
 					try {

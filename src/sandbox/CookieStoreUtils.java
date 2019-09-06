@@ -122,19 +122,19 @@ public class CookieStoreUtils  {
 				column2index.put(tokens[i], i);
 				}
 			for(final String col:new String[]{
-					"id", 
-					"baseDomain", 
-					"originAttributes", 
-					"name", 
-					"value", 
-					"host", 
-					"path", 
-					"expiry", 
-					"lastAccessed", 
-					"creationTime", 
-					"isSecure", 
-					"isHttpOnly", 
-					"inBrowserElement"
+					//"id", 
+					 "baseDomain", 
+					//"originAttributes", 
+					 "name", 
+					 "value", 
+					 "host", 
+					 "path", 
+					//"expiry", 
+					//"lastAccessed", 
+					//"creationTime", 
+					 "isSecure"
+					//"isHttpOnly", 
+					//"inBrowserElement"
 				})
 				{
 				if(!column2index.containsKey(col))
@@ -156,12 +156,15 @@ public class CookieStoreUtils  {
 				cookie.setDomain(att);
 				att = tokens[column2index.get("path")];
 				cookie.setPath(att);
-				att = tokens[column2index.get("expiry")];
-				final Date date = new Date(1000L*Long.parseLong(att));
-				
-				cookie.setExpiryDate(date);
-				att = tokens[column2index.get("isSecure")];
-				cookie.setSecure(att.equals("1"));
+				if(column2index.containsKey("expiry")) {
+					att = tokens[column2index.get("expiry")];
+					final Date date = new Date(1000L*Long.parseLong(att));
+					cookie.setExpiryDate(date);
+					}
+				if(column2index.containsKey("isSecure")) {
+					att = tokens[column2index.get("isSecure")];
+					cookie.setSecure(att.equals("1"));
+					}
 				cookie.setVersion(1);
 				
 				
