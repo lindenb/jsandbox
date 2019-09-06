@@ -1,10 +1,8 @@
 package sandbox;
 
-import java.io.File;
 import java.io.FileReader;
 import java.io.Reader;
 import java.io.StringReader;
-import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -28,7 +26,8 @@ private static final Logger LOG = Logger.builder(HtmlParser.class).build();
 
 private final Tidy tidy;
 private final DocumentBuilder db;
-HtmlParser() {
+private boolean namespaceAware=false;
+public HtmlParser() {
 	try
 		{
 		this.tidy = new Tidy();
@@ -46,9 +45,17 @@ HtmlParser() {
 		}
 	}
 
+public HtmlParser setNamespaceAware(boolean namespaceAware) {
+	this.namespaceAware = namespaceAware;
+	return this;
+	}
+public boolean isNamespaceAware() {
+	return namespaceAware;
+	}
+
 public Document parseDom(final String htmlStr)  {
 	final StringReader r=new StringReader(htmlStr);
-	final Document dom = parseDom(htmlStr);
+	final Document dom = parseDom(r);
 	r.close();
 	return dom;
 	}
@@ -74,7 +81,7 @@ public Document parseDom(final Reader r)  {
 		}
 	}
 
-private static Node clone(final Document owner,final Node n)
+private Node clone(final Document owner,final Node n)
 	{
 	switch(n.getNodeType())
 		{
@@ -94,7 +101,14 @@ private static Node clone(final Document owner,final Node n)
 			{
 			final Element e= Element.class.cast(n);
 			final NamedNodeMap atts = e.getAttributes();
-			final Element r = owner.createElementNS(e.getNamespaceURI(),e.getNodeName());
+			final Element r ;
+			if(isNamespaceAware()) {
+				r=owner.createElementNS(e.getNamespaceURI(),e.getNodeName());
+				}
+			else
+				{
+				r= owner.createElement(e.getNodeName());
+				}
 			for(int i=0;i< atts.getLength();++i)
 				{
 				Attr att=(Attr)atts.item(i);

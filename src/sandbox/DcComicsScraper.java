@@ -38,6 +38,8 @@ import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
 import com.sleepycat.je.Transaction;
 
+import sandbox.http.CookieStoreUtils;
+
 public class DcComicsScraper extends Launcher {
 	private static final Logger LOG = Logger.builder(DcComicsScraper.class).build();
 	

@@ -27,9 +27,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 
-import sandbox.CookieStoreUtils;
 import sandbox.IOUtils;
 import sandbox.Launcher;
+import sandbox.http.CookieStoreUtils;
 
 
 public class FlickrToAtom extends Launcher
@@ -136,7 +136,7 @@ public class FlickrToAtom extends Launcher
 					setUserAgent(IOUtils.getUserAgent());
 				
 				if(this.cookieStoreFile!=null) {
-					final BasicCookieStore cookies =  sandbox.CookieStoreUtils.readTsv(this.cookieStoreFile);
+					final BasicCookieStore cookies =  sandbox.http.CookieStoreUtils.readTsv(this.cookieStoreFile);
 					builder.setDefaultCookieStore(cookies);
 					}
 					
