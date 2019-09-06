@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -54,7 +55,88 @@ public class InstagramGraph extends Launcher {
 	private XPath xpath;
 	private int id_generator=0;
 	
+	private interface Handler {
+		public Set<String> getFriends(final Document dom) throws Exception;
+		public String getName(final String url);
+		}
+	
+	private class MySocialMateHandler implements Handler {
+		@Override
+		public Set<String> getFriends(final Document dom) throws Exception {
+			if(dom==null || dom.getDocumentElement()==null) {
+				LOG.warning("dom is null/empty");
+				return Collections.emptySet();
+				}
+
+			final NodeList anchors=(NodeList)InstagramGraph.this.xpath.evaluate("//a[@class='author-thumb']", dom, XPathConstants.NODESET);
+			if(anchors==null || anchors.getLength()<2)  {
+				LOG.warning("xpath1 return null");
+				return Collections.emptySet();
+				};
+			final Set<String> friends = new HashSet<>(anchors.getLength());
+			
+			for(int i=0;i< anchors.getLength();i++) {
+				final Element a =(Element)anchors.item(i);
+				if(a==null) continue;
+				String href=a.getAttribute("href")+"/following";
+				friends.add(href);
+				}
+			return friends;
+			}
+	
+		@Override
+		public String getName(final String url) {
+			final String tokens[]=url.split("[/]");
+			for(int i=0;i+1< tokens.length;i++) {
+				if(tokens[i].equals("u")) return tokens[i+1];
+				}
+			return url;
+			}
+		}
+	
+	private class StalkfestHandler implements Handler {
+		@Override
+		public Set<String> getFriends(final Document dom) throws Exception{
+			if(dom==null || dom.getDocumentElement()==null) {
+				LOG.warning("dom is null/empty");
+				return Collections.emptySet();
+				}
+			
+			final NodeList divs=(NodeList)InstagramGraph.this.xpath.evaluate("//div[contains(@class,'some-fellowsMedium')]", dom, XPathConstants.NODESET);
+			if(divs==null || divs.getLength()<2)  {
+				LOG.warning("xpath1 return null");
+				return Collections.emptySet();
+				};
+			final NodeList anchors = (NodeList)InstagramGraph.this.xpath.evaluate("//a[@href and contains(@class,'some-item-user')]", divs.item(1), XPathConstants.NODESET);
+			if(anchors==null || anchors.getLength()==0)  {
+				LOG.warning("xpath2 return null");
+				return Collections.emptySet();
+				};
+			
+			final Set<String> friends = new HashSet<>(anchors.getLength());
+			
+			for(int i=0;i< anchors.getLength();i++) {
+				final Element a =(Element)anchors.item(i);
+				if(a==null) continue;
+				String href="https://stalkfest.com"+a.getAttribute("href")+"friends";
+				friends.add(href);
+				}
+			return friends;
+			}
+	
+		@Override
+		public String getName(final String url) {
+			final String tokens[]=url.split("[/]");
+			for(int i=0;i+1< tokens.length;i++) {
+				if(tokens[i].equals("account")) return tokens[i+1];
+				}
+			return url;
+			}
+		}
+	
 	private final Map<String, User> url2user = new HashMap<>();
+	private Handler handler = null;
+	
 	
 	private class User {
 		final String url;
@@ -66,11 +148,7 @@ public class InstagramGraph extends Launcher {
 			}
 		
 		String getName() {
-			String tokens[]=url.split("[/]");
-			for(int i=0;i+1< tokens.length;i++) {
-				if(tokens[i].equals("account")) return tokens[i+1];
-				}
-			return url;
+			return InstagramGraph.this.handler.getName(this.url);
 			}
 		
 		@Override
@@ -108,7 +186,7 @@ public class InstagramGraph extends Launcher {
 			final String content;
 			try {
 				content = client.execute(httpGet,responseHandler);
-				Thread.sleep(10*1000);
+				Thread.sleep(1*1000);
 				}
 			catch(Throwable err) {
 				LOG.warning(err);
@@ -120,31 +198,13 @@ public class InstagramGraph extends Launcher {
 				LOG.warning("dom is null/empty");
 				return;
 			}
-			LOG.info("dom ok.");
-			LOG.debug(this.xpath.evaluate("count(//div[contains(@class,'some-fellowsMedium')])",dom));
-			final NodeList divs=(NodeList)this.xpath.evaluate("//div[contains(@class,'some-fellowsMedium')]", dom, XPathConstants.NODESET);
-			if(divs==null || divs.getLength()<2)  {
-				LOG.warning("xpath1 return null");
-				return;
-				};
-			final NodeList anchors = (NodeList)this.xpath.evaluate("//a[@href and contains(@class,'some-item-user')]", divs.item(1), XPathConstants.NODESET);
-			if(anchors==null || anchors.getLength()==0)  {
-				LOG.warning("xpath2 return null");
-				return;
-				};
+
 			
-			final Set<String> remains = new HashSet<>();
-			
-			for(int i=0;i< anchors.getLength();i++) {
-				final Element a =(Element)anchors.item(i);
-				if(a==null) continue;
-				String href="https://stalkfest.com"+a.getAttribute("href")+"friends";
-				u.friends.add(href);
-				if(url2user.containsKey(href)) continue;
-				LOG.info("found "+href);
-				remains.add(href);
-				}
-			for(final String u2:remains) {
+			final Set<String> friends = this.handler.getFriends(dom);		
+			u.friends.addAll(friends);
+	
+			for(final String u2:friends) {
+				if(url2user.containsKey(u2)) continue;
 				scan(u2, depth+1);
 				}
 			}
@@ -182,6 +242,7 @@ public class InstagramGraph extends Launcher {
 			
 			for(final String s:args)
 				{
+				this.handler = new MySocialMateHandler();
 				scan(s,0);
 				}
 			
