@@ -1,10 +1,11 @@
-package sandbox;
+package sandbox.http;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -25,6 +26,8 @@ import org.apache.http.client.CookieStore;
 import org.apache.http.cookie.Cookie;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.cookie.BasicClientCookie;
+
+import sandbox.IOUtils;
 
 public class CookieStoreUtils  {
 	public static final String OPT_DESC="Cookie file. Obtained from sqlite3 -header -separator '   '  ~/.mozilla/firefox/xxx/cookies.sqlite 'select * from moz_cookies' ";
@@ -106,12 +109,19 @@ public class CookieStoreUtils  {
 		}
 	
 	/**  sqlite3 -header -separator '   '  ~/.mozilla/firefox/xxx/cookies.sqlite 'select * from moz_cookies' */
+	/** CREATE TABLE moz_cookies (id INTEGER PRIMARY KEY, baseDomain TEXT, originAttributes TEXT NOT NULL DEFAULT '', name TEXT, value TEXT, host TEXT, path TEXT, expiry INTEGER, lastAccessed INTEGER, creationTime INTEGER, isSecure INTEGER, isHttpOnly INTEGER, inBrowserElement INTEGER DEFAULT 0, sameSite INTEGER DEFAULT 0, CONSTRAINT moz_uniqueid UNIQUE (name, host, path, originAttributes));
+CREATE INDEX moz_basedomain ON moz_cookies (baseDomain, originAttributes);
+ */
 	public static BasicCookieStore readTsv(final File path) throws IOException {
+		return readTsv(path.toPath());
+		}
+	
+	public static BasicCookieStore readTsv(final Path path) throws IOException {
 		final BasicCookieStore store = new BasicCookieStore();
 		BufferedReader in = null;
 		Pattern tab=Pattern.compile("[\t]");
 		try {
-			in = IOUtils.openBufferedReaderFromFile(path);
+			in = IOUtils.openBufferedReaderFromPath(path);
 			String line =in.readLine();
 			if(line==null) throw new IOException("first line is missing");
 			String tokens[]=tab.split(line);

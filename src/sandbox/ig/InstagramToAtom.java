@@ -1,11 +1,9 @@
-package sandbox;
+package sandbox.ig;
 
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
-import java.io.StringReader;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
@@ -16,8 +14,8 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -37,10 +35,7 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.http.HttpHost;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicCookieStore;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -51,9 +46,11 @@ import com.beust.jcommander.Parameter;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.stream.JsonReader;
+
+import sandbox.IOUtils;
+import sandbox.Launcher;
+import sandbox.Logger;
+import sandbox.http.CookieStoreUtils;
 /**
 ```
 $ crontab -e
@@ -92,7 +89,7 @@ public class InstagramToAtom extends Launcher {
 	private boolean what_is_new_flag = false;
 
 	private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-	private CloseableHttpClient client = null;
+	private InstagramJsonScraper scraper = null;
 	private final XPath xpath = XPathFactory.newInstance().newXPath();
 
 	
@@ -105,27 +102,6 @@ public class InstagramToAtom extends Launcher {
 				(queryName.endsWith("/")?"":"/");
 		}
 		
-	private String queryHtml(final String queryName) throws IOException {
-		CloseableHttpResponse response = null;
-		InputStream httpIn = null;
-		try
-			{
-			response = InstagramToAtom.this.client.execute(new HttpGet(this.getUrl( queryName)));
-			httpIn = response.getEntity().getContent();
-			final String html = IOUtils.readStreamContent(httpIn);
-			return html;
-			}
-		catch(final IOException err)
-			{
-			LOG.error(err);
-			throw err;
-			}
-		finally
-			{
-			IOUtils.close(httpIn);
-			IOUtils.close(response);
-			}
-		}
 		
 		private Integer parseCount(final JsonElement je)
 			{
@@ -215,50 +191,10 @@ public class InstagramToAtom extends Launcher {
 	
 	private Set<Image> query(final Document owner,final String queryName) throws Exception
 		{
-		final String windowSharedData = "window._sharedData";
-		final String endObject="};";
-		String html = queryHtml(queryName);
-		int i= html.indexOf(windowSharedData);
-		if(i==-1) {
-			LOG.error("cannot find "+windowSharedData+" in "+getUrl(queryName));
-			return new HashSet<>();
-			}
-		html=html.substring(i+windowSharedData.length());
-		i= html.indexOf("{");
-		if(i==-1)
-			{
-			LOG.error("cannot find '{' after "+windowSharedData+" in "+getUrl(queryName)+" after "+html);
-			return new HashSet<>();
-			}
-		html=html.substring(i);
-		i = html.indexOf(endObject);
-		if(i==-1)
-			{
-			LOG.error("cannot find  "+endObject+" in "+getUrl(queryName));
-			return new HashSet<>();
-			}
-		html=html.substring(0, i+1);
-		final JsonReader jsr = new JsonReader(new StringReader(html));
-		jsr.setLenient(true);
-		final JsonParser parser = new JsonParser();
-		JsonElement root;
-		try {
-			root = parser.parse(jsr);
-			}
-		catch(final JsonSyntaxException err) {
-			LOG.error(err);
-			return new HashSet<>();
-			}
-		finally
-			{
-			jsr.close();
-			}
-		if(!root.isJsonObject())
-			{
-			LOG.error("root is not json object in "+getUrl(queryName));
-			return new HashSet<>();
-			}
+		Optional<JsonObject> jsonObj = scraper.apply(queryName);
 		final Set<Image> nodes =  new TreeSet<>();
+		if(!jsonObj.isPresent()) return nodes;
+		JsonObject root= jsonObj.get();
 		searchNodes(owner,nodes,null,root.getAsJsonObject());
 		nodes.removeIf(N->N.getSrc()==null && N.getSrc().isEmpty());
 		if(nodes.isEmpty())
@@ -734,7 +670,7 @@ public class InstagramToAtom extends Launcher {
 				builder.setDefaultCookieStore(cookies);
 			}
 			
-			this.client = builder.build();
+			this.scraper = new InstagramJsonScraper(builder.build());
 			
 
 			convertIgFilesToHtml();
@@ -770,7 +706,7 @@ public class InstagramToAtom extends Launcher {
 			w.flush();
 			w.close();
 			
-			this.client.close();this.client=null;
+			this.scraper.close();this.scraper=null;
 			return 0;
 			}
 		catch(final Exception err)
@@ -781,7 +717,7 @@ public class InstagramToAtom extends Launcher {
 		finally
 			{
 			IOUtils.close(w);
-			IOUtils.close(this.client);
+			IOUtils.close(this.scraper);
 			}
 		
 		}

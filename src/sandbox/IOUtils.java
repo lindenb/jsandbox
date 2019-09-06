@@ -5,7 +5,6 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -98,8 +97,12 @@ public static BufferedReader openBufferedReader(final String path) throws IOExce
 	}
 
 public static BufferedReader openBufferedReaderFromFile(final File path) throws IOException {
-	return new BufferedReader(new FileReader(path));
+	return openBufferedReaderFromPath(path.toPath());
 	}
+public static BufferedReader openBufferedReaderFromPath(final Path path) throws IOException {
+	return new BufferedReader(Files.newBufferedReader(path));
+	}
+
 
 public static String slurp(final File file) throws IOException {
 	Reader r=null;

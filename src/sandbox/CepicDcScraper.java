@@ -24,6 +24,8 @@ import org.apache.http.message.BasicNameValuePair;
 
 import com.beust.jcommander.Parameter;
 
+import sandbox.http.CookieStoreUtils;
+
 public class CepicDcScraper extends Launcher {
 	private static final Logger LOG = Logger.builder(CepicDcScraper.class).build();
 	private static final int YEAR_START=1979;

@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.ig;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -9,6 +9,14 @@ import java.util.List;
 import javax.imageio.ImageIO;
 
 import com.beust.jcommander.Parameter;
+
+import sandbox.ColorParser;
+import sandbox.ImageUtils;
+import sandbox.Launcher;
+import sandbox.Logger;
+import sandbox.NoSplitter;
+import sandbox.StringUtils;
+import sandbox.ColorParser.Converter;
 
 public class InstaPanorama extends Launcher {
 	private static final String TOKEN="__TOKEN__";
