@@ -1,6 +1,7 @@
 package sandbox;
 
 import java.io.FileReader;
+import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringReader;
 
@@ -21,6 +22,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 import org.w3c.tidy.Tidy;
 
+import sandbox.io.NullWriter;
+
 public class HtmlParser {
 private static final Logger LOG = Logger.builder(HtmlParser.class).build();
 
@@ -34,6 +37,7 @@ public HtmlParser() {
 		this.tidy.setXmlOut(true);
 		this.tidy.setShowErrors(0);
 		this.tidy.setShowWarnings(false);
+		this.tidy.setErrout(new PrintWriter(new NullWriter()));
 		final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		dbf.setNamespaceAware(false);
 		this.db = dbf.newDocumentBuilder();

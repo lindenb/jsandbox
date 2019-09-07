@@ -1,36 +1,28 @@
 package sandbox.ig;
 
-import java.io.IOException;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
-import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicCookieStore;
-import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.beust.jcommander.Parameter;
@@ -50,7 +42,11 @@ public class InstagramGraph extends Launcher {
 
 	@Parameter(names={"-c","--cookies"},description=CookieStoreUtils.OPT_DESC)
 	private Path cookieStoreFile  = null;
-
+	@Parameter(names={"-d","--max-depth"},description="max recursive depth")
+	private int max_depth=2;
+	@Parameter(names={"-root","--root"},description="display only root mutual relations")
+	private boolean root_only = false;
+	
 	private CloseableHttpClient client = null;
 	private XPath xpath;
 	private int id_generator=0;
@@ -141,9 +137,11 @@ public class InstagramGraph extends Launcher {
 	private class User {
 		final String url;
 		final int id;
+		int depth;
 		final Set<String> friends= new HashSet<>();
-		User(String url) {
+		User(String url,int depth) {
 			this.url = url;
+			this.depth = depth;
 			this.id=(++id_generator);
 			}
 		
@@ -168,43 +166,49 @@ public class InstagramGraph extends Launcher {
 		try {
 			User u = this.url2user.get(url);
 			if(u!=null) {
+				u.depth = Math.min(u.depth, depth);
 				return;
 				}
-			LOG.info(url+" "+depth);
-			
-			u=new User(url);
+			u=new User(url,depth);
+			LOG.debug(u.getName()+" "+depth+" "+this.url2user.size());
 			this.url2user.put(url, u);
 			
-			if(depth>2) return;
-			
+			if(root_only && depth>1) return;
+			if(depth>=this.max_depth) return;
+			final Document dom;
 			final HttpGet httpGet=new HttpGet(url);
-			this.client.execute(httpGet);
 			httpGet.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
 			httpGet.setHeader("Connection", "keep-alive");
 			httpGet.setHeader("Accept-Language", "en-US,en;q=0.5");
-			final ResponseHandler<String> responseHandler = new BasicResponseHandler();
-			final String content;
+
 			try {
-				content = client.execute(httpGet,responseHandler);
-				Thread.sleep(1*1000);
-				}
-			catch(Throwable err) {
+			final String content;
+			
+			 try(CloseableHttpResponse response = client.execute(httpGet)) {
+			 	final HttpEntity entity = response.getEntity();
+  				content = EntityUtils.toString(entity);
+  				EntityUtils.consume(entity);
+			 	}
+			catch(final Throwable err) {
 				LOG.warning(err);
 				return;
 				}
-			LOG.info("fetched.");
-			final Document dom=new HtmlParser().setNamespaceAware(false).parseDom(content);
+			
+			dom=new HtmlParser().setNamespaceAware(false).parseDom(content);
 			if(dom==null || dom.getDocumentElement()==null) {
 				LOG.warning("dom is null/empty");
 				return;
 			}
+			} finally {
+			httpGet.releaseConnection();
+			}
 
 			
-			final Set<String> friends = this.handler.getFriends(dom);		
+			final Set<String> friends = this.handler.getFriends(dom);
 			u.friends.addAll(friends);
 	
 			for(final String u2:friends) {
-				if(url2user.containsKey(u2)) continue;
+				// if(url2user.containsKey(u2)) continue; NON? adjust min.depth
 				scan(u2, depth+1);
 				}
 			}
@@ -240,21 +244,33 @@ public class InstagramGraph extends Launcher {
 			
 			this.client = builder.build();
 			
+			if(!args.isEmpty()) {
+			if(args.get(0).contains("socialmate")) {
+				this.handler = new MySocialMateHandler();
+				}
+			else
+				{
+				this.handler = new StalkfestHandler();
+				}
+			}
+			
 			for(final String s:args)
 				{
-				this.handler = new MySocialMateHandler();
 				scan(s,0);
 				}
 			
 			PrintStream out=System.out;
 			out.println("digraph G {");
 			for(final User u: this.url2user.values()) {
-				out.println("n"+u.id+";");
+				if(root_only && u.depth >1) continue;
+				out.println("n"+u.id+"[label=\""+u.getName()+"\"];");
 				}
 			for(final User u: this.url2user.values()) {
+				if(root_only && u.depth >1) continue;
 				for(final String f:u.friends) {
-					User u2=this.url2user.get(f);
-					if(u2==null || u2.getName().compareTo(u.getName())<=0) continue;
+					final User u2=this.url2user.get(f);
+					if(root_only && !u2.friends.contains(u.url)) continue;
+					
 					out.println("n"+u.id+" -> n"+u2.id+";");
 					}
 				}

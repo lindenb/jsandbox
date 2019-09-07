@@ -194,12 +194,12 @@ public class InstagramToAtom extends Launcher {
 		Optional<JsonObject> jsonObj = scraper.apply(queryName);
 		final Set<Image> nodes =  new TreeSet<>();
 		if(!jsonObj.isPresent()) return nodes;
-		JsonObject root= jsonObj.get();
+		final JsonObject root= jsonObj.get();
 		searchNodes(owner,nodes,null,root.getAsJsonObject());
 		nodes.removeIf(N->N.getSrc()==null && N.getSrc().isEmpty());
 		if(nodes.isEmpty())
 			{
-			LOG.warning("No image found for "+queryName+"."+root);
+			LOG.warning("No image found for "+queryName+".");
 			}
 		return nodes;
 		}
