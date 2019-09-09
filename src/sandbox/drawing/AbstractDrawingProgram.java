@@ -14,8 +14,8 @@ import sandbox.ColorParser;
 import sandbox.ImageUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.NoSplitter;
 import sandbox.jcommander.DimensionConverter;
+import sandbox.jcommander.NoSplitter;
 
 public abstract class AbstractDrawingProgram extends Launcher {
 	private static final Logger LOG = Logger.builder(AbstractDrawingProgram.class).build();

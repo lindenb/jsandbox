@@ -231,7 +231,7 @@ $(eval $(call compile,cepicdcscraper,sandbox.CepicDcScraper,${jcommander.jar} ${
 $(eval $(call compile,htmlparser,sandbox.HtmlParser,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,osm2svg,sandbox.OsmToSvg,${jcommander.jar}))
 $(eval $(call compile,img2palette,sandbox.ImageToPalette,${jcommander.jar}))
-$(eval $(call compile,halftone,sandbox.Halftone,${jcommander.jar}))
+$(eval $(call compile,halftone,sandbox.drawing.Halftone,${jcommander.jar}))
 $(eval $(call compile,igpano,sandbox.ig.InstaPanorama,${jcommander.jar}))
 $(eval $(call compile,drawinggrid,sandbox.drawing.DrawingGrid,${jcommander.jar}))
 $(eval $(call compile,flickr2atom,sandbox.flickr.FlickrToAtom,${jcommander.jar} ${google.gson.jars} ${apache.httpclient.jars}))

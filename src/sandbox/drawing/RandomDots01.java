@@ -12,8 +12,8 @@ import java.util.function.DoubleSupplier;
 import com.beust.jcommander.Parameter;
 
 import sandbox.Logger;
-import sandbox.NoSplitter;
 import sandbox.jcommander.DoubleParamSupplier;
+import sandbox.jcommander.NoSplitter;
 
 public class RandomDots01 extends AbstractDrawingProgram {
 	

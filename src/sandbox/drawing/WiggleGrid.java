@@ -27,10 +27,10 @@ import sandbox.ColorParser;
 import sandbox.ImageUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.NoSplitter;
 import sandbox.StringUtils;
 import sandbox.jcommander.DimensionConverter;
 import sandbox.jcommander.DoubleParamSupplier;
+import sandbox.jcommander.NoSplitter;
 
 public class WiggleGrid extends Launcher {
 	private static final Logger LOG = Logger.builder(WiggleGrid.class).build();

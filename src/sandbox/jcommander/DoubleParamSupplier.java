@@ -9,6 +9,19 @@ import sandbox.StringUtils;
 
 public class DoubleParamSupplier implements IStringConverter<DoubleSupplier>{
 	
+	public static DoubleSupplier createReference(final DoubleSupplier other) {
+		return new DoubleSupplier() {
+			@Override
+			public double getAsDouble() {
+				return other.getAsDouble();
+				}
+			@Override
+			public String toString() {
+				return "copy-of("+other+")";
+				}
+		};
+	}
+	
 	public static DoubleSupplier createDefault(final double d) {
 		return new DoubleSupplier() {
 			@Override
