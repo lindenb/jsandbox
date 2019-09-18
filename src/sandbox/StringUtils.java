@@ -1,7 +1,21 @@
 package sandbox;
 
+import java.math.BigInteger;
+import java.security.MessageDigest;
+
 public class StringUtils {
 
+public static String md5(final String s) {
+	 MessageDigest md;
+	 try {
+		 md = MessageDigest.getInstance("MD5");
+	 } catch (final Exception err) {
+		throw new RuntimeException(err);
+	 	}
+	md.update(s.getBytes());
+	return new BigInteger(1,md.digest()).toString(16);
+}
+	
 public static boolean isBlank(final String s) {
 	if(s==null) return true;
 	for(int i=0;i< s.length();i++) {

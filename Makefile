@@ -205,6 +205,7 @@ $(eval $(call compile,rgddigest,sandbox.RGDDigest,${apache.commons.cli} ${slf4j.
 $(eval $(call compile,saxscript,sandbox.SAXScript,${apache.commons.cli} ${slf4j.jars} ${google.gson.jars} ))
 $(eval $(call compile,nashornserver,sandbox.NashornServer,${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ))
 $(eval $(call compile,filesaveserver,sandbox.http.FileSaveServer,${jcommander.jar} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars} ${log4j.jars}))
+$(eval $(call compile,urlsurveyserver,sandbox.http.UrlSurveyServer,${jcommander.jar} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars} ${log4j.jars}))
 $(eval $(call compile,githistory,sandbox.GitHistory,${apache.commons.cli}  ))
 $(eval $(call compile,xml2xsd,sandbox.XmlToXsd,${apache.commons.cli}  ))
 $(eval $(call compile,java2graph,sandbox.Java2Graph,${apache.commons.cli}  ))
