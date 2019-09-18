@@ -1,6 +1,7 @@
 package sandbox.jcommander;
 
 import java.util.Arrays;
+import java.util.Random;
 import java.util.function.DoubleSupplier;
 
 import com.beust.jcommander.IStringConverter;
@@ -8,6 +9,7 @@ import com.beust.jcommander.IStringConverter;
 import sandbox.StringUtils;
 
 public class DoubleParamSupplier implements IStringConverter<DoubleSupplier>{
+	public static final String OPT_DESC="";
 	
 	public static DoubleSupplier createReference(final DoubleSupplier other) {
 		return new DoubleSupplier() {
@@ -54,7 +56,9 @@ public class DoubleParamSupplier implements IStringConverter<DoubleSupplier>{
 		if(s.equals("random") || s.equals("random()")) {
 			return ()->Math.random();
 		}
-		
+		if(s.equals("gaussian") || s.equals("gaussian()")) {
+			return new GaussianSupplier();
+		}
 		if(s.startsWith("random(") && s.endsWith(")")) {
 			s = s.substring(7,s.length()-1);
 			try {
@@ -103,6 +107,18 @@ public class DoubleParamSupplier implements IStringConverter<DoubleSupplier>{
 			idx++;
 			if(idx>=array.length) idx=0;
 			return v;
+			}
+		}
+	private static class GaussianSupplier implements DoubleSupplier
+		{
+		final Random rnd=new Random();
+		@Override
+		public double getAsDouble() {
+			return rnd.nextGaussian();
+			}
+		@Override
+		public String toString() {
+			return "gaussian";
 			}
 		}
 	}
