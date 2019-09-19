@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.twitter;
 
 
 import java.io.*;
@@ -34,6 +34,13 @@ import org.scribe.model.Verb;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import com.google.gson.*;
+
+import sandbox.LogInputStream;
+import sandbox.twitter.AbstractTwitterApplication.Entity;
+import sandbox.twitter.AbstractTwitterApplication.HashTagEntity;
+import sandbox.twitter.AbstractTwitterApplication.MediaEntity;
+import sandbox.twitter.AbstractTwitterApplication.UrlEntity;
+import sandbox.twitter.AbstractTwitterApplication.UserEntity;
 
 /** TwitterBackup */
 public class TwitterBackup

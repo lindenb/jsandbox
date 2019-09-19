@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.oauth;
 
 import java.awt.Desktop;
 import java.io.Console;
@@ -13,6 +13,10 @@ import org.scribe.builder.api.Api;
 import org.scribe.model.Verifier;
 import org.scribe.oauth.OAuthService;
 import com.beust.jcommander.Parameter;
+
+import sandbox.Launcher;
+import sandbox.Logger;
+import sandbox.StringUtils;
 
 /**
  *
@@ -36,6 +40,7 @@ public abstract class AbstractOAuthApplication
 		{
 		}
 	
+	/** prefix used to define keys when looking in the user preferences */
 	protected abstract String getPreferencesPrefix();
 		
 	
@@ -127,7 +132,7 @@ public abstract class AbstractOAuthApplication
     		{
     		return JOptionPane.showInputDialog(null, www);
     		}
-    	catch(Exception err)
+    	catch(final Exception err)
     		{
     		LOG.info("GUI error: "+err);
     		}
@@ -140,12 +145,11 @@ public abstract class AbstractOAuthApplication
     		}
     	else
     		{
-	    	Scanner in = new Scanner(System.in);
-	    	token=in.nextLine();
-	    	in.close();
-	    	
+	    	try(Scanner in = new Scanner(System.in)) {
+		    	token=in.nextLine();
+		    	}
     		}
-    	if(token==null || token.trim().isEmpty())
+    	if(StringUtils.isBlank(token))
     		{
     		LOG.info("no token");
     		return null;

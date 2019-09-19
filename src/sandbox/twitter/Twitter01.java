@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.twitter;
 
 
 import com.google.common.collect.Lists;

@@ -4,8 +4,6 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.math.BigInteger;
-import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -50,6 +48,7 @@ import com.google.gson.JsonObject;
 import sandbox.IOUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
+import sandbox.StringUtils;
 import sandbox.http.CookieStoreUtils;
 /**
 ```
@@ -326,14 +325,7 @@ public class InstagramToAtom extends Launcher {
 		
 	
 	private String md5(final String s) {
-		 MessageDigest md;
-		 try {
-			 md = MessageDigest.getInstance("MD5");
-		 } catch (final Exception err) {
-			throw new RuntimeException(err);
-		 	}
-		md.update(s.getBytes());
-		return new BigInteger(1,md.digest()).toString(16);
+		return StringUtils.md5(s);
 		}
 	
 	private File getCacheDir() {

@@ -38,10 +38,14 @@ public class DoubleParamSupplier implements IStringConverter<DoubleSupplier>{
 	}
 	
 	public static DoubleSupplier createRandomBetween(final double d1,double d2) {
+		return createRandomBetween(()->Math.random(),d1,d2);
+	}
+	
+	public static DoubleSupplier createRandomBetween(final DoubleSupplier randomSupplier,final double d1,double d2) {
 		return new DoubleSupplier() {
 			@Override
 			public double getAsDouble() {
-				return d1+Math.random()*(d2-d1);
+				return d1+randomSupplier.getAsDouble()*(d2-d1);
 				}
 			@Override
 			public String toString() {
@@ -50,10 +54,11 @@ public class DoubleParamSupplier implements IStringConverter<DoubleSupplier>{
 		};
 	}
 	
+	
 	@Override
 	public DoubleSupplier convert(String s) {
 		s=s.toLowerCase();
-		if(s.equals("random") || s.equals("random()")) {
+		if(s.equals("random") || s.equals("random()") || s.equals("rnd") || s.equals("rnd()")) {
 			return ()->Math.random();
 		}
 		if(s.equals("gaussian") || s.equals("gaussian()")) {

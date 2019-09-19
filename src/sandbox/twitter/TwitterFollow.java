@@ -10,7 +10,7 @@
  *
  */
 
-package sandbox;
+package sandbox.twitter;
 
 import java.math.BigInteger;
 import java.util.List;
@@ -20,6 +20,8 @@ import java.util.List;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+
+import sandbox.twitter.AbstractTwitterApplication.Consumer;
 
 
 

@@ -13,7 +13,7 @@
  *  make a graph of a twitter account
  */
 
-package sandbox;
+package sandbox.twitter;
 
 import java.io.File;
 import java.io.InputStreamReader;
@@ -44,6 +44,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
+import sandbox.LogInputStream;
+import sandbox.Logger;
+
 import com.beust.jcommander.Parameter;
 
 

@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.flickr;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -39,6 +39,11 @@ import javax.xml.stream.events.XMLEvent;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+
+import sandbox.AbstractApplication;
+import sandbox.Logger;
+import sandbox.AbstractApplication.Status;
+
 import org.w3c.dom.Attr;
 
 

@@ -14,7 +14,7 @@
  * Compilation:
  *        cd jsandbox; ant twittermosaic
  */
-package sandbox;
+package sandbox.twitter;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;

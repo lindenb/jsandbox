@@ -4,7 +4,6 @@ import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Composite;
 import java.awt.Graphics2D;
-import java.awt.geom.Arc2D;
 import java.awt.image.BufferedImage;
 import java.util.Random;
 import java.util.function.DoubleSupplier;
@@ -29,10 +28,12 @@ public class RandomDots01 extends AbstractDrawingProgram {
 	private String countStr ="0.0001";
 	@Parameter(names= {"-s","--shape"},description="shape")
 	private ShapeFactory shapeFactory = ShapeFactory.circle;
-
+	@Parameter(names= {"-X"},description="random supplier for X axis")
+	private DoubleSupplier randomX =DoubleParamSupplier.createRandomBetween(0, 1.0);
+	@Parameter(names= {"-Y"},description="random supplier for Y axis")
+	private DoubleSupplier randomY =DoubleParamSupplier.createRandomBetween(0, 1.0);
 
 	
-	private final Random rnd=new Random(System.currentTimeMillis());
 
 	@Override
 	protected int paint(BufferedImage img, Graphics2D g) {
@@ -58,8 +59,8 @@ public class RandomDots01 extends AbstractDrawingProgram {
 		
 		final Composite oldComposite = g.getComposite();
 		while(n_dots > 0L) {
-			double cx = rnd.nextInt(img.getWidth());
-			double cy = rnd.nextInt(img.getHeight());
+			double cx = randomX.getAsDouble() * img.getWidth();
+			double cy = randomX.getAsDouble() * img.getHeight();
 			double cr = this.radius.getAsDouble();
 			float gray = (float)Math.min(1,Math.max(0.0,grayValue.getAsDouble()));
 			g.setColor(new Color(gray,gray,gray));

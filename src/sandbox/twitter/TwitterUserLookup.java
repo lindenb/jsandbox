@@ -10,7 +10,7 @@
  *
  */
 
-package sandbox;
+package sandbox.twitter;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -20,6 +20,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.commons.cli.CommandLine;
+
+import sandbox.twitter.AbstractTwitterApplication.UserEntity;
 
 
 

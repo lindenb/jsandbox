@@ -19,7 +19,7 @@
  *        java -jar dist/twitterkml.jar -g (geonames-id) -o file (twitter-id)
  */
 
-package sandbox;
+package sandbox.twitter;
 
 import java.io.File;
 import java.io.FileOutputStream;

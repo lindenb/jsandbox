@@ -96,7 +96,11 @@ public class UrlSurveyServer extends AbstractJettyAppication {
 						w.writeStartElement("html");
 						w.writeStartElement("head");
 						w.writeStartElement("script");
-						w.writeCharacters("function run(id,url) {var node=document.getElementById(id);node.parentNode.removeChild(node);window.open(url);}");
+						w.writeCharacters("function run(id,url,h) {"
+								+ "var node=document.getElementById(id);node.parentNode.removeChild(node);"
+								+ "var r = new XMLHttpRequest();r.open('GET', document.location+'/?md5='+h, true); r.send();"
+								+ "window.open(url);"
+								+ "}");
 						w.writeEndElement();
 						w.writeStartElement("title");
 						w.writeCharacters(UrlSurveyServer.class.getName());
@@ -105,12 +109,13 @@ public class UrlSurveyServer extends AbstractJettyAppication {
 
 						w.writeStartElement("body");
 						int id=0;
-						for(WebSite ws: webSites) {
+						for(final WebSite ws: webSites) {
 							w.writeStartElement("a");
 							w.writeAttribute("id","a"+(++id));
+							w.writeAttribute("class","r"+(id%2));
 							w.writeAttribute("alt", ws.url);
-							w.writeAttribute("href","javascript:run('a"+id+"','"+ ws.url+"');");
-							w.writeAttribute("ping",getContexPath()+"/?md5="+ws.md5());
+							w.writeAttribute("title", ws.url);
+							w.writeAttribute("href","javascript:run('a"+id+"','"+ ws.url+"','"+ ws.md5() +"');");
 							w.writeCharacters(ws.url);
 							w.writeEndElement();//a
 							w.writeCharacters(" ");
