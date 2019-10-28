@@ -44,6 +44,7 @@ public class DrawingGrid extends JFrame {
 	private final JPanel drawingArea;
 	private final SpinnerNumberModel ticksSpinner;
 	private final JCheckBox rotateCbox;
+	private final JCheckBox equiDistCbox;
 	private File imageFile;
 	private Point mouseStart=null;
 	private Point mousePrev=null;
@@ -75,6 +76,7 @@ public class DrawingGrid extends JFrame {
 	top.add(new JLabel("Ticks:",JLabel.RIGHT));
 	top.add(new JSpinner(ticksSpinner=new SpinnerNumberModel(8, 2, 30,2)));
 	top.add(rotateCbox=new JCheckBox("Rotation",true));
+	top.add(equiDistCbox=new JCheckBox("Equi.",false));
 	JButton but;
 	top.add(but=new JButton("Prev"));
 	but.addActionListener(E->switchImage(-1));
@@ -159,6 +161,7 @@ public class DrawingGrid extends JFrame {
 	
 	ticksSpinner.addChangeListener(E->drawingArea.repaint());
 	rotateCbox.addActionListener(E->drawingArea.repaint());
+	equiDistCbox.addActionListener(E->drawingArea.repaint());
 	}
 	
 	private boolean isPortrait(final int w,final int h) {
@@ -213,8 +216,17 @@ public class DrawingGrid extends JFrame {
 		int num2 = num1/2;
 		
 		final Rectangle bounds =tr.createTransformedShape(new Rectangle(0,0,this.srcImage.getWidth(),this.srcImage.getHeight())).getBounds();
+		double dw = bounds.width/(double)num1;
+		double dh = bounds.height/(double)num1;
+		if(this.equiDistCbox.isSelected()) {
+			dw = Math.min(dw,dh);
+			dh = dw;
+		}
 		
-		for(int i=1;i< num1;i++) {
+		
+		int i=1;
+		double p= bounds.x  + dw;
+		while(p < bounds.getMaxX()) {
 			if(i%num2==0) {
 				g.setStroke(new BasicStroke(1.5f));
 				g.setColor(Color.RED);
@@ -224,11 +236,29 @@ public class DrawingGrid extends JFrame {
 				g.setStroke(new BasicStroke(0.5f));
 				g.setColor(Color.BLUE);
 				}
-			int x= bounds.x + (int)(i*(bounds.width/(double)num1));
-			int y= bounds.y + (int)(i*(bounds.height/(double)num1));
-			g.drawLine(x, bounds.y, x, bounds.y+bounds.height);
-			g.drawLine(bounds.x , y, bounds.x+bounds.width, y);
-			}
+			g.drawLine((int)p, bounds.y, (int)p, bounds.y+bounds.height);
+			p+= dw;
+			i++;
+		}
+		
+		i=1;
+		p= bounds.y + dh;
+		while(p < bounds.getMaxY()) {
+			if(i%num2==0) {
+				g.setStroke(new BasicStroke(1.5f));
+				g.setColor(Color.RED);
+				}
+			else
+				{
+				g.setStroke(new BasicStroke(0.5f));
+				g.setColor(Color.BLUE);
+				}
+			g.drawLine(bounds.x , (int)p, bounds.x+bounds.width, (int)p);
+			p+= dh;
+			i++;
+		}
+		
+		
 		g.setPaintMode();
 		g.setStroke(stroke);
 		
