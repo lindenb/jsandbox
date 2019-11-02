@@ -197,7 +197,7 @@ $(eval $(call compile,divandb,sandbox.DivanDB,${google.gson.jars} ${apache.commo
 $(eval $(call compile,packageeclipsejars,sandbox.PackageEclipseJars,${apache.commons.cli}))
 $(eval $(call compile,htmlinxml,sandbox.HtmlInXml,${jcommander.jar}  ${jtidy.jars}))
 $(eval $(call compile,pubmedtrending,sandbox.PubmedTrending,${apache.commons.cli} ${slf4j.jars} ))
-$(eval $(call compile,atommerger,sandbox.AtomMerger, ${jcommander.jar}))
+$(eval $(call compile,atommerger,sandbox.feed.AtomMerger, ${jcommander.jar}))
 $(eval $(call compile,cookiestorefile,sandbox.CookieStoreUtils,${apache.httpclient.jars}))
 $(eval $(call compile,softwarefitness,sandbox.SoftwareFitness,${apache.commons.cli} ${slf4j.jars}))
 $(eval $(call compile,bmcaltmetrics,sandbox.BmcAltmetrics,${apache.commons.cli} ${slf4j.jars}))

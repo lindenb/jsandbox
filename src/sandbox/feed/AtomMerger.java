@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.feed;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -9,6 +9,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -25,7 +26,10 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import com.beust.jcommander.Parameter;
 
-import sandbox.feed.Atom;
+import sandbox.IOUtils;
+import sandbox.Launcher;
+import sandbox.Logger;
+import sandbox.date.DateParser;
 
 
 
@@ -34,13 +38,8 @@ public class AtomMerger extends Launcher
 	private static final Logger LOG=Logger.builder(AtomMerger.class).build();
 
 	
-	private static final String DATE_FORMATS[]={
-		"yyyy-MM-dd'T'HH:mm:ssXXX",
-		"EEE, dd MMM yyyy HH:mm:ss"
-		};
-	
 	@Parameter(names={"-o","--out"},description="output file")
-	File output;
+	private File output;
 	@Parameter(names={"-L","--limit"},description="limit number of items (-1: no limit)")
 	private int limitEntryCount=-1;
 	@Parameter(names={"--24"},description="limit to last 24 hours")
@@ -48,6 +47,8 @@ public class AtomMerger extends Launcher
 
 	
 	private static class DateExtractor implements Function<Node, Date> {
+		private final DateParser dateParser = new DateParser();
+
 		@Override
 		public Date apply(Node o1)
 			{
@@ -65,15 +66,8 @@ public class AtomMerger extends Launcher
 				return null;
 				}
 			
-			for (final String format : DATE_FORMATS) {
-				final SimpleDateFormat fmt = new SimpleDateFormat(format);
-				fmt.setLenient(true);
-				try {
-					return fmt.parse(updated);
-				}
-				catch (Exception err) {
-				}
-			}
+			final Optional<Date> optDate = this.dateParser.apply(updated);
+			if(optDate.isPresent()) return optDate.get();
 			LOG.info("bad date format : "+updated);
 			return null;
 			}
@@ -93,7 +87,7 @@ public class AtomMerger extends Launcher
 		public int compare(final Node o1,final Node o2) {
 			return getDate(o2).compareTo(getDate(o1));
 			}
-		}	
+		}
 	
 	private boolean ignoreErrors=false;
 	
@@ -162,11 +156,12 @@ public class AtomMerger extends Launcher
 						dom  = (
 								path.equals("-")?
 								db.parse(System.in):
-								db.parse(new File(path))
+								db.parse(path)
 								);
 						}
 					catch(final Exception err)
 						{
+						err.printStackTrace();
 						dom=null;
 						}
 					finally
@@ -218,7 +213,7 @@ public class AtomMerger extends Launcher
 							}
 						
 						}
-				} catch(Exception err)
+				} catch(final Throwable err)
 					{
 					if(this.ignoreErrors) {
 						LOG.warning("Ignore error" + err);
@@ -254,7 +249,7 @@ public class AtomMerger extends Launcher
 							new StreamResult(this.output)
 					);
 			return 0;
-		} catch (Exception e) {
+		} catch (final Throwable e) {
 			e.printStackTrace();
 			return -1;
 		} finally {
@@ -267,7 +262,7 @@ public class AtomMerger extends Launcher
 	
 	public static void main(String[] args)
 		{
-		System.setProperty("http.agent", ""); 
+		System.setProperty("http.agent",IOUtils.getUserAgent());
 		new AtomMerger().instanceMainWithExit(args);
 		}
 	
