@@ -1,0 +1,195 @@
+options {
+STATIC=false;
+LOOKAHEAD=3;
+FORCE_LA_CHECK=true;
+}
+
+
+PARSER_BEGIN(SwijParser)
+
+package sandbox.swij;
+import java.util.*;
+import java.io.*;
+
+
+@SuppressWarnings(value={"unchecked","unused"})
+@javax.annotation.Generated(value="schemaParser")
+public class SwijParser
+{
+public class Modifiers extends HashMap<String,Object> {
+}
+public abstract class Type {
+	abstract String getCName();
+	abstract boolean isPrimitive();
+	boolean isVoid() { return false;}
+	boolean isShort() { return false;}
+	boolean isInt() { return false;}
+	boolean isLong() { return false;}
+	boolean isFloat() { return false;}
+	boolean isDouble() { return false;}
+	boolean isString() { return false;}
+	}
+public abstract class NumberType extends Type {}
+public class IntType extends NumberType {
+	@Override String getCName() { return "int";}
+	@Override boolean isPrimitive() { return true;}
+	@Override boolean isInt() { return true;}
+	}
+public class ShortType extends NumberType {
+	@Override String getCName() { return "short";}
+	@Override boolean isPrimitive() { return true;}
+	@Override boolean isShort() { return true;}
+	}
+public class LongType extends NumberType {
+	@Override String getCName() { return "long";}
+	@Override boolean isPrimitive() { return true;}
+	@Override boolean isLong() { return true;}
+	}
+public class FloatType extends Type {
+	@Override String getCName() { return "float";}
+	@Override boolean isPrimitive() { return true;}
+	@Override boolean isFloat() { return true;}
+	}
+public class DoubleType extends Type {
+	@Override String getCName() { return "double";}
+	@Override boolean isPrimitive() { return true;}
+	@Override boolean isDouble() { return true;}
+	}
+public class StringType extends Type {
+	@Override String getCName() { return "char*";}
+	@Override boolean isPrimitive() { return false;}
+	@Override boolean isString() { return true;}
+	}
+public class VoidType extends Type {
+	@Override String getCName() { return "void";}
+	@Override boolean isPrimitive() { return false;}
+	@Override boolean isVoid() { return true;}
+	}
+public class StructType extends Type {
+	final String name;
+	StructType(final String name) { this.name=name;}
+	@Override String getCName() { return name;}
+	@Override boolean isPrimitive() { return false;}
+	}
+public class PointerType extends Type {
+	final Type delegate;
+	PointerType(final Type delegate) { this.delegate=delegate;}
+	@Override String getCName() { return delegate.getCName()+"*";}
+	@Override boolean isPrimitive() { return false;}
+	}
+
+public class Param {
+	String name;
+	Type type;
+	}
+public class Function {
+	Type type;
+	String name;
+	List<Param> parameters = new ArrayList<Param>();
+	}
+List<Function> functions = new ArrayList<Function>();
+public static void main(final  String args[]) {
+	try { new SwijParser(System.in).input();} catch(final Throwable err) {err.printStackTrace();System.exit(-1);}
+	}
+}
+
+PARSER_END(SwijParser)
+
+SKIP :
+{
+" "
+| "\t"
+| "\n"
+| "\r"
+| <"//" (~["\n"])* "\n">
+| <"/*">: INSIDE_COMMENT
+}
+
+<INSIDE_COMMENT>
+SKIP:
+{
+        <"*/">: DEFAULT
+|       <~[]>
+}
+
+TOKEN : /* LITERALS */
+{
+
+
+  <SINGLE_QUOTE_LITERAL: "\'" (~["\'"])*"\'" >
+| <DOUBLE_QUOTE_LITERAL: "\"" (~["\""])*"\"" >
+| <OPAR:"(">
+| <CPAR:")">
+| <OARR:"[">
+| <CARR:"]">
+| <COMMA:",">
+| <STRUCT:"struct">
+| <EQ:"=">
+| <SEMICOLON:";">
+| <UNSIGNED: "unsigned">
+| <VOID: "void">
+| <INT: "int">
+| <SHORT: "short">
+| <LONG: "long">
+| <FLOAT: "float">
+| <DOUBLE: "double">
+| <CHAR: "char">
+| <STRING: "char*">
+| <TRUE: "true">
+| <FALSE: "false">
+| <#LETTER: ["_","a"-"z","A"-"Z"] >
+| <#DIGIT: ["0"-"9"] >
+| <#STAR: "*" >
+| <STARS: <STAR> (<STAR>)* >
+| <IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
+}
+
+public void input():{}
+    {
+    (struct()|fun())*<EOF>
+    }
+
+private void struct():{String name;}
+	{
+	<STRUCT> name=identifier() <SEMICOLON> 
+	}
+private void fun():{Param p; Function f=new Function();}
+	{
+	f.type=type() (modifiers())? f.name=identifier() <OPAR> ( p=param() {f.parameters.add(p);} (<COMMA> p=param() {f.parameters.add(p);} )* )? <CPAR> <SEMICOLON> {
+		this.functions.add(f);
+		}
+	}
+
+private Param param(): {Param p=new Param();}
+	{
+	p.type=type() p.name=identifier() {return p;}
+	}
+
+private Type type():{Type t=null;String s;Token t2=null;}
+    {
+	(
+	  <SHORT> { t=new ShortType();}
+	  | <INT> { t= new IntType();}
+	  | <LONG> { t= new LongType();}
+	  | <FLOAT> { t= new FloatType();}
+	  | <DOUBLE> { t= new DoubleType();}
+	  | <STRING> { t= new StringType();}
+	  | <VOID> { t= new VoidType();}
+	  | s=identifier() { t=new StructType(s);}
+        ) (t2=<STARS>)? { if(t2!=null) {for(int i=0;i< t2.image.length();i++) t=new PointerType(t);} return t;}
+    }
+
+private String identifier():{Token t;}
+	{
+	t=<IDENTIFIER> { return t.image;}
+	}
+
+private Modifiers modifiers():{Modifiers m=new Modifiers();}
+	{
+	<OARR> (keyvalue(m) (<COMMA> keyvalue(m))*)? <CARR> { return m;}
+	}
+
+private void keyvalue(Modifiers m):{String s;Object v;}
+	{
+	s=identifier() <EQ> (<TRUE>{v=true;}|<FALSE>{v=false;}) { m.put(s,v);}
+	}

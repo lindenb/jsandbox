@@ -240,10 +240,13 @@ $(eval $(call compile,flickr2atom,sandbox.flickr.FlickrToAtom,${jcommander.jar} 
 $(eval $(call compile,wigglegrid,sandbox.drawing.WiggleGrid,${jcommander.jar}))
 $(eval $(call compile,hatching01,sandbox.drawing.Hatching01,${jcommander.jar}))
 $(eval $(call compile,randomdots01,sandbox.drawing.RandomDots01,${jcommander.jar}))
+$(eval $(call compile,swij2guile,sandbox.swij.SwijToGuile,${jcommander.jar} ./src/sandbox/swij/SwijParser.java))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 
+./src/sandbox/swij/SwijParser.java : ./src/sandbox/swij/Swij.jj
+	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	mkdir -p tmp $(dir $@)
