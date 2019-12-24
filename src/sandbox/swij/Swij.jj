@@ -21,39 +21,53 @@ public class Modifiers extends HashMap<String,Object> {
 public abstract class Type {
 	abstract String getCName();
 	abstract boolean isPrimitive();
+	String getDefaultValue() { return "NULL";}
 	boolean isVoid() { return false;}
 	boolean isShort() { return false;}
 	boolean isInt() { return false;}
 	boolean isLong() { return false;}
 	boolean isFloat() { return false;}
 	boolean isDouble() { return false;}
+	boolean isBoolean() { return false;}
 	boolean isString() { return false;}
 	}
 public abstract class NumberType extends Type {}
+
+public class BooleanType extends Type {
+	@Override String getCName() { return "int";}//yes
+	@Override boolean isPrimitive() { return true;}
+	@Override boolean isBoolean() { return true;}
+	@Override String getDefaultValue() { return "0";}
+	}
 public class IntType extends NumberType {
 	@Override String getCName() { return "int";}
 	@Override boolean isPrimitive() { return true;}
 	@Override boolean isInt() { return true;}
+	@Override String getDefaultValue() { return "0";}
 	}
 public class ShortType extends NumberType {
 	@Override String getCName() { return "short";}
 	@Override boolean isPrimitive() { return true;}
 	@Override boolean isShort() { return true;}
+	@Override String getDefaultValue() { return "(short)0";}
 	}
 public class LongType extends NumberType {
 	@Override String getCName() { return "long";}
 	@Override boolean isPrimitive() { return true;}
 	@Override boolean isLong() { return true;}
+	@Override String getDefaultValue() { return "0L";}
 	}
 public class FloatType extends Type {
 	@Override String getCName() { return "float";}
 	@Override boolean isPrimitive() { return true;}
 	@Override boolean isFloat() { return true;}
+	@Override String getDefaultValue() { return "(float)0.0";}
 	}
 public class DoubleType extends Type {
 	@Override String getCName() { return "double";}
 	@Override boolean isPrimitive() { return true;}
 	@Override boolean isDouble() { return true;}
+	@Override String getDefaultValue() { return "0.0";}
 	}
 public class StringType extends Type {
 	@Override String getCName() { return "char*";}
@@ -137,6 +151,7 @@ TOKEN : /* LITERALS */
 | <STRING: "char*">
 | <TRUE: "true">
 | <FALSE: "false">
+| <BOOLEAN: ("bool"|"boolean")>
 | <#LETTER: ["_","a"-"z","A"-"Z"] >
 | <#DIGIT: ["0"-"9"] >
 | <#STAR: "*" >
@@ -175,6 +190,7 @@ private Type type():{Type t=null;String s;Token t2=null;}
 	  | <DOUBLE> { t= new DoubleType();}
 	  | <STRING> { t= new StringType();}
 	  | <VOID> { t= new VoidType();}
+	  | <BOOLEAN> { t= new BooleanType();}
 	  | s=identifier() { t=new StructType(s);}
         ) (t2=<STARS>)? { if(t2!=null) {for(int i=0;i< t2.image.length();i++) t=new PointerType(t);} return t;}
     }
