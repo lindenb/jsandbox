@@ -16,6 +16,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 
@@ -52,6 +53,17 @@ public class HtmlTidy extends Launcher {
 					root.removeChild(e);
 					changed=true;
 					break;
+					}
+				if(e.hasAttributes() && this.normalize_space) {
+					final NamedNodeMap nnm=e.getAttributes();
+					for(int i=0;i< nnm.getLength();i++) {
+						final Node att= nnm.item(i);
+						final String s1= att.getNodeValue();
+						final String s2= s1.replaceAll("[\\s]+", " ");
+						if(!s1.equals(s2)) {
+							e.setAttribute(att.getNodeName(),s2);
+							}
+						}
 					}
 				}
 			else if(c.getNodeType()==Node.COMMENT_NODE && this.removeComment) {
