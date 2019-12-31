@@ -29,6 +29,7 @@ private class GuileFun {
 	}
 	
 	void print(PrintStream w) {
+		final String margin="  ";
 		w.println("/**");
 		w.println(" * BEGIN_DOC");
 		w.println(" * ## "+getGuileName());
@@ -42,63 +43,87 @@ private class GuileFun {
 		w.println(" * ```");
 		w.println(" * END_DOC");
 		w.println(" **/");
-		w.print("static SCM ");
+		w.println("#define FUN_NAME \""+getGuileName()+"\"");
+		w.print("SCM_DEFINE(");
 		w.print(prefix);
 		w.print(fun.name);
-		w.print("(");
+		w.print(",FUN_NAME,");
+		w.print(fun.parameters.size());
+		w.print(",0,0,(");
 		for(int i=0;i< fun.parameters.size();i++) {
 			if(i>0) w.print(", ");
 			w.print("SCM ");
 			w.print("s_"+fun.parameters.get(i).name);
 		}
-		w.println(") {");
+		w.print("),\"(\" FUN_NAME \"");
+		
+		 for(int i=0;i< fun.parameters.size();i++) {
+                        w.print(" "+fun.parameters.get(i).name);
+                        }
+
+		w.println(") a wrapper for the C function "+ fun.name + "\") {");
 		if(!fun.type.isVoid()) {
-			w.println(fun.type.getCName()+" _ret = "+fun.type.getDefaultValue()+":");
+			w.println(margin + fun.type.getCName()+" _ret = "+fun.type.getDefaultValue()+":");
 			}
 		for(int i=0;i< fun.parameters.size();i++) {
 			final SwijParser.Param p = fun.parameters.get(i);
-			w.println(p.type.getCName()+" "+p.name+"="+p.type.getDefaultValue()+";");
+			w.println(margin + p.type.getCName()+" "+p.name+"="+p.type.getDefaultValue()+";");
 			}
 		for(int i=0;i< fun.parameters.size();i++) {
 			final SwijParser.Param p = fun.parameters.get(i);
 			if(p.type.isInt()) {
-				w.println("SCM_ASSERT(scm_is_integer(s_"+p.name+"),s_"+p.name+","+i+",\""+getGuileName()+"\");");
+				w.println(margin + "SCM_ASSERT(scm_is_integer(s_"+p.name+"),s_"+p.name+","+i+",FUN_NAME);");
+				}
+			else if(p.type.isShort()) {
+				w.println(margin + "SCM_ASSERT(scm_is_short(s_"+p.name+"),s_"+p.name+","+i+",FUN_NAME);");
 				}
 			else if(p.type.isLong()) {
-				w.println("SCM_ASSERT(scm_is_long(s_"+p.name+"),s_"+p.name+","+i+",\""+getGuileName()+"\");");
+				w.println(margin + "SCM_ASSERT(scm_is_long(s_"+p.name+"),s_"+p.name+","+i+",FUN_NAME);");
 				}
 			else if(p.type.isBoolean()) {
-				w.println("SCM_ASSERT(scm_is_bool(s_"+p.name+"),s_"+p.name+","+i+",\""+getGuileName()+"\");");
+				w.println(margin + "SCM_ASSERT(scm_is_bool(s_"+p.name+"),s_"+p.name+","+i+",FUN_NAME);");
+				}
+			else if(p.type.isDouble() || p.type.isFloat()) {
+				w.println(margin + "SCM_ASSERT(scm_is_double(s_"+p.name+"),s_"+p.name+","+i+",FUN_NAME);");
 				}
 			else if(p.type.isString()) {
-				w.println("SCM_ASSERT(scm_is_string(s_"+p.name+"),s_"+p.name+","+i+",\""+getGuileName()+"\");");
+				w.println(margin + "SCM_ASSERT(scm_is_string(s_"+p.name+"),s_"+p.name+","+i+",FUN_NAME);");
 				}
 			else
 				{
-				w.println("SCM_ASSERT(SCM_POINTER_P(s_"+p.name+"),s_"+p.name+","+i+",\""+getGuileName()+"\");");
+				w.println(margin + "SCM_ASSERT(SCM_POINTER_P(s_"+p.name+"),s_"+p.name+","+i+",FUN_NAME);");
 				}
 			}
 		for(int i=0;i< fun.parameters.size();i++) {
 			final SwijParser.Param p = fun.parameters.get(i);
 			if(p.type.isInt()) {
-				w.println(p.name+"= scm_to_int(s_"+p.name+");");
+				w.println(margin + p.name+"= scm_to_int(s_"+p.name+");");
+				}
+			else if(p.type.isShort()) {
+				w.println(margin + p.name+"= scm_to_int(s_"+p.name+");");
 				}
 			else if(p.type.isLong()) {
-				w.println(p.name+"= scm_to_long(s_"+p.name+");");
+				w.println(margin + p.name+"= scm_to_long(s_"+p.name+");");
+				}
+			else if(p.type.isFloat()) {
+				w.println(margin + p.name+"= (float)scm_to_double(s_"+p.name+");");
+				}
+			else if(p.type.isDouble()) {
+				w.println(margin + p.name+"= scm_to_double(s_"+p.name+");");
 				}
 			else if(p.type.isBoolean()) {
-				w.println(p.name+"= scm_to_bool(s_"+p.name+");");
+				w.println(margin + p.name+"= scm_to_bool(s_"+p.name+");");
 				}
 			else if(p.type.isString()) {
-				w.println(p.name+"= scm_to_locale_string(s_"+p.name+");");
+				w.println(margin + p.name+"= scm_to_locale_string(s_"+p.name+");");
 				}
 			else
 				{
-				w.println(p.name+"=("+p.type.getCName()+")scm_to_pointer(s_"+p.name+");");
+				w.println(margin + p.name+"=("+p.type.getCName()+")scm_to_pointer(s_"+p.name+");");
 				}
 			}
 		if(!fun.type.isVoid()) {
-			w.print("_ret = ");
+			w.print(margin + "_ret = ");
 			}
 		w.print(fun.name);
 		w.print("(");
@@ -111,34 +136,44 @@ private class GuileFun {
 		for(int i=0;i< fun.parameters.size();i++) {
 			final SwijParser.Param p = fun.parameters.get(i);
 			 if(p.type.isString()) {
-					w.println("free("+p.name+");");
+					w.println(margin + "free("+p.name+");");
 					}
 			}
 		if(fun.type.isVoid()) {
-			w.println("return SCM_UNDEFINED;");
+			w.println(margin + "return SCM_UNDEFINED;");
 			}
 		else if(fun.type.isString()) {
-			w.println("{");
-			w.println("SCM _ret2= scm_from_locale_string(_ret);");
-			w.println("free(_ret);//TODO");
-			w.println("return _ret2;");
-			w.println("}");
+			w.println(margin + "{");
+			w.println(margin + "SCM _ret2= scm_from_locale_string(_ret);");
+			w.println(margin + "free(_ret);//TODO");
+			w.println(margin + "return _ret2;");
+			w.println(margin + "}");
 			}
 		else if(fun.type.isBoolean()) {
-			w.println("return scm_from_bool(_ret);");
+			w.println(margin + "return scm_from_bool(_ret);");
 			}
 		else if(fun.type.isInt()) {
-			w.println("return scm_from_int(_ret);");
+			w.println(margin + "return scm_from_int(_ret);");
+			}
+		else if(fun.type.isShort()) {
+			w.println(margin + "return scm_from_short(_ret);");
 			}
 		else if(fun.type.isLong()) {
-			w.println("return scm_from_long(_ret);");
+			w.println(margin + "return scm_from_long(_ret);");
+			}
+		else if(fun.type.isFloat()) {
+			w.println(margin + "return scm_from_double((double)_ret);");
+			}
+		else if(fun.type.isDouble()) {
+			w.println(margin + "return scm_from_double(_ret);");
 			}
 		else
 			{
-			w.println("if(_ret==NULL) return  SCM_UNDEFINED;");
-			w.println("return scm_from_pointer(_ret,_dispose_"+fun.type.getCName().replace("*","_ptr")+");");
+			w.println(margin + "if(_ret==NULL) return  SCM_UNDEFINED;");
+			w.println(margin + "return scm_from_pointer(_ret,_dispose_"+fun.type.getCName().replace("*","_ptr")+");");
 			}
 		w.println("}");
+		w.println("#undef FUN_NAME");
 		w.println();
 	}
 }
@@ -167,12 +202,6 @@ public int doWork(List<String> args) {
 			GuileFun gf=new GuileFun(fun);
 			gf.print(System.out);
 		}
-		out.println("void init() {");
-		for(SwijParser.Function fun:parser.functions) {
-				GuileFun gf=new GuileFun(fun);
-		  		out.println("scm_c_define_gsubr (\""+ gf.getGuileName() +"\", "+fun.parameters.size()+", 0, 0,"+ prefix+fun.name +");");
-			 }
-		out.println("}");
 		return 0;
 		}
 	catch(Throwable err) {

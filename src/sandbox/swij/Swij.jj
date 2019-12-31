@@ -142,15 +142,16 @@ TOKEN : /* LITERALS */
 | <SEMICOLON:";">
 | <UNSIGNED: "unsigned">
 | <VOID: "void">
-| <INT: "int">
-| <SHORT: "short">
-| <LONG: "long">
+| <INT: ("int"|"int32_t")>
+| <SHORT: ("short"|"int16_t")>
+| <LONG: ("long"|"int64_t")>
 | <FLOAT: "float">
 | <DOUBLE: "double">
 | <CHAR: "char">
 | <STRING: "char*">
 | <TRUE: "true">
 | <FALSE: "false">
+| <CONST: "const">
 | <BOOLEAN: ("bool"|"boolean")>
 | <#LETTER: ["_","a"-"z","A"-"Z"] >
 | <#DIGIT: ["0"-"9"] >
@@ -182,6 +183,7 @@ private Param param(): {Param p=new Param();}
 
 private Type type():{Type t=null;String s;Token t2=null;}
     {
+	(<CONST>)?
 	(
 	  <SHORT> { t=new ShortType();}
 	  | <INT> { t= new IntType();}

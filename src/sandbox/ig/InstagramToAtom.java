@@ -39,6 +39,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.w3c.dom.Text;
 
 import com.beust.jcommander.Parameter;
 import com.google.gson.JsonArray;
@@ -611,6 +612,19 @@ public class InstagramToAtom extends Launcher {
 			{
 			list.removeLast();
 			}
+		
+		//remove blank
+		for(;;) {
+			Node rm = null;
+			for(Node n1=body.getFirstChild();n1!=null;n1=n1.getNextSibling()) {
+				if(n1.getNodeType()!=Node.TEXT_NODE) continue;
+				if(!StringUtils.isBlank(Text.class.cast(n1).getData())) continue;
+				rm = n1;
+				break;
+			}
+			if(rm==null) break;
+			body.removeChild(rm);
+		}
 		
 		for(final Image img:list) {
 			body.appendChild(img.span);
