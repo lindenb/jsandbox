@@ -6,10 +6,10 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import javax.imageio.ImageIO;
@@ -31,7 +31,7 @@ public class MosaicOfPictures extends Launcher
 		String line;
 		while((line=r.readLine())!=null)
 			{
-			if(line.isEmpty() || line.startsWith("#")) continue;
+			if(StringUtils.isBlank(line)|| line.startsWith("#")) continue;
 			final int tab=line.indexOf('\t');
 			if(tab==-1)
 				{
@@ -77,9 +77,9 @@ public class MosaicOfPictures extends Launcher
 				}
 			else if(args.size()==1)
 				{
-				final BufferedReader r=new BufferedReader(new FileReader(args.get(0)));
-				picts=readPictures(r);
-				r.close();
+				try(final BufferedReader r= Files.newBufferedReader(Paths.get(args.get(0)))) {
+					picts=readPictures(r);
+					}
 				}
 			else
 				{
@@ -87,7 +87,7 @@ public class MosaicOfPictures extends Launcher
 				return -1;
 				}
 			
-			
+			LOG.info("Number of images: "+picts.size());
 			if(picts.isEmpty())
 				{
 				LOG.error("No images");
@@ -165,7 +165,7 @@ public class MosaicOfPictures extends Launcher
 			ImageIO.write(img, outFile.getName().toLowerCase().endsWith(".png")?"PNG":"JPG", outFile);
 			return 0;
 			}
-		catch(final Exception err)
+		catch(final Throwable err)
 			{
 			LOG.error(err.getMessage());
 			return -1;

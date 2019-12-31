@@ -6,6 +6,7 @@ import java.io.StringReader;
 
 import org.w3c.dom.Attr;
 import org.w3c.dom.CDATASection;
+import org.w3c.dom.Comment;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Element;
@@ -79,6 +80,12 @@ public class TidyToDom {
 		if(n==null) return null;
 		switch(n.getNodeType())
 			{
+			case Node.COMMENT_NODE:
+				{
+				final String text = Comment.class.cast(n).getTextContent();
+				if(text!=null) return owner.createComment(text);
+				return null;
+				}
 			case Node.TEXT_NODE:
 				{
 				final String text = Text.class.cast(n).getTextContent();

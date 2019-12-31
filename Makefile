@@ -241,6 +241,7 @@ $(eval $(call compile,wigglegrid,sandbox.drawing.WiggleGrid,${jcommander.jar}))
 $(eval $(call compile,hatching01,sandbox.drawing.Hatching01,${jcommander.jar}))
 $(eval $(call compile,randomdots01,sandbox.drawing.RandomDots01,${jcommander.jar}))
 $(eval $(call compile,swij2guile,sandbox.swij.SwijToGuile,${jcommander.jar} ./src/sandbox/swij/SwijParser.java))
+$(eval $(call compile,htmltidy,sandbox.html.HtmlTidy,${jcommander.jar} ${jtidy.jars}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
