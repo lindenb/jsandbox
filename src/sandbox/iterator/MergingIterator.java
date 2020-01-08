@@ -33,12 +33,16 @@ protected T advance() {
 			}
 		i++;
 		}
-	
 	return best_idx==-1?null:this.delegates.get(best_idx).next();
 	}
-@Override
+
+	@Override
 	public void close() {
-		delegates.stream().forEach(PeekIterator::close);
-		this.delegates.clear();
+		//delegates.stream().forEach(PeekIterator::close);
+		//this.delegates.clear();
+		}
+	@Override
+	public String toString() {
+		return "MergingIterator("+ delegates +")";
 		}
 }

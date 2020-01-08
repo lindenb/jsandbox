@@ -9,10 +9,12 @@ private T peeked= null;
 PeekIterator(final Iterator<T> delegate) {
 	this.delegate = delegate;
 	}
+
 @Override
 public boolean hasNext() {
-	return peeked!=null || this.delegate.hasNext();
+	return this.peeked!=null || this.delegate.hasNext();
 	}
+
 @Override
 public T next() {
 	if(this.peeked!=null) {
@@ -24,14 +26,21 @@ public T next() {
 	}
 
 public T peek() {
-	if(this.peeked!=null) return this.peeked;
+	if(this.peeked != null) return this.peeked;
 	if(!this.delegate.hasNext()) return null;
-	this.peeked=this.delegate.next();
+	this.peeked = this.delegate.next();
 	return this.peeked;
 	}
+
 @Override
 public void close() {
 	this.peeked=null;
 	CloseableIterator.close(this.delegate);
 	}
+
+@Override
+public String toString() {
+	return "PeekIterator("+this.delegate+")";
+	}
+
 }

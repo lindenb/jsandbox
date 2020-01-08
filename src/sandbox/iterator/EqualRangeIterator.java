@@ -7,23 +7,23 @@ import java.util.List;
 
 public class EqualRangeIterator<T> extends AbstractIterator<List<T>>{
 private final PeekIterator<T> delegate;
-private final Comparator<T> comparator;	
+private final Comparator<T> comparator;
+
 public EqualRangeIterator(final Comparator<T> comparator,final Iterator<T> delegate) {
 	this.comparator = comparator;
-	this.delegate= new PeekIterator<>(delegate);
+	this.delegate = new PeekIterator<>(delegate);
 	}
 
 @Override
 protected List<T> advance() {
-	
 	if(!this.delegate.hasNext()) {
-		System.err.println("STOP");
+		close();
 		return null;
 		}
-	final List<T> list= new ArrayList<>();
+	final List<T> list = new ArrayList<>();
 	final T first = this.delegate.next();
 	list.add(first);
-	
+
 	while(this.delegate.hasNext()) {
 		final T rec = this.delegate.peek();
 		final int i= comparator.compare(first,rec);
@@ -38,11 +38,17 @@ protected List<T> advance() {
 			break;
 			}
 		}
+	System.err.println(list);
 	return list;
 	}
 
-@Override
+	@Override
 	public void close() {
 		CloseableIterator.close(this.delegate);
+		}
+
+	@Override
+	public String toString() {
+		return "EqualRangeIterator("+this.delegate+")";
 		}
 }

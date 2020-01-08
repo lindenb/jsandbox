@@ -70,7 +70,6 @@ public int doWork(final List<String> args) {
 					OS.writeLong(E.length);
 					OS.writeUTF(E.path);
 				}).make();
-		
 		for(final String fname:args) {
 			recurse(Paths.get(fname));
 			}
@@ -78,16 +77,13 @@ public int doWork(final List<String> args) {
 			EqualRangeIterator<FileSize> iter2= new EqualRangeIterator<>(comparator, iter1);
 			while(iter2.hasNext()) {
 				final List<FileSize> row= iter2.next();
-				System.err.println("##### "+ row.get(0).length);
+				System.err.println("##### "+ row.get(0).length+" "+row.size());
 				for(FileSize a:row) {
 					System.err.println(a.path);
 				}
 			iter2.close();
 			}
-			
-			
 		}
-		
 		this.sorter.close();
 		return 0;
 		}
