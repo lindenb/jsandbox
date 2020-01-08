@@ -194,6 +194,14 @@ public static Writer openPathAsWriter(final Path pathOrNull) throws IOException 
 	return Files.newBufferedWriter(pathOrNull);
 	}
 
+public static PrintWriter openPathAsPrintWriter(final Path pathOrNull) throws IOException {
+	if(pathOrNull==null) return new PrintWriter(System.out);
+	if(pathOrNull.getFileName().toString().endsWith(".gz")) {
+		 return new PrintWriter(openPathAsOutputStream(pathOrNull));
+		}
+	return new PrintWriter(Files.newBufferedWriter(pathOrNull));
+	}
+
 
 public static InputStream mayGzipInputStream(InputStream in) throws IOException {
 	/* http://stackoverflow.com/questions/4818468 */
