@@ -2,6 +2,8 @@ package sandbox;
 
 import java.math.BigInteger;
 import java.security.MessageDigest;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
 
 public class StringUtils {
 
@@ -51,4 +53,34 @@ public static String escapeC(final CharSequence s) {
 	return sb.toString();
 	}
 
+/** parse an Optional integer */
+public static OptionalInt parseInteger(final String s) {
+	if(isBlank(s)) return OptionalInt.empty();
+	try {
+		return OptionalInt.of(Integer.parseInt(s.trim()));
+		}
+	catch(final NumberFormatException err) {
+		return OptionalInt.empty();
+		}
+	}
+
+public static boolean isInteger(final String s) {
+	return parseInteger(s).isPresent();
+	}
+
+
+/** parse an Optional double */
+public static OptionalDouble parseDouble(final String s) {
+	if(isBlank(s)) return OptionalDouble.empty();
+	try {
+		return OptionalDouble.of(Double.parseDouble(s.trim()));
+		}
+	catch(final NumberFormatException err) {
+		return OptionalDouble.empty();
+		}
+	}
+
+public static boolean isDouble(final String s) {
+	return parseDouble(s).isPresent();
+	}
 }

@@ -11,9 +11,9 @@ import java.util.stream.Stream;
 
 import com.beust.jcommander.DynamicParameter;
 
-import sandbox.AbstractIterator;
 import sandbox.Logger;
 import sandbox.SimpleGraphics;
+import sandbox.iterator.AbstractIterator;
 
 public class Kirby01 extends AbstractKirbyLauncher {
 	private static final Logger LOG = Logger.builder(Kirby01.class).build();
