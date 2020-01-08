@@ -5,10 +5,12 @@ import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
@@ -40,6 +42,12 @@ public class ImageUtils
 		return "JPG";
 	}
 	
+	public BufferedImage readPath(final Path path) throws IOException {
+		try (InputStream in=Files.newInputStream(path)) {
+			return ImageIO.read(in);
+		}
+	}
+	
 	public BufferedImage read(final String nullOrfileOrUrl) throws IOException {
 		if(nullOrfileOrUrl==null) {
 			return ImageIO.read(System.in);
@@ -49,7 +57,7 @@ public class ImageUtils
 			}
 		else
 			{
-			return ImageIO.read(new File(nullOrfileOrUrl));
+			return readPath(Paths.get(nullOrfileOrUrl));
 			}
 		}
 	

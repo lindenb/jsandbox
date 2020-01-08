@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.git;
 
 import java.awt.Dimension;
 import java.awt.Rectangle;
@@ -14,18 +14,20 @@ import java.util.Optional;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamWriter;
 
-import org.apache.commons.cli.CommandLine;
+import sandbox.Launcher;
+import sandbox.Logger;
 
 
+public class GitHistory extends Launcher {
+	protected static final Logger LOG=Logger.builder(GitHistory.class).build();
 
-public class GitHistory extends AbstractApplication {
 	private File gitWorkDir=null;
-	private List<GitFile> files= new ArrayList<>();
-	private List<GitEvent> events = new ArrayList<>();
-	private List<GitCommit> commits = new ArrayList<>();
-	final int COMMIT_WIDTH=50;
-	final int FILE_HEIGHT=80;
-	final Insets fileInsets = new Insets(5, 5, 0, 5);
+	private final List<GitFile> files= new ArrayList<>();
+	private final List<GitEvent> events = new ArrayList<>();
+	private final List<GitCommit> commits = new ArrayList<>();
+	private final int COMMIT_WIDTH=50;
+	private final int FILE_HEIGHT=80;
+	private final Insets fileInsets = new Insets(5, 5, 0, 5);
 	private String commitUrl = "https://github.com/lindenb/jsandbox/commit/%H";
 	
 	private class GitFile implements Comparable<GitFile>
@@ -35,7 +37,7 @@ public class GitHistory extends AbstractApplication {
 		final List<GitEvent> events = new ArrayList<>();
 		private GitFile(final String path) {
 			this.path = path;
-		}
+			}
 		
 		@Override
 		public int 	compareTo(final GitFile o) {
@@ -103,20 +105,18 @@ public class GitHistory extends AbstractApplication {
 		
 		public Optional<Long> size(final GitCommit commit) {
 			Long fileSize=null;
-				for(final GitEvent e: this.events) {
-					if(e.commit.index> commit.index) continue;//event are sorted on commit index
-					if(!e.file.equals(this))throw new IllegalStateException();
-					if(e.is_delete_file) {
-						fileSize=null;
-						continue;
+			for(final GitEvent e: this.events) {
+				if(e.commit.index> commit.index) continue;//event are sorted on commit index
+				if(!e.file.equals(this))throw new IllegalStateException();
+				if(e.is_delete_file) {
+					fileSize=null;
+					continue;
 					}
-					if(fileSize==null) fileSize=0L;
-					fileSize+= e.diffLines();
-				
-				
-			}
+				if(fileSize==null) fileSize=0L;
+				fileSize+= e.diffLines();
+				}
 			return fileSize==null?Optional.empty():Optional.of(fileSize);
-		}
+			}
 		
 		
 		}
@@ -223,20 +223,14 @@ public class GitHistory extends AbstractApplication {
 	}
 	
 	@Override
-	protected int execute(final CommandLine cmd) {
-		final List<String> args = cmd.getArgList();
-		
-		if(args.size()!=1) {
-			LOG.severe("Illegal number of args");
-			return -1;
-		}
+	public int doWork(final List<String> args) {
 		try
 			{
-			this.gitWorkDir = new File(args.get(0));
+			this.gitWorkDir = new File(super.oneAndOnlyOneFile(args));
 				
 			 if(!gitWorkDir.isDirectory())
 			 	{
-				 LOG.severe("Not a directory "+gitWorkDir);
+				 LOG.error("Not a directory "+gitWorkDir);
 				return -1;
 			 	}
 			Process proc = 
@@ -258,7 +252,7 @@ public class GitHistory extends AbstractApplication {
 			
 			r.close();
 			if(proc.waitFor()!=0) {
-				LOG.severe("git log failed");
+				LOG.error("git log failed");
 				return -1;
 			}
 			
@@ -337,7 +331,7 @@ public class GitHistory extends AbstractApplication {
 				}
 				r.close();
 				if(proc.waitFor()!=0) {
-					LOG.severe("git log failed");
+					LOG.error("git log failed");
 					return -1;
 				}
 			}
@@ -510,8 +504,8 @@ public class GitHistory extends AbstractApplication {
 			
 			//LOG.info("DONE "+this.path2file.values()+" "+this.events);
 			}
-		catch(Throwable err) {
-			err.printStackTrace();
+		catch(final Throwable err) {
+			LOG.error(err);
 			return -1;
 		} finally
 		{
@@ -523,7 +517,7 @@ public class GitHistory extends AbstractApplication {
 	/**
 	 * @param args
 	 */
-	public static void main(String[] args) {
+	public static void main(final String[] args) {
 			new GitHistory().instanceMainWithExit(args);
 	}
 
