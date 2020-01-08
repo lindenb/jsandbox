@@ -15,20 +15,23 @@ public EqualRangeIterator(final Comparator<T> comparator,final Iterator<T> deleg
 
 @Override
 protected List<T> advance() {
+	
 	if(!this.delegate.hasNext()) {
-		this.close();
+		System.err.println("STOP");
 		return null;
 		}
-	List<T> list= new ArrayList<>();
-	list.add(this.delegate.next());
+	final List<T> list= new ArrayList<>();
+	final T first = this.delegate.next();
+	list.add(first);
+	
 	while(this.delegate.hasNext()) {
-		T rec = this.delegate.peek();
-		int i= comparator.compare(rec, list.get(0));
+		final T rec = this.delegate.peek();
+		final int i= comparator.compare(first,rec);
 		if(i==0) {
 			list.add(this.delegate.next());
 			}
-		else if( i<0) {
-			throw new IllegalStateException("data are not sorted");
+		else if( i>0 ) {
+			throw new IllegalStateException("data are not sorted got:\n  "+rec+"after\n  "+list.get(0));
 			}
 		else
 			{
@@ -37,6 +40,7 @@ protected List<T> advance() {
 		}
 	return list;
 	}
+
 @Override
 	public void close() {
 		CloseableIterator.close(this.delegate);

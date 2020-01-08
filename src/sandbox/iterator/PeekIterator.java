@@ -31,6 +31,7 @@ public T peek() {
 	}
 @Override
 public void close() {
+	this.peeked=null;
 	CloseableIterator.close(this.delegate);
 	}
 }

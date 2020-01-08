@@ -32,6 +32,10 @@ public class IOUtils {
 private IOUtils(){
 }
 
+public static Path getDefaultTmpDirPath() {
+	return Paths.get(System.getProperty("java.io.tmpdir"));
+}
+
 public static List<String> unroll(final List<String> args) throws IOException {
 	if(args.isEmpty()) return Collections.emptyList();
 	if(args.size()==1 && args.get(0).endsWith(".list")) {

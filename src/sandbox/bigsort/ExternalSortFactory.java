@@ -5,7 +5,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -13,19 +12,20 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
+import sandbox.IOUtils;
 import sandbox.iterator.AbstractIterator;
 import sandbox.iterator.CloseableIterator;
 import sandbox.iterator.MergingIterator;
 
 public class ExternalSortFactory<T> {
 	
-private Path tmpDir =  Paths.get(System.getProperty("java. io. tmpdir"));
+private Path tmpDir =  IOUtils.getDefaultTmpDirPath();
 private int maxRecordsInRam= 100_000;
 private 	Comparator<T> comparator;
 private 	EntryWriter<T> entryWriter;
 private 	EntryReader<T> entryReader;
 	
-public interface BigSorter<T> extends AutoCloseable
+public interface ExternalSort<T> extends AutoCloseable
 	{
 	public void add(final T t);
 	public CloseableIterator<T> iterator();
@@ -62,7 +62,7 @@ public ExternalSortFactory<T> setMaxRecordsInRam(final int maxRecordsInRam) {
 	return this;
 }
 
-public BigSorter<T> make() {
+public ExternalSort<T> make() {
 	if(maxRecordsInRam<1) throw new IllegalArgumentException();
 	final BigSorterImpl sorter = new BigSorterImpl();
 	sorter.tmpDir = tmpDir;
@@ -107,7 +107,7 @@ private static class StoredFileIterator<T> extends AbstractIterator<T> {
 
 
 
-private class BigSorterImpl implements BigSorter<T>
+private class BigSorterImpl implements ExternalSort<T>
 	{
 	final List<T> ramRecords = new ArrayList<>();
 	final List<StoredFileIterator<T>> storedFiles = new ArrayList<>();
@@ -132,7 +132,10 @@ private class BigSorterImpl implements BigSorter<T>
 		if(iterating_flag) throw new IllegalStateException();
 		iterating_flag = true;
 		List<Iterator<T>> iterators = new ArrayList<>();
-		if(!this.ramRecords.isEmpty()) iterators.add(this.ramRecords.iterator());
+		if(!this.ramRecords.isEmpty()) {
+			Collections.sort(this.ramRecords,this.comparator);
+			iterators.add(this.ramRecords.iterator());
+			}
 		for(final StoredFileIterator<T> st: this.storedFiles) {
 			try {st.dis = new DataInputStream(Files.newInputStream(st.path));
 			st.entryReader = entryReader;
