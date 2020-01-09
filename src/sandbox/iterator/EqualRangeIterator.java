@@ -11,7 +11,7 @@ private final Comparator<T> comparator;
 
 public EqualRangeIterator(final Comparator<T> comparator,final Iterator<T> delegate) {
 	this.comparator = comparator;
-	this.delegate = new PeekIterator<>(delegate);
+	this.delegate = PeekIterator.wrap(delegate);
 	}
 
 @Override

@@ -83,4 +83,8 @@ public static OptionalDouble parseDouble(final String s) {
 public static boolean isDouble(final String s) {
 	return parseDouble(s).isPresent();
 	}
+
+public static String orElse(final String s,final String def) {
+	return isBlank(s)?def:s;
+	}
 }

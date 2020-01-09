@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -14,6 +16,9 @@ import sandbox.bigsort.ExternalSortFactory;
 import sandbox.bigsort.ExternalSortFactory.ExternalSort;
 import sandbox.iterator.CloseableIterator;
 import sandbox.iterator.EqualRangeIterator;
+import sandbox.iterator.MergingIterator;
+import sandbox.iterator.PeekIterator;
+import sandbox.test.Assert;
 
 public class FindDuplicateFiles extends Launcher{
 	private static final Logger LOG = Logger.builder(FindDuplicateFiles.class).build();
@@ -58,15 +63,39 @@ void recurse(Path f) throws IOException {
 @Override
 public int doWork(final List<String> args) {
 	try {
+		List<Integer> L=new ArrayList<>();
+		for(int i=0;i<10;i++) {L.add(i);}
+		PeekIterator<Integer> iter = PeekIterator.wrap(L.iterator());
+		for(int i=0;i<10;i++) {
+			Assert.assertTrue(iter.hasNext());
+			Assert.assertEquals(iter.peek(),Integer.valueOf(i));
+			Assert.assertEquals(iter.next(),Integer.valueOf(i));
+		}
+		Assert.assertFalse(iter.hasNext());
+		Assert.assertEquals(iter.peek(),null);
+		
+		MergingIterator<Integer> iter2 = new MergingIterator<>(
+				Integer::compare,
+				Arrays.asList(L.iterator(),L.iterator())
+				);
+		for(int i=0;i<10;i++) {
+			Assert.assertTrue(iter2.hasNext());
+			Assert.assertEquals(iter2.next(),Integer.valueOf(i));
+			Assert.assertTrue(iter2.hasNext());
+			Assert.assertEquals(iter2.next(),Integer.valueOf(i));
+		}
+		Assert.assertFalse(iter2.hasNext());
+		
 		final Comparator<FileSize> comparator= (A,B)->Long.compare(A.length, B.length);
 		this.sorter = new ExternalSortFactory<FileSize>().
 				setComparator(comparator).
+				setDebug(true).
 				setEntryReader(IS->{
 					long l= IS.readLong();
 					String p = IS.readUTF();
 					return new FileSize(p,l);
 				}).
-				setEntryWriter((E,OS)->{
+				setEntryWriter((OS,E)->{
 					OS.writeLong(E.length);
 					OS.writeUTF(E.path);
 				}).make();
@@ -74,17 +103,18 @@ public int doWork(final List<String> args) {
 			recurse(Paths.get(fname));
 			}
 		try(CloseableIterator<FileSize> iter1= this.sorter.iterator()) {
-			EqualRangeIterator<FileSize> iter2= new EqualRangeIterator<>(comparator, iter1);
+			EqualRangeIterator<FileSize> itereq= new EqualRangeIterator<>(comparator, iter1);
 			while(iter2.hasNext()) {
-				final List<FileSize> row= iter2.next();
+				final List<FileSize> row= itereq.next();
 				System.err.println("##### "+ row.get(0).length+" "+row.size());
 				for(FileSize a:row) {
 					System.err.println(a.path);
 				}
-			iter2.close();
+			itereq.close();
 			}
 		}
 		this.sorter.close();
+		System.err.println("done");
 		return 0;
 		}
 	catch(final Throwable err) {

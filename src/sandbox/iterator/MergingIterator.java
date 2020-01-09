@@ -1,6 +1,7 @@
 package sandbox.iterator;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -11,8 +12,9 @@ private final List<PeekIterator<T>> delegates;
 private final Comparator<T> comparator;	
 public MergingIterator(final Comparator<T> comparator,final List<Iterator<T>> delegates) {
 	this.comparator = comparator;
-	this.delegates= delegates.stream().map(T->new PeekIterator<>(T)).collect(Collectors.toCollection(ArrayList::new));
+	this.delegates= delegates.stream().map(T->PeekIterator.wrap(T)).collect(Collectors.toCollection(ArrayList::new));
 	}
+
 
 @Override
 protected T advance() {
