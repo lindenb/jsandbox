@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -28,6 +29,7 @@ private int maxRecordsInRam= 100_000;
 private 	Comparator<T> comparator;
 private 	EntryWriter<T> entryWriter;
 private 	EntryReader<T> entryReader;
+private		int maxStoredFiles = 50;
 private boolean do_debug=false;
 	
 public interface ExternalSort<T> extends AutoCloseable
@@ -74,47 +76,55 @@ public ExternalSort<T> make() {
 	sorter.entryReader = Objects.requireNonNull(entryReader,"undefined reader");
 	sorter.entryWriter = Objects.requireNonNull(entryWriter,"undefined writer");
 	sorter.do_debug = this.do_debug;
+	sorter.maxStoredFiles  = maxStoredFiles;
 	return sorter;
 }
 
 
-private static class StoredFileIterator<T> extends AbstractIterator<T> {
-	Path path;
-	int total = 0;
-	DataInputStream dis= null;
-	int nRead= 0;
-	EntryReader<T> entryReader;
-
-	@Override
-	protected T advance() {
-		if(this.nRead>=this.total) {
-			close();
-			return null;
-			}
-		try  {
-			final T rec = this.entryReader.read(this.dis);
-			nRead++;
-			return rec;
-			}
-		catch(final IOException err) {
-			throw new RuntimeException(err);
-			}
-		}
-	
-	@Override
-	public void close() {
-		IOUtils.close(this.dis);
-		dis=null;
-		try{Files.deleteIfExists(this.path);} catch(IOException err) {}
-		}
-	}
 
 
 
 private class BigSorterImpl implements ExternalSort<T>
 	{
+	private class StoredFileIterator extends AbstractIterator<T> {
+		Path path;
+		int total = 0;
+		DataInputStream dis= null;
+		int nRead= 0;
+
+		@Override
+		protected T advance() {
+			if(this.nRead>=this.total) {
+				close();
+				return null;
+				}
+			try  {
+				final T rec = BigSorterImpl.this.entryReader.read(this.dis);
+				nRead++;
+				return rec;
+				}
+			catch(final IOException err) {
+				throw new RuntimeException(err);
+				}
+			}
+		@Override
+		public void close() {
+			this.nRead=this.total;
+			IOUtils.close(this.dis);
+			dis=null;
+			try{Files.deleteIfExists(this.path);} catch(IOException err) {}
+			}
+		
+		StoredFileIterator open() throws IOException {
+			if(this.dis!=null) this.dis = new DataInputStream(Files.newInputStream(this.path));
+			return this;
+			}
+		}
+
+	
+	
 	final List<T> ramRecords = new ArrayList<>();
-	final List<StoredFileIterator<T>> storedFiles = new ArrayList<>();
+	final List<StoredFileIterator> storedFiles = new ArrayList<>();
 	Path tmpDir = null;
 	int maxRecordsInRam=100_000;
 	Comparator<T> comparator;
@@ -122,6 +132,7 @@ private class BigSorterImpl implements ExternalSort<T>
 	EntryReader<T> entryReader;
 	boolean iterating_flag=false;
 	boolean do_debug=false;
+	int maxStoredFiles;
 	@Override
 	public void add(final T t) {
 		if(iterating_flag) throw new IllegalStateException();
@@ -134,6 +145,7 @@ private class BigSorterImpl implements ExternalSort<T>
 		this.ramRecords.add(t);
 		}
 	
+	
 	public CloseableIterator<T> iterator()  {
 		if(this.iterating_flag) throw new IllegalStateException();
 		this.iterating_flag = true;
@@ -142,10 +154,9 @@ private class BigSorterImpl implements ExternalSort<T>
 			this.sortRam();
 			iterators.add(this.ramRecords.iterator());
 			}
-		for(final StoredFileIterator<T> st: this.storedFiles) {
+		for(final StoredFileIterator st: this.storedFiles) {
 			try {
-				st.dis = new DataInputStream(Files.newInputStream(st.path));
-				st.entryReader = entryReader;
+				st.open();
 				iterators.add(st);
 				}
 			catch(final IOException err) {
@@ -153,9 +164,7 @@ private class BigSorterImpl implements ExternalSort<T>
 				throw new RuntimeException(err);
 				}
 			}
-		
 		return new MergingIterator<>(this.comparator, iterators);
-		
 		}
 	
 	public void close() {
@@ -166,7 +175,7 @@ private class BigSorterImpl implements ExternalSort<T>
 		if(this.ramRecords.isEmpty()) return;
 		this.sortRam();
 		
-		final StoredFileIterator<T> sf = new StoredFileIterator<T>();
+		final StoredFileIterator sf = new StoredFileIterator();
 		sf.path = Files.createTempFile(this.tmpDir,"tmp.", ".dat");
 		sf.total = this.ramRecords.size();
 		try(DataOutputStream dos=new DataOutputStream(Files.newOutputStream(sf.path))) {
@@ -178,6 +187,29 @@ private class BigSorterImpl implements ExternalSort<T>
 		this.storedFiles.add(sf);
 		if(do_debug) LOG.debug("saved "+this.ramRecords.size()+" on disk "+sf.path);
 		this.ramRecords.clear();
+		
+		if(this.storedFiles.size()>=this.maxStoredFiles && this.storedFiles.size()>1)  {
+			Collections.sort(this.storedFiles,(A,B)->Integer.compare(A.total, B.total));
+			final StoredFileIterator f1 = this.storedFiles.remove(0);
+			final StoredFileIterator f2 = this.storedFiles.remove(0);/** yes 0 again */
+			final StoredFileIterator sf3 = new StoredFileIterator();
+			sf.path = Files.createTempFile(this.tmpDir,"tmp.", ".dat");
+			sf.total = f1.total + f2.total;
+			
+			try(MergingIterator<T> merger= new MergingIterator<>(this.comparator, Arrays.asList(f1,f2))) {
+				try(DataOutputStream dos=new DataOutputStream(Files.newOutputStream(sf.path))) {
+					while(merger.hasNext()) {
+						this.entryWriter.write(dos, merger.next());
+						}
+					dos.flush();
+					}
+				}
+			f1.close();
+			f2.close();
+			
+			this.storedFiles.add(sf3);
+			}
+		
 		}
 	
 	private void sortRam() {
