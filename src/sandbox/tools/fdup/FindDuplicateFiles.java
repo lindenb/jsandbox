@@ -3,9 +3,13 @@ package sandbox.tools.fdup;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -13,10 +17,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import com.beust.jcommander.Parameter;
 
@@ -41,10 +42,13 @@ public class FindDuplicateFiles extends Launcher{
 	private int max_records_in_ram = 1_000_000;
 	@Parameter(names= {"-b","--buffer-size"},description="Buffer Size for BufferedInputStream. ")
 	private int buff_size = 1_000_000;
+	@Parameter(names= {"-f","--fast"},description="Just compare the xx first bytes. ignore if <=0. "+FileSizeConverter.OPT_DESC,converter=FileSizeConverter.class,splitter=NoSplitter.class)
+	private long fast_size = -1L;
 
 	@Parameter(names= {"-t","--threads"},description="Number of threads.")
 	private int num_threads = 1;
 
+	private enum CompareResult { not_same,suspected,same};
 	
 
 private static class FileSize {
@@ -81,24 +85,31 @@ private static class FileSize {
 	
 	}
 //https://stackoverflow.com/questions/22818590
-private static boolean areSameBinary(Path f1,Path f2,int buff_size) throws IOException {
-	 try(   InputStream in1 =new BufferedInputStream(Files.newInputStream(f1),buff_size);
-			InputStream in2 =new BufferedInputStream(Files.newInputStream(f2),buff_size);
+private CompareResult areSameBinary(Path f1,Path f2) throws IOException {
+	int buffer = this.buff_size;
+	if(fast_size>0 && this.fast_size< (long)this.buff_size) {
+		buffer = (int)this.fast_size;
+	}
+	
+	 try(   InputStream in1 =new BufferedInputStream(Files.newInputStream(f1),buffer);
+			InputStream in2 =new BufferedInputStream(Files.newInputStream(f2),buffer);
 			 ){
-
+		 		  long nReads = 0L;
 			      int value1,value2;
 			      do{
 			           //since we're buffered read() isn't expensive
 			           value1 = in1.read();
 			           value2 = in2.read();
 			           if(value1 !=value2){
-			           return false;
-			           }
+				           return CompareResult.not_same;
+				           }
+			           nReads++;
+			           if(this.fast_size>0 && nReads>=this.fast_size) return CompareResult.suspected;
 			      }while(value1 >=0);
 
 			 //since we already checked that the file sizes are equal 
 			 //if we're here we reached the end of both files without a mismatch
-			 return true;
+			 return CompareResult.same;
 			}
 	}
 
@@ -107,21 +118,40 @@ private void recurse(final  ExternalSort<FileSize> sorter,final Path dir) throws
 
 	if(Files.isHidden(dir) && ignore_hidden) return; 
 
-	Files.walk(dir).forEach(F->{
-		if(!Files.isRegularFile(F)) return;
-		try {
-			if(!Files.isReadable(F)) return;
-			if(Files.isHidden(F) && ignore_hidden) return; 
-			final long length=Files.size(F);
-			if(length< min_length) return;
-			if(max_length!=-1L && length> max_length) return;
-			sorter.add(new FileSize(F.toString(), length));
-			}
-		catch(IOException err) {
-			LOG.error(err);
-			
-			}
+	Files.walkFileTree(dir,new SimpleFileVisitor<Path>() {
+		 	@Override
+		 	public FileVisitResult visitFile(Path F, BasicFileAttributes attrs) throws IOException {
+		 		if(!attrs.isRegularFile()) return FileVisitResult.CONTINUE;
+		 		if(attrs.isSymbolicLink()) return FileVisitResult.CONTINUE;
+		 		try {
+		 			
+					if(!Files.isReadable(F)) return  FileVisitResult.CONTINUE;
+					if(Files.isHidden(F) && ignore_hidden) return FileVisitResult.CONTINUE; 
+					final long length= attrs.size();
+					if(length< min_length) return FileVisitResult.CONTINUE;
+					if(max_length!=-1L && length> max_length) return FileVisitResult.CONTINUE;
+					sorter.add(new FileSize(F.toString(), length));
+					}
+				catch(IOException err) {
+					LOG.error(err);
+					
+					}
+		 		return FileVisitResult.CONTINUE;
+		 		}
+			@Override
+		    public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+		        if (exc instanceof AccessDeniedException) {
+		            return FileVisitResult.SKIP_SUBTREE;
+		        }
+
+		        return super.visitFileFailed(file, exc);
+		    }
 		});
+	/*
+	
+		if(!Files.isRegularFile(F)) return;
+		
+		});*/
 	}
 
 @Override
@@ -150,7 +180,7 @@ public int doWork(final List<String> args) {
 		Iterator<FileSize> iter1=  sorter.iterator();
 		SimpleDateFormat df = new SimpleDateFormat("YYYY-MM-DD HH:mm:ss");
         
-		final Semaphore lock = new Semaphore(this.num_threads);
+		final Semaphore lock = (this.num_threads==1?null:new Semaphore(this.num_threads));
 		
 		final EqualRangeIterator<Set<FileSize>,FileSize> itereq= new EqualRangeIterator<>(comparator, iter1,HashSet::new);
 		while(itereq.hasNext()) {
@@ -168,12 +198,12 @@ public int doWork(final List<String> args) {
 					final long length = Files.size(p2);
 					if(Files.size(p1)!= length) continue;
 					
-					lock.acquire();
 					
 					
-					final Thread thread=new Thread(()->{
+					final Runnable runner =()->{
 						try  {
-						if(!areSameBinary(p1, p2,this.buff_size)) return;
+						final CompareResult cmp = areSameBinary(p1, p2);
+						if(cmp.equals(CompareResult.not_same)) return;
 						
 						final StringBuilder sb=new StringBuilder();
 						sb.append(length);
@@ -184,6 +214,7 @@ public int doWork(final List<String> args) {
 							sb.append("\t");
 							sb.append(df.format(Files.getLastModifiedTime(p).toMillis()));
 							}
+						sb.append("\t").append(cmp.name());
 						System.out.println(sb.toString());
 						
 						} catch(IOException err) {
@@ -191,15 +222,22 @@ public int doWork(final List<String> args) {
 							}
 						finally
 							{
-							lock.release();
+							if(lock!=null) lock.release();
 							}
-						});
-					thread.start();
+						};
+						
+					if(lock!=null) {
+						final Thread thread=new Thread(runner);
+						thread.start();
+						}
+					else
+						{
+						runner.run();
+						}
  				
 					}
 				}
 			}
-			
 		itereq.close();
 		sorter.close();
 		
