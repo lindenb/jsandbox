@@ -12,17 +12,20 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
+import java.util.stream.Collectors;
 
 import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
+import sandbox.StringUtils;
 import sandbox.bigsort.ExternalSortFactory;
 import sandbox.bigsort.ExternalSortFactory.ExternalSort;
 import sandbox.iterator.EqualRangeIterator;
@@ -44,10 +47,12 @@ public class FindDuplicateFiles extends Launcher{
 	private int buff_size = 1_000_000;
 	@Parameter(names= {"-f","--fast"},description="Just compare the xx first bytes. ignore if <=0. "+FileSizeConverter.OPT_DESC,converter=FileSizeConverter.class,splitter=NoSplitter.class)
 	private long fast_size = -1L;
-
+	@Parameter(names= {"-x","--extensions"},description="comma/space/semicolon separated list of extension. Empty=All files.")
+	private String extensions_str="";
 	@Parameter(names= {"-t","--threads"},description="Number of threads.")
 	private int num_threads = 1;
 
+	private final Set<String> extensions = new HashSet<>();
 	private enum CompareResult { not_same,suspected,same};
 	
 
@@ -123,6 +128,7 @@ private void recurse(final  ExternalSort<FileSize> sorter,final Path dir) throws
 		 	public FileVisitResult visitFile(Path F, BasicFileAttributes attrs) throws IOException {
 		 		if(!attrs.isRegularFile()) return FileVisitResult.CONTINUE;
 		 		if(attrs.isSymbolicLink()) return FileVisitResult.CONTINUE;
+		 		if(!extensions.isEmpty() && extensions.stream().noneMatch(EX->F.getFileName().toString().endsWith(EX))) return FileVisitResult.CONTINUE;
 		 		try {
 		 			
 					if(!Files.isReadable(F)) return  FileVisitResult.CONTINUE;
@@ -132,7 +138,7 @@ private void recurse(final  ExternalSort<FileSize> sorter,final Path dir) throws
 					if(max_length!=-1L && length> max_length) return FileVisitResult.CONTINUE;
 					sorter.add(new FileSize(F.toString(), length));
 					}
-				catch(IOException err) {
+				catch(final IOException err) {
 					LOG.error(err);
 					
 					}
@@ -158,6 +164,11 @@ private void recurse(final  ExternalSort<FileSize> sorter,final Path dir) throws
 public int doWork(final List<String> args) {
 	ExternalSort<FileSize> sorter = null;
 	try {		
+		
+		this.extensions.addAll(Arrays.
+				stream(this.extensions_str.split("[\\|\\s;,]+")).
+				filter(S->!StringUtils.isBlank(S)).
+				collect(Collectors.toSet()));
 		
 		final Comparator<FileSize> comparator= (A,B)->Long.compare(B.length, A.length);
 		sorter = new ExternalSortFactory<FileSize>().
