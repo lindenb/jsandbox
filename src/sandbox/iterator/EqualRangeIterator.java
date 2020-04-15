@@ -17,7 +17,7 @@ public EqualRangeIterator(final Comparator<T> comparator,final Iterator<T> deleg
 @Override
 protected List<T> advance() {
 	if(!this.delegate.hasNext()) {
-		close();
+		System.err.println("Delegate has no next");
 		return null;
 		}
 	final List<T> list = new ArrayList<>();

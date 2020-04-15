@@ -85,7 +85,22 @@ public int doWork(final List<String> args) {
 			Assert.assertEquals(iter2.next(),Integer.valueOf(i));
 		}
 		Assert.assertFalse(iter2.hasNext());
-		
+		{
+		final Comparator<Integer> comparator= (A,B)->B.compareTo(A);
+		ExternalSort<Integer> sort= new ExternalSortFactory<Integer>().
+                                setComparator(comparator).
+                                setDebug(true).
+				setMaxRecordsInRam(500).
+				setEntryReader(IS->IS.readInt()).
+				setEntryWriter((OS,V)->OS.writeInt(V)).
+				make();
+		for(int i=0;i< 1_000;i++) sort.add(i);
+		for(Iterator<Integer> r=sort.iterator();r.hasNext();) {
+			System.err.println(r.next());
+			}
+		sort.close();
+		}
+
 		final Comparator<FileSize> comparator= (A,B)->Long.compare(A.length, B.length);
 		this.sorter = new ExternalSortFactory<FileSize>().
 				setComparator(comparator).
@@ -110,7 +125,6 @@ public int doWork(final List<String> args) {
 				for(FileSize a:row) {
 					System.err.println(a.path);
 				}
-			itereq.close();
 			}
 		}
 		this.sorter.close();

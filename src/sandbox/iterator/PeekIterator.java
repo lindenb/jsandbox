@@ -5,11 +5,14 @@ import java.util.Objects;
 
 import sandbox.test.RuntimeTest;
 
-public class PeekIterator<T> implements CloseableIterator<T>{
+public interface PeekIterator<T> extends Iterator<T>{
+public T peek();
+
+static class PeekIteratorImpl<T> implements PeekIterator<T> {
 private final Iterator<T> delegate;
 private T peeked= null;
 
-private PeekIterator(final Iterator<T> delegate) {
+private PeekIteratorImpl(final Iterator<T> delegate) {
 	this.delegate = Objects.requireNonNull(delegate);
 	}
 
@@ -28,6 +31,7 @@ public T next() {
 	return this.delegate.next();
 	}
 
+@Override
 public T peek() {
 	if(this.peeked != null) return this.peeked;
 	if(!this.delegate.hasNext()) return null;
@@ -36,21 +40,14 @@ public T peek() {
 	}
 
 @Override
-public void close() {
-	this.peeked=null;
-	CloseableIterator.close(this.delegate);
-	}
-public static <X> PeekIterator<X> wrap(final Iterator<X> delegate) {
-	if(delegate instanceof PeekIterator) return (PeekIterator<X>)delegate;
-	return new PeekIterator<>(delegate);
-	}
-
-@Override
 public String toString() {
 	return "PeekIterator("+this.delegate+")";
 	}
-@RuntimeTest
-private static void runTest() {
-	
+}
+
+public static <X> PeekIterator<X> wrap(final Iterator<X> delegate) {
+	if(delegate instanceof PeekIterator) return (PeekIterator<X>)delegate;
+	return new PeekIteratorImpl<>(delegate);
 	}
+
 }
