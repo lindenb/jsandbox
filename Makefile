@@ -244,6 +244,7 @@ $(eval $(call compile,swij2guile,sandbox.swij.SwijToGuile,${jcommander.jar} ./sr
 $(eval $(call compile,htmltidy,sandbox.html.HtmlTidy,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,xmlstream,sandbox.xml.XmlStream,${jcommander.jar}))
 $(eval $(call compile,finddupfiles,sandbox.tools.fdup.FindDuplicateFiles,${jcommander.jar}))
+$(eval $(call compile,rdoc,sandbox.tools.rdoc.RDocGenerator,${jcommander.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

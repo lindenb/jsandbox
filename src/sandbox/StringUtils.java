@@ -7,6 +7,14 @@ import java.util.OptionalInt;
 
 public class StringUtils {
 
+public static String ltrim(final String s) {
+	int x=0;
+	while(x<s.length() && Character.isSpaceChar(s.charAt(x))) {
+		x++;
+		}
+	return x==0?s:s.substring(x);
+	}
+	
 public static String md5(final String s) {
 	 MessageDigest md;
 	 try {

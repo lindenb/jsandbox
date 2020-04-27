@@ -21,9 +21,10 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.io.InputStreamReader;
-
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -135,7 +136,7 @@ public class MyWordle extends Launcher
 		}
 	
 	@Parameter(names={"-o","-out","--out"},description="output file")
-	private File fileout=null;
+	private Path fileOut=null;
 	@Parameter(names={"--font-family"},description="font")
 	private String fontFamily="Dialog";
 
@@ -396,7 +397,7 @@ public class MyWordle extends Launcher
 		this.words.add(word);
 		}
 	
-	public void saveAsPNG(File file)
+	public void saveAsPNG(Path file)
 		throws IOException
 		{
 		AffineTransform scale=new AffineTransform();
@@ -449,16 +450,16 @@ public class MyWordle extends Launcher
 			}
 		
 		g.dispose();
-		ImageIO.write(img, "png", file);
+		ImageIO.write(img, "png", file.toFile());
 		}
 	
-	public void saveAsSVG(File file)
+	public void saveAsSVG(final Path file)
 	throws IOException,XMLStreamException
 		{
 		final String SVG="http://www.w3.org/2000/svg";
 		final String XLINK="http://www.w3.org/1999/xlink";
 		XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
-		FileOutputStream fout=new FileOutputStream(file);
+		OutputStream fout= Files.newOutputStream(file);
 		XMLStreamWriter w= xmlfactory.createXMLStreamWriter( fout,"UTF-8");
 		w.writeStartDocument("UTF-8","1.0");
 		w.writeStartElement("svg","svg",SVG);
@@ -560,11 +561,11 @@ public class MyWordle extends Launcher
 		fout.close();
 		}
 	
-	public void saveAsPostscript(File file)
+	public void saveAsPostscript(Path file)
 	throws IOException
 		{
 		
-		PrintWriter out= new PrintWriter(file);
+		PrintWriter out= new PrintWriter(Files.newBufferedWriter(file));
 		out.println("%!PS-Adobe-2.0");
 		out.println("%%%BoundingBox: 0 0 "+(int)this.imageSize.getWidth()+" "+(int)this.imageSize.getHeight());
 		out.println("%%EndComments");
@@ -727,7 +728,7 @@ public class MyWordle extends Launcher
 	
 	@Override
 	public int doWork(final List<String> args) {
-		if(this.fileout==null) {
+		if(this.fileOut==null) {
 			LOG.error("file out missing");
 			return -1;
 		}
@@ -735,7 +736,6 @@ public class MyWordle extends Launcher
 			{
 			MyWordle app=new MyWordle();
 			String format=null;
-			File fileOut=null;
 			int optind=0;
 			
 			
@@ -758,15 +758,17 @@ public class MyWordle extends Launcher
 			
 			this.doLayout();
 			
-			if(fileOut.getName().toLowerCase().endsWith(".svg") || (format!=null && format.equalsIgnoreCase("svg")))
+			final String suffix = IOUtils.getFileSuffix(this.fileOut).toLowerCase();
+			
+			if(suffix.equals(".svg"))
 				{
 				this.saveAsSVG(fileOut);
 				}
-			else if(fileOut.getName().toLowerCase().endsWith(".png") || (format!=null && format.equalsIgnoreCase("png")))
+			else if(suffix.equals(".png"))
 				{
 				this.saveAsPNG(fileOut);
 				}
-			else if(fileOut.getName().toLowerCase().endsWith("ps") || (format!=null && format.equalsIgnoreCase("ps")))
+			else if(suffix.equals(".ps"))
 				{
 				this.saveAsPostscript(fileOut);
 				}

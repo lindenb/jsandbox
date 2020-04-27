@@ -32,6 +32,15 @@ public class IOUtils {
 private IOUtils(){
 }
 
+
+/** return file suffix (INCLUDING the dot) or empty string if there is no dot */
+public static String getFileSuffix(final Path path) {
+	String fname = path.getFileName().toString();
+	int idx = fname.lastIndexOf('.');
+	if(idx<0) return "";
+	return fname.substring(idx);
+}
+
 public static Path getDefaultTmpDirPath() {
 	return Paths.get(System.getProperty("java.io.tmpdir"));
 }
@@ -60,7 +69,13 @@ public static File assertDirectoryExist(final File f) {
 	return f;
 	}
 
-
+public static Path assertDirectoryExist(final Path f) {
+	if(!(f!=null && Files.exists(f) && Files.isDirectory(f))) {
+		throw new IllegalStateException("Not an existing directory "+f);
+		}
+	return f;
+	}
+	
 
 public static boolean isURL(final String s) 
 	{
