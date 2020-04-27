@@ -126,7 +126,11 @@ public int doWork(final List<String> args) {
 					out.println("\\title{"+funName+"}");
 					out.println("\\usage{"+funName+line.substring(openPar,endPar+1)+"}");
 					if(description.length()>0) {
-						out.println("\\description{"+description.toString().trim()+"}");
+						out.println("\\description{"+(description.toString().contains("\n")?description.toString():description.toString().trim())+"}");
+						}
+					else
+						{
+						out.println("\\description{No description available}");
 						}
 					if(returnStr!=null) {
 						out.println("\\value{"+returnStr+"}");
