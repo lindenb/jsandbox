@@ -17,7 +17,6 @@ import javax.xml.stream.XMLStreamWriter;
 
 import com.beust.jcommander.Parameter;
 
-import sandbox.GeneticPainting;
 import sandbox.IOUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
@@ -48,7 +47,6 @@ public class TreeMapMaker extends Launcher
     
 	private class Frame implements TreePack
 		{
-		private int priv_id = ++ID_GENERATOR;
 		private final List<Frame> children=new ArrayList<>();
 		private Frame parent=null;
 		private Map<String,String> properties; 
@@ -62,11 +60,10 @@ public class TreeMapMaker extends Launcher
 			}
 		public String getParentId() {
 			String s = getAttribute("parent", null);
-			if(s==null) s= getAttribute("parent-id", null);
-			if(s==null) s= getAttribute("parent_id", null);
+			if(StringUtils.isBlank(s)) s= getAttribute("parent-id", null);
+			if(StringUtils.isBlank(s)) s= getAttribute("parent_id", null);
 			return s;
 			}
-		boolean hasId() { return hasAttribute("id");}
 		String getId() { return getAttribute("id", null);}
 		
 		@Override
@@ -74,8 +71,8 @@ public class TreeMapMaker extends Launcher
 			{
 			if(isLeaf()) {
 				String s = getAttribute("weight", null);
-				if(s==null) s = getAttribute("score", null);
-				if(s==null) return 1.0;
+				if(StringUtils.isBlank(s)) s = getAttribute("score", null);
+				if(StringUtils.isBlank(s)) return 1.0;
 				double score = Double.parseDouble(s);
 				if(score<=0) throw new IllegalArgumentException("score shoud be > 0 "+this.toString());
 				return score;
@@ -91,6 +88,9 @@ public class TreeMapMaker extends Launcher
 			return children.isEmpty();
 			}
 
+		boolean isRoot() {
+		return this.parent == null;
+		}
 		
 		@Override
 		public Rectangle2D getBounds() {
@@ -98,19 +98,24 @@ public class TreeMapMaker extends Launcher
 			}
 		@Override
 		public void setBounds(final Rectangle2D bounds) {
-			this.bounds = bounds;
+			this.bounds = new Rectangle2D.Double(
+					bounds.getX(),bounds.getY(),bounds.getWidth(),bounds.getHeight());
 			}
 		
 		protected String getAttribute(final String name,String def)
 			{
-			return this.properties.getOrDefault(name, "");
+			return this.properties.getOrDefault(name,(def==null?"":def));
 			}
 		
 		protected String getStyle(String sel,String def)
 			{
 			String val=null;
-			String style=getAttribute("style",null);
-			if(style!=null)
+			
+			String style=getAttribute(sel,null);
+			if(!StringUtils.isBlank(style)) return style;
+			
+			style=getAttribute("style",null);
+			if(!StringUtils.isBlank(style))
 				{
 				for(String s:style.split("[;]"))
 					{
@@ -139,7 +144,7 @@ public class TreeMapMaker extends Launcher
 		public String getUrl()
 			{
 			String s= getAttribute("url",null);
-			if(s==null) s=getAttribute("href",null);
+			if(StringUtils.isBlank(s)) s=getAttribute("href",null);
 			return s;
 			}
 		public String getImage()
@@ -160,11 +165,13 @@ public class TreeMapMaker extends Launcher
 			return getRects()[0];
 		}
 		
-		Rectangle2D[] getRects()
+		private Rectangle2D[] getRects()
 			{
 			Rectangle2D.Double r=new Rectangle2D.Double();
 			r.setRect(this.bounds);
 			if(parent==null) return new Rectangle2D[]{r,null};
+			
+			
 			if(r.width>4*MARGIN)
 				{
 				r.x+=MARGIN;
@@ -187,6 +194,7 @@ public class TreeMapMaker extends Launcher
 				r.y+=L;
 				r.height-=(L*2.0);
 				}
+			
 			Rectangle2D.Double r2= null;;
 			if(StringUtils.isBlank(this.getLabel())) {
 				   if(r.getMaxY()+6 < this.bounds.getMaxY())
@@ -241,9 +249,10 @@ public class TreeMapMaker extends Launcher
 		   if(!StringUtils.isBlank(url)) {
 			   w.writeStartElement("a");
 			   w.writeAttribute("href", url);
-		   }
+		   		}
 		   
 		   w.writeStartElement("rect");
+		   w.writeAttribute("fill",getStyle("fill",isRoot()?"none":"gray"));
 		   w.writeAttribute("x",format(this.bounds.getX()));
 		   w.writeAttribute("y",format(this.bounds.getY()));
 		   w.writeAttribute("width",format(this.bounds.getWidth()));
@@ -265,10 +274,37 @@ public class TreeMapMaker extends Launcher
 		   		w.writeAttribute("y",format(this.bounds.getY()));
 		   		w.writeAttribute("width",format(this.bounds.getWidth()));
 		   		w.writeAttribute("height",format(this.bounds.getHeight()));
-				w.writeAttribute("preserveAspectRatio","xMidYMid slice");
+				w.writeAttribute("preserveAspectRatio",this.getStyle("preserveAspectRatio","xMidYMid slice"));
 				w.writeEndElement();
 				}
+			if(!StringUtils.isBlank(getLabel())) {
+				String label = this.getLabel();
+				final int label_length = label.length();
+				final double fontSize= Math.min(this.bounds.getWidth()/label_length,this.bounds.getHeight());
 
+				 if(!StringUtils.isBlank(url)) {
+				   w.writeStartElement("a");
+				   w.writeAttribute("href", url);
+			   		}
+				
+				w.writeStartElement("text");
+				w.writeAttribute("x",format(this.bounds.getCenterX()));
+				w.writeAttribute("y",format(this.bounds.getCenterY()+fontSize/2.0));
+				w.writeAttribute("text-anchor",getStyle("text-anchor", "middle"));
+				w.writeAttribute("fill",getStyle("text-fill", "blue"));
+				w.writeAttribute("font-size",getStyle("font-size", format(fontSize)));
+				//w.writeStartElement("textPath");
+				//w.writeAttribute("href","#"+path_id);
+				//w.writeAttribute("method","stretch");
+				//w.writeAttribute("lengthAdjust","spacingAndGlyphs");
+				w.writeCharacters(label);
+				//w.writeEndElement();//textPath
+				w.writeEndElement();//mtext
+				
+				 if(!StringUtils.isBlank(url)) {
+				    w.writeEndElement();
+			   		}
+				}
 
 			   Optional<Dimension> imgDimOpt = Optional.empty();
 			   String imgUrl = this.getImage();
@@ -328,6 +364,7 @@ public class TreeMapMaker extends Launcher
 									return -1;
 									}
 								}
+							frame.parent = theParent;
 							theParent.children.add(frame);
 							}
 						

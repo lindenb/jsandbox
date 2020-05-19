@@ -33,16 +33,17 @@ public class TreePacker
 	private <T extends TreePack> List<T> sortDescending(final List<T> items)
 	    {
 	    final List<T> L=new ArrayList<>(items);
-	    Collections.sort(L,comparator);
+	    Collections.sort(L,this.comparator);
 	    return L;
 	    }
 	
-	private <T extends TreePack> void layout(final List<T> items, int start, int end,
+	private <T extends TreePack> void layout(final List<T> items,final int start, final int end,
 			final Rectangle2D bounds)
     {
-        if (start>end) return;
-            
-        if (end-start<2)
+    if (start>end) return;
+    
+        
+    if (end-start<2)
         {
             layoutBest(items,start,end,bounds);
             return;
@@ -50,18 +51,18 @@ public class TreePacker
         
         double x=bounds.getX(), y=bounds.getY(), w=bounds.getWidth(), h=bounds.getHeight();
         
-        double total=sum(items, start, end);
+        final double total=sum(items, start, end);
         int mid=start;
-        double a=items.get(start).getWeight()/total;
-        double b=a;
+        double a = items.get(start).getWeight()/total;
+        double b = a;
         
         if (w<h)
         {
             // height/width
             while (mid<=end)
             {
-                double aspect=normAspect(h,w,a,b);
-                double q=items.get(mid).getWeight()/total;
+                final double aspect=normAspect(h,w,a,b);
+                final double q=items.get(mid).getWeight()/total;
                 if (normAspect(h,w,a,b+q)>aspect) break;
                 mid++;
                 b+=q;
@@ -74,8 +75,8 @@ public class TreePacker
             // width/height
             while (mid<=end)
             {
-                double aspect=normAspect(w,h,a,b);
-                double q=items.get(mid).getWeight()/total;
+            	final double aspect=normAspect(w,h,a,b);
+            	final double q=items.get(mid).getWeight()/total;
                 if (normAspect(w,h,a,b+q)>aspect) break;
                 mid++;
                 b+=q;
@@ -109,16 +110,15 @@ public class TreePacker
     
 
     private <T extends TreePack> void sliceLayout(final List<T> items, int start, int end, final Rectangle2D bounds, Orientation orientation, Direction order)
-        {
+          {
             double total=sum(items, start, end);
             double a=0;
-            boolean vertical=orientation==Orientation.VERTICAL;
-           
+            
             for (int i=start; i<=end; i++)
             {
             	final Rectangle2D.Double r=new Rectangle2D.Double();
-                double b=items.get(i).getWeight()/total;
-                if (vertical)
+                final double b = items.get(i).getWeight()/total;
+                if (orientation==Orientation.VERTICAL)
                 {
                     r.x=bounds.getX();
                     r.width=bounds.getWidth();
@@ -138,10 +138,12 @@ public class TreePacker
                     r.y=bounds.getY();
                     r.height=bounds.getHeight();
                 }
-     
+                
                 items.get(i).setBounds(r);
+               
                 a+=b;
             }
+
         }
 
 	}
