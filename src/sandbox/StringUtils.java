@@ -95,4 +95,8 @@ public static boolean isDouble(final String s) {
 public static String orElse(final String s,final String def) {
 	return isBlank(s)?def:s;
 	}
+
+public static String normalizeSpaces(final String s) {
+	return s.replaceAll("\\s+"," ").trim();
+	}
 }

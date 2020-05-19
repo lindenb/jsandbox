@@ -1,5 +1,6 @@
 package sandbox;
 
+import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
@@ -7,14 +8,19 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PushbackInputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 
 public class ImageUtils
 	{
@@ -24,6 +30,41 @@ public class ImageUtils
 		}
 	public static ImageUtils getInstance() {
 		return new ImageUtils();
+		}
+	
+	public Optional<Dimension> getDimension(final String pathOrUrl) {
+		if(StringUtils.isBlank(pathOrUrl)) return Optional.empty();
+		InputStream in0 = null;
+		ImageInputStream in = null;
+		try
+			{
+			if(IOUtils.isURL(pathOrUrl)) {
+				in0 = new URL(pathOrUrl).openStream();
+				}
+			else
+				{
+				in0 = Files.newInputStream(Paths.get(pathOrUrl));
+				}
+			in = ImageIO.createImageInputStream(in0);
+		    final Iterator<ImageReader> readers = ImageIO.getImageReaders(in0);
+		    if (readers.hasNext()) {
+		        final ImageReader reader = readers.next();
+		        try {
+		            reader.setInput(in);
+		           return Optional.of(new Dimension(reader.getWidth(0), reader.getHeight(0)));
+		        } finally {
+		            reader.dispose();
+			        }
+			    }
+		    return Optional.empty();
+			} 			
+		catch(final Exception err) {
+			return Optional.empty();
+			}
+		finally {
+			IOUtils.close(in);
+			IOUtils.close(in0);
+			}
 		}
 	
 	public boolean hasImageSuffix(final File f) {
