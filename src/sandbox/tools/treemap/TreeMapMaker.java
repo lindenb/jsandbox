@@ -257,6 +257,19 @@ public class TreeMapMaker extends Launcher
 		   w.writeEndElement();//rect
 		   
 		   if(isLeaf()) {
+				if(getImage().trim().length()>0) {
+
+				w.writeStartElement("image");
+				w.writeAttribute("href",getImage());
+				w.writeAttribute("x",format(this.bounds.getX()));
+		   		w.writeAttribute("y",format(this.bounds.getY()));
+		   		w.writeAttribute("width",format(this.bounds.getWidth()));
+		   		w.writeAttribute("height",format(this.bounds.getHeight()));
+				w.writeAttribute("preserveAspectRatio","xMidYMid slice");
+				w.writeEndElement();
+				}
+
+
 			   Optional<Dimension> imgDimOpt = Optional.empty();
 			   String imgUrl = this.getImage();
 
