@@ -29,7 +29,6 @@ import sandbox.treemap.TreePacker;
 public class TreeMapMaker extends Launcher
 	{
 	protected static final Logger LOG=Logger.builder(TreeMapMaker.class).build();
-    private static int ID_GENERATOR=0;
 	private static final  String SVG=  sandbox.svg.SVG.NS;
     private static int MARGIN=10;
     
@@ -56,7 +55,7 @@ public class TreeMapMaker extends Launcher
 			this.properties = new HashMap<>(props);
 			}
 		public boolean hasAttribute(final String id) {
-			return this.properties.containsKey(id);
+			return !StringUtils.isBlank(getAttribute(id,""));
 			}
 		public String getParentId() {
 			String s = getAttribute("parent", null);
@@ -107,10 +106,9 @@ public class TreeMapMaker extends Launcher
 			return this.properties.getOrDefault(name,(def==null?"":def));
 			}
 		
-		protected String getStyle(String sel,String def)
+		protected String getStyle(final String sel,final String def)
 			{
 			String val=null;
-			
 			String style=getAttribute(sel,null);
 			if(!StringUtils.isBlank(style)) return style;
 			
@@ -149,15 +147,10 @@ public class TreeMapMaker extends Launcher
 			}
 		public String getImage()
 			{
+			if(!isLeaf()) return null;
 			String s= getAttribute("image",null);
 			if(s==null) s=getAttribute("img",null);
 			return s;
-			}
-		
-		
-		private String getFontFamily()
-			{
-			return getStyle("font-family","Courier");
 			}
 		
 		
@@ -264,47 +257,64 @@ public class TreeMapMaker extends Launcher
 		   w.writeEndElement();
 		   	   
 		   w.writeEndElement();//rect
-		   
 		   if(isLeaf()) {
-				if(getImage().trim().length()>0) {
-
-				w.writeStartElement("image");
-				w.writeAttribute("href",getImage());
-				w.writeAttribute("x",format(this.bounds.getX()));
-		   		w.writeAttribute("y",format(this.bounds.getY()));
-		   		w.writeAttribute("width",format(this.bounds.getWidth()));
-		   		w.writeAttribute("height",format(this.bounds.getHeight()));
-				w.writeAttribute("preserveAspectRatio",this.getStyle("preserveAspectRatio","xMidYMid slice"));
-				w.writeEndElement();
-				}
-			if(!StringUtils.isBlank(getLabel())) {
-				String label = this.getLabel();
-				final int label_length = label.length();
-				final double fontSize= Math.min(this.bounds.getWidth()/label_length,this.bounds.getHeight());
-
-				 if(!StringUtils.isBlank(url)) {
-				   w.writeStartElement("a");
-				   w.writeAttribute("href", url);
-			   		}
-				
-				w.writeStartElement("text");
-				w.writeAttribute("x",format(this.bounds.getCenterX()));
-				w.writeAttribute("y",format(this.bounds.getCenterY()+fontSize/2.0));
-				w.writeAttribute("text-anchor",getStyle("text-anchor", "middle"));
-				w.writeAttribute("fill",getStyle("text-fill", "blue"));
-				w.writeAttribute("font-size",getStyle("font-size", format(fontSize)));
-				//w.writeStartElement("textPath");
-				//w.writeAttribute("href","#"+path_id);
-				//w.writeAttribute("method","stretch");
-				//w.writeAttribute("lengthAdjust","spacingAndGlyphs");
-				w.writeCharacters(label);
-				//w.writeEndElement();//textPath
-				w.writeEndElement();//mtext
-				
-				 if(!StringUtils.isBlank(url)) {
-				    w.writeEndElement();
-			   		}
-				}
+				if(!StringUtils.isBlank(getImage())) {
+					w.writeStartElement("image");
+					w.writeAttribute("href",getImage());
+					w.writeAttribute("x",format(this.bounds.getX()));
+			   		w.writeAttribute("y",format(this.bounds.getY()));
+			   		w.writeAttribute("width",format(this.bounds.getWidth()));
+			   		w.writeAttribute("height",format(this.bounds.getHeight()));
+					w.writeAttribute("preserveAspectRatio",this.getStyle("preserveAspectRatio","xMidYMid slice"));
+					w.writeEndElement();
+					}
+				if(!StringUtils.isBlank(getLabel())) {
+					String label = this.getLabel();
+					final int label_length = label.length();
+					final double fontSize;
+					final boolean rotate = this.bounds.getHeight()> 1.5* this.bounds.getWidth();
+					
+					if(rotate) {
+						fontSize = Math.min(this.bounds.getWidth(),this.bounds.getHeight()/label_length);
+						}
+					else
+						{
+						fontSize = Math.min(this.bounds.getWidth()/label_length,this.bounds.getHeight());
+						}
+					
+					if(!StringUtils.isBlank(url)) {
+					   w.writeStartElement("a");
+					   w.writeAttribute("href", url);
+				   		}
+					
+					w.writeStartElement("text");
+					w.writeAttribute("x",format(this.bounds.getCenterX()));
+					w.writeAttribute("y",format(this.bounds.getCenterY() /* +fontSize/2.0 */));
+					if(rotate) {
+						w.writeAttribute("transform","rotate(90,"+format(this.bounds.getCenterX())+","+format(this.bounds.getCenterY())+")");
+						}
+					if(!StringUtils.isBlank(getImage())) {
+						w.writeAttribute("fill-opacity","0.7");
+						}
+					w.writeAttribute("text-anchor",getStyle("text-anchor", "middle"));
+					w.writeAttribute("dominant-baseline","central");
+					w.writeAttribute("fill",getStyle("text-fill", "blue"));
+					w.writeAttribute("font-size",getStyle("font-size", format(fontSize)));
+					
+					String style = getStyle("font-family",null);
+					if(!StringUtils.isBlank(style)) w.writeAttribute("font-family",style);
+					//w.writeStartElement("textPath");
+					//w.writeAttribute("href","#"+path_id);
+					//w.writeAttribute("method","stretch");
+					//w.writeAttribute("lengthAdjust","spacingAndGlyphs");
+					w.writeCharacters(label);
+					//w.writeEndElement();//textPath
+					w.writeEndElement();//mtext
+					
+					 if(!StringUtils.isBlank(url)) {
+					    w.writeEndElement();
+				   		}
+					}
 
 			   Optional<Dimension> imgDimOpt = Optional.empty();
 			   String imgUrl = this.getImage();
@@ -400,7 +410,7 @@ public class TreeMapMaker extends Launcher
 				XMLStreamWriter w= xmlfactory.createXMLStreamWriter(os,"UTF-8");
 				w.writeStartDocument("UTF-8","1.0");
 				w.writeStartElement("svg");
-				w.writeAttribute("style", "fill:none;stroke:black;stroke-width:0.5px;");
+				w.writeAttribute("style", "dominant-baseline:central;fill:none;stroke:darkgray;stroke-width:0.5px;");
 				w.writeAttribute("xmlns",SVG);
 				w.writeAttribute("width",format(this.viewRect.getWidth()+1));
 				w.writeAttribute("height",format(this.viewRect.getHeight()+1));
