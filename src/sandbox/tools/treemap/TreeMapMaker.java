@@ -3,14 +3,18 @@ package sandbox.tools.treemap;
 import java.awt.Dimension;
 import java.awt.geom.Rectangle2D;
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.net.URL;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamWriter;
@@ -38,6 +42,9 @@ public class TreeMapMaker extends Launcher
     private Dimension viewRect = new Dimension(1000, 1000);
     @Parameter(names={"--title"},description="title")
     private String mainTitle = "TreeMap";
+    @Parameter(names={"--cache"},description="cache images in that directory")
+    private Path cacheDir = null;
+
 
     
     private String format(double f) {
@@ -241,7 +248,7 @@ public class TreeMapMaker extends Launcher
 		   
 		   if(!StringUtils.isBlank(url)) {
 			   w.writeStartElement("a");
-			   w.writeAttribute("href", url);
+			   w.writeAttribute("href", escapeURL(url));
 		   		}
 		   
 		   w.writeStartElement("rect");
@@ -260,7 +267,7 @@ public class TreeMapMaker extends Launcher
 		   if(isLeaf()) {
 				if(!StringUtils.isBlank(getImage())) {
 					w.writeStartElement("image");
-					w.writeAttribute("href",getImage());
+					w.writeAttribute("href",cacheImage(getImage()));
 					w.writeAttribute("x",format(this.bounds.getX()));
 			   		w.writeAttribute("y",format(this.bounds.getY()));
 			   		w.writeAttribute("width",format(this.bounds.getWidth()));
@@ -284,7 +291,7 @@ public class TreeMapMaker extends Launcher
 					
 					if(!StringUtils.isBlank(url)) {
 					   w.writeStartElement("a");
-					   w.writeAttribute("href", url);
+					   w.writeAttribute("href", escapeURL(url));
 				   		}
 					
 					w.writeStartElement("text");
@@ -340,9 +347,27 @@ public class TreeMapMaker extends Launcher
 		}
 	
 	
-	
+	private String escapeURL(final String url) {
+		return url;
+	}
     
-   
+    private String cacheImage(final String src) {
+    if(this.cacheDir==null) return src;
+    try {
+   		Path imgPath= this.cacheDir.resolve(StringUtils.md5(src)+".png");
+   		if(!Files.exists(imgPath)) {
+	   		LOG.info("Caching "+src+" into "+imgPath);
+	   		try(InputStream in = new URL(src).openStream()) {
+	   			IOUtils.copyTo(in,imgPath);
+	   			}
+   			}
+   		return imgPath.toString();
+    	}
+    catch(IOException err) {
+    	LOG.error(err);
+    	return src;
+    	}
+    }
     
     @Override
     public int doWork(final List<String> args) {

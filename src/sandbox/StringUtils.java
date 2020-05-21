@@ -1,9 +1,12 @@
 package sandbox;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
+import java.util.Properties;
 
 public class StringUtils {
 
@@ -99,4 +102,20 @@ public static String orElse(final String s,final String def) {
 public static String normalizeSpaces(final String s) {
 	return s.replaceAll("\\s+"," ").trim();
 	}
+
+//https://stackoverflow.com/questions/13700333/convert-escaped-unicode-character-back-to-actual-character
+public static  String unescapeUnicode(final String s) {
+	try
+		{
+		final Properties p = new Properties();
+		p.load(new StringReader("key="+s));
+		return p.getProperty("key");
+		}
+	catch (IOException e)
+		{
+		return s;
+		}
+	
+	}
+
 }

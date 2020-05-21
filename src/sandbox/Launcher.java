@@ -11,6 +11,7 @@ import com.beust.jcommander.Parameter;
 public abstract class Launcher
 	{
 	private static final Logger LOG = Logger.builder(Launcher.class).build();
+	protected static final String OUTPUT_OR_STANDOUT= "File output (or stdout if undefined)";
 	
 	public abstract int doWork(final List<String> args);
 	

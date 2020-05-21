@@ -254,6 +254,15 @@ public static void copyTo(final InputStream in,final OutputStream out) throws IO
 		out.write(array, 0, n);
 	}
 
+/** copy in into Path */
+public static void copyTo(final InputStream in,final Path out) throws IOException
+	{
+	try(OutputStream os = Files.newOutputStream(out)) {
+		copyTo(in,os);
+		}
+	}
+
+
 public static void flush(final Object...array)
 	{
 	if(array==null ) return;
@@ -306,6 +315,6 @@ public static void close(final Object...array)
 	}
 
 public static String getUserAgent() {
-	return "Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:60.0) Gecko/20100101 Firefox/60.0";
+	return "Mozilla/5.0 (X11; Linux i686; rv:76.0) Gecko/20100101 Firefox/76.0";
 	}
 }
