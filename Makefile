@@ -247,6 +247,7 @@ $(eval $(call compile,xmlstream,sandbox.xml.XmlStream,${jcommander.jar}))
 $(eval $(call compile,finddupfiles,sandbox.tools.fdup.FindDuplicateFiles,${jcommander.jar}))
 $(eval $(call compile,rdoc,sandbox.tools.rdoc.RDocGenerator,${jcommander.jar}))
 $(eval $(call compile,ig2table,sandbox.tools.ig.IgToTable,${jcommander.jar} ${apache.httpclient.jars}))
+$(eval $(call compile,makegrid,sandbox.tools.kirby.MakeGrid,${jcommander.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
