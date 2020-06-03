@@ -3,23 +3,28 @@ package sandbox.tools.ig;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.io.StringReader;
+import java.io.Writer;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
 import com.beust.jcommander.Parameter;
+import com.google.gson.JsonElement;
 
 import sandbox.IOUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.StringUtils;
+import sandbox.http.CookieStoreUtils;
+import sandbox.ig.InstagramJsonScraper;
 import sandbox.iterator.BufferedReaderIterator;
 
 public class IgToTable extends Launcher
@@ -32,7 +37,10 @@ public class IgToTable extends Launcher
 	private int sleep = 0;
 	@Parameter(names= {"--vertical"},description="vertical output")
 	private boolean vertical = false;
+	@Parameter(names={"-c","--cookies"},description=CookieStoreUtils.OPT_DESC)
+	private Path cookieStoreFile  = null;
 
+	private final InstagramJsonScraper scraper = new InstagramJsonScraper();
 	
    private String month2num(final String s) {
    if(s.equalsIgnoreCase("January")) return "01";
@@ -49,19 +57,134 @@ public class IgToTable extends Launcher
    if(s.equalsIgnoreCase("December")) return "12";
    return s;
    }
-	
+	private String fetchHtml(final CloseableHttpClient client,final String url) {
+	LOG.info("fetch "+url);
+	CloseableHttpResponse resp=null;
+	InputStream in=null;
+	try {
+		resp = client.execute(new HttpGet(url));
+		if(resp.getStatusLine().getStatusCode()!=200) {
+			LOG.error("cannot fetch "+url+" "+resp.getStatusLine());
+			return null;
+			}
+		in = resp.getEntity().getContent();
+		return IOUtils.readStreamContent(in);
+		}
+	catch(final IOException err) {
+		LOG.error(err);
+		return null;
+		}
+	finally
+		{
+		IOUtils.close(in);
+		IOUtils.close(resp);
+		}
+	}
+   
+   
 	private void fetch(final PrintWriter out,final CloseableHttpClient client,final String url) throws Exception {
-		LOG.info("fetch "+url);
-		CloseableHttpResponse resp=null;
-		InputStream in=null;
-		try {
-			resp = client.execute(new HttpGet(url));
-			if(resp.getStatusLine().getStatusCode()!=200) {
-				LOG.error("cannot fetch "+url+" "+resp.getStatusLine());
-				return;
+		if(url.contains("/p/")) {
+			fetchPost(out,client,url);
+			}
+		else
+			{
+			fetchProfile(out,client,url);
+			}
+		}
+	
+	private String findBetween(final String htmlDoc,String start,String end) {
+		int i= htmlDoc.indexOf(start);
+		if(i==-1) {return null;}
+		i+=start.length();
+		int j= htmlDoc.indexOf(end,i);
+		if(j==-1) return null;
+		return htmlDoc.substring(i,j);
+		}
+	private String toString(JsonElement e) {
+		if(e==null || e.isJsonNull()) return null;
+		if(!e.isJsonPrimitive()) return null;
+		return e.getAsJsonPrimitive().getAsString();
+		}
+	private String getCount(JsonElement root,final String key) {
+		JsonElement e=InstagramJsonScraper.find(root,key);
+		if(e==null) return null;
+		e= InstagramJsonScraper.find(e,"count");
+		return toString(e);
+		}
+	
+	private void fetchProfile(final PrintWriter out,final CloseableHttpClient client,final String url) throws Exception {
+		final String htmlDoc =  fetchHtml(client,url);
+		String profile_url = null;
+		String count_followers = null;
+		String count_following = null;
+		String full_name = null;
+		String username = null;
+		String count_posts = null;
+		String isprivate=null;
+		boolean deleted = true;
+		if(htmlDoc!=null) {
+			JsonElement root = scraper.apply(htmlDoc).orElse(null);
+			if(root!=null) {
+				final JsonElement requested_by_viewer = InstagramJsonScraper.find(root,"ProfilePage");
+				if(requested_by_viewer==null) System.err.println("xx="+htmlDoc.indexOf("requested_by_viewer"));
+				if(requested_by_viewer!=null) root = requested_by_viewer;
+				profile_url = toString(InstagramJsonScraper.find(root, "profile_pic_url"));
+				if(profile_url == null) toString(InstagramJsonScraper.find(root, "display_url")); 
+				//if(profile_url!=null) profile_url= StringUtils.unescapeUnicode(profile_url);
+				count_followers = getCount(root, "edge_followed_by");
+				count_following = getCount(root, "edge_follow"); 
+				full_name = toString(InstagramJsonScraper.find(root, "full_name"));
+				username =  toString(InstagramJsonScraper.find(root, "username"));
+				count_posts =   getCount(root, "edge_owner_to_timeline_media");
+				isprivate = toString(InstagramJsonScraper.find(root,"is_private"));
 				}
-			in = resp.getEntity().getContent();
-			final String htmlDoc =  IOUtils.readStreamContent(in);
+			else
+				{
+				LOG.warning("cannot find json in "+url);
+				}
+			if(profile_url==null) profile_url= findBetween(htmlDoc, "property=\"og:image\" content=\"","\"");
+
+			deleted=false;
+			if(profile_url==null) profile_url= findBetween(htmlDoc, "property=\"og:image\" content=\"","\"");
+			
+			}
+		if(this.vertical) {
+			out.println("ig:"+url);
+			if(deleted) out.println("deleted:"+true);
+			if(username!=null) out.println("user:"+username);
+			if(full_name!=null) out.println("name:"+full_name);
+			if(profile_url!=null) out.println("img:"+profile_url);
+			if(count_followers!=null) out.println("followers:"+count_followers);
+			if(count_following!=null) out.println("following:"+count_following);
+			if(count_posts!=null) out.println("posts:"+count_posts);
+			if(isprivate!=null && isprivate.equals("true")) out.println("private:true");
+			out.println();
+			} else {
+			out.print(url);
+			out.print("\t");
+			out.print(username==null?".":username);
+			out.print("\t");
+			out.print(full_name==null?".":full_name);
+			out.print("\t");
+			out.print(profile_url==null?".":profile_url);
+			out.print("\t");
+			out.print(count_followers==null?".":count_followers);
+			out.print("\t");
+			out.print(count_following==null?".":count_following);
+			out.print("\t");
+			out.print(count_posts==null?".":count_posts);
+			out.print("\t");
+			out.print(isprivate!=null && isprivate.equals("true")?"PRIVATE":".");
+			out.println();
+			}
+		}
+	
+	
+	private void fetchPost(final PrintWriter out,final CloseableHttpClient client,final String url) throws Exception {
+		LOG.info("fetch "+url);
+		try {
+			final String htmlDoc =  fetchHtml(client,url);
+			if(htmlDoc==null) return;
 			String needle = "property=\"og:description\"";
 			int i= htmlDoc.indexOf(needle);
 			if(i==-1) {
@@ -184,13 +307,8 @@ public class IgToTable extends Launcher
 				out.println();
 				}
 			}
-		catch(final IOException err) {
+		catch(final Throwable err) {
 			LOG.error(err);
-			}
-		finally
-			{
-			IOUtils.close(in);
-			IOUtils.close(resp);
 			}
 		}
 	
@@ -200,7 +318,10 @@ public class IgToTable extends Launcher
 		try {
 			final HttpClientBuilder builder = HttpClientBuilder.create();
 			builder.setUserAgent(IOUtils.getUserAgent());
-			
+			if(this.cookieStoreFile!=null) {
+				final BasicCookieStore cookies = CookieStoreUtils.readTsv(this.cookieStoreFile);
+				builder.setDefaultCookieStore(cookies);
+				}
 			
 			try(CloseableHttpClient client = builder.build();
 				PrintWriter out = IOUtils.openPathAsPrintWriter(this.output);

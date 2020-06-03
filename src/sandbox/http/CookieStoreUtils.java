@@ -30,7 +30,7 @@ import org.apache.http.impl.cookie.BasicClientCookie;
 import sandbox.IOUtils;
 
 public class CookieStoreUtils  {
-	public static final String OPT_DESC="Cookie file. Obtained from sqlite3 -header -separator '   '  ~/.mozilla/firefox/xxx/cookies.sqlite 'select * from moz_cookies' ";
+	public static final String OPT_DESC="Cookie file. Obtained from `sqlite3 -header -separator $'\\t'  ~/.mozilla/firefox/xxx/cookies.sqlite 'select * from moz_cookies'` ";
 	private CookieStoreUtils()
 		{
 		
@@ -58,7 +58,7 @@ public class CookieStoreUtils  {
 				final String value=att.getValue();
 				
 				final BasicClientCookie cookie= new BasicClientCookie(name, value);
-				att = E.getAttributeByName(new QName("domain"));
+				att = E.getAttributeByName(new QName("host"));
 				if(att!=null) cookie.setDomain(att.getValue());
 				att = E.getAttributeByName(new QName("path"));
 				if(att!=null) cookie.setPath(att.getValue());
@@ -133,11 +133,11 @@ CREATE INDEX moz_basedomain ON moz_cookies (baseDomain, originAttributes);
 				}
 			for(final String col:new String[]{
 					//"id", 
-					 "baseDomain", 
+					// "baseDomain", 
 					//"originAttributes", 
 					 "name", 
 					 "value", 
-					 "host", 
+					"host", 
 					 "path", 
 					//"expiry", 
 					//"lastAccessed", 
@@ -162,7 +162,7 @@ CREATE INDEX moz_basedomain ON moz_cookies (baseDomain, originAttributes);
 						tokens[column2index.get("name")],
 						tokens[column2index.get("value")]
 						);
-				String att = tokens[column2index.get("baseDomain")];
+				String att = tokens[column2index.get("host")];
 				cookie.setDomain(att);
 				att = tokens[column2index.get("path")];
 				cookie.setPath(att);

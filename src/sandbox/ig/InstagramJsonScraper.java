@@ -1,7 +1,6 @@
 package sandbox.ig;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.StringReader;
 import java.util.HashSet;
 import java.util.Map;
@@ -9,9 +8,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -23,35 +19,39 @@ import com.google.gson.stream.JsonReader;
 import sandbox.IOUtils;
 import sandbox.Logger;
 
-class InstagramJsonScraper implements Function<String,Optional<JsonObject>>, AutoCloseable {
+public class InstagramJsonScraper implements Function<String,Optional<JsonObject>> {
 	private static final Logger LOG = Logger.builder(InstagramJsonScraper.class).build();
 
-	private final CloseableHttpClient client;
 
-	public InstagramJsonScraper(final CloseableHttpClient client) {
-		this.client = client;
+	public static JsonElement find(final JsonElement root,final String  key) {
+		JsonElement v = findRecursive(root,key);
+		return v;
 		}
 	
-	private String queryHtml(final String queryName) throws IOException {
-		CloseableHttpResponse response = null;
-		InputStream httpIn = null;
-		try
-			{
-			response = this.client.execute(new HttpGet(this.fixUrl( queryName)));
-			httpIn = response.getEntity().getContent();
-			final String html = IOUtils.readStreamContent(httpIn);
-			return html;
+	private static JsonElement findRecursive(final JsonElement root,final String  key) {
+		if(root==null || root.isJsonNull() || root.isJsonPrimitive()) {
+			return null;
 			}
-		catch(final IOException err)
-			{
-			LOG.error(err);
-			throw err;
+		else if(root.isJsonObject()) {
+			final JsonObject obj = root.getAsJsonObject();
+			if(obj.has(key)) {
+				return obj.get(key);
 			}
-		finally
-			{
-			IOUtils.close(httpIn);
-			IOUtils.close(response);
+			for(final Map.Entry<String,JsonElement> kv:obj.entrySet()) {
+				final JsonElement v1= kv.getValue();
+				final JsonElement v2 =  findRecursive(v1,key);
+				if(v2!=null) return v2;
+				}
 			}
+		else if(root.isJsonArray()) {
+			final JsonArray array = root.getAsJsonArray();
+			for(int i=0;i< array.size();i++) {
+				final JsonElement v1= array.get(i);
+				final JsonElement v2 =  findRecursive(v1,key);
+				if(v2!=null) return v2;
+				}
+			}
+		return null;
 		}
 	
 	private String fixUrl(final String queryName) {
@@ -110,35 +110,28 @@ class InstagramJsonScraper implements Function<String,Optional<JsonObject>>, Aut
 			}
 		return false;
 		}
-	
-	public  Optional<JsonObject> apply(String queryName) {
+	@Override
+	public  Optional<JsonObject> apply(String html) {
 		final String windowSharedData = "window._sharedData";
 		final String endObject="};";
-		String html;
-		try {
-			html = queryHtml(queryName);
-			}
-		catch(Exception err) {
-			LOG.error(err);
-			return Optional.empty();
-			}
+
 		int i= html.indexOf(windowSharedData);
 		if(i==-1) {
-			LOG.error("cannot find "+windowSharedData+" in "+fixUrl(queryName));
+			LOG.error("cannot find "+windowSharedData+" in url");
 			return Optional.empty();
 			}
 		html=html.substring(i+windowSharedData.length());
 		i= html.indexOf("{");
 		if(i==-1)
 			{
-			LOG.error("cannot find '{' after "+windowSharedData+" in "+fixUrl(queryName)+" after "+html);
+			LOG.error("cannot find '{' after "+windowSharedData+" in url after "+html);
 			return Optional.empty();
 			}
 		html=html.substring(i);
 		i = html.indexOf(endObject);
 		if(i==-1)
 			{
-			LOG.error("cannot find  "+endObject+" in "+fixUrl(queryName));
+			LOG.error("cannot find  "+endObject+" in url");
 			return Optional.empty();
 			}
 		html=html.substring(0, i+1);
@@ -159,13 +152,11 @@ class InstagramJsonScraper implements Function<String,Optional<JsonObject>>, Aut
 			}
 		if(!root.isJsonObject())
 			{
-			LOG.error("root is not json object in "+fixUrl(queryName));
+			LOG.error("root is not json object");
 			return Optional.empty();
 			}
 		cleanup(root);
 		return Optional.of(root.getAsJsonObject());
 		}
-	public void close() throws IOException {
-		this.client.close();
-		}
+	
 	}
