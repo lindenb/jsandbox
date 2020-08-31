@@ -99,7 +99,9 @@ public class EMFModel {
 				this.qName = qName;
 		}
 	}
-
+public static class ECoreFactory {
+	
+	}
 
 public static EMFModel parse(final Document dom) {
 	final Map<String,EClass> qName2eclass = new HashMap<>();
@@ -108,15 +110,15 @@ public static EMFModel parse(final Document dom) {
 	final List<Att2Type> att2types = new ArrayList<>();
 	final List<Att2Type> opposites = new ArrayList<>();
 	final EMFModel model = new EMFModel();
-	
+	final ECoreFactory ecoreFactory  = new ECoreFactory();
 	for(final Element packE: XmlUtils.elements(dom.getDocumentElement()).stream().filter(E->E.getLocalName().equals("package")).collect(Collectors.toList()) )
 		{
-		final EPackage pack = ecoreFactory.createEPackage();
+		final EPackage ecorePackage = ecoreFactory.createEPackage();
 		final String prefix =  att(packE,"prefix");
 		final String uri =  att(packE,"uri");
-		pack.setName(att(packE,"name"));
-		pack.setNsPrefix(prefix);
-		pack.setNsURI(uri);
+		ecorePackage.setName(att(packE,"name"));
+		ecorePackage.setNsPrefix(prefix);
+		ecorePackage.setNsURI(uri);
 		
 		for(final Element classE: XmlUtils.elements(packE).stream().filter(E->E.getLocalName().equals("class")).collect(Collectors.toList()) )
 			{

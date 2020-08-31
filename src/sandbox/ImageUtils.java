@@ -4,16 +4,17 @@ import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PushbackInputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -121,6 +122,27 @@ public class ImageUtils
 		ImageIO.write(im,out==null?"PNG":formatForFile(out.getFileName().toString()), os);
 		os.flush();
 		os.close();
+		}
+	public static String toBase64(final RenderedImage im,final String fmt) throws IOException {
+		try(final ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+			ImageIO.write(im,fmt, os);
+			os.flush();
+			return Base64.getEncoder().encodeToString(os.toByteArray());
+			}
+		}
+	public static String toBase64(final RenderedImage im) throws IOException {
+		return toBase64(im,"PNG");
+		}
+	
+	public static boolean isPng(final Path path) throws IOException {
+		try(InputStream fin=Files.newInputStream(path)) {
+			byte[] array = new byte[4];
+			if(fin.read(array)!=array.length) return false;
+			return array[0]==0x89 && 
+				   array[1]==0x50 &&
+				   array[2]==0x4e &&
+				   array[2]==0x47;
+			}
 		}
 	
 	}

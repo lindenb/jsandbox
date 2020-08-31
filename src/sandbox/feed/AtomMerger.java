@@ -1,7 +1,10 @@
 package sandbox.feed;
 
-import java.io.File;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -30,6 +33,8 @@ import sandbox.IOUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.date.DateParser;
+import sandbox.jcommander.DurationConverter;
+import sandbox.jcommander.NoSplitter;
 
 
 
@@ -39,11 +44,11 @@ public class AtomMerger extends Launcher
 
 	
 	@Parameter(names={"-o","--out"},description="output file")
-	private File output;
+	private Path output;
 	@Parameter(names={"-L","--limit"},description="limit number of items (-1: no limit)")
 	private int limitEntryCount=-1;
-	@Parameter(names={"--24"},description="limit to last 24 hours")
-	private boolean lessThan24H00Flag=false;
+	@Parameter(names={"--since"},description=DurationConverter.OPT_DESC,converter=DurationConverter.class,splitter=NoSplitter.class)
+	private Duration since=null;
 
 	
 	private static class DateExtractor implements Function<Node, Date> {
@@ -184,13 +189,13 @@ public class AtomMerger extends Launcher
 						if(!c1.getLocalName().equals("entry")) continue;
 						
 						
-						if(this.lessThan24H00Flag) {
+						if(this.since!=null) {
 							final DateExtractor dateExtractor = new DateExtractor();
 							final Date date = dateExtractor.apply(c1);
 							if( date == null ) continue;
 							final Date today = new Date();
 							final long diff = today.getTime() - date.getTime();
-							if( diff > (24L*60L*60L*1000L) ) {
+							if( diff > since.toMillis() ) {
 								continue;
 								}
 							}
@@ -243,11 +248,12 @@ public class AtomMerger extends Launcher
 			final Transformer tr = trf.newTransformer();
 			tr.setOutputProperty(OutputKeys.INDENT,"yes");
 			tr.setOutputProperty(OutputKeys.ENCODING,"UTF-8");
+			OutputStream os = (this.output==null?System.out:Files.newOutputStream(this.output));
 			tr.transform(new DOMSource(outdom),
-					this.output==null?
-							new StreamResult(System.out):
-							new StreamResult(this.output)
+					new StreamResult(os)
 					);
+			os.flush();
+			os.close();
 			return 0;
 		} catch (final Throwable e) {
 			e.printStackTrace();

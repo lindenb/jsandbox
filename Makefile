@@ -249,6 +249,7 @@ $(eval $(call compile,rdoc,sandbox.tools.rdoc.RDocGenerator,${jcommander.jar}))
 $(eval $(call compile,ig2table,sandbox.tools.ig.IgToTable,${jcommander.jar} ${google.gson.jars} ${apache.httpclient.jars}))
 $(eval $(call compile,makegrid,sandbox.tools.kirby.MakeGrid,${jcommander.jar}))
 $(eval $(call compile,owltool,sandbox.tools.owl.OWLTool,${jcommander.jar}))
+$(eval $(call compile,ffcache,sandbox.tools.ffcache.FirefoxCache,${jcommander.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
