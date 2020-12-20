@@ -219,7 +219,7 @@ $(eval $(call compile,genisansbouillir,sandbox.GeniSansBouillir,${jcommander.jar
 $(eval $(call compile,bouletmaton,sandbox.BouletMaton,${jcommander.jar}))
 $(eval $(call compile,aksum,sandbox.Aksum,))
 $(eval $(call compile,images2base64,sandbox.ImagesToBase64,${jcommander.jar}))
-$(eval $(call compile,rss2atom,sandbox.RssToAtom,${jcommander.jar}))
+$(eval $(call compile,rss2atom,sandbox.tools.feed.RssToAtom,${jcommander.jar}))
 $(eval $(call compile,atom500px,sandbox.Atom500px,${jcommander.jar}))
 $(eval $(call compile,insta2atom,sandbox.ig.InstagramToAtom,${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,insta2json,sandbox.ig.InstagramToJson,${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
@@ -293,7 +293,7 @@ common.avdl :
 	curl -o $@ -L "https://raw.githubusercontent.com/ga4gh/schemas/master/src/main/resources/avro/$@"
 
 ${all_maven_jars}  : 
-	mkdir -p $(dir $@) && wget -O "$(addsuffix .tmp.jar,$@)" "http://central.maven.org/maven2/$(patsubst ${lib.dir}/%,%,$@)" && mv "$(addsuffix .tmp.jar,$@)" $@
+	mkdir -p $(dir $@) && wget -O "$(addsuffix .tmp.jar,$@)" "https://repo1.maven.org/maven2/$(patsubst ${lib.dir}/%,%,$@)" && mv "$(addsuffix .tmp.jar,$@)" $@
 
 eclipse_classpath:
 	echo "$(realpath ${all_maven_jars})" | tr " " "\n" | awk '{printf("\t<classpathentry kind=\"lib\" path=\"%s\"/>\n",$$1);}'
