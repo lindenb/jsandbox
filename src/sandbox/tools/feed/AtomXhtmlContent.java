@@ -17,7 +17,7 @@ import org.w3c.dom.Node;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.TidyToDom;
+import sandbox.html.TidyToDom;
 
 /**
  * 

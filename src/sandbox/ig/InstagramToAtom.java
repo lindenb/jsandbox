@@ -676,7 +676,7 @@ public class InstagramToAtom extends Launcher {
 				builder.setDefaultCookieStore(cookies);
 			}
 			
-			this.scraper = new InstagramJsonScraper(builder.build());
+			this.scraper = new InstagramJsonScraper();
 			
 
 			convertIgFilesToHtml();
@@ -712,7 +712,7 @@ public class InstagramToAtom extends Launcher {
 			w.flush();
 			w.close();
 			
-			this.scraper.close();this.scraper=null;
+			this.scraper=null;
 			return 0;
 			}
 		catch(final Exception err)
@@ -723,7 +723,6 @@ public class InstagramToAtom extends Launcher {
 		finally
 			{
 			IOUtils.close(w);
-			IOUtils.close(this.scraper);
 			}
 		
 		}

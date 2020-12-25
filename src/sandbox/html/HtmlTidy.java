@@ -24,7 +24,6 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.IOUtils;
 import sandbox.Launcher;
-import sandbox.TidyToDom;
 
 public class HtmlTidy extends Launcher {
 	private static final sandbox.Logger LOG = sandbox.Logger.builder(HtmlTidy.class).build();

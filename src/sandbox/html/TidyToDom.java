@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.html;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -15,6 +15,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 import org.w3c.tidy.Tidy;
 
+import sandbox.Logger;
+
 
 public class TidyToDom {
 	private static final Logger LOG = Logger.builder(TidyToDom.class).build();
@@ -23,6 +25,7 @@ public class TidyToDom {
 	public TidyToDom() {
 		this.tidy = new Tidy();
 		this.tidy.setXmlOut(true);
+		this.tidy.setErrout(null);
 		this.tidy.setShowErrors(0);
 		this.tidy.setShowWarnings(false);
 		}
@@ -71,7 +74,7 @@ public class TidyToDom {
 	
 	
 	public Document read(final Reader r) throws IOException {
-		return tidy.parseDOM(r, null);
+		return this.tidy.parseDOM(r, null);
 		}
 
 	

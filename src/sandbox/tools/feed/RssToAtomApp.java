@@ -13,9 +13,9 @@ import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.XMLSerializer;
 
-public class RssToAtom extends Launcher
+public class RssToAtomApp extends Launcher
 	{
-	private static final Logger LOG=Logger.builder(RssToAtom.class).build();
+	private static final Logger LOG=Logger.builder(RssToAtomApp.class).build();
 	
 	
 	@Override
@@ -42,7 +42,7 @@ public class RssToAtom extends Launcher
 		    		);
 		    return 0;
 			}
-		catch(Exception err)
+		catch(final Exception err)
 			{
 			err.printStackTrace();
 			LOG.error(err);
@@ -52,6 +52,6 @@ public class RssToAtom extends Launcher
 		}
 	public static void main(final String[] args)
 		{
-		new RssToAtom().instanceMainWithExit(args);
+		new RssToAtomApp().instanceMainWithExit(args);
 		}
 	}

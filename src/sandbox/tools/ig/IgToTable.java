@@ -3,10 +3,7 @@ package sandbox.tools.ig;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.io.Writer;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -83,7 +80,10 @@ public class IgToTable extends Launcher
    
    
 	private void fetch(final PrintWriter out,final CloseableHttpClient client,final String url) throws Exception {
-		if(url.contains("/p/")) {
+		if(url.contains("/explore/tags/")) {
+			fetchExploreTags(out,client,url);
+			}
+		if(url.contains("/p/") ) {
 			fetchPost(out,client,url);
 			}
 		else
@@ -110,6 +110,15 @@ public class IgToTable extends Launcher
 		if(e==null) return null;
 		e= InstagramJsonScraper.find(e,"count");
 		return toString(e);
+		}
+	
+	private void fetchExploreTags(final PrintWriter out,final CloseableHttpClient client,final String url) throws Exception {
+		final String htmlDoc =  fetchHtml(client,url);
+		if(htmlDoc!=null) {
+			JsonElement root = scraper.apply(htmlDoc).orElse(null);
+			if(root!=null) {
+				}
+			}
 		}
 	
 	private void fetchProfile(final PrintWriter out,final CloseableHttpClient client,final String url) throws Exception {

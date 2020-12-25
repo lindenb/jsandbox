@@ -245,6 +245,10 @@ while((n=in.read(array, 0, array.length))!=-1)
 	out.write(array, 0, n);
 }
 
+public static void copyTo(final InputStream in,final File out) throws IOException
+	{
+	copyTo(in,out.toPath());
+	}
 
 public static void copyTo(final InputStream in,final OutputStream out) throws IOException
 	{

@@ -119,13 +119,13 @@ CREATE INDEX moz_basedomain ON moz_cookies (baseDomain, originAttributes);
 	public static BasicCookieStore readTsv(final Path path) throws IOException {
 		final BasicCookieStore store = new BasicCookieStore();
 		BufferedReader in = null;
-		Pattern tab=Pattern.compile("[\t]");
+		final Pattern tab=Pattern.compile("[\t]");
 		try {
 			in = IOUtils.openBufferedReaderFromPath(path);
 			String line =in.readLine();
 			if(line==null) throw new IOException("first line is missing");
 			String tokens[]=tab.split(line);
-			Map<String, Integer> column2index= new HashMap<String, Integer>(tokens.length);
+			final Map<String, Integer> column2index= new HashMap<String, Integer>(tokens.length);
 			for(int i=0;i< tokens.length;++i)
 				{
 				if(tokens[i].isEmpty()) continue;
@@ -187,7 +187,7 @@ CREATE INDEX moz_basedomain ON moz_cookies (baseDomain, originAttributes);
 			}
 	}
 	
-	public static void main(String[] args) {
+	public static void main(final String[] args) {
 		if(args.length!=1)
 			{
 			System.err.println("Usage: file.xml or file.tsv");
