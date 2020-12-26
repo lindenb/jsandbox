@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.w3c.dom.Attr;
 import org.w3c.dom.CDATASection;
 import org.w3c.dom.Comment;
@@ -29,7 +32,17 @@ public class TidyToDom {
 		this.tidy.setShowErrors(0);
 		this.tidy.setShowWarnings(false);
 		}
-	
+	public DocumentFragment importString(final String s) {
+		try {
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newDefaultInstance();
+			DocumentBuilder db = dbf.newDocumentBuilder();
+			return importString(s,db.newDocument());
+			}
+		catch(Throwable err) {
+			LOG.error(err);
+			return null;
+			}
+		}
 	public DocumentFragment importString(final String s, final Document owner)
 		{
 		final DocumentFragment df=owner.createDocumentFragment();
@@ -112,6 +125,19 @@ public class TidyToDom {
 					r.setAttribute(att.getNodeName(),att.getValue());
 					}
 				for(Node c=e.getFirstChild();
+						c!=null;
+						c=c.getNextSibling())
+					{
+					final Node x = importNode(c,owner); 
+					if(x==null ) continue;
+					r.appendChild(x);
+					}
+				return r;
+				}
+			case Node.DOCUMENT_FRAGMENT_NODE:
+				{
+				final DocumentFragment r = owner.createDocumentFragment();
+				for(Node c=n.getFirstChild();
 						c!=null;
 						c=c.getNextSibling())
 					{

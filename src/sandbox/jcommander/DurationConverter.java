@@ -12,7 +12,7 @@ import com.beust.jcommander.IStringConverter;
 public class DurationConverter
 	implements IStringConverter<Duration>
 	{
-	public static final String OPT_DESC="";
+	public static final String OPT_DESC="format: <integer>(years|week|days|hours|minutes|seconds)";
 	
 	private static class SuffixFun {
 		final String suffix;
@@ -31,6 +31,9 @@ public class DurationConverter
 		suffixes.add(new SuffixFun("years",365,Duration::ofDays));
 		suffixes.add(new SuffixFun("year",365,Duration::ofDays));
 		suffixes.add(new SuffixFun("y",365,Duration::ofDays));
+		suffixes.add(new SuffixFun("weeks",7,Duration::ofDays));
+		suffixes.add(new SuffixFun("week",7,Duration::ofDays));
+		suffixes.add(new SuffixFun("w",7,Duration::ofDays));
 		suffixes.add(new SuffixFun("days",1,Duration::ofDays));
 		suffixes.add(new SuffixFun("day",1,Duration::ofDays));
 		suffixes.add(new SuffixFun("d",1,Duration::ofDays));
