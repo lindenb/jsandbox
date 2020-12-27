@@ -17,17 +17,24 @@ public static String ltrim(final String s) {
 		}
 	return x==0?s:s.substring(x);
 	}
-	
-public static String md5(final String s) {
+private static String hash(final String s,final String method) {
 	 MessageDigest md;
 	 try {
-		 md = MessageDigest.getInstance("MD5");
+		 md = MessageDigest.getInstance(method);
 	 } catch (final Exception err) {
 		throw new RuntimeException(err);
 	 	}
 	md.update(s.getBytes());
 	return new BigInteger(1,md.digest()).toString(16);
 }
+
+public static String md5(final String s) {
+	return hash(s,"MD5"); 
+	}
+public static String sha1(final String s) {
+	return hash(s,"SHA1"); 
+	}
+
 	
 public static boolean isBlank(final String s) {
 	if(s==null) return true;

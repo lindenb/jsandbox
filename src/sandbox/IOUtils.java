@@ -59,6 +59,9 @@ public static List<File> unrollFiles(final List<String> args) throws IOException
 	return unroll(args).stream().map(G->new File(G)).collect(Collectors.toList());
 	}
 
+public static List<Path> unrollPaths(final List<String> args) throws IOException {
+	return unroll(args).stream().map(G->Paths.get(G)).collect(Collectors.toList());
+	}
 
 
 public static File assertDirectoryExist(final File f) {

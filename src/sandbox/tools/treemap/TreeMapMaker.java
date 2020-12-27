@@ -3,21 +3,21 @@ package sandbox.tools.treemap;
 import java.awt.Dimension;
 import java.awt.geom.Rectangle2D;
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.net.URL;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamWriter;
+
+import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 
 import com.beust.jcommander.Parameter;
 
@@ -25,8 +25,12 @@ import sandbox.IOUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.StringUtils;
+import sandbox.http.CookieStoreUtils;
 import sandbox.jcommander.DimensionConverter;
 import sandbox.jcommander.NoSplitter;
+import sandbox.net.DataCache;
+import sandbox.net.HttpURLInputStreamProvider;
+import sandbox.net.URLInputStreamProvider;
 import sandbox.treemap.TreePack;
 import sandbox.treemap.TreePacker;
 
@@ -43,9 +47,12 @@ public class TreeMapMaker extends Launcher
     @Parameter(names={"--title"},description="title")
     private String mainTitle = "TreeMap";
     @Parameter(names={"--cache"},description="cache images in that directory")
-    private Path cacheDir = null;
+    private Path cacheDirectory = null;
+	@Parameter(names={"-c","--cookies"},description=CookieStoreUtils.OPT_DESC)
+	private Path cookieStoreFile  = null;
 
 
+    private DataCache dataCache = null;
     
     private String format(double f) {
     	return String.format("%.2f",f);
@@ -154,9 +161,11 @@ public class TreeMapMaker extends Launcher
 			}
 		public String getImage()
 			{
-			if(!isLeaf()) return null;
+			if(!isLeaf()) {
+				return null;
+			}
 			String s= getAttribute("image",null);
-			if(s==null) s=getAttribute("img",null);
+			if(StringUtils.isBlank(s)) s=getAttribute("img",null);
 			return s;
 			}
 		
@@ -265,9 +274,21 @@ public class TreeMapMaker extends Launcher
 		   	   
 		   w.writeEndElement();//rect
 		   if(isLeaf()) {
-				if(!StringUtils.isBlank(getImage())) {
+			   String imgPath=null;
+			    try {
+			    	if(!StringUtils.isBlank(getImage())) {
+				    	imgPath=dataCache.getUrl(getImage());
+				    	}
+			    	}
+			    catch(final Throwable err) {
+			    	LOG.warning(err);
+			    	imgPath=null;
+			    	}
+			   
+				if(!StringUtils.isBlank(imgPath)) {
+					w.writeComment(getImage());
 					w.writeStartElement("image");
-					w.writeAttribute("href",cacheImage(getImage()));
+					w.writeAttribute("href",imgPath);
 					w.writeAttribute("x",format(this.bounds.getX()));
 			   		w.writeAttribute("y",format(this.bounds.getY()));
 			   		w.writeAttribute("width",format(this.bounds.getWidth()));
@@ -351,28 +372,21 @@ public class TreeMapMaker extends Launcher
 		return url;
 	}
     
-    private String cacheImage(final String src) {
-    if(this.cacheDir==null) return src;
-    try {
-   		Path imgPath= this.cacheDir.resolve(StringUtils.md5(src)+".png");
-   		if(!Files.exists(imgPath)) {
-	   		LOG.info("Caching "+src+" into "+imgPath);
-	   		try(InputStream in = new URL(src).openStream()) {
-	   			IOUtils.copyTo(in,imgPath);
-	   			}
-   			}
-   		return imgPath.toString();
-    	}
-    catch(IOException err) {
-    	LOG.error(err);
-    	return src;
-    	}
-    }
     
     @Override
     public int doWork(final List<String> args) {
+    	CloseableHttpClient client = null;
 		try
 			{
+			final HttpClientBuilder builder = HttpClientBuilder.create();
+			builder.setUserAgent(IOUtils.getUserAgent());
+			if(this.cookieStoreFile!=null) {
+				final BasicCookieStore cookies = CookieStoreUtils.readTsv(this.cookieStoreFile);
+				builder.setDefaultCookieStore(cookies);
+				}
+			client = builder.build();
+			final URLInputStreamProvider urlInputStreamProvider = new HttpURLInputStreamProvider(client);
+			this.dataCache = (this.cacheDirectory==null?DataCache.noCache(urlInputStreamProvider):DataCache.open(this.cacheDirectory,urlInputStreamProvider));
 			final Frame root = new  Frame(Collections.emptyMap());
 			root.properties.put("id", "default");
 			final Map<String, Frame> id2frame = new HashMap<>();
@@ -459,6 +473,9 @@ public class TreeMapMaker extends Launcher
 			{
 			LOG.error(err);
 			return -1;
+			}
+		finally {
+			if(client!=null) try{client.close();} catch(final Throwable err2) {}
 			}
 		}
 	public static void main(final String[] args) {
