@@ -15,6 +15,8 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 
+import sandbox.io.IOUtils;
+
 public class XMLSerializer
 	{
 	private boolean omit_xml_declaration = false;

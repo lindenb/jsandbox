@@ -16,12 +16,12 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import com.beust.jcommander.Parameter;
 import com.google.gson.JsonElement;
 
-import sandbox.IOUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.StringUtils;
 import sandbox.http.CookieStoreUtils;
 import sandbox.ig.InstagramJsonScraper;
+import sandbox.io.IOUtils;
 import sandbox.iterator.BufferedReaderIterator;
 
 public class IgToTable extends Launcher

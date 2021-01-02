@@ -8,10 +8,10 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.Document;
 
-import sandbox.IOUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.XMLSerializer;
+import sandbox.io.IOUtils;
 
 public class RssToAtomApp extends Launcher
 	{

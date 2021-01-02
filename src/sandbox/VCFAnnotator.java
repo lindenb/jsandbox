@@ -52,6 +52,8 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
+import sandbox.io.IOUtils;
+
 class IOUtils
 	{
 	static private final int BUFSIZ=1000000;

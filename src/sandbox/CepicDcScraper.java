@@ -25,6 +25,7 @@ import org.apache.http.message.BasicNameValuePair;
 import com.beust.jcommander.Parameter;
 
 import sandbox.http.CookieStoreUtils;
+import sandbox.io.IOUtils;
 
 public class CepicDcScraper extends Launcher {
 	private static final Logger LOG = Logger.builder(CepicDcScraper.class).build();

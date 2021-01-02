@@ -8,9 +8,9 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.function.Function;
 
-import sandbox.IOUtils;
 import sandbox.Logger;
 import sandbox.StringUtils;
+import sandbox.io.IOUtils;
 
 public interface DataCache {
 static final Logger LOG=Logger.builder(DataCache.class).build();

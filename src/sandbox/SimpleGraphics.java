@@ -26,7 +26,7 @@ import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
-import sandbox.IOUtils;
+import sandbox.io.IOUtils;
 
 public abstract class SimpleGraphics implements Closeable {
 

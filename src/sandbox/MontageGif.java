@@ -18,6 +18,8 @@ import javax.imageio.ImageIO;
 
 import com.beust.jcommander.Parameter;
 
+import sandbox.io.IOUtils;
+
 public class MontageGif extends Launcher
 	{
 	private static final Logger LOG = Logger.builder(MontageGif.class).build();

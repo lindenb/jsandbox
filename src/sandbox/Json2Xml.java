@@ -35,6 +35,8 @@ import javax.xml.stream.XMLStreamWriter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 
+import sandbox.io.IOUtils;
+
 public final class Json2Xml {
 	private static final String NS="http://www.ibm.com/xmlns/prod/2009/jsonx";
 	public static Logger LOG=Logger.getLogger("json2xml");

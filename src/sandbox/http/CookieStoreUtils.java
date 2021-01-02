@@ -27,7 +27,7 @@ import org.apache.http.cookie.Cookie;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.cookie.BasicClientCookie;
 
-import sandbox.IOUtils;
+import sandbox.io.IOUtils;
 
 public class CookieStoreUtils  {
 	public static final String OPT_DESC="Cookie file. Obtained from `sqlite3 -header -separator $'\\t'  ~/.mozilla/firefox/xxx/cookies.sqlite 'select * from moz_cookies'` ";

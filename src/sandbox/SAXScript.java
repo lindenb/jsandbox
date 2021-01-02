@@ -27,6 +27,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonParser;
 
+import sandbox.io.IOUtils;
+
 public class SAXScript  extends AbstractApplication 
 	{
 	private static final Logger LOG=Logger.getLogger("jsandbox");

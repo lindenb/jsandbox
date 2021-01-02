@@ -29,6 +29,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 import org.w3c.tidy.Tidy;
 
+import sandbox.io.IOUtils;
+
 
 public class WeatherArchive extends AbstractApplication {
 	private static final String MIN_DATE_STR="1963-01-01";

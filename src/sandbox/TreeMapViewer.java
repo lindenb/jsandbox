@@ -62,6 +62,8 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableModel;
 
+import sandbox.io.IOUtils;
+
 /**
  * Swing-Bases treeMap Viewer
  * @author Pierre Lindenbaum PhD

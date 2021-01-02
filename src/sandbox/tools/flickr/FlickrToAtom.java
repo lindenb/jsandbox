@@ -28,10 +28,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 
-import sandbox.IOUtils;
 import sandbox.Launcher;
 import sandbox.flickr.FlickrExtractor;
 import sandbox.http.CookieStoreUtils;
+import sandbox.io.IOUtils;
 import sandbox.jcommander.DurationConverter;
 import sandbox.jcommander.NoSplitter;
 

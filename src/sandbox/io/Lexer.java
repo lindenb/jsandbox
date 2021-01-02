@@ -1,18 +1,16 @@
-package sandbox;
+package sandbox.io;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Lexer implements Closeable {
 	public static final int EOF = 1;
 	private final Reader r;
-	private final List<Integer> buffer=new ArrayList<Integer>();
+	private final StringBuilder stack =new StringBuilder();
 	public Lexer(final Reader r) {
 		this.r=r;
 	}
@@ -36,39 +34,40 @@ public class Lexer implements Closeable {
 	/** @return byte in stream at position <code>pos</code>. -1 on EOF */
 	public int peek(final int pos) throws IOException
 		{
-		while(buffer.size()<=pos) {
-			int c= this.r.read();
+		while(this.stack.length()<=pos) {
+			final int c= this.r.read();
 			if(c==EOF) return EOF;
-			buffer.add(c);
+			this.stack.append((char)c);
 			}
-		
-		return buffer.get(pos);
+		return this.stack.charAt(pos);
 		}
 	
+	/** test wether string s is in above , starting from pos*/
 	public boolean downstream(final int pos,String s)  throws IOException {
 		for(int i=0;i< s.length();i++) {
 			int c = peek(pos+i);
 			if(c==EOF ||c!=(int)s.charAt(i)) return false;
-		}
+			}
 		return true;
-	}
+		}
 	
+	/** test wether string s is in above */
 	public boolean downstream(final String s)  throws IOException {
 			return downstream(0, s);
 		}
 	
 	public int consume(int pos,int n) throws IOException {
-		for(int i=0;i< n &&  pos+i< buffer.size();++i) {
-			buffer.remove(pos+i);
+		for(int i=0;i< n &&  pos+i < this.stack.length();++i) {
+			this.stack.deleteCharAt(pos+i);
 			n--;
-		}
+			}
 		while(n>0) {
 			int c= this.r.read();
 			if(c==EOF) return EOF;
 			n--;
-		}
+			}
 		return peek(pos);
-	}
+		}
 	
 	public int consume(int n)  throws IOException {
 		return consume(0,n);
@@ -84,10 +83,9 @@ public class Lexer implements Closeable {
 	
 	@Override
 	public void close() throws IOException {
-		buffer.clear();
+		this.stack.setLength(0);
 		r.close();
 		}
-	
 	
 	
 	private static final Pattern BIGINTEGER = Pattern.compile("[+-]?[0-9]+");

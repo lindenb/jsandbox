@@ -23,6 +23,8 @@ import javax.xml.stream.events.XMLEvent;
 
 import com.beust.jcommander.Parameter;
 
+import sandbox.io.IOUtils;
+
 public class OsmToSvg extends Launcher {
 	private static final Logger LOG = Logger.builder(OsmToSvg.class).build();
 	private final Map<String, Node> id2node = new HashMap<>();

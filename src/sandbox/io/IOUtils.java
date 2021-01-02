@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.io;
 
 import java.io.BufferedReader;
 import java.io.Closeable;
@@ -26,6 +26,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
+
+import sandbox.StringUtils;
 
 public class IOUtils {
 

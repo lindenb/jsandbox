@@ -6,7 +6,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import sandbox.IOUtils;
+import sandbox.io.IOUtils;
 
 public class BasicURLInputStreamProvider implements URLInputStreamProvider {
 @Override

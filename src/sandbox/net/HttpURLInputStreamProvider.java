@@ -12,7 +12,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 
-import sandbox.IOUtils;
+import sandbox.io.IOUtils;
 
 public class HttpURLInputStreamProvider implements URLInputStreamProvider {
 private final CloseableHttpClient client;
