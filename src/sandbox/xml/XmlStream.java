@@ -16,9 +16,9 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import com.beust.jcommander.Parameter;
 
-import sandbox.IOUtils;
 import sandbox.Launcher;
 import sandbox.StringUtils;
+import sandbox.io.IOUtils;
 
 public class XmlStream extends Launcher {
 	private static final sandbox.Logger LOG = sandbox.Logger.builder(XmlStream.class).build();

@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.io;
 
 import java.io.BufferedReader;
 import java.io.Closeable;
@@ -26,6 +26,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
+
+import sandbox.StringUtils;
 
 public class IOUtils {
 
@@ -59,6 +61,9 @@ public static List<File> unrollFiles(final List<String> args) throws IOException
 	return unroll(args).stream().map(G->new File(G)).collect(Collectors.toList());
 	}
 
+public static List<Path> unrollPaths(final List<String> args) throws IOException {
+	return unroll(args).stream().map(G->Paths.get(G)).collect(Collectors.toList());
+	}
 
 
 public static File assertDirectoryExist(final File f) {
@@ -245,6 +250,10 @@ while((n=in.read(array, 0, array.length))!=-1)
 	out.write(array, 0, n);
 }
 
+public static void copyTo(final InputStream in,final File out) throws IOException
+	{
+	copyTo(in,out.toPath());
+	}
 
 public static void copyTo(final InputStream in,final OutputStream out) throws IOException
 	{

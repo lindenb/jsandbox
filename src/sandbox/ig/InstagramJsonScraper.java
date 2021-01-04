@@ -16,8 +16,8 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
 
-import sandbox.IOUtils;
 import sandbox.Logger;
+import sandbox.io.IOUtils;
 
 public class InstagramJsonScraper implements Function<String,Optional<JsonObject>> {
 	private static final Logger LOG = Logger.builder(InstagramJsonScraper.class).build();

@@ -15,6 +15,7 @@ public class DateParser implements Function<String, Optional<Date>> {
 	public DateParser() {
 		this.delegates.add(new SimpleDateFormatParser("yyyy-MM-dd'T'HH:mm:ssXXX"));
 		this.delegates.add(new SimpleDateFormatParser("EEE, dd MMM yyyy HH:mm:ss"));
+		this.delegates.add(new SimpleDateFormatParser("yyyyMMdd"));
 		}
 	@Override
 	public Optional<Date> apply(final String t) {

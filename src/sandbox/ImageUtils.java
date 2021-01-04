@@ -23,6 +23,8 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 
+import sandbox.io.IOUtils;
+
 public class ImageUtils
 	{
 	public final List<String> SUFFIXES = Arrays.asList(".jpg",".jpeg",".JPG",".JPEG",".png",".PNG");

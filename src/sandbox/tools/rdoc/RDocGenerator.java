@@ -10,10 +10,10 @@ import java.util.List;
 
 import com.beust.jcommander.Parameter;
 
-import sandbox.IOUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.StringUtils;
+import sandbox.io.IOUtils;
 
 public class RDocGenerator extends Launcher{
 

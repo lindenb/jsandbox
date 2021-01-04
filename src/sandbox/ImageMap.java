@@ -19,6 +19,8 @@ import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 
 import com.beust.jcommander.Parameter;
+
+import sandbox.io.IOUtils;
 /**
  * 
  * conversion of image to indexed color-map and save modified image as well as an histogram of each color.

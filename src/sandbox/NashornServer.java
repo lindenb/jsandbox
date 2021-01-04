@@ -23,6 +23,8 @@ import org.eclipse.jetty.server.session.HashSessionIdManager;
 import org.eclipse.jetty.server.session.HashSessionManager;
 import org.eclipse.jetty.server.session.SessionHandler;
 
+import sandbox.io.IOUtils;
+
 public class NashornServer extends AbstractApplication {
 	private static Logger LOG=Logger.getLogger("nashornserver");
 	

@@ -19,11 +19,11 @@ import javax.xml.stream.XMLStreamWriter;
 
 import com.beust.jcommander.Parameter;
 
-import sandbox.IOUtils;
 import sandbox.ImageUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.image.ImageResizer;
+import sandbox.io.IOUtils;
 import sandbox.jcommander.DurationConverter;
 import sandbox.jcommander.FileSizeConverter;
 import sandbox.jcommander.NoSplitter;

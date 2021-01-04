@@ -13,10 +13,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
-import sandbox.IOUtils;
 import sandbox.Logger;
 import sandbox.io.EntryReader;
 import sandbox.io.EntryWriter;
+import sandbox.io.IOUtils;
 import sandbox.iterator.AbstractIterator;
 import sandbox.iterator.CloseableIterator;
 import sandbox.iterator.MergingIterator;

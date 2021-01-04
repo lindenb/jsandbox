@@ -14,6 +14,8 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 
+import sandbox.io.IOUtils;
+
 public class HtmlToTTY extends Launcher {
 	private static final Logger LOG = Logger.builder(HtmlToTTY.class).build();
 	private static final String KEY_ITALIC = "italic";
