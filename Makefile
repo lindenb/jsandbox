@@ -163,8 +163,10 @@ jcommander.jar= \
 berkeleydb.jar= \
 	$(lib.dir)/com/sleepycat/je/5.0.73/je-5.0.73.jar
 
+commons-math3.jar= \
+	$(lib.dir)/org/apache/commons/commons-math3/3.6.1/commons-math3-3.6.1.jar
 
-all_maven_jars = $(sort ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars})
+all_maven_jars = $(sort ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar})
 
 
 
@@ -173,7 +175,8 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
-	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom fileserver xmlpath imagemap
+	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom fileserver xmlpath imagemap \
+	pcaviewer
 
 
 $(eval $(call compile,miniivy,sandbox.MiniIvy,${jcommander.jar}))
@@ -250,7 +253,7 @@ $(eval $(call compile,ig2table,sandbox.tools.ig.IgToTable,${jcommander.jar} ${go
 $(eval $(call compile,makegrid,sandbox.tools.kirby.MakeGrid,${jcommander.jar}))
 $(eval $(call compile,owltool,sandbox.tools.owl.OWLTool,${jcommander.jar}))
 $(eval $(call compile,ffcache,sandbox.tools.ffcache.FirefoxCache,${jcommander.jar}))
-
+$(eval $(call compile,pcaviewer,sandbox.tools.pca.PcaViewer,${commons-math3.jar}))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 
@@ -293,7 +296,7 @@ common.avdl :
 	curl -o $@ -L "https://raw.githubusercontent.com/ga4gh/schemas/master/src/main/resources/avro/$@"
 
 ${all_maven_jars}  : 
-	mkdir -p $(dir $@) && wget -O "$(addsuffix .tmp.jar,$@)" "http://central.maven.org/maven2/$(patsubst ${lib.dir}/%,%,$@)" && mv "$(addsuffix .tmp.jar,$@)" $@
+	mkdir -p $(dir $@) && wget -O "$(addsuffix .tmp.jar,$@)" "https://repo1.maven.org/maven2/$(patsubst ${lib.dir}/%,%,$@)" && mv "$(addsuffix .tmp.jar,$@)" $@
 
 eclipse_classpath:
 	echo "$(realpath ${all_maven_jars})" | tr " " "\n" | awk '{printf("\t<classpathentry kind=\"lib\" path=\"%s\"/>\n",$$1);}'
