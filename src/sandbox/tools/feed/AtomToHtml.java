@@ -179,7 +179,7 @@ public class AtomToHtml extends Launcher {
 				final BasicCookieStore cookies = CookieStoreUtils.readTsv(this.cookieStoreFile);
 				builder.setDefaultCookieStore(cookies);
 				}
-			DocumentBuilderFactory dbf = DocumentBuilderFactory.newDefaultInstance();
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 			dbf.setNamespaceAware(true);
 			this.documentBuilder = dbf.newDocumentBuilder();
 			this.document = this.documentBuilder.newDocument();

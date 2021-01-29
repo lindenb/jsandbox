@@ -66,6 +66,15 @@ public static List<Path> unrollPaths(final List<String> args) throws IOException
 	}
 
 
+public static Path assertFileExists(final Path f) {
+	if( f==null || !Files.exists(f) || Files.isDirectory(f))
+		{
+		throw new IllegalStateException("Not an existing file "+f);
+		}
+	return f;
+	}
+
+
 public static File assertDirectoryExist(final File f) {
 	if( f==null || !f.exists() ||!f.isDirectory())
 		{

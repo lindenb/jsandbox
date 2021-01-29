@@ -5,7 +5,13 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -22,18 +28,113 @@ import sandbox.StringUtils;
 import sandbox.http.CookieStoreUtils;
 import sandbox.ig.InstagramJsonScraper;
 import sandbox.io.IOUtils;
+import sandbox.io.RuntimeIOException;
 import sandbox.iterator.BufferedReaderIterator;
 
 public class IgToTable extends Launcher
 	{
 	private static final Logger LOG = Logger.builder(IgToTable.class).build();
+	private enum Format {vertical,horizontal,xml};
+	
+	private static abstract class Displayer {
+		abstract void beginDocument();
+		abstract void record(final Map<String,String> hash);
+		abstract void endDocument();
+		}
+	private static abstract class TextDisplayer extends Displayer{
+		protected PrintWriter out;
+		protected TextDisplayer(final PrintWriter out) {
+			this.out = out;
+			}
+		@Override void beginDocument(){}
+		@Override void endDocument(){
+			out.flush();
+			out.close();
+			}
+		}
+	private static class HDisplayer extends TextDisplayer {
+		HDisplayer(final PrintWriter out) {
+			super(out);
+			}
+		@Override void record(final Map<String,String> hash) {
+			if(hash.isEmpty()) return;
+			out.println(String.join("\t", hash.values()));
+			}
 
+		}
+	private static class VDisplayer extends TextDisplayer {
+		VDisplayer(final PrintWriter out) {
+			super(out);
+			}
+		@Override void record(final Map<String,String> hash) {
+			if(hash.isEmpty()) return;
+			for(String k:hash.keySet()) {
+				String v= hash.get(k);
+				if(StringUtils.isBlank(v)) continue;
+				out.print(k);
+				out.print(":");
+				out.println(v);
+				}
+			out.println();
+			}
+
+		}
+	
+	private static class XMLDisplayer extends Displayer {
+		XMLStreamWriter w;
+		XMLDisplayer(final PrintWriter out) {
+			try {
+				w=XMLOutputFactory.newFactory().createXMLStreamWriter(out);
+				}
+			catch(XMLStreamException err) {
+				throw new RuntimeIOException(err);
+				}
+			}
+		@Override
+		void beginDocument() {
+			try {
+				w.writeStartElement("ig");
+				}
+			catch(Exception err) {
+				throw new RuntimeIOException(err);
+				}
+			}
+		@Override void record(final Map<String,String> hash) {
+			if(hash.isEmpty()) return;
+			try {
+				w.writeStartElement("entry");
+				
+				for(String k:hash.keySet()) {
+					String v= hash.get(k);
+					if(StringUtils.isBlank(v)) continue;
+					w.writeStartElement(k);
+					w.writeCharacters(v);
+					w.writeEndElement();
+					}
+				w.writeEndElement();
+				}
+			catch(Exception err) {
+				throw new RuntimeIOException(err);
+				}
+			}
+
+		@Override
+		void endDocument() {
+			try {
+				w.writeEndDocument();
+				}
+			catch(Exception err) {
+				throw new RuntimeIOException(err);
+				}
+			}
+		}
+	
 	@Parameter(names= {"-o","--out"},description=OUTPUT_OR_STANDOUT)
 	private Path output = null;
 	@Parameter(names= {"-s","--sleep"},description="sleep (seconds) between each call")
 	private int sleep = 0;
-	@Parameter(names= {"--vertical"},description="vertical output")
-	private boolean vertical = false;
+	@Parameter(names= {"--format"},description="output format")
+	private Format output_format = Format.vertical;
 	@Parameter(names={"-c","--cookies"},description=CookieStoreUtils.OPT_DESC)
 	private Path cookieStoreFile  = null;
 
@@ -79,7 +180,7 @@ public class IgToTable extends Launcher
 	}
    
    
-	private void fetch(final PrintWriter out,final CloseableHttpClient client,final String url) throws Exception {
+	private void fetch(final Displayer out,final CloseableHttpClient client,final String url) throws Exception {
 		if(url.contains("/explore/tags/")) {
 			fetchExploreTags(out,client,url);
 			}
@@ -112,7 +213,7 @@ public class IgToTable extends Launcher
 		return toString(e);
 		}
 	
-	private void fetchExploreTags(final PrintWriter out,final CloseableHttpClient client,final String url) throws Exception {
+	private void fetchExploreTags(final Displayer out,final CloseableHttpClient client,final String url) throws Exception {
 		final String htmlDoc =  fetchHtml(client,url);
 		if(htmlDoc!=null) {
 			JsonElement root = scraper.apply(htmlDoc).orElse(null);
@@ -121,16 +222,19 @@ public class IgToTable extends Launcher
 			}
 		}
 	
-	private void fetchProfile(final PrintWriter out,final CloseableHttpClient client,final String url) throws Exception {
+	private void fetchProfile(final Displayer displayer,final CloseableHttpClient client,final String url) throws Exception {
 		final String htmlDoc =  fetchHtml(client,url);
+		final Map<String, String> hash = new LinkedHashMap<>();
+		hash.put("ig",url);
+		hash.put("deleted","true");
+		hash.put("user","");
 		String profile_url = null;
 		String count_followers = null;
 		String count_following = null;
 		String full_name = null;
-		String username = null;
 		String count_posts = null;
 		String isprivate=null;
-		boolean deleted = true;
+
 		if(htmlDoc!=null) {
 			JsonElement root = scraper.apply(htmlDoc).orElse(null);
 			if(root!=null) {
@@ -139,11 +243,12 @@ public class IgToTable extends Launcher
 				if(requested_by_viewer!=null) root = requested_by_viewer;
 				profile_url = toString(InstagramJsonScraper.find(root, "profile_pic_url"));
 				if(profile_url == null) toString(InstagramJsonScraper.find(root, "display_url")); 
+				
 				//if(profile_url!=null) profile_url= StringUtils.unescapeUnicode(profile_url);
 				count_followers = getCount(root, "edge_followed_by");
 				count_following = getCount(root, "edge_follow"); 
 				full_name = toString(InstagramJsonScraper.find(root, "full_name"));
-				username =  toString(InstagramJsonScraper.find(root, "username"));
+				hash.put("user" ,  toString(InstagramJsonScraper.find(root, "username")));
 				count_posts =   getCount(root, "edge_owner_to_timeline_media");
 				isprivate = toString(InstagramJsonScraper.find(root,"is_private"));
 				}
@@ -153,43 +258,22 @@ public class IgToTable extends Launcher
 				}
 			if(profile_url==null) profile_url= findBetween(htmlDoc, "property=\"og:image\" content=\"","\"");
 
-			deleted=false;
+			hash.put("deleted","false");
 			if(profile_url==null) profile_url= findBetween(htmlDoc, "property=\"og:image\" content=\"","\"");
 			
 			}
-		if(this.vertical) {
-			out.println("ig:"+url);
-			if(deleted) out.println("deleted:"+true);
-			if(username!=null) out.println("user:"+username);
-			if(full_name!=null) out.println("name:"+full_name);
-			if(profile_url!=null) out.println("img:"+profile_url);
-			if(count_followers!=null) out.println("followers:"+count_followers);
-			if(count_following!=null) out.println("following:"+count_following);
-			if(count_posts!=null) out.println("posts:"+count_posts);
-			if(isprivate!=null && isprivate.equals("true")) out.println("private:true");
-			out.println();
-			} else {
-			out.print(url);
-			out.print("\t");
-			out.print(username==null?".":username);
-			out.print("\t");
-			out.print(full_name==null?".":full_name);
-			out.print("\t");
-			out.print(profile_url==null?".":profile_url);
-			out.print("\t");
-			out.print(count_followers==null?".":count_followers);
-			out.print("\t");
-			out.print(count_following==null?".":count_following);
-			out.print("\t");
-			out.print(count_posts==null?".":count_posts);
-			out.print("\t");
-			out.print(isprivate!=null && isprivate.equals("true")?"PRIVATE":".");
-			out.println();
-			}
+		
+		hash.put("name",full_name);
+		hash.put("img",profile_url);
+		hash.put("followers",count_followers);
+		hash.put("following",count_following);
+		hash.put("posts",count_posts);
+		hash.put("private",isprivate!=null && isprivate.equals("true")?"true":"");
+		displayer.record(hash);
 		}
 	
 	
-	private void fetchPost(final PrintWriter out,final CloseableHttpClient client,final String url) throws Exception {
+	private void fetchPost(final Displayer out,final CloseableHttpClient client,final String url) throws Exception {
 		LOG.info("fetch "+url);
 		try {
 			final String htmlDoc =  fetchHtml(client,url);
@@ -284,37 +368,18 @@ public class IgToTable extends Launcher
 					og_image=StringUtils.unescapeUnicode(htmlDoc.substring(i,j));
 					}
 				}
-				
-			
-			if(this.vertical) {
-				if(inspir!=null) out.println("URL: "+inspir);
-				if(date!=null) out.println("date: "+date);
-				if(account1!=null) out.println("depicted: "+account1);
-				if(account2!=null) out.println("photo: "+account2);
-				if(likes!=null && !likes.equals("0")) out.println("likes: "+likes);
-				if(comments!=null && !comments.equals("0")) out.println("comments: "+comments);
-				if(og_image!=null) out.println("og-image: "+og_image);
-				out.println("ig: "+url);
-				out.println();
-				} 
-			else  {
-				out.print(url);
-				out.print("\t");
-				out.print(likes==null?".":likes);
-				out.print("\t");
-				out.print(comments==null?".":comments);
-				out.print("\t");
-				out.print(date==null?".":date);
-				out.print("\t");
-				out.print(inspir==null?".":inspir);
-				out.print("\t");
-				out.print(account1==null?".":account1);
-				out.print("\t");
-				out.print(account2==null?".":account2);
-				out.print("\t");
-				out.print(og_image==null?".":og_image);
-				out.println();
-				}
+		
+			final Map<String, String> hash=new LinkedHashMap<>();
+			hash.put("URL", inspir);
+			hash.put("date", date);
+			hash.put("depicted", account1);
+			hash.put("photo", account2);
+			hash.put("likes", (likes!=null && !likes.equals("0")?likes:""));
+			hash.put("comments", (comments!=null && !comments.equals("0")?comments:""));
+			hash.put("og-image", og_image);
+			hash.put("ig", url);
+
+			out.record(hash);			
 			}
 		catch(final Throwable err) {
 			LOG.error(err);
@@ -333,8 +398,15 @@ public class IgToTable extends Launcher
 				}
 			
 			try(CloseableHttpClient client = builder.build();
-				PrintWriter out = IOUtils.openPathAsPrintWriter(this.output);
+				PrintWriter pw = IOUtils.openPathAsPrintWriter(this.output);	
 				BufferedReaderIterator iter= new BufferedReaderIterator(super.openBufferedReader(args))) {
+				Displayer disp;
+				switch(this.output_format) {
+					case xml: disp = new XMLDisplayer(pw);break;
+					case vertical: disp = new VDisplayer(pw);break;
+					default: disp = new HDisplayer(pw);break;
+					}
+				disp.beginDocument();
 				while(iter.hasNext()) {
 					String line = iter.next();
 					if(line.startsWith("#") || StringUtils.isBlank(line)) continue;
@@ -343,10 +415,10 @@ public class IgToTable extends Launcher
 						LOG.warning("not a url?"+line);
 						continue;
 						}
-					fetch(out,client,line);
+					fetch(disp,client,line);
 					Thread.sleep(this.sleep*1000);
 					}
-				out.flush();
+				disp.endDocument();
 				}
 
 			return 0;

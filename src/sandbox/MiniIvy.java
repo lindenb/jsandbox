@@ -117,7 +117,7 @@ public class MiniIvy extends Launcher
 		
 		private String getBaseUrl()
 		{
-		return "http://central.maven.org/maven2/"+
+		return "https://repo1.maven.org/maven2/"+
 				this.group.replace('.', '/') +"/"+
 				this.artifactId;
 				
