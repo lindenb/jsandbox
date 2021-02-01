@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventReader;
@@ -36,6 +37,7 @@ public class OWLTool extends Launcher
 	private static final QName rdfRsrc=new QName(RDF,"resource","rdf");
 
 	private enum SearchMethod {children,parents};
+	private enum OutputFormat {tabular,recutils};
 	
     @Parameter(names={"-o","--output"},description=OUTPUT_OR_STANDOUT)
     private Path out = null; 
@@ -43,6 +45,8 @@ public class OWLTool extends Launcher
     private String term_uri= null;
     @Parameter(names={"--method"},description="What to search")
     private SearchMethod method= SearchMethod.children;
+    @Parameter(names={"--format"},description="output format")
+    private OutputFormat outputFormat= OutputFormat.tabular;
 
     
     private class TermImpl {
@@ -54,6 +58,11 @@ public class OWLTool extends Launcher
 				this.accession = uri;
 				this.name= this.accession;
 				}
+		
+		boolean isRoot(){
+			return this.parents.isEmpty();
+			}
+		
 		@Override
 		public int hashCode()
 			{
@@ -78,11 +87,19 @@ public class OWLTool extends Launcher
 			set.add(this);
 			for(TermImpl c:this.parents) c.collectParents(set);
 			}
+		@Override
+		public String toString() {
+			return "("+this.accession+" "+this.name+")";
+			}
     	}
 	
     
     private final Map<String, TermImpl> uri2term = new HashMap<>();
     
+    
+    private final Set<TermImpl> getRoots() {
+    	return uri2term.values().stream().filter(T->T.isRoot()).collect(Collectors.toSet());
+    	}
     
     private TermImpl findTermByUri(final String uri) {
     	TermImpl t= uri2term.get(uri);
@@ -114,12 +131,20 @@ public class OWLTool extends Launcher
 		final Attribute aboutAtt=root.getAttributeByName(rdfAbout);
 		if(aboutAtt==null)
 			{
+			LOG.info("no rdf:about in "+root.getLocation());
+			consumme(r);
 			return;
 			}
 		final String termUri=aboutAtt.getValue();
-		
 		boolean obsolete_flag=false;
-		final TermImpl term = new TermImpl(termUri);
+		final TermImpl term;
+		if(this.uri2term.containsKey(termUri)) {
+			term = this.uri2term.get(termUri);
+			}
+		else
+			{
+			term = new TermImpl(termUri);
+			}
 		final Set<TermImpl> parents = new HashSet<>();	
 		while(r.hasNext())
 			{
@@ -146,6 +171,11 @@ public class OWLTool extends Launcher
 							parents.add(findTermByUri(parentUri));
 							}
 						}
+					else
+						{
+						consumme(r);
+						LOG.warning("no subClassOf/@rdf:resource for "+termUri);
+						}
 					}
 				else
 					{
@@ -162,10 +192,17 @@ public class OWLTool extends Launcher
 					}
 				}
 			}
-		if(obsolete_flag)  return;
+		if(obsolete_flag) {
+			return;
+		}
 		term.parents.addAll(parents);
-		for(final TermImpl p:parents) p.children.add(term);
-		this.uri2term.put(termUri, term);
+		for(final TermImpl p:parents) {
+			p.children.add(term);
+			}
+		
+		if(!this.uri2term.containsKey(termUri)) {
+			this.uri2term.put(termUri, term);
+			}
 		}	
     
     @Override
@@ -194,30 +231,67 @@ public class OWLTool extends Launcher
 			r.close();
 			is.close();
 			is=null;
+			
+			
+			final Set<TermImpl> query;
 			if(!StringUtils.isBlank(this.term_uri)) {
-				TermImpl t = this.uri2term.get(term_uri);
+				final TermImpl t = this.uri2term.get(term_uri);
 				if(t==null) {
 					LOG.error("term not found "+term_uri);
 					return -1;
 					}
-				try(PrintWriter w=IOUtils.openPathAsPrintWriter(this.out)) {
-					final Set<TermImpl> set = new HashSet<>();
-					if(method.equals(SearchMethod.children)) {
-						t.collectChildren(set);
-					} else
-						{
-						t.collectParents(set);
-						}
-					
-					for(TermImpl c:set) {
-						w.print(c.accession);
-						w.print("\t");
-						w.print(c.name);
-						w.println();
-						}
-					w.flush();
+				query = new HashSet<>();
+				query.add(t);
+				}
+			else
+				{
+				query = getRoots();
+				}
+			final Set<TermImpl> set = new HashSet<>();
+			for(final TermImpl t:query) {
+				if(method.equals(SearchMethod.children)) {
+					t.collectChildren(set);
+					} 
+				else
+					{
+					t.collectParents(set);
 					}
 				}
+			
+				
+			try(PrintWriter w=IOUtils.openPathAsPrintWriter(this.out)) {
+				switch(this.outputFormat) {
+					case recutils:
+						w.println("%rec: Ontology");
+						w.println("%key: id");
+						w.println("%required: label");
+						w.println();
+						for(final TermImpl c:set) {
+							w.println("id: "+c.accession);
+							w.println("label: "+c.name);
+							final Set<TermImpl> parents = new HashSet<>();
+							c.collectParents(parents);
+							parents.remove(c);
+							for(final TermImpl p: parents) {
+								w.println("is_a: "+p.accession);
+								}
+							w.println();
+							}
+						break;
+					case tabular:
+						for(final TermImpl c:set) {
+							w.print(c.accession);
+							w.print("\t");
+							w.print(c.name);
+							w.println();
+							}
+						break;
+					default:break;
+					}
+				
+				w.flush();
+				}
+				
 			return 0;
 			} 
 		catch(final Throwable err)
