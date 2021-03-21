@@ -256,6 +256,7 @@ $(eval $(call compile,ffcache,sandbox.tools.ffcache.FirefoxCache,${jcommander.ja
 $(eval $(call compile,pcaviewer,sandbox.tools.pca.PcaViewer,${commons-math3.jar}))
 $(eval $(call compile,atom2html,sandbox.tools.feed.AtomToHtml,${jcommander.jar} ${apache.httpclient.jars}))
 $(eval $(call compile,igdigest,sandbox.tools.ig.IgDigest,${jcommander.jar}))
+$(eval $(call compile,interpolator,sandbox.tools.interpolate.Interpolator,${jcommander.jar} ${commons-math3.jar}))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 

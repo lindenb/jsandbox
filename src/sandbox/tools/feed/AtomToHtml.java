@@ -2,6 +2,7 @@ package sandbox.tools.feed;
 
 import java.io.File;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -45,18 +46,23 @@ public class AtomToHtml extends Launcher {
 	private Path cookieStoreFile  = null;
 	@Parameter(names={"--since"},description=DurationConverter.OPT_DESC,converter=DurationConverter.class,splitter=NoSplitter.class)
 	private Duration since=null;
+	@Parameter(names={"--exclude-users"},description="Exclude users")
+	private Path xUserPath = null;
 
 	
 	private DocumentBuilder documentBuilder;
 	private Document document = null;
 	private final DateParser dateParser = new DateParser();
 	private final Set<String> imgSrcSet = new HashSet<>();
+	private final Set<String> excludeUsers = new HashSet<>();
 	
 	private Node parseEntry(Node root) {
 		String title = null;
 		String updated = null;
 		String url = null;
 		String img = null;
+		String categoryLabel=null;
+		String userName =null;
 		for(Node c1= root.getFirstChild();c1!=null;c1=c1.getNextSibling()) {
 			if(c1.getNodeType()!=Node.ELEMENT_NODE) continue;
 			final Element e1 = Element.class.cast(c1);
@@ -73,6 +79,31 @@ public class AtomToHtml extends Launcher {
 			else if(localName1.equals("thumbnail") && e1.hasAttribute("url")) {
 				img = e1.getAttribute("url");
 				}
+			else if(localName1.equals("category") && e1.hasAttribute("label")) {
+				categoryLabel = e1.getAttribute("label");
+				}
+			else if(localName1.equals("author")) {
+				for(Node c2= e1.getFirstChild();c2!=null;c2=c2.getNextSibling()) {
+					if(c2.getNodeType()!=Node.ELEMENT_NODE) continue;
+					final Element e2 = Element.class.cast(c2);
+					final String localName2 = e2.getLocalName();
+					if(localName2.equals("name")) {
+						userName = e2.getTextContent();
+						}
+					}
+				}
+			}
+		
+		if(userName!=null && this.excludeUsers.contains(userName)) {
+			return null;
+			}
+		
+		if(!StringUtils.isBlank(categoryLabel) && 
+			!StringUtils.isBlank(title) &&
+			StringUtils.md5(categoryLabel).equals("cc2e71a2513d6d4ad6d7b903eea11526") &&
+			!title.contains("[OC]")
+			) {
+			return null;
 			}
 		
 		if(!StringUtils.isBlank(updated) && this.since!=null) {
@@ -90,12 +121,12 @@ public class AtomToHtml extends Launcher {
 		if(StringUtils.isBlank(img)) return null;
 		if(this.imgSrcSet.contains(img)) return null;
 		this.imgSrcSet.add(img);
-		Element retE = this.document.createElement("span");
-		Element a  = this.document.createElement("a");
+		final Element retE = this.document.createElement("span");
+		final Element a  = this.document.createElement("a");
 		retE.appendChild(a);
 		a.setAttribute("href",url);
 		a.setAttribute("target","_blank");
-		Element imgE = this.document.createElement("img");
+		final Element imgE = this.document.createElement("img");
 		a.appendChild(imgE);
 		if(!StringUtils.isBlank(title)) imgE.setAttribute("alt", title);
 		if(!StringUtils.isBlank(title)) a.setAttribute("title", title + (StringUtils.isBlank(updated)?"":" "+updated));
@@ -173,6 +204,12 @@ public class AtomToHtml extends Launcher {
 	@Override
 	public int doWork(final List<String> args) {
 		try {
+			if(this.xUserPath!=null) {
+				Files.lines(this.xUserPath).
+					filter(S->!StringUtils.isBlank(S)).
+					forEach(S->this.excludeUsers.add(S));
+				}
+		
 			final HttpClientBuilder builder = HttpClientBuilder.create();
 			builder.setUserAgent(IOUtils.getUserAgent());
 			if(this.cookieStoreFile!=null) {

@@ -30,6 +30,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 
 public class VelocityJson extends Launcher {
@@ -172,10 +173,12 @@ public class VelocityJson extends Launcher {
 		    		for(final String filename: args)
 		                    {
 		                    final File file=new File(filename);
+					IOUtils.assertFileExists(file);
 		                    final VelocityEngine ve = new VelocityEngine();
 		                    ve.setProperty(RuntimeConstants.RESOURCE_LOADER, "file");
 		                    ve.setProperty("file.resource.loader.class","org.apache.velocity.runtime.resource.loader.FileResourceLoader");
-		                    ve.setProperty("file.resource.loader.path",file.getParent());
+		                    //ve.setProperty("file.resource.loader.path",Collections.singletonList(file.getParent()==null?new File("."):file.getParent()));
+		                    ve.setProperty("file.resource.loader.path",file.getParent()==null?".":file.getParent().toString());
 		                    ve.init();
 		                    final Template template = ve.getTemplate(file.getName());
 		                    template.merge( context, w);
