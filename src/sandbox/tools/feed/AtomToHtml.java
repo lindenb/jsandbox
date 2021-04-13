@@ -46,6 +46,8 @@ public class AtomToHtml extends Launcher {
 	private Path cookieStoreFile  = null;
 	@Parameter(names={"--since"},description=DurationConverter.OPT_DESC,converter=DurationConverter.class,splitter=NoSplitter.class)
 	private Duration since=null;
+	@Parameter(names={"--width"},description="Image width. Ignore if lower than 1.")
+	private int width = -1;
 	@Parameter(names={"--exclude-users"},description="Exclude users")
 	private Path xUserPath = null;
 
@@ -127,6 +129,7 @@ public class AtomToHtml extends Launcher {
 		a.setAttribute("href",url);
 		a.setAttribute("target","_blank");
 		final Element imgE = this.document.createElement("img");
+		if(width>0) imgE.setAttribute("width", String.valueOf(width));
 		a.appendChild(imgE);
 		if(!StringUtils.isBlank(title)) imgE.setAttribute("alt", title);
 		if(!StringUtils.isBlank(title)) a.setAttribute("title", title + (StringUtils.isBlank(updated)?"":" "+updated));
