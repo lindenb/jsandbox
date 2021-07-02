@@ -1,10 +1,6 @@
 /**
  * Author:
  * 	Pierre Lindenbaum PhD
- * Date:
- * 	June-2011
- * Contact:
- * 	plindenbaum@yahoo.fr
  * Reference:
  *   http://www.exampledepot.com/egs/javax.crypto/PassKey.html
  * WWW:
@@ -46,8 +42,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 
 //
-public class XmlCipher
-	{
+public class XmlCipher extends Launcher {
 	private final static String BASE64 =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -108,149 +103,6 @@ public class XmlCipher
   	}
   
 
-	/***
-	*  Decodes BASE64 encoded string.
-	*/
-	private static byte[] decodeBase64(String dataIn) throws IOException 
-		{
-		ByteArrayOutputStream out=new ByteArrayOutputStream();
-		byte output[] = new byte[3];
-		int state=0;
-		 char alpha='\0';
-		
-		for(int i=0;i<dataIn.length();++i)
-			{
-		    byte c;
-		    alpha=dataIn.charAt(i);
-		    if (Character.isWhitespace(alpha))
-		    	{
-		    	continue;
-		    	}
-		    else if ((alpha >= 'A') && (alpha <= 'Z'))
-				{
-				c = (byte)(alpha - 'A');
-				}
-			else if ((alpha >= 'a') && (alpha <= 'z'))
-				{
-				c = (byte)(26 + (alpha - 'a'));
-				}
-			else if ((alpha >= '0') && (alpha <= '9'))
-				{
-				c = (byte)(52 + (alpha - '0'));
-				}
-		   	else if (alpha=='+')
-		   		{
-		   		c = 62;
-		   		}
-			else if (alpha=='/')
-				{
-				c = 63;
-				}
-		   	else if (alpha=='=')
-		   		{
-		   		break; // end
-		   		}
-			else
-				{
-				throw new IOException("Illegal character for Base64 \'"+alpha+"\' in "+dataIn); // error
-				}
-		   
-		
-		    switch(state)
-		        {   case 0: output[0] = (byte)(c << 2);
-		        			state++;
-		                    break;
-		            case 1: output[0] |= (byte)(c >>> 4);
-		                    output[1] = (byte)((c & 0x0F) << 4);
-		        			state++;
-		                    break;
-		            case 2: output[1] |= (byte)(c >>> 2);
-		                    output[2] =  (byte)((c & 0x03) << 6);
-		        			state++;
-		                    break;
-		            case 3: output[2] |= c;
-		                    out.write(output);
-		        			state=0;
-		                    break;
-		        }
-			} // for
-		
-		if (alpha=='=') /* then '=' found, but the end of string */
-		    switch(state)
-		    {   
-		    case 2: out.write(output,0,1); break;
-			case 3: out.write(output,0,2); break;
-			default: break;
-		    }
-		out.flush();
-		return out.toByteArray();
-		} // decode
-
-	/**
-	 *  Encodes binary data by BASE64 method.
-	 *  @param data binary data as byte array
-	 *  @return encoded data as String
-	 */
-	private static String encodeBase64(byte dataIn[]) throws IOException
-			{
-			StringBuilder out=new StringBuilder();
-			char output[] = new char[4];
-			int restbits = 0;
-			 int chunks = 0;
-			int c;
-			int nFill=0;
-			
-			for(int i=0;i< dataIn.length;++i)
-				{
-				c=dataIn[i];
-				int ic = ( c >= 0 ? c : (c & 0x7F) + 128);
-				//array3[nFill]=(byte)ic;
-			   
-			    switch (nFill)
-			        {	
-			        case 0:
-			        	{
-			        	output[nFill] = BASE64.charAt(ic >>> 2);
-			            restbits = ic & 0x03;
-			            nFill++;
-			            break;
-			        	}
-			       case 1:
-			    	    {
-			    		output[nFill] = BASE64.charAt((restbits << 4) | (ic >>> 4));
-			    	    restbits = ic & 0x0F;
-			    	    nFill++;
-			            break;
-			    	    }
-			       case 2:
-			    	   	{
-			    	   	output[nFill  ] = BASE64.charAt((restbits << 2) | (ic >>> 6));
-			    	   	output[nFill+1] = BASE64.charAt(ic & 0x3F);
-			            out.append(output);
-			            // keep no more the 76 character per line
-			            chunks++;
-			            nFill=0;
-			            break;
-			    	   	}
-			        }
-				} // for
-			
-				/* final */
-				switch (nFill)
-				{    case 1:
-			         	 output[1] = BASE64.charAt((restbits << 4));
-			             output[2] = output[3] = '=';
-			             out.append(output);
-			             break;
-			         case 2:
-			         	 output[2] = BASE64.charAt((restbits << 2));
-			             output[3] = '=';
-			             out.append(output);
-			             break;
-				}
-			
-		return out.toString();
-		} // encode()	
 	
 	private String process(String s,boolean encode) throws Exception
 		{

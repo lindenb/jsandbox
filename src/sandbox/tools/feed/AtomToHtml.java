@@ -77,6 +77,7 @@ public class AtomToHtml extends Launcher {
 				}
 			else if(localName1.equals("title")) {
 				title = e1.getTextContent();
+				if(title.toLowerCase().contains("[m]") || title.toLowerCase().contains("(m)")) return null;
 				}
 			else if(localName1.equals("thumbnail") && e1.hasAttribute("url")) {
 				img = e1.getAttribute("url");

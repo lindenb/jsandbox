@@ -18,15 +18,15 @@ define compile
 ## 2 : qualified main class name
 ## 3 : other deps
 
-$(1)  : $(addsuffix .java,$(addprefix src/,$(subst .,/,$(2)))) $(3)
+$(1)  : $(addsuffix .java,$(addprefix src/,$(subst .,/,$(2)))) $(3) dist/annotproc.jar
 	echo "### COMPILING $(1) ######"
 	mkdir -p ${tmp.dir}/META-INF ${bin.dir}
 	#compile
-	${JAVAC} -Xlint -d ${tmp.dir} -g -classpath "$$(subst $$(SPACE),:,$$(filter %.jar,$$^))" -sourcepath ${src.dir} $$(filter %.java,$$^)
+	${JAVAC} -Xlint -d ${tmp.dir} -implicit:class -processor sandbox.annotation.processing.MyProcessor -processorpath dist/annotproc.jar -g -classpath "$$(subst $$(SPACE),:,$$(filter-out dist/annotproc.jar,$$(filter %.jar,$$^)))" -sourcepath ${src.dir} $$(filter %.java,$$^)
 	#create META-INF/MANIFEST.MF
 	echo "Manifest-Version: 1.0" > ${tmp.dir}/tmp.mf
 	echo "Main-Class: $(2)" >> ${tmp.dir}/tmp.mf
-	echo "Class-Path: $$(filter %.jar,$$^) ${bin.dir}/$(1).jar" | fold -w 71 | awk '{printf("%s%s\n",(NR==1?"": " "),$$$$0);}' >>  ${tmp.dir}/tmp.mf
+	echo "Class-Path: $$(filter-out dist/annotproc.jar,$$(filter %.jar,$$^)) ${bin.dir}/$(1).jar" | fold -w 71 | awk '{printf("%s%s\n",(NR==1?"": " "),$$$$0);}' >>  ${tmp.dir}/tmp.mf
 	#create jar
 	${JAR} cfm ${bin.dir}/$(1).jar ${tmp.dir}/tmp.mf  -C ${tmp.dir} .
 	#cleanup
@@ -186,7 +186,7 @@ $(eval $(call compile,twitter01,sandbox.Twitter01, ${twitter.hbc.jars}))
 $(eval $(call compile,twitterfollow,sandbox.TwitterFollow, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,twitteruserlookup,sandbox.TwitterUserLookup, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,twittergraph,sandbox.TwitterGraph, ${sqlite3.jdbc.jar} ${jcommander.jar} ${org.scribe.jars} ${google.gson.jars}))
-$(eval $(call compile,json2xml,sandbox.Json2Xml,${google.gson.jars}))
+$(eval $(call compile,json2xml,sandbox.tools.json2xml.Json2Xml,${google.gson.jars} ${jcommander.jar}))
 $(eval $(call compile,json2dom,sandbox.Json2Dom,${google.gson.jars}))
 $(eval $(call compile,timelinemaker,sandbox.TimeLineMaker,${google.gson.jars} ${jcommander.jar}))
 $(eval $(call compile,geneticpainting,sandbox.GeneticPainting,${apache.commons.cli}))
@@ -263,6 +263,14 @@ $(eval $(call compile,interpolator,sandbox.tools.interpolate.Interpolator,${jcom
 ./src/sandbox/swij/SwijParser.java : ./src/sandbox/swij/Swij.jj
 	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<
 
+dist/annotproc.jar:  src/sandbox/annotation/processing/MyProcessor.java
+	rm -rf tmp
+	mkdir -p tmp $(dir $@)
+	javac -d tmp -sourcepath src $<
+	jar cvf $@ -C tmp .
+	rm -rf tmp
+
+
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	mkdir -p tmp $(dir $@)
 	${javacc.exe} -OUTPUT_DIRECTORY=tmp/sandbox -TOKEN_MANAGER_USES_PARSER=true $<
@@ -308,6 +316,8 @@ download_maven_jars : ${all_maven_jars}
 
 clean_maven_jars :
 	rm -f ${all_maven_jars}
+
+
 
 ## JNLP
 

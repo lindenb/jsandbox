@@ -22,12 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 */
-package sandbox;
+package sandbox.tools.json2xml;
 
-import java.io.File;
-import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.List;
 import java.util.logging.Logger;
 
 import javax.xml.stream.XMLOutputFactory;
@@ -35,9 +34,12 @@ import javax.xml.stream.XMLStreamWriter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 
+import sandbox.Launcher;
+import sandbox.annotation.IncludeUrl;
 import sandbox.io.IOUtils;
 
-public final class Json2Xml {
+@IncludeUrl(url="http://en.wikipedia.org http://fr.wikipedia.org",directory="XXX")
+public final class Json2Xml extends Launcher {
 	private static final String NS="http://www.ibm.com/xmlns/prod/2009/jsonx";
 	public static Logger LOG=Logger.getLogger("json2xml");
 	
@@ -151,25 +153,22 @@ public final class Json2Xml {
 			
 		}
 	
-	public static void main(String[] args) {
+	@Override
+	public int doWork(List<String> args)
+		{
 		try {
-			Json2Xml app = new Json2Xml();
 			Reader r = null;
 			JsonReader jr=null;
-			if(args.length==0)
+			String input = super.oneAndOnlyOneFile(args);
+			if(input==null)
 				{
-				LOG.info("reading JSON from stdin");
 				r = new InputStreamReader(System.in);
 				}
-			else if(args.length==1)
-				{
-				r  = new FileReader(new File(args[0]));
-				}		
 			else
 				{
-				System.err.println("Illegal Number of args");
-				System.exit(-1);
-				}
+				r  = IOUtils.openBufferedReader(input);
+				}		
+			
 			
 			
 			jr = new JsonReader(r);
@@ -180,17 +179,20 @@ public final class Json2Xml {
 			w.setDefaultNamespace(NS);
 			w.writeStartDocument("UTF-8", "1.0");
 			
-			app.parse(w,null,jr);
+			this.parse(w,null,jr);
 			w.writeEndDocument();
 			w.flush();
 			w.close();
 			IOUtils.close(jr);
-			System.exit(0);
-		} catch (Exception e) {
-			e.printStackTrace();
-			System.exit(-1);
+			return 0;
+		} catch (Throwable err) {
+			err.printStackTrace();
+			return -1;
 		}
 
 	}
-
+	public static void main(String[] args)
+		{
+		new Json2Xml().instanceMainWithExit(args);
+		}
 }
