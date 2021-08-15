@@ -22,7 +22,7 @@ public XmlBeanFactory() {
 	}
 public BeanSet parse(final Path path) throws IOException {
 	try {
-		final DocumentBuilderFactory dbf = DocumentBuilderFactory.newDefaultInstance();
+		final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		final DocumentBuilder db = dbf.newDocumentBuilder();
 		final Document dom = db.parse(path.toFile());
 		return new BeanSetImpl(dom);

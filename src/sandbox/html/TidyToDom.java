@@ -34,7 +34,7 @@ public class TidyToDom {
 		}
 	public DocumentFragment importString(final String s) {
 		try {
-			DocumentBuilderFactory dbf = DocumentBuilderFactory.newDefaultInstance();
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 			DocumentBuilder db = dbf.newDocumentBuilder();
 			return importString(s,db.newDocument());
 			}

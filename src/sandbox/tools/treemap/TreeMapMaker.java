@@ -29,6 +29,7 @@ import sandbox.io.IOUtils;
 import sandbox.jcommander.DimensionConverter;
 import sandbox.jcommander.NoSplitter;
 import sandbox.net.DataCache;
+import sandbox.net.DataCacheFactory;
 import sandbox.net.HttpURLInputStreamProvider;
 import sandbox.net.URLInputStreamProvider;
 import sandbox.treemap.TreePack;
@@ -386,7 +387,10 @@ public class TreeMapMaker extends Launcher
 				}
 			client = builder.build();
 			final URLInputStreamProvider urlInputStreamProvider = new HttpURLInputStreamProvider(client);
-			this.dataCache = (this.cacheDirectory==null?DataCache.noCache(urlInputStreamProvider):DataCache.open(this.cacheDirectory,urlInputStreamProvider));
+			this.dataCache = new DataCacheFactory().
+					setDirectory(this.cacheDirectory).
+					setUrlInputStreamProvider(urlInputStreamProvider).
+					make();
 			final Frame root = new  Frame(Collections.emptyMap());
 			root.properties.put("id", "default");
 			final Map<String, Frame> id2frame = new HashMap<>();
@@ -475,6 +479,7 @@ public class TreeMapMaker extends Launcher
 			return -1;
 			}
 		finally {
+			if(this.dataCache!=null) try{this.dataCache.close();} catch(final Throwable err2) {}
 			if(client!=null) try{client.close();} catch(final Throwable err2) {}
 			}
 		}
