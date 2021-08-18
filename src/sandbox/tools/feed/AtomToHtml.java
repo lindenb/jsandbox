@@ -1,6 +1,7 @@
 package sandbox.tools.feed;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,6 +51,8 @@ public class AtomToHtml extends Launcher {
 	private int width = -1;
 	@Parameter(names={"--exclude-users"},description="Exclude users")
 	private Path xUserPath = null;
+	@Parameter(names={"--directory"},description="Save images in that directory")
+	private Path saveDirectory = null;
 
 	
 	private DocumentBuilder documentBuilder;
@@ -58,7 +61,7 @@ public class AtomToHtml extends Launcher {
 	private final Set<String> imgSrcSet = new HashSet<>();
 	private final Set<String> excludeUsers = new HashSet<>();
 	
-	private Node parseEntry(Node root) {
+	private Node parseEntry(Node root,final CloseableHttpClient client) {
 		String title = null;
 		String updated = null;
 		String url = null;
@@ -135,8 +138,37 @@ public class AtomToHtml extends Launcher {
 		if(!StringUtils.isBlank(title)) imgE.setAttribute("alt", title);
 		if(!StringUtils.isBlank(title)) a.setAttribute("title", title + (StringUtils.isBlank(updated)?"":" "+updated));
 		imgE.setAttribute("src", img);
+		saveImage(img,client);
 		return retE;
 		}
+	
+	private void saveImage(final String img,CloseableHttpClient client) {
+		if(saveDirectory==null) return;
+		if(!Files.exists(saveDirectory)) return;
+		final String md5 = StringUtils.md5(img);
+		final Path saveFile = saveDirectory.resolve(md5);
+		if(Files.exists(saveFile)) return;
+		
+		try {
+			try(CloseableHttpResponse resp=client.execute(new HttpGet(img))) {
+				if(resp.getStatusLine().getStatusCode()!=200) {
+					LOG.error("cannot fetch "+img+" "+resp.getStatusLine());
+					}
+				else {
+					try(InputStream in = resp.getEntity().getContent()) {
+						IOUtils.copyTo(in, saveFile);
+						}
+					catch(final Throwable err) {
+						LOG.error(err);
+						}
+					}
+				}
+			} catch(IOException err) {
+				LOG.error(err);
+			}
+			
+	}
+		
 	
 	private Document parseUrl(CloseableHttpClient client,final String url) throws Exception {
 		if(IOUtils.isURL(url)) {
@@ -184,7 +216,7 @@ public class AtomToHtml extends Launcher {
 				title = e1.getTextContent();
 				}
 			else if(e1.getLocalName().equals("entry")) {
-				Node entryE = parseEntry(e1);
+				Node entryE = parseEntry(e1,client);
 				if(entryE!=null) {
 					entries.add(entryE);
 					}
