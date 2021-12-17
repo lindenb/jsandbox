@@ -166,8 +166,23 @@ berkeleydb.jar= \
 commons-math3.jar= \
 	$(lib.dir)/org/apache/commons/commons-math3/3.6.1/commons-math3-3.6.1.jar
 
-all_maven_jars = $(sort ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar})
 
+
+apache.poi.jar = \
+	$(lib.dir)/org/apache/poi/poi/5.0.0/poi-5.0.0.jar \
+	$(lib.dir)/com/zaxxer/SparseBitSet/1.2/SparseBitSet-1.2.jar \
+	$(lib.dir)/commons-codec/commons-codec/1.15/commons-codec-1.15.jar \
+	$(lib.dir)/org/apache/commons/commons-collections4/4.4/commons-collections4-4.4.jar \
+	$(lib.dir)/org/apache/commons/commons-math3/3.6.1/commons-math3-3.6.1.jar \
+	$(lib.dir)/org/slf4j/slf4j-api/1.7.30/slf4j-api-1.7.30.jar \
+	$(lib.dir)/org/slf4j/jcl-over-slf4j/1.7.30/jcl-over-slf4j-1.7.30.jar \
+	$(lib.dir)/org/slf4j/slf4j-simple/1.7.13/slf4j-simple-1.7.13.jar \
+	$(lib.dir)/org/apache/poi/poi-ooxml-lite/5.0.0/poi-ooxml-lite-5.0.0.jar \
+	$(lib.dir)/org/apache/poi/poi-ooxml/5.0.0/poi-ooxml-5.0.0.jar \
+	$(lib.dir)/org/apache/xmlbeans/xmlbeans/4.0.0/xmlbeans-4.0.0.jar \
+	$(lib.dir)/org/apache/commons/commons-compress/1.20/commons-compress-1.20.jar
+
+all_maven_jars = $(sort $(apache.poi.jar) ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar})
 
 
 all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
@@ -191,7 +206,7 @@ $(eval $(call compile,json2dom,sandbox.Json2Dom,${google.gson.jars}))
 $(eval $(call compile,timelinemaker,sandbox.TimeLineMaker,${google.gson.jars} ${jcommander.jar}))
 $(eval $(call compile,geneticpainting,sandbox.GeneticPainting,${apache.commons.cli}))
 $(eval $(call compile,flickrrss,sandbox.FlickrRss,${apache.commons.cli} ${slf4j.jars} ${org.scribe.jars}))
-$(eval $(call compile,mosaicofpictures,sandbox.MosaicOfPictures,${jcommander.jar}))
+$(eval $(call compile,mosaicofpictures,sandbox.tools.mosaic.MosaicOfPictures,${jcommander.jar} ${apache.httpclient.jars} ))
 $(eval $(call compile,montagegif,sandbox.MontageGif,${jcommander.jar}))
 $(eval $(call compile,java2xml,sandbox.Java2Xml,${jcommander.jar}))
 $(eval $(call compile,html2tty,sandbox.HtmlToTTY,${jcommander.jar}))
@@ -257,6 +272,7 @@ $(eval $(call compile,pcaviewer,sandbox.tools.pca.PcaViewer,${commons-math3.jar}
 $(eval $(call compile,atom2html,sandbox.tools.feed.AtomToHtml,${jcommander.jar} ${apache.httpclient.jars}))
 $(eval $(call compile,igdigest,sandbox.tools.ig.IgDigest,${jcommander.jar}))
 $(eval $(call compile,interpolator,sandbox.tools.interpolate.Interpolator,${jcommander.jar} ${commons-math3.jar}))
+$(eval $(call compile,test,sandbox.tools.xml2ppt.XmlToPPT,${jcommander.jar} ${apache.poi.jar}))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 

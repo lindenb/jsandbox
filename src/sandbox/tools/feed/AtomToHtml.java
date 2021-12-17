@@ -53,6 +53,8 @@ public class AtomToHtml extends Launcher {
 	private Path xUserPath = null;
 	@Parameter(names={"--directory"},description="Save images in that directory")
 	private Path saveDirectory = null;
+	@Parameter(names={"--no-gif"},description="remove images with .gif suffix")
+	private boolean no_gif = false;
 
 	
 	private DocumentBuilder documentBuilder;
@@ -99,12 +101,11 @@ public class AtomToHtml extends Launcher {
 					}
 				}
 			}
-		
 		if(userName!=null && this.excludeUsers.contains(userName)) {
 			return null;
 			}
 		
-		if(!StringUtils.isBlank(categoryLabel) && 
+		if(!StringUtils.isBlank(categoryLabel) &&
 			!StringUtils.isBlank(title) &&
 			StringUtils.md5(categoryLabel).equals("cc2e71a2513d6d4ad6d7b903eea11526") &&
 			!title.contains("[OC]")
@@ -125,6 +126,11 @@ public class AtomToHtml extends Launcher {
 		
 		if(StringUtils.isBlank(url)) return null;
 		if(StringUtils.isBlank(img)) return null;
+		if(no_gif && (img.endsWith(".gif") || img.contains(".gif?"))) {
+			return null;
+		}
+		
+		
 		if(this.imgSrcSet.contains(img)) return null;
 		this.imgSrcSet.add(img);
 		final Element retE = this.document.createElement("span");
@@ -136,7 +142,7 @@ public class AtomToHtml extends Launcher {
 		if(width>0) imgE.setAttribute("width", String.valueOf(width));
 		a.appendChild(imgE);
 		if(!StringUtils.isBlank(title)) imgE.setAttribute("alt", title);
-		if(!StringUtils.isBlank(title)) a.setAttribute("title", title + (StringUtils.isBlank(updated)?"":" "+updated));
+		if(!StringUtils.isBlank(title)) a.setAttribute("title", title + (StringUtils.isBlank(userName)?"":" \""+userName+"\"")+(StringUtils.isBlank(updated)?"":" "+updated));
 		imgE.setAttribute("src", img);
 		saveImage(img,client);
 		return retE;
@@ -242,6 +248,7 @@ public class AtomToHtml extends Launcher {
 		try {
 			if(this.xUserPath!=null) {
 				Files.lines(this.xUserPath).
+					map(S->S.trim()).
 					filter(S->!StringUtils.isBlank(S)).
 					forEach(S->this.excludeUsers.add(S));
 				}

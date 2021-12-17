@@ -1,8 +1,11 @@
 package sandbox;
 
+import java.security.KeyStore.Entry.Attribute;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.function.Function;
@@ -13,21 +16,28 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import sandbox.iterator.AbstractIterator;
 
+
 public class XmlUtils {
 
-static final Predicate<Node> isElement = (N) -> N!=null && 	N.getNodeType()==Node.ELEMENT_NODE;
-static final Predicate<Node> isText = (N) -> N!=null && 	N.getNodeType()==Node.TEXT_NODE;
-static final Function<Node,Element> toElement = N->{
+public static final Predicate<Node> isElement = (N) -> N!=null && 	N.getNodeType()==Node.ELEMENT_NODE;
+public static final Predicate<Node> isText = (N) -> N!=null && 	N.getNodeType()==Node.TEXT_NODE;
+public static final Function<Node,Element> toElement = N->{
 	if(isElement.test(N)) return Element.class.cast(N);
 	throw new IllegalArgumentException("node is not an element");
 	};
 
-
+public static Optional<String> attribute(Node n,final String key) {
+	if(!isElement.test(n)) return Optional.empty();
+	final Element e=Element.class.cast(n);
+	if(!e.hasAttribute(key)) return Optional.empty();
+	return Optional.of(e.getAttribute(key));
+	}
 
 static final Collector<Node,?, List<Element>> collectElements = Collector.of(
 		()->new ArrayList<>(),
@@ -56,6 +66,18 @@ public static void _recurse(final List<Node> L,final Node root) {
 public static Stream<Node> stream(final Node root) {
 return children(root).stream();
 }
+
+/* returns parents including self ordered from the_node to its parents*/
+public static List<Node> ancestorsOrSelf(final Node the_node) {
+	if( the_node == null) return Collections.emptyList();
+	final List<Node> L = new ArrayList<>();
+	Node curr= the_node;
+	while(curr!=null) {
+		L.add(curr);
+		curr=curr.getParentNode();
+		}
+	return L;
+	}
 
 
 public static List<Node> children(final Node root) {

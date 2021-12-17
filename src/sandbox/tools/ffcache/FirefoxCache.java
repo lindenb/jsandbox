@@ -28,6 +28,15 @@ import sandbox.jcommander.DurationConverter;
 import sandbox.jcommander.FileSizeConverter;
 import sandbox.jcommander.NoSplitter;
 
+/**
+
+Input is a directory like:
+
+```
+${HOME}/.cache/mozilla/firefox/
+```
+
+*/
 public class FirefoxCache extends Launcher {
 	private static final Logger LOG = Logger.builder(FirefoxCache.class).build();
 
@@ -39,10 +48,14 @@ public class FirefoxCache extends Launcher {
 	private long min_size = 0L;
 	@Parameter(names= {"-icon-size","--icon-size"},description="Icon size")
 	private int icon_size = 32;
+	@Parameter(names= {"-min-width","--min-width"},description="Min image width")
+	private long min_width = 0L;
+	@Parameter(names= {"-min-height","--min-height"},description="Min image height")
+	private long min_height = 0L;
 	@Parameter(names= {"-min-dim","--min-dim"},description="Min dimension either width or height.")
 	private int min_dimension=100;
 
-	
+
 	private void recurse(final XMLStreamWriter w,final Path dir) throws IOException {
 		if(!Files.exists(dir)) return;
 
@@ -51,34 +64,37 @@ public class FirefoxCache extends Launcher {
 			 	public FileVisitResult visitFile(Path F, BasicFileAttributes attrs) throws IOException {
 			 		if(!attrs.isRegularFile()) return FileVisitResult.CONTINUE;
 			 		if(attrs.isSymbolicLink()) return FileVisitResult.CONTINUE;
-			 		try {			 			
+			 		try {
 						if(!Files.isReadable(F)) return FileVisitResult.CONTINUE;
 						if(since!=null) {
 							final FileTime fileTime = attrs.creationTime();
 							Duration dd =  Duration.ofMillis(System.currentTimeMillis()-fileTime.toMillis());
 							if(since.compareTo(dd)<0) return FileVisitResult.CONTINUE;
-							
+
 							final long fsize = attrs.size();
 							if(fsize < min_size) return FileVisitResult.CONTINUE;
 							}
 						try {
 							BufferedImage img = ImageIO.read(F.toFile());
-							if(img==null || (img.getWidth()< min_dimension && img.getHeight()< min_dimension ) ) return FileVisitResult.CONTINUE;
+							if(img==null) return FileVisitResult.CONTINUE;
+							if (min_dimension>0 && img.getWidth()< min_dimension && img.getHeight()< min_dimension ) return FileVisitResult.CONTINUE;
+							if (min_height>0 && img.getHeight() < min_height) return FileVisitResult.CONTINUE;
+							if (min_width>0 && img.getWidth() < min_width) return FileVisitResult.CONTINUE;
+							final String wxh= " [" + img.getWidth() + "x" + img.getHeight()+"]";
 							ImageResizer resizer = new ImageResizer();
 							resizer.setSize( icon_size);
-							
+
 							img = resizer.apply(img);
-							String base64=ImageUtils.toBase64(img);
+							final String base64=ImageUtils.toBase64(img);
 							w.writeStartElement("span");
 							w.writeStartElement("a");
 							w.writeAttribute("title",F.getFileName().toString());
 							w.writeAttribute("href","file://"+ F.toString());
 							w.writeAttribute("target","_blank");
-							
-							
+
 							w.writeEmptyElement("img");
-							w.writeAttribute("alt",F.getFileName().toString());
-							w.writeAttribute("title",F.getFileName().toString());
+							w.writeAttribute("alt",F.getFileName().toString()+wxh);
+							w.writeAttribute("title",F.getFileName().toString()+wxh);
 							w.writeAttribute("src","data:image/png;base64,"+base64);
 							w.writeAttribute("width",String.valueOf(img.getWidth()));
 							w.writeAttribute("height",String.valueOf(img.getHeight()));
@@ -86,7 +102,8 @@ public class FirefoxCache extends Launcher {
 							w.writeEndElement();
 							w.writeCharacters("\n");
 							}
-						catch(Throwable err) {
+						catch(final Throwable err) {
+							LOG.error(F.toString());
 							LOG.error(err);
 							return FileVisitResult.CONTINUE;
 							}
