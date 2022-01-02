@@ -232,7 +232,7 @@ public class AtomToHtml extends Launcher {
 		Node retE = this.document.createDocumentFragment();
 		Element dt = this.document.createElement("dt");
 		retE.appendChild(dt);
-		if(!StringUtils.isBlank(title)) retE.appendChild(document.createTextNode(title));
+		if(!StringUtils.isBlank(title)) dt.appendChild(document.createTextNode(title));
 		Element dd= this.document.createElement("dd");
 		retE.appendChild(dd);
 		for(Node entry:entries) {
