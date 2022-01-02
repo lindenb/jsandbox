@@ -268,6 +268,17 @@ public static void copyTo(final InputStream in,final File out) throws IOExceptio
 	copyTo(in,out.toPath());
 	}
 
+public static void copyTo(final Path fin,final OutputStream out) throws IOException
+{
+try(InputStream in=Files.newInputStream(fin)) {
+	copyTo(in, out);
+	}
+}
+
+public static void copyTo(final File fin,final OutputStream out) throws IOException {
+	copyTo(fin.toPath(),out);
+	}
+
 public static void copyTo(final InputStream in,final OutputStream out) throws IOException
 	{
 	byte array[]=new byte[1024];
