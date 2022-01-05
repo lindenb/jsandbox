@@ -11,6 +11,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 public abstract class ArchiveFactory implements AutoCloseable {
+	public static final String OPT_DESC = "Existing directory or zip file";
 	public abstract OutputStream openOuputStream(final String filename) throws IOException;
 	
 	/** copy whole file into the archive */
