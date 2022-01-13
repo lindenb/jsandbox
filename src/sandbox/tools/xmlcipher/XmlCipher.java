@@ -12,14 +12,13 @@
  * Usage:
  *        java -jar dist/xmlcipher.jar [options] (stdin|file|uri)
  */
-package sandbox;
+package sandbox.tools.xmlcipher;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.KeySpec;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 import javax.crypto.Cipher;
@@ -41,12 +40,21 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 
+import com.beust.jcommander.Parameter;
+
+import sandbox.Launcher;
+import sandbox.StringUtils;
+
 //
 public class XmlCipher extends Launcher {
-	private final static String BASE64 =
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-
+	@Parameter(names={"-o","--output"},description="output name")
+	private File fileout = null; 
+	@Parameter(names={"-d","--decode"},description="decode")
+	private boolean decode = false;
+	@Parameter(names={"-e","--encode"},description="encode")
+	private boolean encode = false;
+	@Parameter(names={"-p","--password"},description="password")
+	private String password = null;
 	
 	// 8-byte Salt
     private static final byte[] SALT =
@@ -56,26 +64,8 @@ public class XmlCipher extends Launcher {
     	};
    private static final int ITERATION_COUNT = 23;
    private Cipher theCipher;
-   private  XmlCipher(char passPhrase[], boolean encode) throws Exception
+   private  XmlCipher()
 	   {
-        // Create the key
-        KeySpec keySpec = new PBEKeySpec(passPhrase, SALT, ITERATION_COUNT);
-        SecretKey key = SecretKeyFactory.getInstance(
-            "PBEWithMD5AndDES").generateSecret(keySpec);
-      
-        theCipher = Cipher.getInstance(key.getAlgorithm());
-       
-
-        // Prepare the parameter to the ciphers
-        AlgorithmParameterSpec paramSpec = new PBEParameterSpec(SALT, ITERATION_COUNT);
-        if(encode)
-        	{
-        	theCipher.init(Cipher.ENCRYPT_MODE, key, paramSpec);
-        	}
-        else
-        	{
-        	theCipher.init(Cipher.DECRYPT_MODE, key, paramSpec);
-        	}
 	 	}
    
    
@@ -87,13 +77,13 @@ public class XmlCipher extends Launcher {
        // Encrypt
        byte[] enc = theCipher.doFinal(utf8);
 
-        return encodeBase64(enc);
+        return Base64.getEncoder().encodeToString(enc);
 	    }
 
   private String decrypt(String str)  throws Exception
   	{
       // Decode base64 to get bytes
-      byte[] dec = decodeBase64(str);
+      byte[] dec = Base64.getDecoder().decode(str);
 
       // Decrypt
       byte[] utf8 = theCipher.doFinal(dec);
@@ -170,87 +160,60 @@ public class XmlCipher extends Launcher {
 			}
 		}
 	
-	
-	public static void main(String[] args)
+	@Override
+	public int doWork(List<String> args)
 		{
 		try
 			{
-			File fileout=null;
-			Boolean encode=null;
-			char password[]=null;
-			int optind=0;
-			while(optind< args.length)
-				{
-				if(args[optind].equals("-h") ||
-				   args[optind].equals("-help") ||
-				   args[optind].equals("--help"))
-					{
-					System.err.println("Pierre Lindenbaum PhD. 2011");
-					System.err.println("Options:");
-					System.err.println(" -h help; This screen.");
-					System.err.println(" -e 'encode'");
-					System.err.println(" -d 'decode'");
-					System.err.println(" -o 'fileout' (optional)");
-					System.err.println(" -p <password> (optional).");
-					return;
-					}
-				else if(args[optind].equals("-o"))
-					{
-					fileout=new File(args[++optind]);
-					}
-				else if(args[optind].equals("-p"))
-					{
-					password=args[++optind].toCharArray();
-					}
-				else if(args[optind].equals("-e"))
-					{
-					if(encode!=null && encode!=Boolean.TRUE)
-						{
-						System.err.println("ambigous program");
-						return;
-						}
-					encode=Boolean.TRUE;
-					}
-				else if(args[optind].equals("-d"))
-					{
-					if(encode!=null &&encode!=Boolean.FALSE)
-						{
-						System.err.println("ambigous program");
-						return;
-						}
-					encode=Boolean.FALSE;
-					}
-				else if(args[optind].equals("--"))
-					{
-					optind++;
-					break;
-					}
-				else if(args[optind].startsWith("-"))
-					{
-					System.err.println("Unknown option "+args[optind]);
-					return;
-					}
-				else 
-					{
-					break;
-					}
-				++optind;
-				}
-			if(password==null)
+			final char[] passPhrase;
+			if(StringUtils.isBlank(password))
 				{
 				if(System.console()==null)
 					{
 					System.err.println("Undefined password.");
-					return;
+					return -1;
 					}
-				password=System.console().readPassword("[xmlcipher] Password ?");
-				if(password==null)
+				passPhrase =System.console().readPassword("[xmlcipher] Password ?");
+				if(passPhrase==null)
 					{
 					System.err.println("Undefined password.");
-					return;
+					return -1;
 					}
 				}
+			else
+				{
+				passPhrase = this.password.toCharArray();
+				}
 			
+			
+
+	        // Create the key
+	        KeySpec keySpec = new PBEKeySpec(passPhrase, SALT, ITERATION_COUNT);
+	        SecretKey key = SecretKeyFactory.getInstance(
+	            "PBEWithMD5AndDES").generateSecret(keySpec);
+	      
+	        theCipher = Cipher.getInstance(key.getAlgorithm());
+	       
+
+	        // Prepare the parameter to the ciphers
+	        AlgorithmParameterSpec paramSpec = new PBEParameterSpec(SALT, ITERATION_COUNT);
+	        if(this.decode && this.encode) {
+	        	System.err.println("decode and encode ???");
+	        	return -1;
+	        	}
+	        else if(this.encode)
+	        	{
+	        	this.theCipher.init(Cipher.ENCRYPT_MODE, key, paramSpec);
+	        	}
+	        else if(this.decode)
+	        	{
+	        	this.theCipher.init(Cipher.DECRYPT_MODE, key, paramSpec);
+	        	}
+	        else
+	        	{
+	        	System.err.println("decode or encode ???");
+	        	return -1;
+	        	}
 					
 				DocumentBuilderFactory f=DocumentBuilderFactory.newInstance();
 				f.setCoalescing(true);
@@ -261,13 +224,13 @@ public class XmlCipher extends Launcher {
 				Document dom=null;
 				
 				
-			    if(optind==args.length)
+			    if(args.isEmpty())
                     {
                     dom=docBuilder.parse(System.in);
                     }
-                else if(optind+1==args.length)
+                else if(args.size()==1)
                     {
-                    String filename=args[optind++];
+                    String filename=args.get(0);
                     if(	filename.startsWith("http://") ||
                     	filename.startsWith("https://") ||
                     	filename.startsWith("ftp://"))
@@ -282,22 +245,16 @@ public class XmlCipher extends Launcher {
                 else
                 	{
                 	System.err.println("IllegalNumber of arguments.");
-                	return;
+                	return -1;
                 	}
-			    if(encode==null)
+			    
+			    if(encode)
 			    	{
-			    	System.err.println("undefined program decode or encode ??");
-                	return;
+			    	this.process(dom,true);
 			    	}
-			    else if(encode)
+			    else if(this.decode)
 			    	{
-			    	XmlCipher app=new XmlCipher(password,encode);
-			    	app.process(dom,true);
-			    	}
-			    else if(!encode)
-			    	{
-			    	XmlCipher app=new XmlCipher(password,encode);
-			    	app.process(dom,false);
+			    	this.process(dom,false);
 			    	}
 			
 			TransformerFactory factory=TransformerFactory.newInstance();
@@ -310,12 +267,17 @@ public class XmlCipher extends Launcher {
 				{
 				transformer.transform(new DOMSource(dom), new StreamResult(System.out));
 				}
+			return 0;
 			} 
 		catch(Throwable err)
 			{
 			err.printStackTrace();
+			return -1;
 			}
 		}
 	
+	public static void main(String[] args) {
+		new XmlCipher().instanceMain(args);
+		}
 	}
   
