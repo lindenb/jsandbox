@@ -1,0 +1,516 @@
+package sandbox.tools.chalkboard;
+
+import java.awt.BasicStroke;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Event;
+import java.awt.FlowLayout;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.Shape;
+import java.awt.Stroke;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.geom.GeneralPath;
+import java.awt.geom.Rectangle2D;
+import java.io.File;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.swing.AbstractAction;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+
+import com.beust.jcommander.Parameter;
+
+import sandbox.Launcher;
+import sandbox.svg.SVG;
+
+@SuppressWarnings("serial")
+public class ChalkBoard extends Launcher  {
+	@Parameter(names="-o",description="save directory")
+	private File outputDir = null;
+	@Parameter(names="--prefix",description="file prefix")
+	private String prefix = "slideshow.";
+
+
+	private static class MyStyle {
+		String className;
+		Color color = Color.BLACK;
+		int lineSize = 1;
+		@Override
+		public boolean equals(Object obj)
+			{
+			MyStyle other= MyStyle.class.cast(obj);
+			if(this.lineSize!=other.lineSize) return false;
+			if(!this.color.equals(other.color)) return false;
+			return true;
+			}
+		@Override
+		public int hashCode()
+			{
+			return color.hashCode()*31 +Integer.hashCode(lineSize);
+			}
+		void apply(final Graphics2D g) {
+			g.setColor(this.color);
+			g.setStroke(new BasicStroke(lineSize,BasicStroke.CAP_ROUND,BasicStroke.JOIN_ROUND));
+			}
+		void write(final XMLStreamWriter w) throws XMLStreamException {
+			final StringBuilder sb=new StringBuilder(".").
+					append(className).
+					append("{");
+			sb.append("fill:none;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(").
+				append(color.getRed()).
+				append(",").
+				append(color.getGreen()).
+				append(",").
+				append(color.getBlue()).
+				append(");");
+			sb.append("stroke-width:").append(this.lineSize).append(";");
+			sb.append("}\n");
+			w.writeCharacters(sb.toString());
+			}
+		}
+	private static abstract class MyShape {
+		MyStyle style;
+		abstract void paint(final Graphics2D g);
+		abstract void write(final XMLStreamWriter w) throws XMLStreamException;
+		}
+	private static class MyPolyLine extends MyShape {
+		final List<Point> points = new ArrayList<>();
+		
+		private Shape toShape() {
+			final GeneralPath gp = new GeneralPath();
+			
+			for(int i=0;i< points.size();i++) {
+				Point pt = points.get(i);
+				if(i==0) {
+					gp.moveTo(pt.x, pt.y);
+					}
+				else
+					{
+					gp.lineTo(pt.x, pt.y);
+					}
+				}
+			return gp;
+			}
+		@Override
+		void paint(final Graphics2D g) {
+			style.apply(g);
+			g.draw(toShape());
+			}
+		@Override
+		void write(final XMLStreamWriter w) throws XMLStreamException {
+			w.writeEmptyElement("polyline");
+			w.writeAttribute("class", style.className);
+			w.writeAttribute("points",
+				this.points.stream().map(P->String.valueOf(P.x)+","+P.y).
+					collect(Collectors.joining(" "))
+				);
+			}
+		}
+	private static class Slide  {
+		String title="";
+		Dimension dimension;
+		final List<MyStyle> styles = new ArrayList<>();
+		final List<MyShape> shapes = new ArrayList<>();
+		Slide(Dimension d) {
+			this.dimension = d;
+			}
+		public MyStyle getSyle(MyStyle st) {
+			int i= this.styles.indexOf(st);
+			if(i!=-1) return this.styles.get(i);
+			st.className = "s"+styles.size();
+			this.styles.add(st);
+			return st;
+			}
+		
+		void paint(final Graphics2D g) {
+			final Stroke stroke = g.getStroke();
+			g.setColor(Color.LIGHT_GRAY);
+			g.drawString(this.title, 1, 15);
+			for(MyShape shape:this.shapes) {
+				shape.paint(g);
+				}
+			g.setStroke(stroke);
+			}
+		void write(final XMLStreamWriter w) throws XMLStreamException {
+			
+			w.writeStartElement("svg");
+			w.writeDefaultNamespace(SVG.NS);
+			w.writeAttribute("width", String.valueOf(this.dimension.width));
+			w.writeAttribute("height", String.valueOf(this.dimension.height));
+			w.writeStartElement("style");
+			for(MyStyle style:this.styles) {
+				style.write(w);
+				}
+			w.writeEndElement();
+			w.writeStartElement("title");
+			w.writeCharacters(this.title);
+			w.writeEndElement();
+			
+			
+			w.writeStartElement("g");
+			for(MyShape shape:this.shapes) {
+				shape.write(w);
+				}
+			w.writeEndElement();
+			}
+		}
+	
+	private static class SlideShow  {
+		final List<Slide> slides = new ArrayList<>();
+		SlideShow() {
+			
+			}
+		
+		}
+	
+	
+	private class XFrame extends JFrame {
+		private JPanel drawingArea;
+		private SlideShow slideShow = new SlideShow();
+		private int slide_index=0;
+		private final String prefix;
+		private File saveDir = null;
+		
+		
+		private abstract class AbstractSelectorPane extends JPanel {
+		AbstractSelectorPane() {
+				setOpaque(true);
+				setBackground(Color.WHITE);
+				setPreferredSize(new Dimension(200,30));
+				final MouseAdapter mouse= new MouseAdapter()
+					{
+					@Override
+					public void mouseClicked(MouseEvent e)
+						{
+						doMouseClicked(e);
+						}
+					@Override
+					public void mouseMoved(MouseEvent e)
+						{
+						doMouseClicked(e);
+						}
+					};
+				this.addMouseListener(mouse);
+				this.addMouseMotionListener(mouse);
+				}
+			@Override
+			protected void paintComponent(Graphics g) {
+				g.setColor(Color.WHITE);
+				g.fillRect(0,0,this.getWidth(),this.getHeight());
+				paintDrawingArea(Graphics2D.class.cast(g));
+				}
+			abstract void paintDrawingArea(Graphics2D g);
+			abstract void doMouseClicked(MouseEvent e);
+			}
+		
+		private class SelectColorPane extends AbstractSelectorPane {
+			double fraction=0.0;
+			Color getColor(float f) {
+				return Color.getHSBColor(f, 0.9f, 0.9f);
+				}
+			Color getValue() {
+				return getColor((float)fraction);
+				}
+			void paintDrawingArea(Graphics2D g) {
+				final int width = this.getWidth();
+				if(width<2) return;
+				double w=1.0/width;
+				for(int i=0;i< width;i++) {
+					g.setColor(getColor(i/(float)width));
+					g.fill(new Rectangle2D.Double(i, 2, w, this.getHeight()-4));
+					}
+				int x = (int)(fraction*width);
+				g.setXORMode(this.getBackground());
+				g.setColor(Color.BLACK);
+				g.drawLine(x, 0, x, this.getHeight());
+				g.setPaintMode();
+				}
+			@Override
+			void doMouseClicked(MouseEvent e)
+				{
+				this.fraction = e.getX()/(double)this.getWidth();
+				this.repaint();
+				}
+			}
+		private SelectColorPane selectColorPane;
+
+		private class SelectPenSize extends AbstractSelectorPane {
+			double fraction=1.0;
+			int getPenSize(double f) {
+				return (int)(fraction*this.getHeight());
+				}
+			int getValue() {
+				return getPenSize(fraction);
+				}
+			void paintDrawingArea(Graphics2D g) {
+				g.setColor(Color.BLACK);
+				GeneralPath p = new GeneralPath();
+				p.moveTo(0, this.getHeight()/2.0);
+				p.lineTo(this.getWidth(), 0);
+				p.lineTo(this.getWidth(), this.getHeight());
+				p.closePath();
+				g.fill(p);
+				
+				int x = (int)(fraction * this.getWidth());
+				g.setXORMode(this.getBackground());
+				g.setColor(Color.BLACK);
+				g.drawLine(x, 0, x, this.getHeight());
+				g.setPaintMode();
+				}
+			@Override
+			void doMouseClicked(MouseEvent e)
+				{
+				this.fraction = e.getX()/(double)this.getWidth();
+				this.repaint();
+				}
+			}
+		private SelectPenSize selectPenSize;
+		XFrame(final File outDir,final String prefix) {
+			super(ChalkBoard.class.getSimpleName());
+			setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+			this.saveDir = outDir;
+			this.prefix = prefix;
+			final JPanel content = new JPanel(new BorderLayout());
+			setContentPane(content);
+			final JPanel top = new JPanel(new FlowLayout(FlowLayout.LEADING));
+			content.add(top,BorderLayout.NORTH);
+			top.add(this.selectColorPane=new SelectColorPane());
+			top.add(this.selectPenSize=new SelectPenSize());
+			top.add(new JButton(new AbstractAction("<") {
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					if(slide_index>0)  slide_index--;
+					drawingArea.repaint();
+					}
+				}));
+			top.add(new JButton(new AbstractAction(">") {
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					if(slide_index+1<slideShow.slides.size())  slide_index++;
+					drawingArea.repaint();
+					}
+				}));
+			top.add(new JButton(new AbstractAction("+") {
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					pushSlide();
+					}
+				}));
+			final AbstractAction actionSave = new AbstractAction("Save") {
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					doMenuSave(saveDir);
+					}
+				};
+			top.add(new JButton(actionSave));
+			
+			this.drawingArea=new JPanel(null) {
+				@Override
+				protected void paintComponent(Graphics g)
+					{
+					paintDrawingArea(Graphics2D.class.cast(g));
+					}
+				};
+			this.drawingArea.setBackground(Color.WHITE);
+			this.drawingArea.setOpaque(true);
+		
+			addWindowListener(new WindowAdapter()
+				{
+				@Override
+				public void windowClosing(WindowEvent e)
+					{
+					if(saveDir==null) {
+						doMenuSaveAs();
+					} else
+						{
+						doMenuSave(saveDir);
+						}
+					setVisible(false);
+					dispose();
+					}
+				@Override
+				public void windowOpened(WindowEvent e) {
+					pushSlide();
+					drawingArea.repaint();
+					}
+				@Override
+				public void windowClosed(WindowEvent e)
+					{
+					doMenuQuit();
+					}
+				});
+			
+			
+			content.add(this.drawingArea, BorderLayout.CENTER);
+			final MouseAdapter mouse = new MouseAdapter()
+				{
+				final List<Point> points =new ArrayList<>();
+				MyStyle style = null;
+				@Override
+				public void mousePressed(MouseEvent e)
+					{
+					style = getCurrentStyle();
+					points.clear();
+					points.add(e.getPoint());
+					drawingArea.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+					}
+				@Override
+				public void mouseDragged(MouseEvent e)
+					{
+					if(points.size()>0) {
+						final Graphics2D g = (Graphics2D)drawingArea.getGraphics();
+						final Point p=points.get(points.size()-1);
+						style.apply(g);
+						g.drawLine(p.x, p.y,e.getX(),e.getY());
+						points.add(e.getPoint());
+						}
+					}
+				@Override
+				public void mouseReleased(MouseEvent e)
+					{
+					drawingArea.setCursor(Cursor.getDefaultCursor());
+					if(points.size()<2) return;
+					final Slide slide = slideShow.slides.get(slide_index);
+					MyPolyLine shape = new MyPolyLine();
+					shape.style = slide.getSyle(this.style);
+					shape.points.addAll(points);
+					slide.shapes.add(shape);
+					drawingArea.repaint();
+					style=null;
+					points.clear();
+					}
+				};
+			this.drawingArea.addMouseListener(mouse);
+			this.drawingArea.addMouseMotionListener(mouse);
+			
+			final KeyStroke keySave = KeyStroke.getKeyStroke(KeyEvent.VK_S,Event.CTRL_MASK);
+					
+			this.drawingArea.getInputMap().put(keySave, "saveas");
+			this.drawingArea.getActionMap().put("saveas",actionSave);
+			}
+		private void paintDrawingArea(Graphics2D g) {
+			g.setColor(Color.WHITE);
+			g.fillRect(0,0,drawingArea.getWidth(),drawingArea.getHeight());
+			if(slide_index<0 || slide_index>=this.slideShow.slides.size()) {
+				return;
+				}
+			final Slide slide =  this.slideShow.slides.get(this.slide_index);
+			slide.paint(g);
+			}
+		private void doMenuSave(File dir) {
+			if(dir==null) {
+				doMenuSaveAs();
+				return;
+				}
+			try {
+				final XMLOutputFactory xof = XMLOutputFactory.newFactory();
+				for(int i=0;i< slideShow.slides.size();i++) {
+					final File f = new File(dir, String.format("%s%03d.svg",this.prefix, (i+1)));
+					try(PrintWriter w = new PrintWriter(f,"UTF-8")) {
+						final XMLStreamWriter wc=xof.createXMLStreamWriter(w);
+						wc.writeStartDocument("UTF-8","1.0");
+						slideShow.slides.get(i).write(wc);
+						wc.writeEndDocument();
+						wc.flush();
+						w.flush();
+						}
+					}
+				final File f = new File(dir,this.prefix+"index.html");
+				try(PrintWriter w = new PrintWriter(f,"UTF-8")) {
+					final XMLStreamWriter wc=xof.createXMLStreamWriter(w);
+					wc.writeStartElement("html");
+					wc.writeStartElement("body");
+					wc.writeStartElement("div");
+					for(int i=0;i< slideShow.slides.size();i++) {
+						wc.writeStartElement("div");
+						slideShow.slides.get(i).write(wc);
+						wc.writeEndElement();
+						}
+					wc.writeEndElement();//div
+					wc.writeEndElement();//body
+					wc.writeEndElement();//html
+					wc.flush();					
+					w.flush();
+					}
+				this.saveDir = dir;
+				}
+			catch(final Throwable err) {
+				err.printStackTrace();
+				JOptionPane.showMessageDialog(this, err.getMessage());
+				}
+			}
+		private boolean doMenuSaveAs() {
+			final JFileChooser fc = new JFileChooser();
+			fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			if(fc.showSaveDialog(this)!=JFileChooser.APPROVE_OPTION) {
+				return false;
+				}
+			File d=fc.getSelectedFile();
+			if(d==null) return false;
+			doMenuSave(d);
+			return true;
+			}
+		private void doMenuQuit() {
+			this.setVisible(false);
+			this.dispose();
+			}
+		
+		private void pushSlide() {
+			final Slide s = new Slide(new Dimension(this.drawingArea.getSize()));
+			
+			this.slideShow.slides.add(s);
+			this.slide_index= this.slideShow.slides.size()-1;
+			s.title="Slide " + this.slideShow.slides.size();
+			this.drawingArea.repaint();
+			}
+		private MyStyle getCurrentStyle() {
+			MyStyle st = new MyStyle();
+			st.className = "x";
+			st.color = this.selectColorPane.getValue();
+			st.lineSize = this.selectPenSize.getValue();
+			return st;
+			}
+		}
+	
+	@Override
+	public int doWork(List<String> args)
+		{
+		final XFrame f=new XFrame(this.outputDir,this.prefix);
+		final Dimension d=Toolkit.getDefaultToolkit().getScreenSize();
+		SwingUtilities.invokeLater(()->{
+			f.setBounds(30, 30, d.width-60, d.height-60);
+			f.setVisible(true);
+			});
+		return 0;
+		}
+	
+	public static void main(String[] args)
+		{
+		new ChalkBoard().instanceMain(args);
+		}
+	}
