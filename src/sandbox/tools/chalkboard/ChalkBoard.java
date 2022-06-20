@@ -5,7 +5,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.Event;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -14,6 +13,7 @@ import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -33,7 +33,6 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -77,7 +76,7 @@ public class ChalkBoard extends Launcher  {
 			final StringBuilder sb=new StringBuilder(".").
 					append(className).
 					append("{");
-			sb.append("fill:none;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(").
+			sb.append("opacity:0.95;fill:none;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(").
 				append(color.getRed()).
 				append(",").
 				append(color.getGreen()).
@@ -153,26 +152,35 @@ public class ChalkBoard extends Launcher  {
 			g.setStroke(stroke);
 			}
 		void write(final XMLStreamWriter w) throws XMLStreamException {
-			
 			w.writeStartElement("svg");
 			w.writeDefaultNamespace(SVG.NS);
-			w.writeAttribute("width", String.valueOf(this.dimension.width));
-			w.writeAttribute("height", String.valueOf(this.dimension.height));
+			w.writeAttribute("width", String.valueOf(this.dimension.width+1));
+			w.writeAttribute("height", String.valueOf(this.dimension.height+1));
 			w.writeStartElement("style");
+			w.writeCharacters(".bckg {fill:white;stroke:darkgray;}");
 			for(MyStyle style:this.styles) {
 				style.write(w);
 				}
-			w.writeEndElement();
+			w.writeEndElement();//style
 			w.writeStartElement("title");
 			w.writeCharacters(this.title);
-			w.writeEndElement();
+			w.writeEndElement();//title
 			
 			
 			w.writeStartElement("g");
+			w.writeEmptyElement("rect");
+			w.writeAttribute("class", "bckg");
+			w.writeAttribute("x", "0");
+			w.writeAttribute("y", "0");
+			w.writeAttribute("width", String.valueOf(this.dimension.width));
+			w.writeAttribute("height", String.valueOf(this.dimension.width));
+			
+
 			for(MyShape shape:this.shapes) {
 				shape.write(w);
 				}
-			w.writeEndElement();
+			w.writeEndElement();//g
+			w.writeEndElement();//svg
 			}
 		}
 	
@@ -320,6 +328,18 @@ public class ChalkBoard extends Launcher  {
 					pushSlide();
 					}
 				}));
+			
+			top.add(new JButton(new AbstractAction("x") {
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					final Slide slide= slideShow.slides.get(slide_index);
+					if(slide.shapes.isEmpty()) return;
+					slide.shapes.remove(slide.shapes.size()-1);
+					drawingArea.repaint();
+					}
+				}));
+			
 			final AbstractAction actionSave = new AbstractAction("Save") {
 				@Override
 				public void actionPerformed(ActionEvent e)
@@ -356,6 +376,7 @@ public class ChalkBoard extends Launcher  {
 				@Override
 				public void windowOpened(WindowEvent e) {
 					pushSlide();
+					drawingArea.requestFocus();
 					drawingArea.repaint();
 					}
 				@Override
@@ -403,17 +424,39 @@ public class ChalkBoard extends Launcher  {
 					drawingArea.repaint();
 					style=null;
 					points.clear();
+					drawingArea.requestFocus();
 					}
 				};
 			this.drawingArea.addMouseListener(mouse);
 			this.drawingArea.addMouseMotionListener(mouse);
 			
-			final KeyStroke keySave = KeyStroke.getKeyStroke(KeyEvent.VK_S,Event.CTRL_MASK);
-					
-			this.drawingArea.getInputMap().put(keySave, "saveas");
-			this.drawingArea.getActionMap().put("saveas",actionSave);
+			drawingArea.addKeyListener(new KeyAdapter() {
+				@Override
+				public void keyPressed(KeyEvent e) {
+					if(e.isControlDown()) {
+						switch(e.getKeyCode()) {
+							case KeyEvent.VK_S: {
+								doMenuSave(saveDir);
+								break;
+								}
+							case KeyEvent.VK_Z: {
+								final Slide slide= slideShow.slides.get(slide_index);
+								if(slide.shapes.isEmpty()) return;
+								slide.shapes.remove(slide.shapes.size()-1);
+								drawingArea.repaint();
+								break;
+								}
+							case KeyEvent.VK_Q:{
+								doMenuSave(saveDir);
+								doMenuQuit();
+								break;
+								}
+							}
+						}
+					}	
+				});
 			}
-		private void paintDrawingArea(Graphics2D g) {
+		private void paintDrawingArea(final Graphics2D g) {
 			g.setColor(Color.WHITE);
 			g.fillRect(0,0,drawingArea.getWidth(),drawingArea.getHeight());
 			if(slide_index<0 || slide_index>=this.slideShow.slides.size()) {
@@ -449,7 +492,7 @@ public class ChalkBoard extends Launcher  {
 					for(int i=0;i< slideShow.slides.size();i++) {
 						wc.writeStartElement("div");
 						slideShow.slides.get(i).write(wc);
-						wc.writeEndElement();
+						wc.writeEndElement();//div
 						}
 					wc.writeEndElement();//div
 					wc.writeEndElement();//body
