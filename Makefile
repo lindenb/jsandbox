@@ -274,6 +274,7 @@ $(eval $(call compile,igdigest,sandbox.tools.ig.IgDigest,${jcommander.jar}))
 $(eval $(call compile,interpolator,sandbox.tools.interpolate.Interpolator,${jcommander.jar} ${commons-math3.jar}))
 $(eval $(call compile,xmlcipher,sandbox.tools.xmlcipher.XmlCipher,${jcommander.jar}))
 $(eval $(call compile,chalkboard,sandbox.tools.chalkboard.ChalkBoard,${jcommander.jar}))
+$(eval $(call compile,donotuseexcel,sandbox.tools.donotuseexcel.DoNotUseExcel,${jcommander.jar} ${apache.poi.jar}))
 $(eval $(call compile,test,sandbox.tools.xml2ppt.XmlToPPT,${jcommander.jar} ${apache.poi.jar}))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
