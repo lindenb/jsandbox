@@ -1,0 +1,135 @@
+options {
+STATIC=false;
+LOOKAHEAD=2;
+}
+
+// https://github.com/bkiers/Curta/blob/master/src/main/jjtree/CurtaParser.jjt
+PARSER_BEGIN(MiniLangParser)
+
+package sandbox.minilang;
+import java.util.List;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
+    
+@SuppressWarnings("unchecked")
+public abstract class MiniLangParser {
+
+public interface AstNode {
+	}
+	
+private class NilAstNode implements AstNode {
+	}
+
+private class PrimitiveAstNode implements AstNode {
+	final Object value;
+	PrimitiveAstNode(Object o) {
+		this.value=o;
+		}
+	}
+private final PrimitiveAstNode TRUE_NODE = new PrimitiveAstNode(Boolean.TRUE);
+private final PrimitiveAstNode FALSE_NODE = new PrimitiveAstNode(Boolean.FALSE);
+private final AstNode NIL_NODE = new NilAstNode();
+	
+private class Atom implements AstNode {
+	String name;
+	}
+private class Context  {
+	}
+
+
+}
+
+
+PARSER_END(MiniLangParser)
+
+SKIP :
+{
+" "
+| "\t"
+| "\n"
+| "\r"
+| <"//" (~["\n"])* "\n">
+| <"/*">: INSIDE_COMMENT
+}
+
+<INSIDE_COMMENT>
+SKIP:
+{
+        <"*/">: DEFAULT
+|       <~[]>
+}
+
+
+TOKEN : /* LITERALS */
+{
+  <OFUN: "(" (~["\n"," ","\n","\r"])+ >
+| <OPAR:"(">
+| <CPAR:")">
+| <SEMICOLON: ";">
+| <COLON: ":">
+| <QUESTION: "?">
+| <DOT: ".">
+| <COMMA: ",">
+| <EQ: "==">
+| <NE: "!=">
+| <LE: "<=">
+| <GE: ">=">
+| <LT: "<">
+| <GT: ">">
+| <PLUS: "+">
+| <MINUS: "-">
+| <MUL: "*">
+| <DIV: "/">
+| <MODULUS: "%">
+| <ASSIGN: "=">
+| <LEX_TRUE: "true">
+| <LEX_FALSE: "false">
+| <LEX_NIL: "nil">
+| <#LETTER: ["_","a"-"z","A"-"Z"] >
+| <#DIGIT: ["0"-"9"] >
+| <#SIGN: ["-","+"]>
+| <#EXPONENT: ("E"|"e") (<SIGN>)? (<DIGIT>)+ >
+| <FLOATING_NUMBER: (<DIGIT>)* "." (<DIGIT>)* (<EXPONENT>)?
+| (<DIGIT>)+ (<EXPONENT>) >
+| <INT_NUMBER: (<DIGIT>)+ >
+| <IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
+| <#ESCAPE_CHAR: "\\" ["n","t","b","r","f","\\","'","\""] >
+| <SIMPLE_QUOTE_LITERAL: "\'" ( (~["\'","\\","\n","\r"]) | <ESCAPE_CHAR> )* "\'" >
+| <DOUBLE_QUOTE_LITERAL: "\"" ( (~["\"","\\","\n","\r"]) | <ESCAPE_CHAR> )*"\"" >
+}
+
+
+
+private AstNode doubleNumber() : {Token t;} {
+	t= <FLOATING_NUMBER> {
+		final BigDecimal bd = new BigDecimal(t.image);
+		return new PrimitiveAstNode(bd);
+		}
+	}
+private AstNode intNumber() : {Token t;} {
+	t= <INT_NUMBER> {
+		final BigInteger bi = new BigInteger(t.image);
+		return new PrimitiveAstNode(bi);
+		}
+	}
+private AstNode string() : {Token t;} {
+	t= <DOUBLE_QUOTE_LITERAL> {
+		return new PrimitiveAstNode(t.image);
+		}
+	}
+
+private AstNode booleanNode() : {} {
+	(<LEX_TRUE>{
+		return this.TRUE_NODE;
+		}
+	|<LEX_FALSE> {
+		return this.FALSE_NODE;
+		}
+	)
+	}
+private AstNode nilNode() : {} {
+	<LEX_NIL>{
+		return this.NIL_NODE;
+		}
+	}
