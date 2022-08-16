@@ -1,4 +1,4 @@
-package sandbox.drawing;
+package sandbox.tools.drawinggrid;
 
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
