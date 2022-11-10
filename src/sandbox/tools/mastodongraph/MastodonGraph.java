@@ -27,7 +27,6 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
@@ -50,18 +49,24 @@ import sandbox.io.IOUtils;
 public class MastodonGraph extends Launcher {
 	private static final Logger LOG= Logger.builder(MastodonGraph.class).build();
 	private HttpClientBuilder builder = null;
+	
+	private enum REL {following,followers,both};
+	
 	@Parameter(names={"--output","-o"},description="output")
 	private File output = null;
-
-	@Parameter(names={"--instance"},description="instance")
-	private String instance="https://genomic.social/";
 	@Parameter(names={"--config","--xml"},description="XML config",required = true)
 	private File xmlConfig = null;
 	@Parameter(names={"--max-depth","-D"},description="max depth")
 	private int max_depth = 2;
+	@Parameter(names={"--relations"},description="type of relations")
+	private REL relation_type = REL.both;
+	@Parameter(names={"--instance"},description="instance name in config file (if multiple instances are defined)")
+	private String instance_name = null;
 
 	
-	private final Map<String,Instance> url2instance = new HashMap<>();
+	
+	
+	private final List<Instance> all_instances = new ArrayList<>();
 	
 	private class User {
 		String id;
@@ -79,7 +84,7 @@ public class MastodonGraph extends Launcher {
 			return id.hashCode();
 			}
 		@Override
-		public boolean equals(Object obj) {
+		public boolean equals(final Object obj) {
 			if(obj==this) return true;
 			return User.class.cast(obj).id.equals(this.id);
 			}
@@ -93,7 +98,7 @@ public class MastodonGraph extends Launcher {
 		final User u1;
 		final User u2;
 		boolean reverse=false;
-		Link(User u1,User u2) {
+		Link(final User u1,final User u2) {
 			this.u1 = u1;
 			this.u2 = u2;
 			}
@@ -105,6 +110,7 @@ public class MastodonGraph extends Launcher {
 	
 	private class Instance {
 		private String url;
+		String instance_name="";
 		String client_id;
 		String client_secret;
 		String oauth_token=null;
@@ -227,7 +233,7 @@ public class MastodonGraph extends Launcher {
 						}
 					}
 				}
-		
+		/*
 		private String searchUserIdByName(String id) throws IOException {
 			String url = this.url+"api/v2/search"; //+"/followers"
 			try {
@@ -246,7 +252,7 @@ public class MastodonGraph extends Launcher {
 				return "";
 				}
 			return "";
-			}
+			}*/
 		
 		private User getUserFromJson(final JsonObject obj) {
 			final String id = obj.get("id").getAsString();
@@ -296,12 +302,16 @@ public class MastodonGraph extends Launcher {
 			}
 		
 		private void scan(String userid) throws IOException {
-			String url = this.url+"api/v1/accounts/"+userid; //+"/followers"
-			final HttpGet get = new HttpGet(url);
-			Response resp = wget(get);
-			LOG.info(resp.content);
-			User user = getUserFromJson(resp.getJsonObject());
+			User user = this.id2user.get(userid);
+			if(user==null) {
+				final String url = this.url+"api/v1/accounts/"+userid; //+"/followers"
+				final HttpGet get = new HttpGet(url);
+				final Response resp = wget(get);
+				LOG.info(resp.content);
+				user = getUserFromJson(resp.getJsonObject());
+				}
 			user.depth=0;
+			user.processed_flag=false;
 			for(;;) {
 				user = this.id2user.values().stream().
 						filter(U->U.depth< MastodonGraph.this.max_depth).
@@ -310,8 +320,14 @@ public class MastodonGraph extends Launcher {
 						orElse(null);
 				if(user==null) break;
 				user.processed_flag=true;
-				links(user,"following");
-				links(user,"followers");
+				switch(relation_type) {
+					case followers:break;
+					default: links(user,"following"); break;
+					}
+				switch(relation_type) {
+					case following:break;
+					default: links(user,"followers"); break;
+					}
 				LOG.info("links: "+links.size()+ " remains:"+ this.id2user.values().stream().
 						filter(U->U.depth < MastodonGraph.this.max_depth).
 						filter(U->!U.processed_flag).count()
@@ -457,6 +473,7 @@ public class MastodonGraph extends Launcher {
 	
 	
 	private class Response {
+		@SuppressWarnings("unused")
 		HttpRequestBase request;
 		String content = null;
 		int httpStatus = -1;
@@ -479,15 +496,7 @@ public class MastodonGraph extends Launcher {
 		}
 	
 	
-	
-	
-	private Instance findInstanceByName(String s) {
-		for(Instance instance:this.url2instance.values()) {
-			return instance;
-			}
-		return null;
-		}
-	
+
 	
 
 	private UrlEncodedFormEntity createFormEntity(String...array) {
@@ -518,12 +527,16 @@ public class MastodonGraph extends Launcher {
 	@Override
 	public int doWork(final List<String> args) {
 		try {
+			if(args.isEmpty()) {
+				LOG.error("Illegal number of arguments. expect user-id1 user-id2 etc...");
+				return -1;
+				}
 			// load config
 			IOUtils.assertFileExists(this.xmlConfig);
-			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-			DocumentBuilder db=dbf.newDocumentBuilder();
-			Document dom = db.parse(this.xmlConfig);
-			Element root=dom.getDocumentElement();
+			final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+			final DocumentBuilder db=dbf.newDocumentBuilder();
+			final Document dom = db.parse(this.xmlConfig);
+			final Element root=dom.getDocumentElement();
 			if(root==null)  {
 				LOG.error("empty config");
 				return -1;
@@ -538,12 +551,23 @@ public class MastodonGraph extends Launcher {
 					LOG.error("no @href in <instance> in "+this.xmlConfig);
 					return -1;
 					}
-				if(this.url2instance.containsKey(instance.url)) {
+				if(this.all_instances.stream().anyMatch(X->X.url.equals(instance.url))) {
 					LOG.error("duplicate @href "+instance.url+" for <instance> in "+this.xmlConfig);
 					return -1;
 					}
 				
-				this.url2instance.put(instance.url,instance);
+				instance.instance_name = e.getAttribute("name");
+				if(StringUtils.isBlank(instance.instance_name)) {
+					LOG.error("no @name in <instance> in "+this.xmlConfig);
+					return -1;
+					}
+				if(this.all_instances.stream().anyMatch(X->X.instance_name.equals(instance.instance_name))) {
+					LOG.error("duplicate @instance_name "+instance.instance_name+" instance_name <instance> in "+this.xmlConfig);
+					return -1;
+					}
+				
+				
+				this.all_instances.add(instance);
 				for(Node n2=e.getFirstChild();n2!=null;n2=n2.getNextSibling()) {
 					if(n2.getNodeType()!=Node.ELEMENT_NODE) continue;
 					final Element e2 = Element.class.cast(n2);
@@ -556,11 +580,29 @@ public class MastodonGraph extends Launcher {
 					}
 				LOG.info(instance);
 				}
-			
+		
 			this.builder = HttpClientBuilder.create();
 			
-			Instance ins = url2instance.values().iterator().next();
-			ins.scan("109291968049706699");
+			final Instance ins;
+			if(all_instances.isEmpty()) {
+				LOG.info("No instance defined in xml contig "+this.xmlConfig);
+				return -1;
+				}
+			if(all_instances.size()==1) {
+				ins = all_instances.get(0);
+				}
+			else
+				{
+				ins =  all_instances.stream().filter(X->X.instance_name.equals(this.instance_name)).findFirst().orElse(null);
+				if(ins==null) {
+					LOG.info("No instance@name="+this.instance_name+" was defined in xml contig "+this.xmlConfig);
+					return -1;
+					}
+				}
+			for(final String user_id:args) {
+				ins.scan(user_id);
+				}
+		
 			if(this.output==null) {
 				ins.toGexf(System.out);
 				}
@@ -571,14 +613,7 @@ public class MastodonGraph extends Launcher {
 					fos.flush();
 					}
 				}
-			for(String param: args) {
-				Instance instance = findInstanceByName(param);
-				if(instance==null) {
-					LOG.warning("cannot find an instance for "+param);
-					continue;
-					}
-				
-				}
+			
 			return 0;
 		} catch(final Throwable err) {
 			LOG.error(err);
