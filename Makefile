@@ -191,7 +191,7 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
 	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
 	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom fileserver xmlpath imagemap \
-	pcaviewer
+	pcaviewer swap2bits
 
 
 $(eval $(call compile,miniivy,sandbox.MiniIvy,${jcommander.jar}))
@@ -277,6 +277,7 @@ $(eval $(call compile,xmlcipher,sandbox.tools.xmlcipher.XmlCipher,${jcommander.j
 $(eval $(call compile,chalkboard,sandbox.tools.chalkboard.ChalkBoard,${jcommander.jar}))
 $(eval $(call compile,donotuseexcel,sandbox.tools.donotuseexcel.DoNotUseExcel,${jcommander.jar} ${apache.poi.jar}))
 $(eval $(call compile,mastodongraph,sandbox.tools.mastodongraph.MastodonGraph,${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
+$(eval $(call compile,swap2bits,sandbox.tools.swap2bits.SwapTwoBits,${jcommander.jar}))
 $(eval $(call compile,test,sandbox.tools.xml2ppt.XmlToPPT,${jcommander.jar} ${apache.poi.jar}))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
