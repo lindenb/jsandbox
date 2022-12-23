@@ -10,10 +10,10 @@
  * Compilation:
  *        ant geneticpainting
  * Usage:
- *        java -jar geneticpainting.jar 
+ *        java -jar geneticpainting.jar
  */
-package sandbox;
-
+package sandbox.tools.geneticpaint;
+import sandbox.Launcher;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -39,7 +39,7 @@ import javax.imageio.ImageIO;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
-
+import sandbox.Logger;
 import com.beust.jcommander.Parameter;
 
 /**

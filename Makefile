@@ -204,7 +204,7 @@ $(eval $(call compile,twittergraph,sandbox.TwitterGraph, ${sqlite3.jdbc.jar} ${j
 $(eval $(call compile,json2xml,sandbox.tools.json2xml.Json2Xml,${google.gson.jars} ${jcommander.jar}))
 $(eval $(call compile,json2dom,sandbox.Json2Dom,${google.gson.jars}))
 $(eval $(call compile,timelinemaker,sandbox.TimeLineMaker,${google.gson.jars} ${jcommander.jar}))
-$(eval $(call compile,geneticpainting,sandbox.GeneticPainting,${apache.commons.cli}))
+$(eval $(call compile,geneticpainting,sandbox.tools.geneticpaint.GeneticPainting,${jcommander.jar}))
 $(eval $(call compile,flickrrss,sandbox.FlickrRss,${apache.commons.cli} ${slf4j.jars} ${org.scribe.jars}))
 $(eval $(call compile,mosaicofpictures,sandbox.tools.mosaic.MosaicOfPictures,${jcommander.jar} ${apache.httpclient.jars} ))
 $(eval $(call compile,montagegif,sandbox.MontageGif,${jcommander.jar}))
