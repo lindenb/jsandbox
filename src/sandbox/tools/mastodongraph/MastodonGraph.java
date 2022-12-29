@@ -384,6 +384,7 @@ public class MastodonGraph extends Launcher {
 				w.writeStartElement("gexf");
 				w.writeAttribute("version",Gexf.VERSION);
 				w.writeAttribute("xmlns",Gexf.XMLNS);
+				w.writeAttribute("xmlns:viz",Gexf.XMLNS_VIZ);
 				w.writeAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
 				w.writeAttribute("xsi:schemaLocation",Gexf.SCHEMA_LOCATION);
 
@@ -452,6 +453,16 @@ public class MastodonGraph extends Launcher {
 				w.writeAttribute("id", "u"+user.id);
 				w.writeAttribute("label", user.acct);
 				
+				w.writeEmptyElement("viz","color", Gexf.XMLNS_VIZ);
+				w.writeAttribute("r","95");
+				w.writeAttribute("g","158");
+				w.writeAttribute("b","160");
+				w.writeAttribute("a","0.6");
+				
+				w.writeEmptyElement("viz","size", Gexf.XMLNS_VIZ);
+				w.writeAttribute("size",String.valueOf((MastodonGraph.this.max_depth-user.depth)+1));
+				
+
 				w.writeStartElement("attvalues");
 				gexfAtt(w,"name",user.username);
 				gexfAtt(w,"acct",user.acct);

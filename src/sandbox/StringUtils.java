@@ -35,7 +35,11 @@ public static String sha1(final String s) {
 	return hash(s,"SHA1"); 
 	}
 
-	
+
+public static String ifBlank(final String s,final String def) {
+	return isBlank(s)?def:s;
+}
+
 public static boolean isBlank(final String s) {
 	if(s==null) return true;
 	for(int i=0;i< s.length();i++) {
