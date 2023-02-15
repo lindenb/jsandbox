@@ -1,6 +1,6 @@
 /* for P in in {1..50} ; do wget -q -O  - "http://<site>.tumblr.com/page/${P}" | tr '"' '\n' | grep  https | grep media | grep -F '_500.jpg'  | grep -v 0afe983308d5f82323f9006f85dcaafe | sort | uniq ; done | sort | uniq > jeter.list 
  */
-package sandbox;
+package sandbox.tools.montagegif;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -18,6 +18,10 @@ import javax.imageio.ImageIO;
 
 import com.beust.jcommander.Parameter;
 
+import sandbox.ColorParser;
+import sandbox.ImageUtils;
+import sandbox.Launcher;
+import sandbox.Logger;
 import sandbox.io.IOUtils;
 
 public class MontageGif extends Launcher

@@ -207,7 +207,7 @@ $(eval $(call compile,timelinemaker,sandbox.TimeLineMaker,${google.gson.jars} ${
 $(eval $(call compile,geneticpainting,sandbox.tools.geneticpaint.GeneticPainting,${jcommander.jar}))
 $(eval $(call compile,flickrrss,sandbox.FlickrRss,${apache.commons.cli} ${slf4j.jars} ${org.scribe.jars}))
 $(eval $(call compile,mosaicofpictures,sandbox.tools.mosaic.MosaicOfPictures,${jcommander.jar} ${apache.httpclient.jars} ))
-$(eval $(call compile,montagegif,sandbox.MontageGif,${jcommander.jar}))
+$(eval $(call compile,montagegif,sandbox.tools.montagegif.MontageGif,${jcommander.jar}))
 $(eval $(call compile,java2xml,sandbox.Java2Xml,${jcommander.jar}))
 $(eval $(call compile,html2tty,sandbox.HtmlToTTY,${jcommander.jar}))
 $(eval $(call compile,xslserver,sandbox.XslHandler,${google.gson.jars} ${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars} ${spring-beans.jars}))

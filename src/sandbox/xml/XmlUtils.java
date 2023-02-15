@@ -1,6 +1,5 @@
-package sandbox;
+package sandbox.xml;
 
-import java.security.KeyStore.Entry.Attribute;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -16,7 +15,6 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -61,7 +59,13 @@ public static void _recurse(final List<Node> L,final Node root) {
 		}
 	}
 
-
+public static boolean isA(final Node n, String ns, String localName) {
+	if(!isElement.test(n)) return false;
+	final Element e= Element.class.cast(n);
+	if(!ns.equals(e.getNamespaceURI())) return false;
+	if(!localName.equals(e.getLocalName())) return false;
+	return true;
+	}
 
 public static Stream<Node> stream(final Node root) {
 return children(root).stream();
@@ -123,6 +127,13 @@ public static Stream<Node> stream(final NodeList nl) {
 			false
 			);
 	}		
-
+/** returns human XPATH-like path for this node 
+ * @param node the node
+ * @return the path
+ */
+public static String getNodePath(final org.w3c.dom.Node node) {
+	if(node==null) return null;
+	return "(todo)";
+	}
 
 }
