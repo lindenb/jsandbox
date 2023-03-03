@@ -7,70 +7,73 @@ import java.util.Optional;
 
 import javax.xml.namespace.QName;
 
+import org.w3c.dom.Attr;
+import org.w3c.dom.DOMException;
+import org.w3c.dom.NamedNodeMap;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-public class Element extends NamedNode {
-	/* private */ List<Attr> _atts = null;
-	/* no private */ final List<Node> _children = new ArrayList<>();
-	public Element(final Element parent,final QName qName) {
-		super(parent, qName);
+public class ElementImpl extends NamedNode implements org.w3c.dom.Element {
+	protected NamedNodeMapImpl namedNodeMap = null;
+	/* no private */ final List<AbstractNode> _children = new ArrayList<>();
+	public ElementImpl(final DocumentImpl owner,final QName qName) {
+		super(owner, qName);
 		}
 
-	public Element(final QName qName) {
-		this(null, qName);
+	@Override
+	public String getAttribute(String name) {
+		final Attr  n=getAttributeNode(name);
+		return n==null?"":n.getValue();
 		}
-	
+	@Override
+	public Attr getAttributeNode(String name) {
+		if(this.namedNodeMap==null) return null;
+		return (Attr) this.namedNodeMap.getNamedItem(name);
+		}
 	
 	@Override
-	public final boolean isElement() {
-		return true;
+	public NamedNodeMap getAttributes() {
+		if(namedNodeMap==null) namedNodeMap=new NamedNodeMapImpl();
+		return namedNodeMap;
 		}
-	
 	@Override
-	public boolean isAttribute() {
-		return false;
+	public void setAttribute(String name, String value) throws DOMException {
+		final Attr att = getOwnerDocument().createAttribute(name);
+		att.setValue(value);
+		setAttributeNode(att);
 		}
+	@Override
+	public Attr setAttributeNode(Attr newAttr) throws DOMException {
+		if(newAttr.getOwnerDocument()!=this.getOwnerDocument()) throw new DOMException(DOMException.WRONG_DOCUMENT_ERR,"wrong doc");
+		if(namedNodeMap==null) namedNodeMap=new NamedNodeMapImpl();
+		Attr old= (Attr)namedNodeMap.getNamedItem(newAttr.getName());
+		namedNodeMap.setNamedItem(newAttr);
+		return old;
+		}
+	@Override
+	public Attr setAttributeNodeNS(Attr newAttr) throws DOMException {
+		if(newAttr.getOwnerDocument()!=this.getOwnerDocument()) throw new DOMException(DOMException.WRONG_DOCUMENT_ERR,"wrong doc");
+		if(namedNodeMap==null) namedNodeMap=new NamedNodeMapImpl();
+		Attr old= (Attr)namedNodeMap.getNamedItemNS(newAttr.getNamespaceURI(),newAttr.getName());
+		namedNodeMap.setNamedItemNS(newAttr);
+		return old;
+		}
+
 	
-	public boolean hasAttributes() {
-		return _atts!=null && !_atts.isEmpty();
-		}
-	public List<Attr> getAttributes() {
-		if(!hasAttributes()) return Collections.emptyList();
-		return Collections.unmodifiableList(this._atts);
-		}
-	public boolean hasAttribute(String s) {
-		if(!hasAttributes()) return false;
-		return getAttributes().stream().anyMatch(N->N.getNodeName().equals(s));
-		}
 	
-	
-	public Optional<String> getAttribute(final QName qName) {
-		if(!hasAttributes()) return Optional.empty();
-		return getAttributes().stream().
-				filter(N->hasQName(qName)).
-				map(T->T.getValue()).findFirst();
-		}
-	
-	public Optional<String> getAttribute(String s) {
-		if(!hasAttributes()) return Optional.empty();
-		return getAttributes().stream().
-				filter(N->N.getNodeName().equals(s)).
-				map(T->T.getValue()).findFirst();
-		}
 	
 	public String getAttribute(String s,String def) {
 		return getAttribute(s).orElse(def);
 		}
 
-	public Attr getAttributeNodeNS(final String namespaceURI,final String localName) {
+	public AttrImpl getAttributeNodeNS(final String namespaceURI,final String localName) {
 		if(!hasAttributes()) return  null;
 		return getAttributes().stream().
 				filter(N->N.isA(namespaceURI,localName)).
 				findFirst().orElse(null);
 		}
 	public Optional<String> getAttributeNS(final String namespaceURI,final String localName) {
-		final Attr att = getAttributeNodeNS(namespaceURI,localName);
+		final AttrImpl att = getAttributeNodeNS(namespaceURI,localName);
 		if(att==null) return Optional.empty();
 		return Optional.of(att.getValue());
 		}
@@ -82,7 +85,7 @@ public class Element extends NamedNode {
 		if(getParentNode()!=null) {
 			String indexstr="";
 			int i=-1;
-			for(Node n:getParentNode().getChildrenAsList()) {
+			for(AbstractNode n:getParentNode().getChildrenAsList()) {
 				if(n==this) break;
 				if(n.isElement() && n.asElement().hasQName(getQName())) {
 					i++;
@@ -95,14 +98,14 @@ public class Element extends NamedNode {
 		}
 	
 	@Override
-	public List<Node> getChildrenAsList() {
+	public List<AbstractNode> getChildrenAsList() {
 		return Collections.unmodifiableList(this._children);
 		}
 	
 	@Override
 	public void sax(final DefaultHandler handler) throws SAXException {
 		handler.startElement(getPath(), getPath(), getPath(), null);
-		for(Node n:getChildrenAsList()) {
+		for(AbstractNode n:getChildrenAsList()) {
 			n.sax(handler);
 			}
 		handler.endElement(getPath(), getPath(), getPath());
@@ -118,11 +121,11 @@ public class Element extends NamedNode {
 			{
 			E = doc.createElement(getNodeName());
 			}
-		for(Attr att:getAttributes()) {
+		for(AttrImpl att:getAttributes()) {
 			//TODO
 			}
 		doc.createElement(getNodeName());
-		for(Node n:getChildrenAsList()) {
+		for(AbstractNode n:getChildrenAsList()) {
 			E.appendChild(n.toDOM(doc));
 			}
 		return E;

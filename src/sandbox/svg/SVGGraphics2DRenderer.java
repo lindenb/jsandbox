@@ -80,8 +80,8 @@ public Optional<Dimension2D> getSize(final Element svgRoot)throws InvalidXMLExce
 	try
 		{
 		Dimension2D.Double srcSize=new Dimension2D.Double(0,0);
-		Attr width= svgRoot.getAttributeNode("width");
-		Attr height= svgRoot.getAttributeNode("height");
+		AttrImpl width= svgRoot.getAttributeNode("width");
+		AttrImpl height= svgRoot.getAttributeNode("height");
 		
 		if(width==null) throw new InvalidXMLException(svgRoot,"@width missing");
 		srcSize.width= castUnit(width.getValue());

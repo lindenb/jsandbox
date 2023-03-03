@@ -251,7 +251,7 @@ public class MiniIvy extends Launcher
 						dbf = DocumentBuilderFactory.newInstance();
 						dbf.setNamespaceAware(false);
 						System.err.println("getting "+dep.getMetaDataUrl());
-						Document dom2 = db.parse(dep.getMetaDataUrl());*/
+						DocumentImpl dom2 = db.parse(dep.getMetaDataUrl());*/
 						dep.revision=null;
 						}
 					// http://central.maven.org/maven2/net/java/dev/jets3t/jets3t/0.9.4/jets3t-0.9.4.pom

@@ -5,11 +5,21 @@ import javax.xml.namespace.QName;
 
 import sandbox.StringUtils;
 
-public abstract class NamedNode extends Node {
-	private final QName qName;
-	protected NamedNode(final Element parent,final QName qName) {
-		super(parent);
+public abstract class NamedNode extends AbstractNode {
+	private final String name;
+	private final String qName;
+	private final String namespareUri;
+	protected NamedNode(final DocumentImpl owner,final String name) {
+		super(owner);
+		this.name = name;
+		this.qName = null;
+		this.namespareUri= null;
+		}
+	protected NamedNode(final DocumentImpl owner,final String namespaceUri,final String qName) {
+		super(owner);
+		this.name = null;
 		this.qName = qName;
+		this.namespareUri= namespaceUri;
 		}
 	
 	@Override
@@ -17,10 +27,10 @@ public abstract class NamedNode extends Node {
 		return this.getQName().hashCode();
 		}
 	
-	@Override
-	public final boolean isText() {
-		return false;
+	public QName getQName() {
+		return null;
 		}
+	
 	
 	public boolean isA(String namespaceURI, String localName) {
 		return hasNamespaceURI(namespaceURI) && hasLocalName(localName);
@@ -30,7 +40,7 @@ public abstract class NamedNode extends Node {
 		return !StringUtils.isBlank(getQName().getNamespaceURI());
 		}
 	
-	public boolean hasNamespaceURI(final Element other) {
+	public boolean hasNamespaceURI(final ElementImpl other) {
 		return other!=null && hasNamespaceURI(other.getNamespaceURI());
 		}
 	
@@ -42,13 +52,7 @@ public abstract class NamedNode extends Node {
 		}
 	public boolean hasNodeName(final String ns) {
 		return ns.equals(getNodeName());
-		}
-	public QName getQName() {
-		return this.qName;
-		}
-	public boolean hasQName(final QName qName) {
-		return getQName().equals(qName);
-		}
+	}
 	
 	public String getNamespaceURI() {
 		return getQName().getNamespaceURI();

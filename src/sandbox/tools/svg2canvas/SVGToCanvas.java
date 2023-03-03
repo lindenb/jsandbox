@@ -1,5 +1,4 @@
-package org.lindenb.tinytools;
-
+package sandbox.tools.svg2canvas;
 
 import java.awt.Shape;
 
@@ -30,27 +29,14 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 
-import org.lindenb.awt.Dimension2D;
-import org.lindenb.io.IOUtils;
-import org.lindenb.lang.InvalidXMLException;
-import org.lindenb.me.Me;
-import org.lindenb.svg.SVGUtils;
-import org.lindenb.svg.path.ParseException;
-import org.lindenb.svg.path.SVGPathParser;
-import org.lindenb.svg.transform.SVGTransformParser;
-import org.lindenb.sw.vocabulary.SVG;
-import org.lindenb.sw.vocabulary.XLINK;
-import org.lindenb.util.AbstractApplication;
-import org.lindenb.util.Base64;
-import org.lindenb.util.C;
-import org.lindenb.util.Cast;
-import org.lindenb.util.StringUtils;
-import org.lindenb.xml.XMLUtilities;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
+
+
+import sandbox.Launcher;
 
 /**
  * Transforms a Scalable Vector Graphics SVG
@@ -59,7 +45,7 @@ import org.w3c.dom.Node;
  *
  */
 public class SVGToCanvas
-	extends AbstractApplication
+	extends Launcher
 	{
 	private Integer overrideWidth=null;
 	private boolean useBase64ForImages=false;
