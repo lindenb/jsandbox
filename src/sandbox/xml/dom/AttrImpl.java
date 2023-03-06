@@ -1,26 +1,39 @@
 package sandbox.xml.dom;
 
-import java.util.Collections;
-import java.util.List;
+
 
 import javax.xml.namespace.QName;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 
-import org.w3c.dom.Attr;
 import org.w3c.dom.DOMException;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.TypeInfo;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-public class AttrImpl extends NamedNode implements org.w3c.dom.Attr {
-	private Element owner = null;
+public class AttrImpl extends AbstractTerminalNode implements org.w3c.dom.Attr {
+	private final QName qName;
+	private ElementImpl owner = null;
 	private String value="";
 	AttrImpl(final DocumentImpl owner,final QName qName) {
-		super(owner,qName);
+		super(owner);
+		this.qName = qName;
 		}
+	
+	@Override
 	public String getValue() {
 		return this.value;
+		}
+	
+	@Override
+	public QName getQName() {
+		return this.qName;
+		}
+	
+	@Override
+	public final String getNodeValue() throws DOMException {
+		return getValue();
 		}
 	
 	@Override
@@ -30,10 +43,7 @@ public class AttrImpl extends NamedNode implements org.w3c.dom.Attr {
 	
 	@Override
 	public Node cloneNode(boolean deep) {
-		Attr att = getOwnerDocument().createAttribute(getName());
-		
-		att.setValue(this.value);
-		return att;
+		return getOwnerDocument().createAttribute(getQName(),getValue());
 		}
 	
 	@Override
@@ -59,13 +69,8 @@ public class AttrImpl extends NamedNode implements org.w3c.dom.Attr {
 		this.setValue(value);
 		}
 	
-	@Override
-	public boolean hasAttributes() {
-		return false;
-		}
 	
 
-	
 	@Override
 	public int hashCode() {
 		return super.hashCode()*31 + getValue().hashCode();
@@ -79,26 +84,48 @@ public class AttrImpl extends NamedNode implements org.w3c.dom.Attr {
 			}
 		return s;
 		}
+
 	@Override
-	public List<AbstractNode> getChildrenAsList() {
-		return Collections.emptyList();
+	public final boolean hasChildNodes() {
+		return false;
 		}
 	
 	@Override
 	public void sax(DefaultHandler handler) throws SAXException {
-		
 		}
+	
 	@Override
-	public String getName() {
-		throw new UnsupportedOperationException();
+	public final String getName() {
+		return getNodeName();
 		}
 	@Override
 	public boolean getSpecified() {
 		throw new UnsupportedOperationException();
 		}
 	@Override
-	public Element getOwnerElement() {
+	public ElementImpl getOwnerElement() {
 		return this.owner;
 		}
-
+	/* package */ void setOwnerElement(ElementImpl e) {
+		this.owner = e;
+		}
+	
+	public void write(XMLStreamWriter w) throws XMLStreamException {
+		if(getNamespaceURI()==null) {
+			w.writeAttribute(getLocalName(), getValue());
+			}
+		else if(getPrefix()==null)
+			{
+			w.writeAttribute(getNamespaceURI(),getLocalName(), getValue());
+			}
+		else
+			{
+			w.writeAttribute(getPrefix(),getNamespaceURI(),getLocalName(), getValue());
+			}
+		}
+	
+	@Override
+	public String toString() {
+		return "@"+getNodeName()+"="+getValue();
+		}
 	}

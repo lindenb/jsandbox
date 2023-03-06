@@ -1,14 +1,17 @@
 package sandbox.xml.dom;
 
 import org.w3c.dom.Node;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.DefaultHandler;
 
-public class CDataSectionImpl extends TextImpl implements org.w3c.dom.CDATASection {
+public class CDataSectionImpl extends AbstractTextNode implements org.w3c.dom.CDATASection {
 	CDataSectionImpl(DocumentImpl owner,final String text) {
 		super(owner, text);
 		}
 
+	@Override
+	public final String getNodeName() {
+		return "#cdata-section"; // in spec
+		}
+	
 	@Override
 	public boolean equals(final Object obj) {
 		if(obj == this) return true;
@@ -27,7 +30,6 @@ public class CDataSectionImpl extends TextImpl implements org.w3c.dom.CDATASecti
 		return getOwnerDocument().createCDATASection(this.getData());
 		}
 	
-	
 	@Override
 	public String getPath() {
 		String s= "cdata()";
@@ -36,5 +38,4 @@ public class CDataSectionImpl extends TextImpl implements org.w3c.dom.CDATASecti
 			}
 		return s;
 		}
-	
 	}

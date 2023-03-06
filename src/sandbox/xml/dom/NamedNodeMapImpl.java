@@ -2,6 +2,7 @@ package sandbox.xml.dom;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.w3c.dom.DOMException;
@@ -9,7 +10,20 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 
 public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMap {
-	private final List<Node> array = new ArrayList<>();
+	private final List<Node> array;
+	private static final NamedNodeMapImpl EMPTY_NODE_MAP = new NamedNodeMapImpl(Collections.emptyList());
+	
+	public static NamedNodeMapImpl getEmptyNamedNodeMap() {
+		return EMPTY_NODE_MAP;
+	}
+	
+	public NamedNodeMapImpl(final List<Node> array) {
+		this.array = array;// = not a copy
+	}
+	public NamedNodeMapImpl() {
+		this(new ArrayList<>());
+	}
+	
 	@Override
 	public Node getNamedItem(String name) {
 		int i=0;
@@ -38,7 +52,7 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 		}
 
 	@Override
-	public Node removeNamedItem(String name) throws DOMException {
+	public Node removeNamedItem(final String name) throws DOMException {
 		int i=0;
 		while(i<array.size()) {
 			final Node n = this.array.get(i);
@@ -47,7 +61,7 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 				}
 			i++;
 			}
-		return null;
+		throw new DOMException(DOMException.NOT_FOUND_ERR, "No such item");
 		}
 
 	@Override
@@ -98,6 +112,11 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 		this.array.add(arg);
 		return arg;		
 		}
+	
+	@Override
+	public boolean remove(Object o) {
+		return this.array.remove(o);
+		}
 
 	@Override
 	public Node removeNamedItemNS(final String namespaceURI, final String localName) throws DOMException {
@@ -109,7 +128,7 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 				}
 			i++;
 			}
-		return null;
+		throw new DOMException(DOMException.NOT_FOUND_ERR, "No such item");
 		}
 	
 	}

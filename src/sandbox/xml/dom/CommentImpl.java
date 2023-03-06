@@ -8,6 +8,11 @@ public class CommentImpl extends AbstractTextNode implements org.w3c.dom.Comment
 	CommentImpl(DocumentImpl owner,final String text) {
 		super(owner, text);
 		}
+	
+	@Override
+	public final String getNodeName() {
+		return "#comment"; // in spec
+		}
 
 	@Override
 	public boolean equals(final Object obj) {

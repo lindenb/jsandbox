@@ -1,19 +1,22 @@
 package sandbox.xml.dom;
 
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 
-import org.w3c.dom.DOMException;
-import org.w3c.dom.Node;
 import org.w3c.dom.Text;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.DefaultHandler;
 
-public class TextImpl extends AbstractTextNode implements org.w3c.dom.Text {
+public class TextImpl extends AbstractTextNode implements Text {
 	TextImpl(DocumentImpl downer,final String text) {
 		super(downer, text);
 		}
 	
 	@Override
-	public /* final not CDATA override this */ short getNodeType() {
+	public final String getNodeName() {
+		return "#text"; // in spec
+		}
+	
+	@Override
+	public final short getNodeType() {
 		return TEXT_NODE;
 		}
 	
@@ -26,44 +29,18 @@ public class TextImpl extends AbstractTextNode implements org.w3c.dom.Text {
 		}
 	
 	@Override
-	public String getWholeText() {
-		return getData();
-		}
-	
-	@Override
-	public Node cloneNode(boolean deep) {
+	public Text cloneNode(boolean deep) {
 		return getOwnerDocument().createTextNode(this.getData());
 		}
 	
 	@Override
-	public void sax(final DefaultHandler handler) throws SAXException {
-		char[] ch = getData().toCharArray();
-		handler.characters(ch, 0, ch.length);
-		}
-
-	@Override
 	public String getPath() {
 		String s= "text()";
 		if(getParentNode()!=null) {
-			s=getParentNode()+"/"+s;
+			s=getParentNode().getPath()+"/"+s;
 			}
 		return s;
 		}
 	
-
-	@Override
-	public Text splitText(int offset) throws DOMException {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public boolean isElementContentWhitespace() {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public Text replaceWholeText(String content) throws DOMException {
-		throw new UnsupportedOperationException();
-		}
 	
 	}

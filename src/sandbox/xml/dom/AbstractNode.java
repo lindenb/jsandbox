@@ -18,9 +18,12 @@ import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.w3c.dom.Text;
 import org.w3c.dom.UserDataHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
+
+import sandbox.StringUtils;
 
 public abstract class AbstractNode implements org.w3c.dom.Node {
 	private final DocumentImpl ownerDoc;
@@ -54,24 +57,52 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 	public AbstractNode getParentNode() {
 		return this.parentNode;
 		}
+	
+	/** remove this node from it's parent if any
+	 * @return this
+	 */
+	public AbstractNode unlink() {
+		if(getParentNode()!=null) getParentNode().removeChild(this);
+		return this;
+		}
+	/** 
+	 * remove all child nodes
+	 * @return this
+	 */
+	public AbstractNode removeAllChildNodes() {
+		if(hasChildNodes()) {
+			AbstractNode n1 = this.firstChild;
+			while(n1!=null) {
+				final AbstractNode n2 = n1.getNextSibling();
+				n1.nextSibling = null;
+				n1.prevSibling = null;
+				n1.parentNode = null;
+				n1 = n2;
+				}
+			this.firstChild = null;
+			this.lastChild = null;
+			}
+		return this;
+		}
+	
 	public boolean isRoot() {
 		return this.parentNode==null;
 		}
 	@Override
-	public final Document getOwnerDocument() {
+	public final DocumentImpl getOwnerDocument() {
 		return ownerDoc;
 		}
 	
 	@Override
-	public Node getPreviousSibling() {
+	public AbstractNode getPreviousSibling() {
 		return this.prevSibling;
 		}
 	@Override
-	public Node getNextSibling() {
+	public AbstractNode getNextSibling() {
 		return this.nextSibling;
 		}
 	@Override
-	public Node getFirstChild() {
+	public AbstractNode getFirstChild() {
 		return this.firstChild;
 		}
 
@@ -81,8 +112,8 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		}
 	
 	@Override
-	public NamedNodeMap getAttributes() {
-		return null;
+	public NamedNodeMapImpl getAttributes() {
+		return NamedNodeMapImpl.getEmptyNamedNodeMap();
 		}
 	
 	@Override
@@ -90,26 +121,60 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		return null;
 		}
 	
-	@Override
-	public String getNodeName() {
+	public QName getQName() {
 		return null;
 		}
 	
-	@Override
-	public String getNodeValue() throws DOMException {
-		return null;
+	public boolean hasQName(final QName qName) {
+		final QName qN = this.getQName();
+		return qN==null?false:qN.equals(qName);
+		}
+	
+	public boolean isA(String namespaceURI, String localName) {
+		return hasNamespaceURI(namespaceURI) && hasLocalName(localName);
+		}
+	
+	public boolean hasNamespaceURI() {
+		return !StringUtils.isBlank(getQName().getNamespaceURI());
+		}
+	
+	public boolean hasNamespaceURI(final ElementImpl other) {
+		return other!=null && hasNamespaceURI(other.getNamespaceURI());
+		}
+	
+	public boolean hasNamespaceURI(final String ns) {
+		return ns.equals(getNamespaceURI());
+		}
+	public boolean hasLocalName(final String ns) {
+		return ns.equals(getLocalName());
+		}
+	public boolean hasNodeName(final String ns) {
+		return ns.equals(getNodeName());
 		}
 	
 	@Override
 	public String getNamespaceURI() {
-		return null;
+		final QName qN = this.getQName();
+		return qN==null?null:qN.getNamespaceURI();
+		}
+	@Override
+	public String getLocalName() {
+		final QName qN = this.getQName();
+		return qN==null?null:qN.getLocalPart();
 		}
 	
 	@Override
-	public String getLocalName() {
-		return null;
+	public String getPrefix() {
+		final QName qN = this.getQName();
+		return qN==null?null:qN.getPrefix();
 		}
 	
+	public String getNodeName() {
+		return StringUtils.isBlank(getPrefix())?getLocalName():getPrefix()+":"+getLocalName();
+		}
+	
+	@Override
+	public abstract String getNodeValue() throws DOMException;
 	
 
 	public Object getFeature(String feature, String version) {
@@ -126,14 +191,10 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		throw new UnsupportedOperationException();
 		}
 	
-	@Override
-	public String getPrefix() {
-		return null;
-		}
 	
 	@Override
 	public void setTextContent(String textContent) throws DOMException {
-		throw new UnsupportedOperationException();
+		throw new DOMException(DOMException.INVALID_MODIFICATION_ERR, "Cannot set text");
 		}
 	
 	@Override
@@ -163,14 +224,11 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 	
 	
 	@Override
-	public NodeList getChildNodes() {
-		final NodeListImpl L = new NodeListImpl();
-		Node c = this.getFirstChild();
-		while(c!=null) {
-			L.add(c);
-			c = c.getNextSibling();
+	public NodeListImpl<AbstractNode> getChildNodes() {
+		if(!hasChildNodes()) {
+			return NodeListImpl.emptyNodeList();
 			}
-		return L;
+		return getChildNodes(N->true);
 		}
 	
 	@Override
@@ -204,12 +262,42 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		}
 	
 	@Override
-	public Node appendChild(Node newChild) throws DOMException {
-			return insertBefore(newChild,null);
+	public AbstractNode appendChild(Node newChild) throws DOMException {
+		if(newChild.getOwnerDocument()!=this.getOwnerDocument()) {
+			throw new DOMException(DOMException.WRONG_DOCUMENT_ERR, "Not the same document");
 			}
+		if(newChild==this) {
+			throw new DOMException(DOMException.HIERARCHY_REQUEST_ERR, "this==child");
+			}
+		final List<AbstractNode> nodes;
+		if(newChild.getNodeType()==DOCUMENT_FRAGMENT_NODE) {
+			nodes = new ArrayList<>(DocumentFragmentImpl.class.cast(newChild).getChildNodes());
+			}
+		else
+			{
+			nodes = Collections.singletonList(AbstractNode.class.cast(newChild));
+			}
+		AbstractNode last = null;
+		for(final AbstractNode n : nodes ) {
+			n.unlink();
+			if(firstChild==null) {
+				this.firstChild=n;
+				this.lastChild=n;
+				}
+			else
+				{
+				this.lastChild.nextSibling = n;
+				n.prevSibling  = this.lastChild;
+				this.lastChild = n;
+				}
+			n.parentNode = this;
+			last = n;
+			}
+		return last;
+		}
 	
 	@Override
-	public Node removeChild(Node oldChild) throws DOMException {
+	public AbstractNode removeChild(Node oldChild) throws DOMException {
 		if(oldChild==null) return null;
 		if(oldChild.getParentNode()!=this) {
 			throw new DOMException(DOMException.NOT_FOUND_ERR, "Not child of this node");
@@ -222,14 +310,18 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		if(next!=null) next.nextSibling = prev;
 		if(this.firstChild==n) this.firstChild=next;
 		if(this.lastChild==n) this.lastChild=prev;
+		n.prevSibling = null;
+		n.nextSibling = null;
 		n.parentNode = null;
 		return n;
 		}
 	
 	@Override
-	public Node insertBefore(final Node newChild, final Node refChild) throws DOMException {
+	public AbstractNode insertBefore(final Node newChild, final Node refChild) throws DOMException {
 		if(newChild==null) return null;
-		
+		if(refChild==null) {
+			return appendChild(newChild);
+			}
 		if(refChild!=null && refChild.getParentNode()!=this) {
 			throw new DOMException(DOMException.NOT_FOUND_ERR, "refchild is not child of this node");
 			}
@@ -297,11 +389,72 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 
 	@Override
 	public void normalize() {
+		if(!hasChildNodes()) return;
+		AbstractNode c1= getFirstChild();
+		while(c1!=null) {
+			AbstractNode c2 = c1.getNextSibling();
+			if(c1.isText() && c2!=null && c2.isText()) {
+				Text.class.cast(c1).appendData(Text.class.cast(c2).getData());
+				c2.unlink();
+				}
+			else
+				{
+				c1.normalize();
+				c1=c1.getNextSibling();
+				}
+			}
 		}
 	
 	@Override
 	public Node replaceChild(Node newChild, Node oldChild) throws DOMException {
-		throw new UnsupportedOperationException();
+		if(newChild==null) return null;
+		
+		if(oldChild.getParentNode()!=this) {
+			throw new DOMException(DOMException.NOT_FOUND_ERR, "refchild is not child of this node");
+			}
+		if(newChild==oldChild) {
+			throw new DOMException(DOMException.HIERARCHY_REQUEST_ERR, "newChild==refChild");
+			}
+		final List<Node> L;
+		if(newChild.getNodeType()==Node.DOCUMENT_FRAGMENT_NODE) {
+			L = new ArrayList<>();
+			for(Node n1= newChild.getFirstChild();n1!=null;n1=n1.getNextSibling()) {
+				L.add(n1);
+				}
+			}
+		else
+			{
+			L = Collections.singletonList(newChild);
+			}
+		
+		if(newChild.getOwnerDocument()!=this.getOwnerDocument()) {
+			throw new DOMException(DOMException.WRONG_DOCUMENT_ERR, "Not the same document");
+			}
+		if(newChild.getNodeType()==DOCUMENT_NODE) {
+			throw new DOMException(DOMException.HIERARCHY_REQUEST_ERR, "Cannot doc to node");
+			}
+		if(newChild==this) {
+			throw new DOMException(DOMException.HIERARCHY_REQUEST_ERR, "Cannot add to itself");
+			}
+		if(isTerminal()) {
+			throw new DOMException(DOMException.HIERARCHY_REQUEST_ERR, "Cannot append child to termnal");
+			}
+		if(!(newChild instanceof AbstractNode)) {
+			throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "Cannot append child that is not instance of AbstractNode");
+			}
+		
+		AbstractNode prev= (AbstractNode)oldChild.getPreviousSibling();
+		AbstractNode next= (AbstractNode)oldChild.getNextSibling();
+
+		if(newChild.getNodeType()==DOCUMENT_FRAGMENT_NODE) {
+			
+			}
+		else
+			{
+			}
+		throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "Cannot append child that is not instance of AbstractNode");
+
+		
 		}
 	
 	@Override
@@ -318,63 +471,39 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 			}
 		}
 	
-	public List<AbstractNode> getPrecedingSiblingAsList() {
-		if(!hasParent()) return Collections.emptyList();
-		final List<AbstractNode> L = new ArrayList<>();
-		for(AbstractNode n: getParentNode().getChildrenAsList()) {
-			if(n==this) break;
-			L.add(n);
-			}
-		return L;
+	public int getChildCount() {
+		return getChildCount(N->true);
 		}
-	public List<AbstractNode> getFollowingSiblingAsList() {
-		if(!hasParent()) return Collections.emptyList();
-		final List<AbstractNode> L = new ArrayList<>();
-		int state=0;
-		for(AbstractNode n: getParentNode().getChildrenAsList()) {
-			if(n==this) {
-				state=1;
-				}
-			else if(state==1) {
-				L.add(n);
-				}
-			}
-		return L;
-		}
-	
-	public abstract List<AbstractNode> getChildrenAsList();
-	
-	public boolean hasChild() {
-		return !getChildrenAsList().isEmpty();
-		}
-	
-	public Stream<AbstractNode> getChildren() {
-		return getChildren(N->true);
-		}
-	public Stream<AbstractNode> getChildren(final Predicate<AbstractNode> filter) {
-		return getChildrenAsList().stream().filter(filter);
-		}
-	public List<AbstractNode> getChildrenAsList(final Predicate<AbstractNode> filter) {
-		return getChildren(filter).collect(Collectors.toList());
-		}
-	
 
-	public Stream<ElementImpl> getElements(final Predicate<ElementImpl> filter) {
-		return getChildren(N->N.isElement()).
-				map(C->C.asElement()).
-				filter(filter)
-				;
-		}
-	public Stream<ElementImpl> getElements() {
-		return getElements(E->true);
+	public int getChildCount(Predicate<AbstractNode> predicate) {
+		if(!hasChildNodes()) {
+			return 0;
+			}
+		else
+			{
+			int n = 0;
+			for(AbstractNode c = this.getFirstChild();c!=null;c=c.getNextSibling()) {
+				if(predicate==null || predicate.test(c)) ++n;
+				}
+			return n;
+			}
 		}
 	
-	public List<ElementImpl> getElementsAsList(final Predicate<ElementImpl> filter) {
-		return getElements(filter).collect(Collectors.toList());
+	
+	public NodeListImpl<AbstractNode> getChildNodes(Predicate<AbstractNode> predicate) {
+		if(!hasChildNodes()) {
+			return NodeListImpl.emptyNodeList();
+			}
+		else
+			{
+			final List<AbstractNode> L= new ArrayList<AbstractNode>();
+			for(AbstractNode c = this.getFirstChild();c!=null;c=c.getNextSibling()) {
+				if(predicate==null || predicate.test(c)) L.add(c);
+				}
+			return new NodeListImpl<>(L);
+			}
 		}
-	public List<ElementImpl> getElementsAsList() {
-		return getElementsAsList(E->true);
-		}
+	
 	
 	public final boolean isText() {
 		return getNodeType() == org.w3c.dom.Node.TEXT_NODE;
@@ -401,21 +530,32 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		return TextImpl.class.cast(this);
 		}
 	
+	@Override
+	public String getTextContent() throws DOMException {
+		final StringBuilder sb=new StringBuilder();
+		return sb.toString();
+		}
+
+	private static List<AbstractNode> elements(AbstractNode  root,Predicate<AbstractNode> predicate,final List<AbstractNode> array) {
+		if(predicate.test(root)) array.add(root);
+		if(root.hasChildNodes()) {
+			for(Node c=root.getFirstChild();c!=null;c=c.getNextSibling()) {
+				elements(AbstractNode.class.cast(c),predicate,array);
+				}
+			}
+		return array;
+		}
 	
-
-
+	public  NodeListImpl<AbstractNode> findAll(final Predicate<AbstractNode> predicate) {
+		return new NodeListImpl<>(elements(this,predicate,new ArrayList<>()));
+		}
 	
 	
 	public abstract String getPath();
 	
 	public abstract void sax(final DefaultHandler handler) throws SAXException;
 	
-	public void consume(final Consumer<AbstractNode> consumer) {
-		consumer.accept(this);
-		for(AbstractNode n:getChildrenAsList()) {
-			n.consume(consumer);
-			}
-		}
+	
 	
 	public static QName createQName(String namespaceUri,String qName) {
 		if(namespaceUri==null) {

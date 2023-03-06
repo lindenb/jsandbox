@@ -1,7 +1,5 @@
 package sandbox.xml.dom;
 
-import java.util.Collections;
-import java.util.List;
 
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Node;
@@ -14,31 +12,44 @@ public abstract class AbstractTerminalNode extends AbstractNode {
 	public final boolean isTerminal() {
 		return true;
 		}
+	
 	@Override
-	public final Node appendChild(Node newChild) throws DOMException {
-		throw new DOMException(DOMException.HIERARCHY_REQUEST_ERR,"Cannot add node to leaf node");
-		}
+	public final boolean hasAttributes() {
+		return false;
+		}	
 
 	@Override
-	public Node insertBefore(Node newChild, Node refChild) throws DOMException {
-		throw new DOMException(DOMException.HIERARCHY_REQUEST_ERR,"Cannot add node to leaf node");
-		}
-
-	@Override
-	public final Node removeChild(Node oldChild) throws DOMException {
-		throw new DOMException(DOMException.HIERARCHY_REQUEST_ERR,"Cannot add node to leaf node");
+	public final NamedNodeMapImpl getAttributes() {
+		return null;//spec
 		}
 	
 	@Override
-	public final Node getFirstChild() {
+	public final AbstractNode appendChild(Node newChild) throws DOMException {
+		throw new DOMException(DOMException.HIERARCHY_REQUEST_ERR,"Cannot add node to leaf node");
+		}
+
+	@Override
+	public AbstractNode insertBefore(Node newChild, Node refChild) throws DOMException {
+		throw new DOMException(DOMException.HIERARCHY_REQUEST_ERR,"Cannot add node to leaf node");
+		}
+
+	@Override
+	public final AbstractNode getFirstChild() {
 		return null;
 		}
+
 	@Override
-	public final Node getLastChild() {
+	public final AbstractNode getLastChild() {
 		return null;
 		}
+
 	@Override
-	public final boolean hasChild() {
+	public final boolean hasChildNodes() {
 		return false;
+		}
+	
+	@Override
+	public final NodeListImpl<AbstractNode> getChildNodes() {
+		return null;
 		}
 	}
