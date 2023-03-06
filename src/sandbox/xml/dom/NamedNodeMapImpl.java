@@ -25,6 +25,18 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 	}
 	
 	@Override
+	public boolean add(final Node e) {
+		if(e.getNamespaceURI()!=null) {
+			setNamedItemNS(e);
+			}
+		else
+			{
+			setNamedItem(e);
+			}
+		return true;
+		}
+	
+	@Override
 	public Node getNamedItem(String name) {
 		int i=0;
 		while(i<array.size()) {
@@ -39,6 +51,7 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 
 	@Override
 	public Node setNamedItem(Node arg) throws DOMException {
+		if(arg.getNodeName()==null) throw new DOMException(DOMException.NO_DATA_ALLOWED_ERR, "No name");
 		int i=0;
 		while(i<array.size()) {
 			if(arg.getNodeName().equals(this.array.get(i).getNodeName())) {
@@ -53,6 +66,7 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 
 	@Override
 	public Node removeNamedItem(final String name) throws DOMException {
+
 		int i=0;
 		while(i<array.size()) {
 			final Node n = this.array.get(i);

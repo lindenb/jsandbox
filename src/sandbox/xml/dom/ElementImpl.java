@@ -79,13 +79,20 @@ public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Elemen
 	@Override
 	public AttrImpl removeAttributeNode(Attr oldAttr) throws DOMException {
 		if(namedNodeMap==null || oldAttr.getOwnerElement()!=this) throw new DOMException(DOMException.NOT_FOUND_ERR, "cannot find this attr");
+		AttrImpl att;
 		if(oldAttr.getNamespaceURI()!=null) {
-			namedNodeMap.remove
+			att=(AttrImpl)namedNodeMap.removeNamedItemNS(oldAttr.getNamespaceURI(), oldAttr.getLocalName());
 			}
-		
+		else
+			{
+			att=(AttrImpl)namedNodeMap.removeNamedItem(oldAttr.getNodeName());
+			}
+		if(att==null) throw new DOMException(DOMException.NOT_FOUND_ERR, "not found");
+		att.setOwnerElement(null);
+		return att;
 		}
 	@Override
-	public String getAttribute(String name) {
+	public String getAttribute(final String name) {
 		final Attr  n=getAttributeNode(name);
 		return n==null?"":n.getValue();
 		}
