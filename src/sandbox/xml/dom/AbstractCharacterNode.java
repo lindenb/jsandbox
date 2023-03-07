@@ -1,12 +1,14 @@
 package sandbox.xml.dom;
 
-import java.util.Collections;
-import java.util.List;
+
 
 import org.w3c.dom.CharacterData;
 import org.w3c.dom.DOMException;
 
-
+/**
+ * base class for text, CDATA, Comment...
+ *
+ */
 public abstract class AbstractCharacterNode extends AbstractTerminalNode implements CharacterData,CharSequence {
 	protected final StringBuilder text ;
 	protected AbstractCharacterNode(final DocumentImpl owner,final String text) {

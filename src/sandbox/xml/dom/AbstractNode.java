@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.xml.namespace.QName;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -26,7 +28,7 @@ import org.xml.sax.helpers.DefaultHandler;
 import sandbox.StringUtils;
 
 public abstract class AbstractNode implements org.w3c.dom.Node {
-	private final DocumentImpl ownerDoc;
+	private /*final no, node can be 'adopted' */ DocumentImpl ownerDoc;
 	private AbstractNode parentNode;
 	private AbstractNode firstChild = null;
 	private AbstractNode lastChild = null;
@@ -35,6 +37,15 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 	private Map<String,Object> userProperties  = null;
 	protected AbstractNode(final DocumentImpl ownerDoc) {
 		this.ownerDoc = ownerDoc;
+		}
+	
+	/** called by Document.adoptNode */
+	protected AbstractNode adoptDoc(final DocumentImpl doc) {
+		this.ownerDoc=doc;
+		for(AbstractNode c=getFirstChild();c!=null;c=c.getNextSibling()) {
+			c.adoptDoc(doc);
+			}
+		return this;
 		}
 	
 	/** return true for text, cdata, comment */
@@ -89,7 +100,7 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		return this.parentNode==null;
 		}
 	@Override
-	public final DocumentImpl getOwnerDocument() {
+	public /*final$*/ DocumentImpl getOwnerDocument() {
 		return ownerDoc;
 		}
 	
@@ -135,7 +146,7 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		}
 	
 	public boolean hasNamespaceURI() {
-		return !StringUtils.isBlank(getQName().getNamespaceURI());
+		return !StringUtils.isBlank(getNamespaceURI());
 		}
 	
 	public boolean hasNamespaceURI(final ElementImpl other) {
@@ -162,6 +173,12 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		final QName qN = this.getQName();
 		return qN==null?null:qN.getLocalPart();
 		}
+	
+	
+	public boolean hasPrefix() {
+		return !StringUtils.isBlank(getPrefix());
+		}
+
 	
 	@Override
 	public String getPrefix() {
@@ -333,10 +350,11 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 			for(Node n1= newChild.getFirstChild();n1!=null;n1=n1.getNextSibling()) {
 				L.add(n1);
 				}
+			AbstractNode last=null;
 			for(Node n1:L) {
-				this.appendChild(n1);
+				last =  this.insertBefore(n1,refChild);
 				}
-			return newChild;
+			return last;
 			}
 		
 		if(newChild.getOwnerDocument()!=this.getOwnerDocument()) {
@@ -354,37 +372,15 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		if(!(newChild instanceof AbstractNode)) {
 			throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "Cannot append child that is not instance of AbstractNode");
 			}
-		if(newChild.getParentNode()!=null) {
-			newChild.getParentNode().removeChild(newChild);
-			}
 		final AbstractNode n = AbstractNode.class.cast(newChild);
-		if(refChild!=null) {
-			final AbstractNode ref = AbstractNode.class.cast(refChild);
-			final AbstractNode prev = (AbstractNode)ref.getPreviousSibling();
-			if(prev!=null) {
-				prev.nextSibling = n;
-				}
-			else
-				{
-				this.firstChild = n;
-				}
-			ref.prevSibling = n;
-			n.nextSibling = ref;
-			}
-		else
-			{
-			if(firstChild==null) {
-				firstChild = n;
-				lastChild = n;
-				}
-			else
-				{
-				lastChild.nextSibling = n;
-				this.lastChild=n;
-				}
-			}
+		final AbstractNode next = AbstractNode.class.cast(newChild);
+		n.unlink();
+		if(this.firstChild==next) firstChild=n;
+		n.nextSibling = next;
+		n.prevSibling = next.prevSibling;
+		next.prevSibling = n;
 		n.parentNode = this;
-		return newChild;
+		return n;
 		}
 
 	@Override
@@ -551,6 +547,8 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		}
 	
 	
+	
+	
 	public abstract String getPath();
 	
 	public abstract void sax(final DefaultHandler handler) throws SAXException;
@@ -581,6 +579,37 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 				}
 			}
 		}
+	static Predicate<Node> createNodeMatcher(String name) {
+		return N->name.equals(N.getNodeName());
+		}
+	
+	static Predicate<Node> createNodeMatcher(final String namespaceUri,final String localName) {
+		return N->namespaceUri.equals(N.getNamespaceURI()) &&
+				localName.equals(N.getLocalName());
+		}
+	static Predicate<Node> createNodeMatcher(final QName qName) {
+		if(!StringUtils.isBlank(qName.getNamespaceURI())) {
+			return createNodeMatcher(qName.getNamespaceURI(),qName.getLocalPart());
+			}
+		else
+			{
+			return createNodeMatcher(qName.getLocalPart());
+			}
+		}
+	static QName toQName(final org.w3c.dom.Node n) {
+		if(StringUtils.isBlank(n.getNamespaceURI())) {
+			return new QName(n.getLocalName());
+			}
+		else if(StringUtils.isBlank(n.getPrefix())) {
+			return new QName(n.getNamespaceURI(),n.getLocalName());
+			}
+		else
+			{
+			return new QName(n.getNamespaceURI(), n.getLocalName(), n.getPrefix());
+			}
+		}
+
+	public abstract void write(XMLStreamWriter w) throws XMLStreamException;
 	
 	/*
 	public void print() {

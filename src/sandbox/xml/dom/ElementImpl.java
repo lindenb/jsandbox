@@ -1,20 +1,20 @@
 package sandbox.xml.dom;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.function.Predicate;
 
 import javax.xml.namespace.QName;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 
 import org.w3c.dom.Attr;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.TypeInfo;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
-import org.xml.sax.helpers.AttributesImpl;
 import org.xml.sax.helpers.DefaultHandler;
 
 public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Element {
@@ -24,9 +24,29 @@ public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Elemen
 		}
 
 	@Override
+	public final String getTagName() {
+		return getNodeName();
+		}
+	
+	@Override
+	public final String getNodeValue() throws DOMException {
+		return null;//spec
+		}
+	
+
+	
+	@Override
 	public short getNodeType() {
 		return ELEMENT_NODE;
 		}
+	
+	protected AbstractNode adoptDoc(final DocumentImpl doc) {
+		if(this.namedNodeMap!=null) {
+			this.namedNodeMap.forEach(N->AttrImpl.class.cast(N).adoptDoc(doc));
+			}
+		return super.adoptDoc(doc);
+		}
+	
 	
 	@Override
 	public Node cloneNode(boolean deep) {
@@ -41,7 +61,7 @@ public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Elemen
 		if(hasAttributes()) {
 			final NamedNodeMap nm = this.getAttributes();
 			for(int i=0;i< nm.getLength();i++) {
-				Attr att = (Attr)nm.item(i).cloneNode(deep);
+				final Attr att = (Attr)nm.item(i).cloneNode(deep);
 				if(att.getNamespaceURI()==null) {
 					cp.setAttributeNode(att);
 					}
@@ -66,14 +86,20 @@ public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Elemen
 		this.appendChild(getOwnerDocument().createTextNode(textContent));
 		}
 	
+	private boolean hasAttribute(final Predicate<Node> filter) {
+		return namedNodeMap!=null && namedNodeMap.
+				stream().
+				anyMatch(filter);
+		}
+	
 	@Override
 	public boolean hasAttribute(String name) {
-		return namedNodeMap!=null && namedNodeMap.getNamedItem(name)!=null;
+		return hasAttribute(createNodeMatcher(name));
 		}
 
 	@Override
 	public boolean hasAttributeNS(String namespaceURI, String localName) throws DOMException {
-		return namedNodeMap!=null && namedNodeMap.getNamedItemNS(namespaceURI,localName)!=null;
+		return hasAttribute(createNodeMatcher(namespaceURI, localName));
 		}
 	
 	@Override
@@ -91,15 +117,16 @@ public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Elemen
 		att.setOwnerElement(null);
 		return att;
 		}
+	
 	@Override
 	public String getAttribute(final String name) {
 		final Attr  n=getAttributeNode(name);
 		return n==null?"":n.getValue();
 		}
 	@Override
-	public Attr getAttributeNode(String name) {
+	public AttrImpl getAttributeNode(final String name) {
 		if(this.namedNodeMap==null) return null;
-		return (Attr) this.namedNodeMap.getNamedItem(name);
+		return (AttrImpl) this.namedNodeMap.getNamedItem(name);
 		}
 	
 	@Override
@@ -108,7 +135,15 @@ public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Elemen
 		return namedNodeMap;
 		}
 	
+	@Override
+	public NodeListImpl<ElementImpl> getElementsByTagName(String name) {
+		return findAll(E->E.isElement() && name.equals(Element.class.cast(E).getTagName())).asElements();
+		}
 	
+	@Override
+	public NodeList getElementsByTagNameNS(String namespaceURI, String localName) throws DOMException {
+		return findAll(E->E.isElement() && namespaceURI.equals(E.getNamespaceURI()) && localName.equals(E.getLocalName())).asElements();
+		}
 	
 	
 	@Override
@@ -126,11 +161,6 @@ public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Elemen
 		
 		if(namedNodeMap==null) namedNodeMap=new NamedNodeMapImpl();
 		Attr old= (Attr)namedNodeMap.getNamedItem(newAttr.getName());
-		
-		if(owner!=null) {
-			
-			}
-		
 		namedNodeMap.setNamedItem(newAttr);
 		return old;
 		}
@@ -142,14 +172,18 @@ public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Elemen
 		namedNodeMap.setNamedItemNS(newAttr);
 		return old;
 		}
-final
 	
 	
-	
-	public String getAttribute(String s,String def) {
-		return getAttribute(s).orElse(def);
+	@Override
+	public void removeAttribute(String name) throws DOMException {
+		if(namedNodeMap==null)return;
+		if(namedNodeMap.stream().noneMatch(createNodeMatcher(name))) return;
+		AttrImpl att = (AttrImpl)namedNodeMap.removeNamedItem(name);
+		if(att!=null) att.unlink();
+		att.setOwnerElement(null);
 		}
 
+	
 
 	
 	@Override
@@ -259,5 +293,109 @@ final
 		}
 		
 		}
+
+	@Override
+	public String getAttributeNS(String namespaceURI, String localName) throws DOMException {
+		if(this.namedNodeMap==null) return "";
+		return this.namedNodeMap.stream().
+				filter(createNodeMatcher(namespaceURI, localName)).
+				map(N->N.getNodeValue()).findFirst().
+				orElse("");
+		}
+
+	@Override
+	public void setAttributeNS(String namespaceURI, String qualifiedName, String value) throws DOMException {
+		final AttrImpl att = getOwnerDocument().createAttributeNS(namespaceURI, qualifiedName);
+		att.setValue(value);
+		this.setAttributeNode(att);		
+		}
+
+	@Override
+	public void removeAttributeNS(String namespaceURI, String localName) throws DOMException {
+		if(this.namedNodeMap==null) return;
+		if( this.namedNodeMap.stream().
+				noneMatch(createNodeMatcher(namespaceURI, localName))) return;
+				
+		AttrImpl old =(AttrImpl) this.namedNodeMap.removeNamedItemNS(namespaceURI, localName);
+		old.setOwnerElement(null);
+		}
+
+	@Override
+	public AttrImpl getAttributeNodeNS(String namespaceURI, String localName) throws DOMException {
+		if(this.namedNodeMap==null) return null;
+		return this.namedNodeMap.stream().
+				filter(createNodeMatcher(namespaceURI, localName)).
+				map(N->AttrImpl.class.cast(N)).
+				findFirst().
+				orElse(null);
+		}
+
+	@Override
+	public TypeInfo getSchemaTypeInfo() {
+		throw new UnsupportedOperationException();
+	}
 	
+	@Override
+	public void setIdAttribute(String name, boolean isId) throws DOMException {
+		setIdAttributeNode(getAttributeNode(name),isId);
+	}
+
+	@Override
+	public void setIdAttributeNS(String namespaceURI, String localName, boolean isId) throws DOMException {
+		setIdAttributeNode(getAttributeNodeNS(namespaceURI,localName),isId);
+	}
+
+	@Override
+	public void setIdAttributeNode(Attr idAttr, boolean isId) throws DOMException {
+		if(idAttr.getOwnerElement()!=this) throw new DOMException(DOMException.HIERARCHY_REQUEST_ERR, "not owner element");
+		AttrImpl.class.cast(this).setId(isId);
+		}
+	
+	
+	@Override
+	public void write(XMLStreamWriter w) throws XMLStreamException {
+		
+		
+		
+		if(!hasChildNodes()) {
+			if(!hasNamespaceURI()) {
+				w.writeEmptyElement(getTagName());
+				}
+			else if(!hasPrefix()) {
+				w.writeEmptyElement(getNamespaceURI(), getLocalName());
+				}
+			else
+				{
+				w.writeEmptyElement(getPrefix(),getLocalName(), getNamespaceURI());
+				}
+			}
+		else
+			{
+			if(!hasNamespaceURI()) {
+				w.writeStartElement(getTagName());
+				}
+			else if(!hasPrefix()) {
+				w.writeStartElement(getNamespaceURI(), getLocalName());
+				}
+			else
+				{
+				w.writeStartElement(getPrefix(),getLocalName(), getNamespaceURI());
+				}
+			}
+				
+		if(hasAttributes()) {
+			for(Node a: getAttributes()) {
+				AttrImpl.class.cast(a).write(w);
+				}
+			}
+		
+		if(hasChildNodes())
+			{
+			for(AbstractNode c= getFirstChild(); c!=null; c=c.getNextSibling()) {
+				c.write(w);
+				}
+			w.writeEndElement();
+			}
+		
+		}
 	}

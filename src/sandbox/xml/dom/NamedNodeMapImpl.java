@@ -3,11 +3,18 @@ package sandbox.xml.dom;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
+
+import javax.xml.namespace.QName;
 
 import org.w3c.dom.DOMException;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
+
+import sandbox.StringUtils;
 
 public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMap {
 	private final List<Node> array;
@@ -36,25 +43,10 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 		return true;
 		}
 	
-	@Override
-	public Node getNamedItem(String name) {
+	private Node setNamedItem(final Node arg,Predicate<Node> filter) throws DOMException {
 		int i=0;
 		while(i<array.size()) {
-			final Node n = this.array.get(i);
-			if(name.equals(n.getNodeName())) {
-				return n;
-				}
-			i++;
-			}
-		return null;
-		}
-
-	@Override
-	public Node setNamedItem(Node arg) throws DOMException {
-		if(arg.getNodeName()==null) throw new DOMException(DOMException.NO_DATA_ALLOWED_ERR, "No name");
-		int i=0;
-		while(i<array.size()) {
-			if(arg.getNodeName().equals(this.array.get(i).getNodeName())) {
+			if(filter.test(this.array.get(i))) {
 				this.array.set(i, arg);
 				return arg;
 				}
@@ -63,19 +55,15 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 		this.array.add(arg);
 		return arg;
 		}
-
+	
 	@Override
-	public Node removeNamedItem(final String name) throws DOMException {
-
-		int i=0;
-		while(i<array.size()) {
-			final Node n = this.array.get(i);
-			if(name.equals(n.getNodeName())) {
-				return array.remove(i);
-				}
-			i++;
-			}
-		throw new DOMException(DOMException.NOT_FOUND_ERR, "No such item");
+	public Node setNamedItem(Node arg) throws DOMException {
+		return setNamedItem(arg,AbstractNode.createNodeMatcher(arg.getNodeName()));
+		}
+	
+	@Override
+	public Node setNamedItemNS(Node arg) throws DOMException {
+		return setNamedItem(arg,AbstractNode.createNodeMatcher(arg.getNamespaceURI(),arg.getLocalName()));
 		}
 
 	@Override
@@ -98,33 +86,21 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 		return getLength();
 		}
 	
+	private Node getNamedItem(Predicate<Node> matcher)  {
+		return this.array.stream().
+				filter(matcher).
+				findFirst().
+				orElse(null);
+		}
+	
 	@Override
 	public Node getNamedItemNS(String namespaceURI, String localName) throws DOMException {
-		int i=0;
-		while(i<array.size()) {
-			final Node n = this.array.get(i);
-			if(namespaceURI.equals(n.getNamespaceURI()) && localName.equals(n.getLocalName())) {
-				return n;
-				}
-			i++;
-			}
-		return null;
+		return getNamedItem(AbstractNode.createNodeMatcher(namespaceURI, localName));
 		}
 
 	@Override
-	public Node setNamedItemNS(Node arg) throws DOMException {
-		int i=0;
-		while(i<array.size()) {
-			final Node n = this.array.get(i);
-			if(arg.getLocalName().equals(n.getLocalName()) && 
-				arg.getNamespaceURI().equals(n.getNamespaceURI())) {
-				this.array.set(i, arg);
-				return arg;
-				}
-			i++;
-			}
-		this.array.add(arg);
-		return arg;		
+	public Node getNamedItem(String name) {
+		return getNamedItem(AbstractNode.createNodeMatcher(name));
 		}
 	
 	@Override
@@ -132,12 +108,11 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 		return this.array.remove(o);
 		}
 
-	@Override
-	public Node removeNamedItemNS(final String namespaceURI, final String localName) throws DOMException {
+	
+	private Node removeItem(final Predicate<Node> matcher) throws DOMException {
 		int i=0;
 		while(i<array.size()) {
-			final Node n = this.array.get(i);
-			if(namespaceURI.equals(n.getNamespaceURI()) && localName.equals(n.getLocalName())) {
+			if(matcher.test(this.array.get(i))) {
 				return array.remove(i);
 				}
 			i++;
@@ -145,4 +120,24 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 		throw new DOMException(DOMException.NOT_FOUND_ERR, "No such item");
 		}
 	
+	@Override
+	public Node removeNamedItem(final String name) throws DOMException {
+		return removeItem(AbstractNode.createNodeMatcher(name));
+		}
+
+	
+	@Override
+	public Node removeNamedItemNS(final String namespaceURI, final String localName) throws DOMException {
+		return removeItem(AbstractNode.createNodeMatcher(namespaceURI,localName));
+		}
+	
+
+	
+	public Map<QName,String> asMap() {
+		final HashMap<QName,String> hash = new HashMap<>(this.array.size());
+		for(int i=0;i< getLength();i++) {
+			hash.put(AbstractNode.toQName(item(i)),item(i).getNodeValue());
+			}
+		return hash;
+		}
 	}

@@ -1,7 +1,5 @@
 package sandbox.xml.dom;
 
-
-
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
@@ -11,19 +9,51 @@ import org.w3c.dom.Node;
 import org.w3c.dom.TypeInfo;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
-
+/**
+ * implementation of org.w3c.dom.Attr
+ */
 public class AttrImpl extends AbstractTerminalNode implements org.w3c.dom.Attr {
 	private final QName qName;
 	private ElementImpl owner = null;
 	private String value="";
+	private boolean is_id;
+	
+	private static TypeInfo DEFAULT_TYPE_INFO = new TypeInfo() {
+		@Override
+		public String getTypeName() {
+			return null;
+			}
+		@Override
+		public String getTypeNamespace() {
+			return null;
+			}
+		@Override
+		public boolean isDerivedFrom(String typeNamespaceArg, String typeNameArg, int derivationMethod) {
+			return false;
+			}
+		};
+	
 	AttrImpl(final DocumentImpl owner,final QName qName) {
 		super(owner);
 		this.qName = qName;
+		this.is_id = false;
 		}
 	
 	@Override
+	public AttrImpl unlink() {
+		if(getOwnerElement()!=null) {
+			getOwnerElement().removeAttributeNode(this);
+			setOwnerElement(null);
+			}
+		return this;
+		}
+	@Override
 	public String getValue() {
 		return this.value;
+		}
+	
+	void setId(boolean b)  {
+		this.is_id = b;
 		}
 	
 	@Override
@@ -48,11 +78,11 @@ public class AttrImpl extends AbstractTerminalNode implements org.w3c.dom.Attr {
 	
 	@Override
 	public boolean isId() {
-		throw new UnsupportedOperationException();
+		return this.is_id;
 		}
 	@Override
 	public TypeInfo getSchemaTypeInfo() {
-		throw new UnsupportedOperationException();
+		return DEFAULT_TYPE_INFO;
 		}
 	
 	@Override
@@ -65,12 +95,10 @@ public class AttrImpl extends AbstractTerminalNode implements org.w3c.dom.Attr {
 		this.value = value;
 		}
 	@Override
-	public final void setNodeValue(String nodeValue) throws DOMException {
+	public final void setNodeValue(final String nodeValue) throws DOMException {
 		this.setValue(value);
 		}
 	
-	
-
 	@Override
 	public int hashCode() {
 		return super.hashCode()*31 + getValue().hashCode();
@@ -85,11 +113,6 @@ public class AttrImpl extends AbstractTerminalNode implements org.w3c.dom.Attr {
 		return s;
 		}
 
-	@Override
-	public final boolean hasChildNodes() {
-		return false;
-		}
-	
 	@Override
 	public void sax(DefaultHandler handler) throws SAXException {
 		}
@@ -111,10 +134,10 @@ public class AttrImpl extends AbstractTerminalNode implements org.w3c.dom.Attr {
 		}
 	
 	public void write(XMLStreamWriter w) throws XMLStreamException {
-		if(getNamespaceURI()==null) {
+		if(!hasNamespaceURI()) {
 			w.writeAttribute(getLocalName(), getValue());
 			}
-		else if(getPrefix()==null)
+		else if(!hasPrefix())
 			{
 			w.writeAttribute(getNamespaceURI(),getLocalName(), getValue());
 			}

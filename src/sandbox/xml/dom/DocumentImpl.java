@@ -1,9 +1,6 @@
 package sandbox.xml.dom;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Predicate;
+
 
 import javax.xml.namespace.QName;
 
@@ -13,18 +10,18 @@ import org.w3c.dom.Comment;
 import org.w3c.dom.DOMConfiguration;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.DOMImplementation;
-import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.DocumentType;
 import org.w3c.dom.Element;
 import org.w3c.dom.EntityReference;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.w3c.dom.ProcessingInstruction;
 import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
-
+/**
+ * Implementation of  org.w3c.dom.Document
+ */
 public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  {
 	private String xmlEncoding="UTF-8";
 	private String xmlVersion  = "1.0";
@@ -34,10 +31,18 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 	public DocumentImpl() {
 		super(null);
 		}
-	
+	@Override
+	public final DocumentImpl getOwnerDocument() {
+		return this;
+		}
 	@Override
 	public final String getNodeName() {
 		return "#document"; // in spec
+		}
+	
+	@Override
+	public final String getNodeValue() throws DOMException {
+		return null;
 		}
 	
 	@Override
@@ -49,22 +54,23 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 		return new AttrImpl(this,qname);
 		}
 	
-	public Attr createAttribute(final QName qname,final Object value) throws DOMException {
+	
+	public AttrImpl createAttribute(final QName qname,final Object value) throws DOMException {
 		final AttrImpl att= createAttribute(qname);
 		att.setValue(String.valueOf(value));
 		return att;
 		}
 	
 	@Override
-	public Attr createAttribute(String name) throws DOMException {
+	public AttrImpl createAttribute(final String name) throws DOMException {
 		return createAttribute(createQName(null,name));
 		}
 	@Override
-	public Attr createAttributeNS(String namespaceURI, String qualifiedName) throws DOMException {
+	public AttrImpl createAttributeNS(String namespaceURI, String qualifiedName) throws DOMException {
 		return createAttribute(createQName(namespaceURI,qualifiedName));
 		}
 	@Override
-	public Comment createComment(String data) {
+	public CommentImpl createComment(String data) {
 		return new CommentImpl(this,data);
 		}
 
@@ -77,25 +83,25 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 		return new TextImpl(this,data);
 		}
 	
-	public Element createElement(QName qName) throws DOMException {
+	public ElementImpl createElement(QName qName) throws DOMException {
 		return new ElementImpl(this,qName);
 		}
 	
 	@Override
-	public Element createElement(String tagName) throws DOMException {
+	public ElementImpl createElement(String tagName) throws DOMException {
 		return createElement(createQName(null,tagName));
 		}
 	@Override
-	public Element createElementNS(String namespaceURI, String qualifiedName) throws DOMException {
+	public ElementImpl createElementNS(String namespaceURI, String qualifiedName) throws DOMException {
 		return createElement(createQName(namespaceURI,qualifiedName));
 		}
 	
 	@Override
-	public CDATASection createCDATASection(String data) throws DOMException {
+	public CDataSectionImpl createCDATASection(String data) throws DOMException {
 		return new CDataSectionImpl(this, data);
 		}
 	@Override
-	public DocumentFragment createDocumentFragment() {
+	public DocumentFragmentImpl createDocumentFragment() {
 		return new DocumentFragmentImpl(this);
 		}
 	
@@ -105,13 +111,19 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 		}
 	
 	@Override
-	public NodeList getElementsByTagNameNS(final String namespaceURI, final String localName) {
+	public NodeListImpl<AbstractNode> getElementsByTagNameNS(final String namespaceURI, final String localName) {
 		return findAll(N->N.isElement() && localName.equals(N.getLocalName()) && namespaceURI.equals(N.getNamespaceURI()));
 		}
 	@Override
-	public Element getElementById(final String elementId) {
-		final NodeListImpl<AbstractNode> nl = findAll(N->N.isElement() && N.hasAttributes() && N.getAttributes().stream().map(T->Attr.class.cast(T)).anyMatch(A->A.isId() && elementId.equals(A.getValue())));
-		return nl.isEmpty()?null:(Element)nl.get(0);
+	public ElementImpl getElementById(final String elementId) {
+		return findAll( N->N.isElement() && N.hasAttributes() && 
+				N.getAttributes().stream().
+				map(T->Attr.class.cast(T)).
+				anyMatch(A->A.isId() && elementId.equals(A.getValue()))).
+			asElements().
+			stream().
+			findFirst().
+			orElse(null);
 		}
 	@Override
 	public Node cloneNode(boolean deep) {
@@ -140,7 +152,7 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 		}
 	
 	@Override
-	public ProcessingInstruction createProcessingInstruction(String target, String data) throws DOMException {
+	public ProcessingInstructionImpl createProcessingInstruction(String target, String data) throws DOMException {
 		return new ProcessingInstructionImpl(this, target, data);
 	}
 	@Override
@@ -248,8 +260,12 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 	}
 	@Override
 	public Node adoptNode(Node source) throws DOMException {
-		throw new UnsupportedOperationException();
-	}
+		if(source.getNodeType()==DOCUMENT_NODE) return null;
+		if(source.getOwnerDocument()==this) return source;
+		if(!(source instanceof AbstractNode)) return null;
+		return AbstractNode.class.cast(source).adoptDoc(this);
+		}
+	
 	@Override
 	public DOMConfiguration getDomConfig() {
 		throw new UnsupportedOperationException();

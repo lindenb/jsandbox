@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -52,5 +54,16 @@ public class NodeListImpl<T extends Node> extends AbstractList<T> implements Nod
 	@Override
 	public final T get(int index) {
 		return array.get(index);
+		}
+	
+	public <Z extends Node> NodeListImpl<Z> map(Function<Node,Z> mapper) {
+		return new NodeListImpl<Z>(
+			(this.array.stream().map(mapper)).
+			collect(Collectors.toList())
+			);
+		}
+	
+	public NodeListImpl<ElementImpl> asElements() {
+		return map(X->ElementImpl.class.cast(X));
 		}
 	}

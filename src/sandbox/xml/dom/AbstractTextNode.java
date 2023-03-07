@@ -25,8 +25,7 @@ public abstract class AbstractTextNode extends AbstractCharacterNode implements 
 	public Text splitText(int offset) throws DOMException {
 		final String s1 = super.text.substring(0, offset);
 		final String s2 = super.text.substring(offset+1);
-		super.text.setLength(0);
-		super.text.append(s1);
+		this.setData(s1);
 		final Text newNode = getOwnerDocument().createTextNode(s2);
 		this.insertBefore(newNode, getNextSibling());
 		return newNode;

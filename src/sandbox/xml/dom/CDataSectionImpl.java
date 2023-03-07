@@ -1,5 +1,8 @@
 package sandbox.xml.dom;
 
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+
 import org.w3c.dom.Node;
 
 public class CDataSectionImpl extends AbstractTextNode implements org.w3c.dom.CDATASection {
@@ -37,5 +40,10 @@ public class CDataSectionImpl extends AbstractTextNode implements org.w3c.dom.CD
 			s=getParentNode().getPath()+"/"+s;
 			}
 		return s;
+		}
+	
+	@Override
+	public void write(XMLStreamWriter w) throws XMLStreamException {
+		w.writeCData(getData());
 		}
 	}

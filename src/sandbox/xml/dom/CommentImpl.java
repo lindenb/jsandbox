@@ -1,5 +1,8 @@
 package sandbox.xml.dom;
 
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -37,6 +40,10 @@ public class CommentImpl extends AbstractTextNode implements org.w3c.dom.Comment
 	public void sax(final DefaultHandler handler) throws SAXException {
 	}
 
+	@Override
+	public void write(XMLStreamWriter w) throws XMLStreamException {
+		w.writeComment(getData());
+		}
 	
 	@Override
 	public String getPath() {

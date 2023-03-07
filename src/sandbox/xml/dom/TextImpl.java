@@ -42,5 +42,8 @@ public class TextImpl extends AbstractTextNode implements Text {
 		return s;
 		}
 	
-	
+	@Override
+	public void write(XMLStreamWriter w) throws XMLStreamException {
+		w.writeCharacters(getData());
+		}
 	}

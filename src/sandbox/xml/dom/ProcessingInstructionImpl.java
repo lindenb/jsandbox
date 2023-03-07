@@ -15,6 +15,11 @@ public class ProcessingInstructionImpl extends AbstractCharacterNode implements 
 		this.target = target;
 		}
 	@Override
+	public final String getNodeName() {
+		return getTarget(); //see spec
+		}
+	
+	@Override
 	public final short getNodeType() {
 		return PROCESSING_INSTRUCTION_NODE;
 		}
@@ -31,7 +36,7 @@ public class ProcessingInstructionImpl extends AbstractCharacterNode implements 
 
 	@Override
 	public String getPath() {
-		String s="processing-instruction()";
+		String s= getTarget()+"()";
 		if(hasParent()) {
 			s= getParentNode().getPath()+"/"+s;
 			}

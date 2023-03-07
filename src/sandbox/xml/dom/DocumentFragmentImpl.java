@@ -2,6 +2,9 @@ package sandbox.xml.dom;
 
 import java.util.List;
 
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+
 import org.w3c.dom.DOMException;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Node;
@@ -29,6 +32,11 @@ public class DocumentFragmentImpl extends AbstractNode implements DocumentFragme
 	@Override
 	public void sax(DefaultHandler handler) throws SAXException {
 		throw new SAXException("Cannot run sax handler on DocumentFragment ");
+		}
+	
+	@Override
+	public void write(XMLStreamWriter w) throws XMLStreamException {
+		throw new XMLStreamException("Cannot run XMLStreamWriter on DocumentFragment ");
 		}
 	
 	@Override
