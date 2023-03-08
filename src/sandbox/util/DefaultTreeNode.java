@@ -15,7 +15,7 @@ import java.util.stream.StreamSupport;
 
 import javax.swing.tree.TreeNode;
 
-public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements javax.swing.tree.TreeNode {
+public class DefaultTreeNode<T extends DefaultTreeNode<T,DATATYPE>,DATATYPE> extends AbstractList<T> implements javax.swing.tree.TreeNode {
 	public enum AXIS {
 		SELF,
 		PARENT,
@@ -29,26 +29,31 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		};
 	private static long ID_GENERATOR=0L;
 	private final long node_id = ++ID_GENERATOR;
-	protected DefaultTreeNode nextSibling;
-	protected DefaultTreeNode prevSibling;
-	protected DefaultTreeNode parentNode;
-	protected DefaultTreeNode firstChild;
-	protected DefaultTreeNode lastChild;
-	private Object userData;
+	protected T nextSibling;
+	protected T prevSibling;
+	protected T parentNode;
+	protected T firstChild;
+	protected T lastChild;
+	private DATATYPE userData;
 	
-	public DefaultTreeNode(Object userData) {
+	public DefaultTreeNode(DATATYPE userData) {
 		this.userData  = userData;
+	}
+	
+	@SuppressWarnings("unchecked")
+	protected T self() {
+		return (T)this;
 	}
 	
 	public DefaultTreeNode() {
 		this(null);
 	}
 	
-	public Object getUserData() {
+	public DATATYPE getUserData() {
 		return this.userData;
 		}
 
-	public void setUserData(Object userData) {
+	public void setUserData(DATATYPE userData) {
 		this.userData = userData;
 		}
 	
@@ -73,7 +78,7 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		String s= getNodeName();
 		if(getParentNode()==null) return "/"+s;
 		int idx =0;
-		for(DefaultTreeNode c = getParentNode().getFirstChild();c!=null;c=c.getNextSibling() ) {
+		for(DefaultTreeNode<T,DATATYPE> c = getParentNode().getFirstChild();c!=null;c=c.getNextSibling() ) {
 			if(c.getNodeName().equals(this.getNodeName())) {
 				idx++;
 				}
@@ -83,8 +88,8 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		return getParentNode().getPath()+"/"+s;
 		}
 	
-	private DefaultTreeNode assertIsNotAncestor(final DefaultTreeNode n) {
-		DefaultTreeNode p = getParentNode();
+	private DefaultTreeNode<T,DATATYPE> assertIsNotAncestor(final DefaultTreeNode<T,DATATYPE> n) {
+		DefaultTreeNode<T,DATATYPE> p = getParentNode();
 		while(p!=null) {
 			if(p==n) throw new IllegalArgumentException(""+n+" is an ancestor of "+this);
 			p = p.getParentNode();
@@ -92,7 +97,7 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		return n;
 		}
 	
-	private DefaultTreeNode assertIsMyChild(final DefaultTreeNode n) {
+	private DefaultTreeNode<T,DATATYPE> assertIsMyChild(final DefaultTreeNode<T,DATATYPE> n) {
 		if(n==null) throw new IllegalArgumentException("null");
 		if(n.getParentNode()!=this) throw new IllegalArgumentException(""+n+" is not a child of "+this);
 		return n;
@@ -111,36 +116,36 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 	@Override
 	public int size() {
 		int n=0;
-		for(DefaultTreeNode c=getFirstChild();c!=null;c=c.getNextSibling()) {
+		for(DefaultTreeNode<T,DATATYPE> c=getFirstChild();c!=null;c=c.getNextSibling()) {
 			n++;
 			}
 		return n;
 		}
 	@Override
-	public DefaultTreeNode get(int index) {
+	public T get(int index) {
 		int n=0;
-		for(DefaultTreeNode c=getFirstChild();c!=null;c=c.getNextSibling()) {
+		for(T c=getFirstChild();c!=null;c=c.getNextSibling()) {
 			if(n==index) return c;
 			n++;
 			}
 		throw new IndexOutOfBoundsException();
 		}
 	@Override
-	public boolean add(DefaultTreeNode e) {
+	public boolean add(T e) {
 		appendChild(e);
 		return true;
 		}
 	
 	public void unlink() {
 		if(getParentNode()!=null) {
-			getParentNode().removeChild(this);
+			getParentNode().removeChild(self());
 		}
 	}
 	
-	public DefaultTreeNode removeChild(DefaultTreeNode c) {
+	public T removeChild(T c) {
 		assertIsMyChild(c);
-		DefaultTreeNode prev = c.getPrevSibling();
-		DefaultTreeNode next = c.getNextSibling();
+		T prev = c.getPrevSibling();
+		T next = c.getNextSibling();
 		if(prev!=null) prev.nextSibling=next;
 		if(next!=null) next.prevSibling=prev;
 		if(this.firstChild==c) this.firstChild=next;
@@ -151,7 +156,7 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		return c;
 		}
 	
-	public DefaultTreeNode appendChild(DefaultTreeNode c) {
+	public T appendChild(T c) {
 		if(c==null) throw new IllegalArgumentException();
 		assertIsNotAncestor(c);
 		c.unlink();
@@ -165,7 +170,7 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 			c.prevSibling = this.lastChild;
 			this.lastChild = c;
 			}
-		c.parentNode = this;
+		c.parentNode = self();
 		return c;
 		}
 	
@@ -174,7 +179,7 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 	@Override
 	public int indexOf(final Object o) {
 		int i=0;
-		for(DefaultTreeNode c=getFirstChild();c!=null;c=c.getNextSibling()) {
+		for(DefaultTreeNode<T,DATATYPE> c=getFirstChild();c!=null;c=c.getNextSibling()) {
 			if(c==o) return i;
 			i++;
 			}
@@ -182,9 +187,9 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		}
 	
 	@Override
-	public DefaultTreeNode set(int index, DefaultTreeNode element) {
+	public T set(int index, T element) {
 		int i=0;
-		for(DefaultTreeNode c=getFirstChild();c!=null;c=c.getNextSibling()) {
+		for(T c=getFirstChild();c!=null;c=c.getNextSibling()) {
 			if(i==index) {
 				replaceChild(c,element);
 				return c;
@@ -196,7 +201,7 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 	
 	@Override
 	public boolean remove(Object o) {
-		for(DefaultTreeNode c=getFirstChild();c!=null;c=c.getNextSibling()) {
+		for(T c=getFirstChild();c!=null;c=c.getNextSibling()) {
 			if(c==o) {
 				removeChild(c);
 				return true;
@@ -206,9 +211,9 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		}
 	
 	@Override
-	public DefaultTreeNode remove(int index) {
+	public T remove(int index) {
 		int i=0;
-		for(DefaultTreeNode c=getFirstChild();c!=null;c=c.getNextSibling()) {
+		for(T c=getFirstChild();c!=null;c=c.getNextSibling()) {
 			if(i==index) {
 				return removeChild(c);
 				}
@@ -229,11 +234,11 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 	}
 	
 	@Override
-	public boolean removeIf(Predicate<? super DefaultTreeNode> filter) {
+	public boolean removeIf(Predicate<? super T> filter) {
 		boolean flag = false;
-		DefaultTreeNode curr= getFirstChild();
+		T curr= getFirstChild();
 		while(curr!=null) {
-			DefaultTreeNode next  =  curr.getNextSibling();
+			T next  =  curr.getNextSibling();
 			if(filter.test(curr)) {
 				flag = true;
 				removeChild(curr);
@@ -243,7 +248,7 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		return flag;
 		}
 	
-	public DefaultTreeNode insertBefore(DefaultTreeNode newChild,DefaultTreeNode refNode) {
+	public DefaultTreeNode<T,DATATYPE> insertBefore(T newChild,T refNode) {
 		if(newChild==null)  throw new IllegalArgumentException();
 		if(refNode==newChild)  throw new IllegalArgumentException();
 		if(refNode==null) {
@@ -252,18 +257,18 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		assertIsMyChild(refNode);
 		assertIsNotAncestor(newChild);
 		newChild.unlink();
-		final DefaultTreeNode prev = refNode.getPrevSibling();
+		final T prev = refNode.getPrevSibling();
 		
 		if(prev!=null) prev.nextSibling=newChild;
 		refNode.prevSibling=prev;
 		if(this.firstChild==refNode) this.firstChild=newChild;
 		newChild.nextSibling= refNode;
 		newChild.prevSibling= prev;
-		newChild.parentNode = this;
+		newChild.parentNode = self();
 		return newChild;
 		}
 	
-	public DefaultTreeNode replaceChild(DefaultTreeNode oldChild,DefaultTreeNode newChild) {
+	public T replaceChild(T oldChild,T newChild) {
 		if(newChild==null)  throw new IllegalArgumentException();
 		if(oldChild==newChild)  return newChild;
 		
@@ -271,31 +276,31 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		assertIsNotAncestor(newChild);
 		
 		newChild.unlink();
-		DefaultTreeNode prev = newChild.getPrevSibling();
-		DefaultTreeNode next = newChild.getNextSibling();
+		T prev = newChild.getPrevSibling();
+		T next = newChild.getNextSibling();
 		if(prev!=null) prev.nextSibling = newChild;
 		if(next!=null) next.prevSibling = newChild;
 		newChild.prevSibling= prev;
 		newChild.nextSibling = next;
-		newChild.parentNode = this;
+		newChild.parentNode = self();
 		if(newChild.prevSibling==null) this.firstChild=newChild;
 		if(newChild.nextSibling==null) this.lastChild=newChild;
 		return newChild;
 		}
 	
-	public DefaultTreeNode getPrevSibling() {
+	public T getPrevSibling() {
 		return prevSibling;
 	}
 
-	public DefaultTreeNode getNextSibling() {
+	public T getNextSibling() {
 		return nextSibling;
 	}
 
-	public DefaultTreeNode getFirstChild() {
+	public T getFirstChild() {
 		return firstChild;
 	}
 
-	public DefaultTreeNode getLastChild() {
+	public T getLastChild() {
 		return lastChild;
 	}
 
@@ -303,39 +308,39 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		return getParentNode()==null;
 		}
 	
-	public DefaultTreeNode getRoot() {
-		DefaultTreeNode p  = this;
+	public T getRoot() {
+		T p  = self();
 		while(!p.isRoot()) {
 			p = p.getParentNode();
 			}
 		return p;
 		}
 	
-	public DefaultTreeNode getParentNode() {
+	public T getParentNode() {
 		return parentNode;
 	}
 	
 	/** apply Consummer to this node and his descendants */
-	public void consume(final Consumer<DefaultTreeNode> consumer) {
-		consumer.accept(this);
-		for(DefaultTreeNode c=getFirstChild();c!=null;c=c.getNextSibling()) {
+	public void consume(final Consumer<T> consumer) {
+		consumer.accept(self());
+		for(DefaultTreeNode<T,DATATYPE> c=getFirstChild();c!=null;c=c.getNextSibling()) {
 			c.consume(consumer);
 			}
 		}
 	
-	public List<DefaultTreeNode> findAll(final AXIS axis) {
+	public List<T> findAll(final AXIS axis) {
 		return findAll(axis,N->true);
 		}
 	
-	public List<DefaultTreeNode> findAll(final AXIS axis,final Predicate<DefaultTreeNode> filter) {
+	public List<T> findAll(final AXIS axis,final Predicate<? super T> filter) {
 		switch(axis) {
-			case SELF: return filter.test(this)?Collections.singletonList(this):Collections.emptyList();
+			case SELF: return filter.test(self())?Collections.singletonList(self()):Collections.emptyList();
 			case PARENT: return getParentNode()==null?Collections.emptyList():getParentNode().findAll(AXIS.SELF,filter);
 			case ANCESTOR: //cont
 			case ANCESTOR_OR_SELF: {
-				final List<DefaultTreeNode> L = new ArrayList<>();
-				if(axis==AXIS.ANCESTOR_OR_SELF && filter.test(this)) L.add(this);
-				DefaultTreeNode p = getParentNode();
+				final List<T> L = new ArrayList<>();
+				if(axis==AXIS.ANCESTOR_OR_SELF && filter.test(self())) L.add(self());
+				T p = getParentNode();
 				while(p!=null) {
 					if(filter.test(p)) L.add(p);
 					p = p.getParentNode();
@@ -343,8 +348,8 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 				return L;
 				}
 			case PRECEDING_SIBLINGS: {
-				final List<DefaultTreeNode> L = new ArrayList<>();
-				DefaultTreeNode c = getPrevSibling();
+				final List<T> L = new ArrayList<>();
+				T c = getPrevSibling();
 				while(c!=null) {
 					if(filter.test(c)) L.add(c);
 					c = c.getPrevSibling();
@@ -352,8 +357,8 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 				return L;
 				}
 			case FOLLOWING_SIBLINGS: {
-				final List<DefaultTreeNode> L = new ArrayList<>();
-				DefaultTreeNode c = getNextSibling();
+				final List<T> L = new ArrayList<>();
+				T c = getNextSibling();
 				while(c!=null) {
 					if(filter.test(c)) L.add(c);
 					c = c.getNextSibling();
@@ -362,8 +367,8 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 				}
 			case CHILD:
 				{
-				final List<DefaultTreeNode> L = new ArrayList<>();
-				DefaultTreeNode c = getFirstChild();
+				final List<T> L = new ArrayList<>();
+				T c = getFirstChild();
 				while(c!=null) {
 					if(filter.test(c)) L.add(c);
 					c = c.getNextSibling();
@@ -373,8 +378,8 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 			case DESCENDANT:
 			case DESCENDANT_OR_SELF:
 				{
-				final List<DefaultTreeNode> L = new ArrayList<>();
-				if(axis==AXIS.DESCENDANT_OR_SELF && filter.test(this)) L.add(this);
+				final List<T> L = new ArrayList<>();
+				if(axis==AXIS.DESCENDANT_OR_SELF && filter.test(self())) L.add(self());
 				consume(X->{
 					if(filter.test(X)) L.add(X);
 					});
@@ -393,7 +398,7 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		return size();
 		}
 	@Override
-	public final DefaultTreeNode getParent() {
+	public final DefaultTreeNode<T,DATATYPE> getParent() {
 		return getParentNode();
 		}
 	@Override
@@ -401,9 +406,9 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		return !hasChildNodes();
 		}
 	
-	private static class IterImpl implements Iterator<DefaultTreeNode>, Enumeration<DefaultTreeNode> {
-		private DefaultTreeNode curr;
-		IterImpl(DefaultTreeNode c) {
+	private class IterImpl implements Iterator<T>, Enumeration<T> {
+		private T curr;
+		IterImpl(T c) {
 			this.curr= c;
 			}
 		@Override
@@ -415,29 +420,29 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 			return hasNext();
 			}
 		@Override
-		public DefaultTreeNode next(){
+		public T next(){
 			if(curr==null) throw new IllegalStateException();
-			DefaultTreeNode n = curr;
+			T n = curr;
 			curr=curr.nextSibling;
 			return n;
 			}
-		public DefaultTreeNode nextElement() {
+		public T nextElement() {
 			return next();
 			}
 		}
 	
 
 	@Override
-	public Iterator<DefaultTreeNode> iterator() {
+	public Iterator<T> iterator() {
 		return new IterImpl(getFirstChild());
 		}
 	
 	@Override
-	public Enumeration<? extends DefaultTreeNode> children() {
+	public Enumeration<? extends DefaultTreeNode<T,DATATYPE>> children() {
 		return new IterImpl(getFirstChild());
 		}
 	@Override
-	public final DefaultTreeNode getChildAt(int childIndex) {
+	public final DefaultTreeNode<T,DATATYPE> getChildAt(int childIndex) {
 		return get(childIndex);
 		}
 	@Override
@@ -446,7 +451,7 @@ public class DefaultTreeNode extends AbstractList<DefaultTreeNode> implements ja
 		}
 	
 	@Override
-	public Stream<DefaultTreeNode> stream() {
+	public Stream<T> stream() {
 		return StreamSupport.stream(
 			Spliterators.spliteratorUnknownSize(iterator(),Spliterator.ORDERED)
 			,false);
