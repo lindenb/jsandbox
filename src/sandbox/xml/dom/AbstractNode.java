@@ -58,6 +58,7 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 	public boolean hasParent() {
 		return getParentNode()!=null;
 		}
+	
 	@Override
 	public AbstractNode getParentNode() {
 		return this.parentNode;
@@ -112,7 +113,7 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		}
 
 	@Override
-	public Node getLastChild() {
+	public AbstractNode getLastChild() {
 		return this.lastChild;
 		}
 	
