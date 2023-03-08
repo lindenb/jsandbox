@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.tools.aksum;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;

@@ -1,8 +1,17 @@
 package sandbox.awt;
 
+import java.awt.Dimension;
+
 public class Dimension2D implements HasDimension {
 	private final double width;
 	private final double height;
+	
+	public Dimension2D(final Dimension d) {
+		this(d.getWidth(),d.getHeight());
+		}
+	public Dimension2D(final Dimension2D d) {
+		this(d.getWidth(),d.getHeight());
+		}
 	
 	public Dimension2D(double width,double height) {
 		this.width = width;

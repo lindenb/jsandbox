@@ -15,6 +15,7 @@ public class DocumentFragmentImpl extends AbstractNode implements DocumentFragme
 	DocumentFragmentImpl(DocumentImpl doc) {
 		super(doc);
 		}
+		
 	@Override
 	public final short getNodeType() {
 		return DocumentFragmentImpl.DOCUMENT_FRAGMENT_NODE;

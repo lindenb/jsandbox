@@ -27,6 +27,7 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.http.CookieStoreUtils;
 import sandbox.io.IOUtils;
+import sandbox.xml.XmlUtils;
 
 public class GrandComicsDatabaseScraper extends Launcher {
 	private static final Logger LOG = Logger.builder(GrandComicsDatabaseScraper.class).build();

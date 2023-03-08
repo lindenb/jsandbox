@@ -39,6 +39,12 @@ public class AttrImpl extends AbstractTerminalNode implements org.w3c.dom.Attr {
 		this.is_id = false;
 		}
 	
+	
+	@Override
+	public final AbstractNode getParentNode() {
+		return null;
+		}
+	
 	@Override
 	public AttrImpl unlink() {
 		if(getOwnerElement()!=null) {
@@ -107,8 +113,8 @@ public class AttrImpl extends AbstractTerminalNode implements org.w3c.dom.Attr {
 	@Override
 	public String getPath() {
 		String s= "@"+getNodeName();
-		if(getParentNode()!=null) {
-			s=getParentNode().getPath()+"/"+s;
+		if(getOwnerElement()!=null) {
+			s=getOwnerElement().getPath()+"/"+s;
 			}
 		return s;
 		}

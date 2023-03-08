@@ -3,6 +3,12 @@ package sandbox.xml.dom;
 
 
 import javax.xml.namespace.QName;
+import javax.xml.stream.XMLEventReader;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
+import javax.xml.stream.events.XMLEvent;
 
 import org.w3c.dom.Attr;
 import org.w3c.dom.CDATASection;
@@ -38,6 +44,21 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 	@Override
 	public final String getNodeName() {
 		return "#document"; // in spec
+		}
+	
+	@Override
+	public final AbstractNode getParentNode() {
+		return null;
+		}
+
+	@Override
+	public AbstractNode appendChild(Node newChild) throws DOMException {
+		if(newChild.getNodeType()==Node.ELEMENT_NODE) {
+			if(getDocumentElement()!=null) {
+				throw new DOMException(DOMException.SYNTAX_ERR, "There's already an element in the doc.");
+				}
+			}
+		return super.appendChild(newChild);
 		}
 	
 	@Override
@@ -288,8 +309,85 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 	@Override
 	public void sax(DefaultHandler handler) throws SAXException {
 		handler.startDocument();
-		//TODO
+		for(AbstractNode n=getFirstChild();n!=null;n=n.getNextSibling()) {
+			n.sax(handler);
+			}
 		handler.endDocument();
+		}
+	
+	@Override
+	public void write(XMLStreamWriter w) throws XMLStreamException {
+		w.writeStartDocument(getXmlEncoding(), getXmlVersion());
+		for(AbstractNode n=getFirstChild();n!=null;n=n.getNextSibling()) {
+			n.write(w);
+			}
+		w.writeEndDocument();
+		}
+	
+	private void load(AbstractNode root, XMLStreamReader r)  throws XMLStreamException {
+		while(r.hasNext()) {
+			final int type = r.nextTag();
+			switch(type) {
+				case XMLStreamConstants.CHARACTERS:{
+					root.appendChild(createTextNode(new String(r.getTextCharacters())));
+					break;
+					}
+				case XMLStreamConstants.START_ELEMENT:
+					{
+					final ElementImpl  E = createElement(r.getName());
+					root.appendChild(E);
+					load(E,r);
+					break;
+					}
+				case XMLStreamConstants.ATTRIBUTE:
+					{
+					if(!root.isElement()) throw new IllegalStateException();
+					for(int i=0;i< r.getAttributeCount();i++) {
+						final AttrImpl att = createAttribute(r.getAttributeName(i));
+						att.setValue(r.getAttributeValue(i));
+						final ElementImpl  E= ElementImpl.class.cast(root);
+						if(att.hasNamespaceURI()) {
+							E.setAttributeNodeNS(att);
+							}
+						else
+							{
+							E.setAttributeNode(att);
+							}
+						}
+					break;
+					}
+				case XMLStreamConstants.END_ELEMENT:
+					{
+					if(!root.isElement()) throw new IllegalStateException();
+					return;
+					}
+				case XMLStreamConstants.END_DOCUMENT:
+					{
+					if(!root.isDocument()) throw new IllegalStateException();
+					return;
+					}
+				case XMLStreamConstants.COMMENT:
+					{
+					root.appendChild(createComment(new String(r.getTextCharacters())));
+					break;
+					}
+				case XMLStreamConstants.CDATA:
+					{
+					root.appendChild(createCDATASection(new String(r.getTextCharacters())));
+					break;
+					}
+				case XMLStreamConstants.PROCESSING_INSTRUCTION: {
+					root.appendChild(createProcessingInstruction(r.getPITarget(),new String(r.getTextCharacters())));
+					break;
+					}
+				default: throw new IllegalStateException();
+				}
+			}
+		}
+	
+	public void load(final XMLStreamReader r)  throws XMLStreamException {
+		this.removeAllChildNodes();
+		load(this,r);
 		}
 	
 	}

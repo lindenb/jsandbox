@@ -235,7 +235,7 @@ $(eval $(call compile,treemapmaker,sandbox.tools.treemap.TreeMapMaker,${jcommand
 $(eval $(call compile,comicstrip,sandbox.ComicsStrip, ))
 $(eval $(call compile,genisansbouillir,sandbox.GeniSansBouillir,${jcommander.jar} ${apache.httpclient.jars}  ${jtidy.jars}))
 $(eval $(call compile,bouletmaton,sandbox.BouletMaton,${jcommander.jar}))
-$(eval $(call compile,aksum,sandbox.Aksum,))
+$(eval $(call compile,aksum,sandbox.tools.aksum.Aksum,))
 $(eval $(call compile,images2base64,sandbox.ImagesToBase64,${jcommander.jar}))
 $(eval $(call compile,rss2atom,sandbox.tools.feed.RssToAtom,${jcommander.jar}))
 $(eval $(call compile,atom500px,sandbox.Atom500px,${jcommander.jar}))

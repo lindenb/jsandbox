@@ -17,6 +17,8 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
+import sandbox.StringUtils;
+
 public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Element {
 	protected NamedNodeMapImpl namedNodeMap = null;
 	public ElementImpl(final DocumentImpl owner,final QName qName) {
@@ -256,41 +258,46 @@ public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Elemen
 			return get(index).getValue();
 			}
 
+		private int findIndex(final Predicate<Node> filter) {
+			for(int i=0;i< this.nm.getLength();i++) {
+				if(filter.test(this.nm.item(i))) return i;
+				}
+			return -1;
+		}
+		
 		@Override
-		public int getIndex(String uri, String localName) {
-			// TODO Auto-generated method stub
-			return 0;
+		public int getIndex(final String uri, final String localName) {
+			return findIndex(AbstractNode.createNodeMatcher(uri, localName));
 		}
 
 		@Override
-		public int getIndex(String qName) {
-			// TODO Auto-generated method stub
-			return 0;
+		public int getIndex(final String qName) {
+			return findIndex(N->qName.equals(N.getNodeName()));
 		}
 
 		@Override
 		public String getType(String uri, String localName) {
-			// TODO Auto-generated method stub
-			return null;
+			int i = getIndex(uri,localName);
+			return  i==-1?null:getType(i);
 		}
 
 		@Override
 		public String getType(String qName) {
-			// TODO Auto-generated method stub
-			return null;
+			int i = getIndex(qName);
+			return  i==-1?null:getType(i);
 		}
 
 		@Override
 		public String getValue(String uri, String localName) {
-			// TODO Auto-generated method stub
-			return null;
+			int i = getIndex(uri,localName);
+			return  i==-1?null:getValue(i);
 		}
 
 		@Override
 		public String getValue(String qName) {
-			// TODO Auto-generated method stub
-			return null;
-		}
+			int i = getIndex(qName);
+			return  i==-1?null:getValue(i);
+			}
 		
 		}
 
@@ -351,6 +358,11 @@ public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Elemen
 		AttrImpl.class.cast(this).setId(isId);
 		}
 	
+	
+	protected static String assertNonEmpty(final String s) {
+		if(StringUtils.isBlank(s)) throw new IllegalArgumentException("empty string");
+		return s;
+	}
 	
 	@Override
 	public void write(XMLStreamWriter w) throws XMLStreamException {

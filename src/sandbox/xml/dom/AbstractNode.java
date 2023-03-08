@@ -5,21 +5,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
 import org.w3c.dom.DOMException;
-import org.w3c.dom.Document;
-import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import org.w3c.dom.UserDataHandler;
 import org.xml.sax.SAXException;
@@ -29,7 +23,7 @@ import sandbox.StringUtils;
 
 public abstract class AbstractNode implements org.w3c.dom.Node {
 	private /*final no, node can be 'adopted' */ DocumentImpl ownerDoc;
-	private AbstractNode parentNode;
+	private AbstractNode parentNode = null;
 	private AbstractNode firstChild = null;
 	private AbstractNode lastChild = null;
 	private AbstractNode nextSibling = null;
@@ -580,14 +574,18 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 			}
 		}
 	static Predicate<Node> createNodeMatcher(String name) {
+		if(StringUtils.isBlank(name)) throw new IllegalArgumentException("empty name");
 		return N->name.equals(N.getNodeName());
 		}
 	
 	static Predicate<Node> createNodeMatcher(final String namespaceUri,final String localName) {
+		if(StringUtils.isBlank(namespaceUri)) throw new IllegalArgumentException("empty NS");
+		if(StringUtils.isBlank(localName)) throw new IllegalArgumentException("empty localName");
 		return N->namespaceUri.equals(N.getNamespaceURI()) &&
 				localName.equals(N.getLocalName());
 		}
 	static Predicate<Node> createNodeMatcher(final QName qName) {
+		if(qName==null) throw new IllegalArgumentException("qName is null");
 		if(!StringUtils.isBlank(qName.getNamespaceURI())) {
 			return createNodeMatcher(qName.getNamespaceURI(),qName.getLocalPart());
 			}

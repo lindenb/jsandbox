@@ -37,6 +37,10 @@ import org.w3c.dom.Node;
 
 
 import sandbox.Launcher;
+import sandbox.StringUtils;
+import sandbox.awt.Dimension2D;
+import sandbox.svg.SVG;
+import sandbox.xml.XMLException;
 
 /**
  * Transforms a Scalable Vector Graphics SVG
@@ -149,7 +153,7 @@ public class SVGToCanvas
 	
 	private void parse(
 			State parent,
-			Element e) throws InvalidXMLException
+			Element e) throws XMLException
 		{
 		State state= new State();
 		state.prev=parent;
@@ -381,7 +385,7 @@ public class SVGToCanvas
 		State state,
 		String key,
 		String value
-		) throws InvalidXMLException
+		) throws XMLException
 		{
 		if(StringUtils.isBlank(key) || StringUtils.isBlank(value)) return;
 		
@@ -892,15 +896,14 @@ public class SVGToCanvas
 		}
 	
 	private void paintDocument(Document dom)
-		throws InvalidXMLException
 		{
 		VAR_GENERATOR=0;//reset
 		this.id2definition.clear();
 
 		
 		Element root=dom.getDocumentElement();
-		if(root==null) throw new InvalidXMLException(dom,"no root");
-		if(!XMLUtilities.isA(root, SVG.NS, "svg")) throw new InvalidXMLException(root,"not a SVG root");
+		if(root==null) throw new XMLException(dom,"no root");
+		if(!XMLUtilities.isA(root, SVG.NS, "svg")) throw new XMLException(root,"not a SVG root");
 		
 		State init= new State();
 		init.selector.put(Selector.FILL, "white");
@@ -922,7 +925,7 @@ public class SVGToCanvas
 		
 		
 		Dimension2D size=SVGUtils.getSize(root);
-		Dimension2D newsize=new Dimension2D.Double(size);
+		Dimension2D newsize=new Dimension2D(size);
 		String initialTransform="";
 		if(this.overrideWidth!=null
 			&& (int)size.getWidth()!=this.overrideWidth)

@@ -1,5 +1,6 @@
 package sandbox;
 
+import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
@@ -14,9 +15,16 @@ public static XmlStreamWriter wrap(final XMLStreamWriter delegate) {
 	return new XmlStreamWriterImpl(delegate);
 	}
 public void writeStartElement(final String localName);
-public void writeEmptyElement(final String localName);
-public void writeAttribute(final String localName,final Object value);
+public default void writeStartElement(final QName qName) {
+	
+	}
 
+public void writeEmptyElement(final String localName);
+public default void writeEmptyElement(final QName qName) {
+	
+	}
+public void writeAttribute(final String localName,final Object value);
+public void writeDefaultNamespace(final String ns);
 public void writeEndElement();
 public void writeStartDocument(final String encoding,final String version);
 public void writeEndDocument();
@@ -24,13 +32,24 @@ public void writeCharacters(final Object text);
 public void close();
 public void flush();
 
-
 static class XmlStreamWriterImpl implements XmlStreamWriter
 	{
 	final XMLStreamWriter delegate;
 	private XmlStreamWriterImpl(final XMLStreamWriter delegate)  {
 		this.delegate = delegate;
 		}
+	
+	@Override
+	public void writeDefaultNamespace(final String ns) {
+		try {
+			this.delegate.writeDefaultNamespace(ns);
+			}
+		catch(final XMLStreamException err)
+			{
+			throw new RuntimeException(err);
+			}
+		}
+	@Override
 	public void writeAttribute(final String localName,final Object value) {
 		try {
 			this.delegate.writeAttribute(localName,String.valueOf(value));

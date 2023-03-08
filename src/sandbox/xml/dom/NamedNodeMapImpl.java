@@ -14,7 +14,6 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 
-import sandbox.StringUtils;
 
 public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMap {
 	private final List<Node> array;
@@ -33,12 +32,13 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 	
 	@Override
 	public boolean add(final Node e) {
-		if(e.getNamespaceURI()!=null) {
-			setNamedItemNS(e);
+		final AbstractNode n = AbstractNode.class.cast(e);
+		if(n.hasNamespaceURI()) {
+			setNamedItemNS(n);
 			}
 		else
 			{
-			setNamedItem(e);
+			setNamedItem(n);
 			}
 		return true;
 		}
@@ -86,7 +86,7 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 		return getLength();
 		}
 	
-	private Node getNamedItem(Predicate<Node> matcher)  {
+	private Node getNamedItem(final Predicate<Node> matcher)  {
 		return this.array.stream().
 				filter(matcher).
 				findFirst().
