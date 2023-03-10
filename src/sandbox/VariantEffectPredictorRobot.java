@@ -379,7 +379,7 @@ public class VariantEffectPredictorRobot
 			Document dom=builder.parse(in);
 			in.close();
 			
-			Element anchor=(Element)xpath.evaluate("//a[@class='modal_link'][@href][text()='Text']", dom, XPathConstants.NODE);
+			Element anchor=(Element)xpath.evaluate("//a[@class='modal_link'][@href][text()='TextImpl']", dom, XPathConstants.NODE);
 			if(anchor==null)
 				{
 				TransformerFactory factory=TransformerFactory.newInstance();

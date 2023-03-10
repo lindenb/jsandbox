@@ -15,18 +15,9 @@ import java.util.stream.StreamSupport;
 
 import javax.swing.tree.TreeNode;
 
+import sandbox.xml.XPathAxis;
+
 public class DefaultTreeNode<T extends DefaultTreeNode<T,DATATYPE>,DATATYPE> extends AbstractList<T> implements javax.swing.tree.TreeNode {
-	public enum AXIS {
-		SELF,
-		PARENT,
-		ANCESTOR,
-		ANCESTOR_OR_SELF,
-		PRECEDING_SIBLINGS,
-		FOLLOWING_SIBLINGS,
-		CHILD,
-		DESCENDANT,
-		DESCENDANT_OR_SELF
-		};
 	private static long ID_GENERATOR=0L;
 	private final long node_id = ++ID_GENERATOR;
 	protected T nextSibling;
@@ -328,18 +319,18 @@ public class DefaultTreeNode<T extends DefaultTreeNode<T,DATATYPE>,DATATYPE> ext
 			}
 		}
 	
-	public List<T> findAll(final AXIS axis) {
+	public List<T> findAll(final XPathAxis axis) {
 		return findAll(axis,N->true);
 		}
 	
-	public List<T> findAll(final AXIS axis,final Predicate<? super T> filter) {
+	public List<T> findAll(final XPathAxis axis,final Predicate<? super T> filter) {
 		switch(axis) {
 			case SELF: return filter.test(self())?Collections.singletonList(self()):Collections.emptyList();
-			case PARENT: return getParentNode()==null?Collections.emptyList():getParentNode().findAll(AXIS.SELF,filter);
+			case PARENT: return getParentNode()==null?Collections.emptyList():getParentNode().findAll(XPathAxis.SELF,filter);
 			case ANCESTOR: //cont
 			case ANCESTOR_OR_SELF: {
 				final List<T> L = new ArrayList<>();
-				if(axis==AXIS.ANCESTOR_OR_SELF && filter.test(self())) L.add(self());
+				if(axis==XPathAxis.ANCESTOR_OR_SELF && filter.test(self())) L.add(self());
 				T p = getParentNode();
 				while(p!=null) {
 					if(filter.test(p)) L.add(p);
@@ -379,7 +370,7 @@ public class DefaultTreeNode<T extends DefaultTreeNode<T,DATATYPE>,DATATYPE> ext
 			case DESCENDANT_OR_SELF:
 				{
 				final List<T> L = new ArrayList<>();
-				if(axis==AXIS.DESCENDANT_OR_SELF && filter.test(self())) L.add(self());
+				if(axis==XPathAxis.DESCENDANT_OR_SELF && filter.test(self())) L.add(self());
 				consume(X->{
 					if(filter.test(X)) L.add(X);
 					});
@@ -456,6 +447,14 @@ public class DefaultTreeNode<T extends DefaultTreeNode<T,DATATYPE>,DATATYPE> ext
 			Spliterators.spliteratorUnknownSize(iterator(),Spliterator.ORDERED)
 			,false);
 		}
+	
+	public <X extends T> Stream<X> stream(Class<X> clazz) {
+		return stream().
+				filter(O->clazz.isInstance(O)).
+				map(O->clazz.cast(O));
+		}
+
+	
 	
 	@Override
 	public String toString() {

@@ -1,4 +1,4 @@
-package sandbox.xml;
+package sandbox.tools.xmlstream;
 
 import java.io.File;
 import java.io.PrintWriter;

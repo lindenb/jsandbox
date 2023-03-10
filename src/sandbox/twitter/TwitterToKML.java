@@ -270,7 +270,7 @@ public class TwitterToKML
 			w.writeStartElement("kml");
 			w.writeAttribute("xmlns", "http://www.opengis.net/kml/2.2");
 			
-			w.writeStartElement("Document");
+			w.writeStartElement("DocumentImpl");
 			w.writeStartElement("name");
 			w.writeCharacters("Twitter: 'following' for user_id: "+this.owner+" date:"+new java.sql.Timestamp(System.currentTimeMillis()));
 			w.writeEndElement();//name

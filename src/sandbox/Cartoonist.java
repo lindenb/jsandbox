@@ -1030,7 +1030,7 @@ public class Cartoonist
 			}
 		public String getTitle()
 			{
-			return fileSaveAs==null?"Untitled Document":fileSaveAs.getName();
+			return fileSaveAs==null?"Untitled DocumentImpl":fileSaveAs.getName();
 			}
 		
 		void read(File file) throws IOException,XMLStreamException

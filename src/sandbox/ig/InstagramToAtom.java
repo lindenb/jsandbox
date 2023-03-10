@@ -120,8 +120,8 @@ public class InstagramToAtom extends Launcher {
 			}
 		
 		/*
-		private Element parseThumbail(final Document owner,final JsonObject jObject) {
-			final Element th = owner.createElement("img");
+		private ElementImpl parseThumbail(final DocumentImpl owner,final JsonObject jObject) {
+			final ElementImpl th = owner.createElement("img");
 			th.setAttribute("class", "thumbail");
 			th.setAttribute("width",""+jObject.get("config_width").getAsInt());
 			th.setAttribute("height",""+jObject.get("config_height").getAsInt());

@@ -312,7 +312,7 @@ public class IgToTable extends Launcher
 				if(likes==null && i+1<tokens.length && (tokens[i+1].equalsIgnoreCase("Likes") || tokens[i+1].equalsIgnoreCase("Like"))) {
 					likes = tokens[i];
 					}
-				else if(comments==null && i+1<tokens.length &&  (tokens[i+1].equalsIgnoreCase("Comments") || tokens[i+1].equalsIgnoreCase("Comment"))) {
+				else if(comments==null && i+1<tokens.length &&  (tokens[i+1].equalsIgnoreCase("Comments") || tokens[i+1].equalsIgnoreCase("CommentImpl"))) {
 					comments = tokens[i];
 					}
 				else if(inspir==null && IOUtils.isURL(tokens[i])) {

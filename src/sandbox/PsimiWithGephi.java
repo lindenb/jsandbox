@@ -140,7 +140,7 @@ public class PsimiWithGephi
 		for(int i=0;i< nodes.getLength();++i)
 			{
 			Element e=Element.class.cast(nodes.item(i));
-			Node gephiNode = graphModel.factory().newNode(e.getAttribute("id"));
+			AbstractNode gephiNode = graphModel.factory().newNode(e.getAttribute("id"));
 			NodeData nodeData=gephiNode.getNodeData();
 			String label=xpath.evaluate("p:names/p:shortLabel", e);
 			if(!label.isEmpty()) nodeData.setLabel(label);
@@ -157,8 +157,8 @@ public class PsimiWithGephi
 			String ref1= xpath.evaluate("p:participantList/p:participant[1]/p:interactorRef",e);
 			String ref2= xpath.evaluate("p:participantList/p:participant[2]/p:interactorRef",e);
 			if(ref1.equals(ref2) || ref1.isEmpty() || ref2.isEmpty()) continue;
-			Node gephiNode1=graph.getNode(ref1);
-			Node gephiNode2=graph.getNode(ref2);
+			AbstractNode gephiNode1=graph.getNode(ref1);
+			AbstractNode gephiNode2=graph.getNode(ref2);
 			float score=1f;
 			try
 				{
