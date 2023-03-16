@@ -8,6 +8,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import sandbox.awt.HasDimension;
+import sandbox.xml.XMLException;
 import sandbox.xml.XmlUtils;
 
 public class PageLayout extends AbstractNode implements HasDimension {
@@ -27,7 +28,7 @@ public class PageLayout extends AbstractNode implements HasDimension {
 				
 				}
 			}
-		if(panes.isEmpty()) throw new IllegalArgumentException("No pane defined under "+ XmlUtils.getNodePath(root));
+		if(panes.isEmpty()) throw new XMLException(root,"No pane defined");
 		}
 	
 	public String getId() {

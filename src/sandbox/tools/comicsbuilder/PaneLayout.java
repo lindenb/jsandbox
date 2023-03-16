@@ -1,6 +1,9 @@
 package sandbox.tools.comicsbuilder;
 
+import org.w3c.dom.Attr;
 import org.w3c.dom.Element;
+
+import sandbox.xml.XmlUtils;
 
 class PaneLayout extends AbstractNode{
 	private final PageLayout owner;
@@ -15,6 +18,7 @@ class PaneLayout extends AbstractNode{
 	
 	public Style getStyle() {
 		Style style= getPageLayout().getStyle();
+		
 		return style;
 		}
 	
@@ -30,9 +34,30 @@ class PaneLayout extends AbstractNode{
 		return getPageLayout().getHeight() * parseRatio("");
 	}
 	public double getWidth() {
-		return getPageLayout().getWidth() * parseRatio("");
-	}
+		Attr att = getElement().getAttributeNode("width");
+		if(att!=null) {
+			double factor = parseRatio(att.getValue());
+			return getPageLayout().getWidth() * factor;
+			}
+		att = getElement().getAttributeNode("right");
+		if(att!=null) {
+			double factor = parseRatio(att.getValue());
+			return getPageLayout().getWidth() * factor - getX();
+			}
+		throw new IllegalArgumentException("no @width or @right in "+XmlUtils.getNodePath(getElement()));
+		}
+	
 	public double getHeight() {
-		return getPageLayout().getHeight() * parseRatio("");
+		Attr att = getElement().getAttributeNode("height");
+		if(att!=null) {
+			double factor = parseRatio(att.getValue());
+			return getPageLayout().getHeight() * factor;
+			}
+		att = getElement().getAttributeNode("bottom");
+		if(att!=null) {
+			double factor = parseRatio(att.getValue());
+			return getPageLayout().getHeight() * factor - getX();
+			}
+		throw new IllegalArgumentException("no @height or @bottom in "+XmlUtils.getNodePath(getElement()));
 	}
 }
