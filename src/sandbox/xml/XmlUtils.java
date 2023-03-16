@@ -14,10 +14,13 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.w3c.dom.CharacterData;
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import sandbox.StringUtils;
 import sandbox.iterator.AbstractIterator;
 
 
@@ -135,5 +138,24 @@ public static String getNodePath(final org.w3c.dom.Node node) {
 	if(node==null) return null;
 	return "(todo)";
 	}
+
+/** return true if 'n' is not a  Node.ELEMENT_NODE
+ * also check that text node are blank
+ * */
+public static boolean isNotElement(final Node n) {
+	switch(n.getNodeType()) {
+		case Node.COMMENT_NODE: return true;
+		case Node.CDATA_SECTION_NODE:
+		case Node.TEXT_NODE:
+			{
+			String s=CharacterData.class.cast(n).getData();
+			if(StringUtils.isBlank(s)) return true;
+			throw new DOMException(DOMException.NO_DATA_ALLOWED_ERR,"found non blank node "+XmlUtils.getNodePath(n));
+			}
+		case Node.ELEMENT_NODE: return false;
+		default: throw new DOMException(DOMException.NO_DATA_ALLOWED_ERR,"cannot handle node "+XmlUtils.getNodePath(n));
+		}
+	}
+
 
 }

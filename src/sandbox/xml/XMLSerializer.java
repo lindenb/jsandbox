@@ -1,8 +1,7 @@
-package sandbox;
+package sandbox.xml;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
 import java.nio.file.Path;
 
 import javax.xml.transform.OutputKeys;

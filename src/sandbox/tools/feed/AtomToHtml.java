@@ -30,13 +30,13 @@ import com.beust.jcommander.Parameter;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.StringUtils;
-import sandbox.XMLSerializer;
 import sandbox.date.DateParser;
 import sandbox.feed.RssToAtom;
 import sandbox.http.CookieStoreUtils;
 import sandbox.io.IOUtils;
 import sandbox.jcommander.DurationConverter;
 import sandbox.jcommander.NoSplitter;
+import sandbox.xml.XMLSerializer;
 
 public class AtomToHtml extends Launcher {
 	private static final Logger LOG=Logger.builder(AtomToHtml.class).build();

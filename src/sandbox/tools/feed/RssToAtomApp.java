@@ -10,8 +10,8 @@ import org.w3c.dom.Document;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.XMLSerializer;
 import sandbox.io.IOUtils;
+import sandbox.xml.XMLSerializer;
 
 public class RssToAtomApp extends Launcher
 	{

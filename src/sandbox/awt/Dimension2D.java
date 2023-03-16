@@ -22,6 +22,7 @@ public class Dimension2D implements HasDimension {
 	public double getWidth() {
 		return width;
 		}
+	
 	@Override
 	public double getHeight() {
 		return height;
