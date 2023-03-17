@@ -9,7 +9,7 @@ public class Dimension2D implements HasDimension {
 	public Dimension2D(final Dimension d) {
 		this(d.getWidth(),d.getHeight());
 		}
-	public Dimension2D(final Dimension2D d) {
+	public Dimension2D(final HasDimension d) {
 		this(d.getWidth(),d.getHeight());
 		}
 	

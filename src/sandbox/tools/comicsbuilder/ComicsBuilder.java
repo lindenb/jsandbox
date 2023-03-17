@@ -334,52 +334,11 @@ public class ComicsBuilder extends Launcher {
 			}
 		}
 	
-	private class Text extends AbstractPageComponent {
-		Text(Page page,Element root) {
-			super(page,root);
-			}
-		}
-	
-	private static interface HasDimension {
-		public double getWidth();
-		public double getHeight();
-		}
-	private static interface HasRectangularShape extends HasDimension {
-		public double getX();
-		public double getY();
-		}
-	
+
 	private static class GoogleFont {
 		/** source uri */
 		private String url;
 		
-		}
-	
-	private static class RemoteImage extends AbstractNode implements HasDimension {
-		RemoteImage(Element e) {
-			super(e);
-			}
-		
-		@Override
-		public double getWidth() {
-			return getAttributeAsDouble("width");
-			}
-		@Override
-		public double getHeight() {
-			return getAttributeAsDouble("height");
-			}
-		
-		public String getSrc() {
-			return getAttribute("src");
-			}
-		void save(XMLStreamWriter out) throws XMLStreamException {
-			out.writeStartElement("image");
-			out.writeAttribute("src",getSrc());
-			out.writeAttribute("width",String.valueOf(getWidth()));
-			out.writeAttribute("height",String.valueOf(getHeight()));
-			
-			out.writeEndElement();
-			}
 		}
 	
 	
@@ -432,25 +391,7 @@ public class ComicsBuilder extends Launcher {
 			out.writeEndElement();
 			}
 		}
-	
-	private static class ClippedImage implements HasDimension {
-		public RemoteImage delegate;
-		private Polygon polygon;
 
-		@Override
-		public double getWidth() {
-			return polygon.getWidth();
-			}
-		@Override
-		public double getHeight() {
-			return polygon.getHeight();
-			}
-		void save(XMLStreamWriter out) throws XMLStreamException {
-			out.writeStartElement("clipped-image");
-			out.writeEndElement();
-			}
-		}
-	
 
 	private static class PanelLayout implements HasRectangularShape {
 		private PageLayout owner;
@@ -648,20 +589,6 @@ public class ComicsBuilder extends Launcher {
 			}
 		}
 
-	private static boolean notElement(Node n) {
-		switch(n.getNodeType()) {
-			case Node.COMMENT_NODE: return true;
-			case Node.CDATA_SECTION_NODE:
-			case Node.TEXT_NODE:
-				{
-				String s=CharacterData.class.cast(n).getData();
-				if(StringUtils.isBlank(s)) return true;
-				throw new IllegalArgumentException("found non blank node "+XmlUtils.getNodePath(n));
-				}
-			case Node.ELEMENT_NODE: return false;
-			default: throw new IllegalArgumentException("cannot handle node "+XmlUtils.getNodePath(n));
-			}
-		}
 	
 	
 	public static void main(String[] args) {
