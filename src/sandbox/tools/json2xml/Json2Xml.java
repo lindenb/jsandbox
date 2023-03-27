@@ -159,7 +159,7 @@ public final class Json2Xml extends Launcher {
 		try {
 			Reader r = null;
 			JsonReader jr=null;
-			String input = super.oneAndOnlyOneFile(args);
+			final String input = super.oneFileOrNull(args);
 			if(input==null)
 				{
 				r = new InputStreamReader(System.in);

@@ -2,8 +2,12 @@ package sandbox;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.GZIPOutputStream;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -62,6 +66,13 @@ public abstract class Launcher
 		}
 	}	
 
+	
+	protected OutputStream openPathAsOuputStream(final Path path) throws IOException {
+		if( path==null) return System.out;
+		OutputStream os = Files.newOutputStream(path);
+		if(path.getFileName().toString().toLowerCase().endsWith(".gz")) os=new GZIPOutputStream(os);
+		return os;
+		}
 	
 	protected BufferedReader  openBufferedReader(final List<String> args) throws IOException {
 		return openBufferedReader(oneFileOrNull(args));

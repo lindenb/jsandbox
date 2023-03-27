@@ -30,6 +30,10 @@ public class Pages extends AbstractNode {
 			if(E1.getLocalName().equals("page")) {
 				this.pages.add(new Page(this, E1));
 				}
+			else
+				{
+				throw new XMLException(E1,"unknown element");
+				}
 			}
 		}
 	
@@ -48,5 +52,7 @@ public class Pages extends AbstractNode {
 			}
 		throw new XMLException(getElement(),"missing @height");
 		}
-	
+	public List<Page> getPages() {
+		return pages;
+		}
 	}

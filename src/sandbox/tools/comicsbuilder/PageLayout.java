@@ -14,7 +14,7 @@ import sandbox.xml.XmlUtils;
 public class PageLayout extends AbstractNode implements HasDimension {
 	private final List<PaneLayout> panes = new ArrayList<>();
 	private final ComicsBuilder owner;
-	PageLayout(ComicsBuilder owner,final Element root) {
+	PageLayout(final ComicsBuilder owner,final Element root) {
 		super(root);
 		this.owner = owner;
 		for(Node n1=root.getFirstChild();n1!=null;n1=n1.getNextSibling()) {
@@ -25,7 +25,7 @@ public class PageLayout extends AbstractNode implements HasDimension {
 				}
 			else
 				{
-				
+				throw new XMLException(e1,"not handled");
 				}
 			}
 		if(panes.isEmpty()) throw new XMLException(root,"No pane defined");

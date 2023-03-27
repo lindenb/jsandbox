@@ -1,4 +1,4 @@
-package sandbox.feed;
+package sandbox.tools.feed;
 
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -32,6 +32,8 @@ import com.beust.jcommander.Parameter;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.date.DateParser;
+import sandbox.feed.Atom;
+import sandbox.feed.RssToAtom;
 import sandbox.io.IOUtils;
 import sandbox.jcommander.DurationConverter;
 import sandbox.jcommander.NoSplitter;
@@ -101,6 +103,11 @@ public class AtomMerger extends Launcher
 		{
 		final Element root= dom.getDocumentElement();
 		return root!=null && root.getLocalName().equals("feed") && root.getNamespaceURI().equals(Atom.NS);
+		}
+	private static boolean isRss(final Document dom)
+		{
+		final Element root= dom.getDocumentElement();
+		return root!=null && root.getNodeName().equals("rss");
 		}
 
 	private static String getId(final Element root)
@@ -173,6 +180,11 @@ public class AtomMerger extends Launcher
 						{
 						}
 					if(dom==null) continue;
+					
+					if(isRss(dom)) {
+						dom = new RssToAtom().apply(dom);
+						if(dom==null) continue;
+						}
 					
 					if(!isAtom(dom))
 						{

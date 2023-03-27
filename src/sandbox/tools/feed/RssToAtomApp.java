@@ -1,12 +1,16 @@
 package sandbox.tools.feed;
 
 import java.io.File;
+import java.io.OutputStream;
+import java.nio.file.Path;
 import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.Document;
+
+import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
@@ -17,6 +21,8 @@ public class RssToAtomApp extends Launcher
 	{
 	private static final Logger LOG=Logger.builder(RssToAtomApp.class).build();
 	
+	@Parameter(names= {"-o","--out"},description = "ouput file or stdout")
+	private Path outputFile = null;
 	
 	@Override
 	public int doWork(final List<String> args)
@@ -36,15 +42,17 @@ public class RssToAtomApp extends Launcher
 				{
 				rss = db.parse(new File(input));
 				}
-		    new XMLSerializer().serialize(
-		    		new sandbox.feed.RssToAtom().apply(rss),
-		    		System.out
-		    		);
+			try(OutputStream out = super.openPathAsOuputStream(this.outputFile)) {
+			    new XMLSerializer().serialize(
+			    		new sandbox.feed.RssToAtom().apply(rss),
+			    		out
+			    		);
+				out.flush();
+				}
 		    return 0;
 			}
-		catch(final Exception err)
+		catch(final Throwable err)
 			{
-			err.printStackTrace();
 			LOG.error(err);
 			return -1;
 			}

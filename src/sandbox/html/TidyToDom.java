@@ -1,6 +1,7 @@
 package sandbox.html;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringReader;
 
@@ -19,6 +20,7 @@ import org.w3c.dom.Text;
 import org.w3c.tidy.Tidy;
 
 import sandbox.Logger;
+import sandbox.io.NullWriter;
 
 
 public class TidyToDom {
@@ -28,7 +30,7 @@ public class TidyToDom {
 	public TidyToDom() {
 		this.tidy = new Tidy();
 		this.tidy.setXmlOut(true);
-		this.tidy.setErrout(null);
+		this.tidy.setErrout( new PrintWriter(new NullWriter()));
 		this.tidy.setShowErrors(0);
 		this.tidy.setShowWarnings(false);
 		}
@@ -38,7 +40,7 @@ public class TidyToDom {
 			final DocumentBuilder db = dbf.newDocumentBuilder();
 			return importString(s,db.newDocument());
 			}
-		catch(Throwable err) {
+		catch(final Throwable err) {
 			LOG.error(err);
 			return null;
 			}
@@ -55,7 +57,7 @@ public class TidyToDom {
 			final Document tmpDom = tidy.parseDOM(sr, null);
 			final Element root = tmpDom==null?null:tmpDom.getDocumentElement();
 			Node html = null;
-			for(Node c=root.getFirstChild();
+			for(Node c=(root==null?null:root.getFirstChild());
 				c!=null;
 				c=c.getNextSibling())
 				{
@@ -65,7 +67,6 @@ public class TidyToDom {
 					break;
 					}
 				}
-		
 			for(Node c=html==null?null:html.getFirstChild();
 					c!=null;
 					c=c.getNextSibling())
@@ -74,9 +75,8 @@ public class TidyToDom {
 				if(c2!=null) df.appendChild(c2);
 				}
 			}
-		catch(final Exception err)
-			{
-			
+		catch(final Throwable err) {
+			LOG.info(err);
 			}
 		finally
 			{

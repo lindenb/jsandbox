@@ -18,7 +18,7 @@
  * Execution:
  * 		 java -jar dist/images2base64.jar -w 400 images*.png > file.html
  */
-package sandbox;
+package sandbox.tools.img2base64;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -32,6 +32,9 @@ import javax.imageio.ImageIO;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamWriter;
 import com.beust.jcommander.Parameter;
+
+import sandbox.Launcher;
+import sandbox.Logger;
 
 
 /**
@@ -47,15 +50,15 @@ public class ImagesToBase64 extends Launcher
 	private int width=-1;
 
 	@Override
-	public int doWork(List<String> args) {
+	public int doWork(final List<String> args) {
 		try
 			{
-			XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
-			XMLStreamWriter w= xmlfactory.createXMLStreamWriter(System.out,"UTF-8");
+			final XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
+			final XMLStreamWriter w= xmlfactory.createXMLStreamWriter(System.out,"UTF-8");
 			w.writeStartDocument("UTF-8","1.0");
 			w.writeStartElement("html");
 			w.writeStartElement("body");
-			 w.writeCharacters("\n");
+			w.writeCharacters("\n");
 			w.writeStartElement("div");
 			                      
             for(String filename:args)
@@ -71,19 +74,19 @@ public class ImagesToBase64 extends Launcher
                     	}
                     else
                     	{
-                    	File f=new File(filename);
+                    	final File f=new File(filename);
                     	img=ImageIO.read(f);
                     	filename=f.getName();
                     	}
                   	if(width!=-1 && img.getWidth()>width)
                     	{
                     	double ratio=((double)width/(double)img.getWidth());
-                    	BufferedImage img2=new BufferedImage(
+                    	final BufferedImage img2=new BufferedImage(
                     			width,
                     			(int)(img.getHeight()*ratio),
                     			BufferedImage.TYPE_INT_RGB
                     			);
-                    	Graphics2D g=(Graphics2D)img2.getGraphics();
+                    	final Graphics2D g=(Graphics2D)img2.getGraphics();
                     	g.drawImage(img,0,0,img2.getWidth(),img2.getHeight(),null);
                     	g.dispose();
                     	img=img2;
