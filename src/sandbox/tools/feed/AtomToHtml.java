@@ -63,6 +63,22 @@ public class AtomToHtml extends Launcher {
 	private final Set<String> imgSrcSet = new HashSet<>();
 	private final Set<String> excludeUsers = new HashSet<>();
 	
+	
+	private String findImageInHtml(Node root) {
+		if(root==null) return null;
+		for(Node c1= root.getFirstChild();c1!=null;c1=c1.getNextSibling()) {
+			if(c1.getNodeType()==Node.ELEMENT_NODE) {
+				final Element e1 = Element.class.cast(c1);
+				if(e1.getNodeName().equals("img") && e1.hasAttribute("src")) {
+					return e1.getAttribute("src");
+					}
+				}
+			String s = findImageInHtml(c1);
+			if(s!=null) return s;
+			}
+		return null;
+		}
+	
 	private Node parseEntry(Node root,final CloseableHttpClient client) {
 		String title = null;
 		String updated = null;
@@ -70,12 +86,26 @@ public class AtomToHtml extends Launcher {
 		String img = null;
 		String categoryLabel=null;
 		String userName =null;
+		String license = null;
 		for(Node c1= root.getFirstChild();c1!=null;c1=c1.getNextSibling()) {
 			if(c1.getNodeType()!=Node.ELEMENT_NODE) continue;
 			final Element e1 = Element.class.cast(c1);
 			final String localName1= e1.getLocalName();
-			if(localName1.equals("link") && e1.hasAttribute("href")) {
+			if(localName1.equals("link") && e1.hasAttribute("href") &&
+				!e1.getAttribute("rel").equals("enclosure") && 
+				!e1.getAttribute("rel").equals("license") && 
+				!e1.getAttribute("type").startsWith("image/")) {
 				url = e1.getAttribute("href");
+				}
+			else if(localName1.equals("link") && e1.hasAttribute("href") && 
+					e1.getAttribute("rel").equals("enclosure") && 
+					e1.getAttribute("type").startsWith("image/")) {
+				img = e1.getAttribute("href");
+				}
+			else if(localName1.equals("link") &&
+					e1.hasAttribute("href") && 
+					e1.getAttribute("rel").equals("license") ) {
+				license = e1.getAttribute("href");
 				}
 			else if(localName1.equals("updated")) {
 				updated = e1.getTextContent();
@@ -101,6 +131,20 @@ public class AtomToHtml extends Launcher {
 					}
 				}
 			}
+		
+		if(img==null) {
+			for(Node c1= root.getFirstChild();c1!=null;c1=c1.getNextSibling()) {
+				if(c1.getNodeType()!=Node.ELEMENT_NODE) continue;
+				final Element e1 = Element.class.cast(c1);
+				
+				final String localName1= e1.getLocalName();
+				if(!localName1.equals("content")) continue;
+				if(!e1.getAttribute("type").equals("html")) continue;
+				final Node frag=new sandbox.html.TidyToDom().importString(e1.getTextContent(),root.getOwnerDocument());
+				img = findImageInHtml(frag);
+				}
+			}
+				
 		if(userName!=null && this.excludeUsers.contains(userName)) {
 			return null;
 			}
@@ -129,7 +173,9 @@ public class AtomToHtml extends Launcher {
 		if(no_gif && (img.endsWith(".gif") || img.contains(".gif?"))) {
 			return null;
 		}
-		
+		if(!StringUtils.isBlank(title) && !StringUtils.isBlank(license)) {
+			title = title+" "+license;
+		}
 		
 		if(this.imgSrcSet.contains(img)) return null;
 		this.imgSrcSet.add(img);
@@ -222,7 +268,7 @@ public class AtomToHtml extends Launcher {
 				title = e1.getTextContent();
 				}
 			else if(e1.getLocalName().equals("entry")) {
-				Node entryE = parseEntry(e1,client);
+				final Node entryE = parseEntry(e1,client);
 				if(entryE!=null) {
 					entries.add(entryE);
 					}
