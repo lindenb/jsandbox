@@ -278,6 +278,7 @@ $(eval $(call compile,chalkboard,sandbox.tools.chalkboard.ChalkBoard,${jcommande
 $(eval $(call compile,donotuseexcel,sandbox.tools.donotuseexcel.DoNotUseExcel,${jcommander.jar} ${apache.poi.jar}))
 $(eval $(call compile,mastodongraph,sandbox.tools.mastodongraph.MastodonGraph,${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,swap2bits,sandbox.tools.swap2bits.SwapTwoBits,${jcommander.jar}))
+$(eval $(call compile,biostarsblame,sandbox.tools.biostars.BiostarsBlame,${jcommander.jar} ${apache.httpclient.jars} ${jtidy.jars}))
 $(eval $(call compile,test,sandbox.tools.xml2ppt.XmlToPPT,${jcommander.jar} ${apache.poi.jar}))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

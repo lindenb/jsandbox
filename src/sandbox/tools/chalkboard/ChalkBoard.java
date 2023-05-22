@@ -28,7 +28,6 @@ import java.io.PrintWriter;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.swing.AbstractAction;

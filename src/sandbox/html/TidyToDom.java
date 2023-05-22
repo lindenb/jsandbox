@@ -98,19 +98,19 @@ public class TidyToDom {
 			{
 			case Node.COMMENT_NODE:
 				{
-				final String text = Comment.class.cast(n).getTextContent();
+				final String text = Comment.class.cast(n).getData();
 				if(text!=null) return owner.createComment(text);
 				return null;
 				}
 			case Node.TEXT_NODE:
 				{
-				final String text = Text.class.cast(n).getTextContent();
+				final String text = Text.class.cast(n).getData();
 				if(text!=null) return owner.createTextNode(text);
 				return null;
 				}
 			case Node.CDATA_SECTION_NODE:
 				{
-				final String text = CDATASection.class.cast(n).getTextContent();
+				final String text = CDATASection.class.cast(n).getData();
 				if(text!=null) return owner.createTextNode(text);
 				return null;
 				}

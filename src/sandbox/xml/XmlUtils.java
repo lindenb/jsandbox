@@ -1,5 +1,8 @@
 package sandbox.xml;
 
+import java.io.OutputStream;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -13,6 +16,12 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
+import javax.xml.transform.Result;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.CharacterData;
 import org.w3c.dom.DOMException;
@@ -69,6 +78,14 @@ public static boolean isA(final Node n, String ns, String localName) {
 	if(!localName.equals(e.getLocalName())) return false;
 	return true;
 	}
+
+public static boolean isA(final Node n, final String nodeName) {
+	if(!isElement.test(n)) return false;
+	final Element e= Element.class.cast(n);
+	if(!nodeName.equals(e.getNodeName())) return false;
+	return true;
+	}
+
 
 public static Stream<Node> stream(final Node root) {
 return children(root).stream();
@@ -157,5 +174,31 @@ public static boolean isNotElement(final Node n) {
 		}
 	}
 
+/** write to Result */
+public static void write(final Node n,Result out) {
+	try {
+		TransformerFactory trf = TransformerFactory.newInstance();
+		Transformer tr= trf.newTransformer();
+		tr.transform(new DOMSource(n),out);
+		}
+	catch(Throwable err ) {
+		throw new RuntimeException(err);
+		}
+	}
 
+/** write do to writer */
+public static void write(final Node n,OutputStream out) {
+	write(n,new StreamResult(out));
+	}
+/** write do to writer */
+public static void write(final Node n,Writer out) {
+	write(n,new StreamResult(out));
+	}
+
+/** convert DOM to string */
+public static String toString(final Node n) {
+	final StringWriter strw = new StringWriter();
+	write(n,strw);
+	return strw.toString();
+	}
 }
