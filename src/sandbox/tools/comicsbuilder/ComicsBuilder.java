@@ -47,6 +47,7 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
+import sandbox.StringUtils;
 import sandbox.svg.SVG;
 import sandbox.xml.DefaultNamespaceContext;
 import sandbox.xml.XMLException;
@@ -59,9 +60,13 @@ public class ComicsBuilder extends Launcher {
 	
 	@Parameter(names = "-o",description = "output directory")
 	private File outDir=null;
+	private Path layoutDir;
 	private final XPath xpath;
 	private final Map<String,Element> id2node = new HashMap<>();
-	private final Map<String,PageLayout> id2layout = new HashMap<>();
+	private final Map<String,Document> id2layout = new HashMap<>();
+	private static int ID_GENERATOR = 0;
+	
+	
 	
 	ComicsBuilder() {
 		final XPathFactory xpf = XPathFactory.newInstance();
@@ -73,47 +78,53 @@ public class ComicsBuilder extends Launcher {
 		}
 	
 	
+	
 	private void createDefaultLayouts(Document dom) {
-		createKirbyLayout(dom, "3p1","0,0,1,1 0,1,1,1 0,2,1,1");
-		createKirbyLayout(dom, "3p2","0,0,2,1 0,1,1,2 1,1,1,2");
-		createKirbyLayout(dom, "3p3","0,0,1,2 1,0,1,1 1,1,1,1");
-		createKirbyLayout(dom, "3p4","0,0,1,1 1,0,1,1 0,1,2,2");
+		createKirbyLayout("3p1","0,0,1,1 0,1,1,1 0,2,1,1");
+		createKirbyLayout("3p2","0,0,2,1 0,1,1,2 1,1,1,2");
+		createKirbyLayout("3p3","0,0,1,2 1,0,1,1 1,1,1,1");
+		createKirbyLayout("3p4","0,0,1,1 1,0,1,1 0,1,2,2");
 		
-		createKirbyLayout(dom, "4p1","0,0,1,1 0,1,1,1 0,2,1,1 0,3,1,1");
-		createKirbyLayout(dom, "4p2","0,0,2,1 0,1,1,1 1,1,1,1 0,2,2,1");
-		createKirbyLayout(dom, "4p3","0,0,1,1 1,0,1,1 0,1,1,1 1,1,1,1");
-		createKirbyLayout(dom, "4p4","0,0,1,1 1,0,1,1 0,1,1,2 1,1,1,2");
-		createKirbyLayout(dom, "4p5","0,0,1,3 1,0,1,1 1,1,1,1 1,2,1,1");
-		createKirbyLayout(dom, "4p6","0,0,1,2 1,0,1,2 2,0,1,2 0,2,3,1");
+		createKirbyLayout("4p1","0,0,1,1 0,1,1,1 0,2,1,1 0,3,1,1");
+		createKirbyLayout("4p2","0,0,2,1 0,1,1,1 1,1,1,1 0,2,2,1");
+		createKirbyLayout("4p3","0,0,1,1 1,0,1,1 0,1,1,1 1,1,1,1");
+		createKirbyLayout("4p4","0,0,1,1 1,0,1,1 0,1,1,2 1,1,1,2");
+		createKirbyLayout("4p5","0,0,1,3 1,0,1,1 1,1,1,1 1,2,1,1");
+		createKirbyLayout("4p6","0,0,1,2 1,0,1,2 2,0,1,2 0,2,3,1");
 		
-		createKirbyLayout(dom, "5p1","0,0,2,1 0,1,1,1 1,1,1,1 0,2,1,1 1,2,1,1");
-		createKirbyLayout(dom, "5p2","0,0,1,1 1,0,1,1 0,1,1,1 1,1,1,1 0,2,2,1");
-		createKirbyLayout(dom, "5p3","0,0,1,1 1,0,1,1 2,0,1,1 0,1,3,1 0,2,3,1");
-		createKirbyLayout(dom, "5p4","0,0,2,1 2,0,2,1 4,0,2,1 0,1,3,2 3,1,3,2");
-		createKirbyLayout(dom, "5p5","0,0,3,1 0,1,1,1 1,1,1,1 2,1,1,1 0,2,3,1");
+		createKirbyLayout("5p1","0,0,2,1 0,1,1,1 1,1,1,1 0,2,1,1 1,2,1,1");
+		createKirbyLayout("5p2","0,0,1,1 1,0,1,1 0,1,1,1 1,1,1,1 0,2,2,1");
+		createKirbyLayout("5p3","0,0,1,1 1,0,1,1 2,0,1,1 0,1,3,1 0,2,3,1");
+		createKirbyLayout("5p4","0,0,2,1 2,0,2,1 4,0,2,1 0,1,3,2 3,1,3,2");
+		createKirbyLayout("5p5","0,0,3,1 0,1,1,1 1,1,1,1 2,1,1,1 0,2,3,1");
 		
-		createKirbyLayout(dom, "6p1","0,0,1,1 1,0,1,1 0,1,1,1 1,1,1,1 0,2,1,1 1,2,1,1");
-		createKirbyLayout(dom, "6p2","0,0,1,1 1,0,1,1 2,0,1,1 0,1,1,2 1,1,2,1 1,2,2,1");
+		createKirbyLayout("6p1","0,0,1,1 1,0,1,1 0,1,1,1 1,1,1,1 0,2,1,1 1,2,1,1");
+		createKirbyLayout("6p2","0,0,1,1 1,0,1,1 2,0,1,1 0,1,1,2 1,1,2,1 1,2,2,1");
 
-		createKirbyLayout(dom, "7p1","0,0,3,1 3,0,3,1 0,1,2,1 2,1,2,1 4,1,2,1 0,2,3,1 3,2,3,1");
+		createKirbyLayout("7p1","0,0,3,1 3,0,3,1 0,1,2,1 2,1,2,1 4,1,2,1 0,2,3,1 3,2,3,1");
 		
-		createKirbyLayout(dom, "8p1","0,0,1,1 1,0,1,1 0,1,1,1 1,1,1,1 0,2,1,1 1,2,1,1 0,3,1,1 1,3,1,1");
-		createKirbyLayout(dom, "9p1","0,0,1,1 1,0,1,1 2,0,1,1 0,1,1,1 1,1,1,1 2,1,1,1 0,2,1,1 1,2,1,1 2,2,1,1");
+		createKirbyLayout("8p1","0,0,1,1 1,0,1,1 0,1,1,1 1,1,1,1 0,2,1,1 1,2,1,1 0,3,1,1 1,3,1,1");
+		createKirbyLayout("9p1","0,0,1,1 1,0,1,1 2,0,1,1 0,1,1,1 1,1,1,1 2,1,1,1 0,2,1,1 1,2,1,1 2,2,1,1");
 	}
 	
 	
 	private void createKirbyLayout(
-			final Document dom,
 			final String name,
 			final String def
 			)
 		{
 		final int A4_width = 2480;
 		final int A4_height = 3508;
-		final Element root = dom.createElement("layout");
+		final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		dbf.setNamespaceAware(true);
+		final Document dom = dbf.newDocumentBuilder().newDocument();
+		final Element root = dom.createElementNS(SVG.NS,"svg:svg");
 		root.setAttribute("id", name);
 		root.setAttribute("width",String.valueOf(A4_width));
 		root.setAttribute("height",String.valueOf(A4_height));
+		final Element groot = dom.createElementNS(SVG.NS,"g");
+		root.appendChild(groot);
+		
 		
 		final String[] tokens = def.split("[ ]");
 		double maxx=0.0;
@@ -127,19 +138,18 @@ public class ComicsBuilder extends Launcher {
 		
 		for(int i=0;i< tokens.length;i++) {
 			final String[] tokens2 =  tokens[i].split("[,]");
-			final Element E2 = dom.createElement("pane");
-			root.appendChild(E2);
+			final Element E2 =dom.createElementNS(SVG.NS,"svg:rect");
+			groot.appendChild(E2);
 			E2.setAttribute("id",name+"."+(1+i));
 			E2.setAttribute("x", String.valueOf(A4_width  * Double.parseDouble(tokens2[0])/maxx));
 			E2.setAttribute("y", String.valueOf(A4_height  * Double.parseDouble(tokens2[1])/maxy));
 			E2.setAttribute("width", String.valueOf(A4_width  * Double.parseDouble(tokens2[2])/maxx));
 			E2.setAttribute("height", String.valueOf(A4_height  * Double.parseDouble(tokens2[3])/maxy));
 			}
-		final PageLayout layout = new PageLayout(this,root);
-		if(id2layout.containsKey(layout.getId())) {
-			throw new XMLException(root, "duplicate layout id "+layout.getId());
+		if(id2layout.containsKey(name)) {
+			throw new XMLException(root, "duplicate layout id "+name);
 			}
-		this.id2layout.put(layout.getId(), layout);
+		this.id2layout.put(name, dom);
 		}
 	
 	@Override
@@ -162,30 +172,47 @@ public class ComicsBuilder extends Launcher {
 				throw new XMLException(root,"Cannot find /svg:svg/svg:g");
 				}
 			
-			if(this.xpath.evaluate("/svg:svg/svg:defs", dom,XPathConstants.NODE)==null) {
-				root.appendChild(dom.createElementNS(SVG.NS, "svg:defs"));
-			}
 			
 			if(gList.getLength()>1) {
 				throw new XMLException(root,"multiple /svg:svg/svg:g");
 				}
 			final Element gRoot =(Element)gList.item(0);
-			NodeList pagesList =(NodeList)this.xpath.evaluate("c:page", gRoot, XPathConstants.NODESET);
-			if(pagesList.getLength()==0) {
+			final List<Element> pagesList = XmlUtils.asList(Element.class,(NodeList)this.xpath.evaluate("c:page", gRoot, XPathConstants.NODESET));
+			if(pagesList.isEmpty()) {
 				LOG.warning("no <c:page> under /svg/g");
 				}
 			// remove all child from parents
-			for(int i=0; i< pagesList.getLength();i++) {
-				gRoot.removeChild(pagesList.item(i));
+			for(Element E: pagesList) {
+				gRoot.removeChild(E);
 				}
 			
+			
 			// process each page
-			for(int i=0; i< pagesList.getLength();i++) {
+			for(int i=0; i< pagesList.size();i++) {
+				final Element page = pagesList.get(i);
 				String title = "page"+(i+1);
-				Element page = (Element)pagesList.item(i);
 				
+				// get Layout for this page
+				Attr att=page.getAttributeNode("layout-id");
+				if(att==null) throw new XMLException(page,"missing layout-id");
+				final String layoutId = att.getValue();
+				if(StringUtils.isBlank(layoutId)) throw new XMLException(page,"empty layout-id");
+				final Document pageLayout= this.id2layout.get(layoutId);
+				if(pageLayout==null) throw new XMLException(page,"cannot find layout-id="+layoutId);
+				final List<Element> panelRects = XmlUtils.asList(Element.class,
+						(NodeList)this.xpath.evaluate("/svg:svg/svg:g/svg:rect",
+								pageLayout,
+								XPathConstants.NODESET)
+						);
 				
-				
+				// <defs> for this pages
+				final Element defs = dom.createElementNS(SVG.NS, "defs");
+				gRoot.appendChild(defs);
+				for(Element E1 :panelRects) {
+					Element E = (Element)dom.importNode(E1, true);
+					E.setAttribute("id", String.valueOf(++ID_GENERATOR));
+					defs.appendChild(E);
+				}
 				
 				//clean up root
 				while(gRoot.hasChildNodes()) {

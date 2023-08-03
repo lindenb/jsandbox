@@ -3,19 +3,16 @@ package sandbox.xml;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.Spliterator;
-import java.util.Spliterators;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import javax.xml.transform.Result;
 import javax.xml.transform.Transformer;
@@ -30,7 +27,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import sandbox.StringUtils;
-import sandbox.iterator.AbstractIterator;
 
 
 public class XmlUtils {
@@ -131,21 +127,7 @@ return children(root).stream().
 		;
 	}
 public static Stream<Node> stream(final NodeList nl) {
-	final Iterator<Node> iter = new AbstractIterator<Node>() {
-		int i=0;
-		@Override
-		protected Node advance() {
-			if(nl==null || i>=nl.getLength()) return null;
-			final Node ret = nl.item(i);
-			i++;
-			return ret;
-			}
-		};
-	
-	return StreamSupport.stream(
-			Spliterators.spliteratorUnknownSize(iter, Spliterator.ORDERED),
-			false
-			);
+	return asList(nl).stream();
 	}		
 /** returns human XPATH-like path for this node 
  * @param node the node
@@ -177,11 +159,11 @@ public static boolean isNotElement(final Node n) {
 /** write to Result */
 public static void write(final Node n,Result out) {
 	try {
-		TransformerFactory trf = TransformerFactory.newInstance();
-		Transformer tr= trf.newTransformer();
+		final TransformerFactory trf = TransformerFactory.newInstance();
+		final Transformer tr= trf.newTransformer();
 		tr.transform(new DOMSource(n),out);
 		}
-	catch(Throwable err ) {
+	catch(final Throwable err ) {
 		throw new RuntimeException(err);
 		}
 	}
@@ -201,4 +183,24 @@ public static String toString(final Node n) {
 	write(n,strw);
 	return strw.toString();
 	}
+
+/** convert NodeList to java.util.List */
+public static List<Node> asList(final NodeList L) {
+	return asList(Node.class,L);
+	}
+
+/** convert NodeList to java.util.List */
+public static <T extends Node> List<T> asList(final Class<T> clazz,final NodeList L) {
+	return new AbstractList<T>() {
+		@Override
+		public T get(int idx) {
+			return clazz.cast(L.item(idx));
+			}
+		@Override
+		public int size() {
+			return L.getLength();
+			}
+		};
+	}
+
 }

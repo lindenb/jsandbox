@@ -51,6 +51,9 @@ public class FindDuplicateFiles extends Launcher{
 	private String extensions_str="";
 	@Parameter(names= {"-t","--threads"},description="Number of threads.")
 	private int num_threads = 1;
+	@Parameter(names= {"--too-many"},description="Ignore if there is more than 'x' files with the same size. probably a common file/format generated at multiple places . -1 == ignore")
+	private int too_many_treshold = -1;
+
 
 	private final Set<String> extensions = new HashSet<>();
 	private enum CompareResult { not_same,suspected,same};
@@ -90,12 +93,17 @@ private static class FileSize {
 	
 	}
 //https://stackoverflow.com/questions/22818590
-private CompareResult areSameBinary(Path f1,Path f2) throws IOException {
+private CompareResult areSameBinary(Path f1,Path f2, final long length) throws IOException {
+	
 	int buffer = this.buff_size;
 	if(fast_size>0 && this.fast_size< (long)this.buff_size) {
 		buffer = (int)this.fast_size;
 	}
-	
+	System.err.print(String.valueOf(f1));
+	System.err.print(" ");
+	System.err.print(String.valueOf(f2));
+	System.err.print(" ");
+	System.err.println(length);
 	 try(   InputStream in1 =new BufferedInputStream(Files.newInputStream(f1),buffer);
 			InputStream in2 =new BufferedInputStream(Files.newInputStream(f2),buffer);
 			 ){
@@ -178,8 +186,8 @@ public int doWork(final List<String> args) {
 				setMaxRecordsInRam(max_records_in_ram).
 				setDebug(true).
 				setEntryReader(IS->{
-					long l= IS.readLong();
-					String p = IS.readUTF();
+					final long l= IS.readLong();
+					final String p = IS.readUTF();
 					return new FileSize(p,l);
 				}).
 				setEntryWriter((OS,E)->{
@@ -199,7 +207,7 @@ public int doWork(final List<String> args) {
 		while(itereq.hasNext()) {
 			final List<FileSize> row= new ArrayList<>(itereq.next());
 			if(row.size()==1) continue;
-			
+			if(this.too_many_treshold>0 && row.size()> this.too_many_treshold) continue;
 			
 			for(int x=0;x+1< row.size();++x) {
 				
@@ -215,7 +223,7 @@ public int doWork(final List<String> args) {
 					
 					final Runnable runner =()->{
 						try  {
-						final CompareResult cmp = areSameBinary(p1, p2);
+						final CompareResult cmp = areSameBinary(p1, p2, length);
 						if(cmp.equals(CompareResult.not_same)) return;
 						
 						final StringBuilder sb=new StringBuilder();
