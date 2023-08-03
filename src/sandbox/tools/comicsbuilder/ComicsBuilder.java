@@ -14,6 +14,7 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,34 +24,53 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.xml.namespace.NamespaceContext;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
 
 import org.w3c.dom.Attr;
 import org.w3c.dom.CharacterData;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
+import sandbox.svg.SVG;
+import sandbox.xml.DefaultNamespaceContext;
 import sandbox.xml.XMLException;
 import sandbox.xml.XmlUtils;
 
 public class ComicsBuilder extends Launcher {
+	
 	private static final Logger LOG = Logger.builder(ComicsBuilder.class).build();
+	private static final String NS="uri:comics";
+	
 	@Parameter(names = "-o",description = "output directory")
 	private File outDir=null;
-	
+	private final XPath xpath;
 	private final Map<String,Element> id2node = new HashMap<>();
 	private final Map<String,PageLayout> id2layout = new HashMap<>();
+	
+	ComicsBuilder() {
+		final XPathFactory xpf = XPathFactory.newInstance();
+		this.xpath = xpf.newXPath();
+		this.xpath.setNamespaceContext(new DefaultNamespaceContext().
+				put("c",NS).
+				put("svg", SVG.NS)
+				);
+		}
 	
 	
 	private void createDefaultLayouts(Document dom) {
@@ -137,8 +157,49 @@ public class ComicsBuilder extends Launcher {
 				LOG.error("root missing");
 				return -1;
 				}
-			if(root.getLocalName().equals("comics")) {
-				throw new XMLException(root,"Expected root to be comics but got "+root.getLocalName());
+			NodeList gList =(NodeList)this.xpath.evaluate("/svg:svg/svg:g", dom, XPathConstants.NODESET);
+			if(gList.getLength()==0) {
+				throw new XMLException(root,"Cannot find /svg:svg/svg:g");
+				}
+			
+			if(this.xpath.evaluate("/svg:svg/svg:defs", dom,XPathConstants.NODE)==null) {
+				root.appendChild(dom.createElementNS(SVG.NS, "svg:defs"));
+			}
+			
+			if(gList.getLength()>1) {
+				throw new XMLException(root,"multiple /svg:svg/svg:g");
+				}
+			final Element gRoot =(Element)gList.item(0);
+			NodeList pagesList =(NodeList)this.xpath.evaluate("c:page", gRoot, XPathConstants.NODESET);
+			if(pagesList.getLength()==0) {
+				LOG.warning("no <c:page> under /svg/g");
+				}
+			// remove all child from parents
+			for(int i=0; i< pagesList.getLength();i++) {
+				gRoot.removeChild(pagesList.item(i));
+				}
+			
+			// process each page
+			for(int i=0; i< pagesList.getLength();i++) {
+				String title = "page"+(i+1);
+				Element page = (Element)pagesList.item(i);
+				
+				
+				
+				
+				//clean up root
+				while(gRoot.hasChildNodes()) {
+					gRoot.removeChild(gRoot.getFirstChild());
+					}
+				}
+			
+			
+			
+			if(root.getLocalName().equals("svg")) {
+				throw new XMLException(root,"Expected root to be svg but got "+root.getLocalName());
+				}
+			if(SVG.NS.equals(root.getNamespaceURI())) {
+				throw new XMLException(root,"Expected xmnns to be "+SVG.NS+" but got "+root.getNamespaceURI());
 				}
 
 			createDefaultLayouts(dom);

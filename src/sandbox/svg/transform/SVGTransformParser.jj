@@ -1,0 +1,155 @@
+/**
+
+java -cp ~/package/javacc/javacc.jar javacc SVGTransformParser.jj
+
+*/
+options {
+STATIC=false;
+DEBUG_PARSER=false;
+DEBUG_TOKEN_MANAGER=false;
+LOOKAHEAD=2;
+FORCE_LA_CHECK=true;
+}
+
+
+PARSER_BEGIN(SVGTransformParser)
+package sandbox.svg.transform;
+import java.awt.geom.AffineTransform;
+
+/**
+ * Convert a SVG transform into a java.awt.geom.AffineTransform
+ *  
+ */
+@SuppressWarnings("unused")
+public class SVGTransformParser
+	{
+	private SVGTransformParser(final String s)
+		{
+		this(new java.io.StringReader(s));
+		}
+	
+	public static AffineTransform parse(final String s)
+		{
+		try
+			{
+			return new SVGTransformParser(s).transform();
+			}
+		catch(final ParseException err)
+			{
+			throw new IllegalArgumentException(err);
+			}
+		}
+	}
+PARSER_END(SVGTransformParser)
+
+TOKEN:
+	{
+	  <OPAR: "(" >
+	| <CPAR: ")" >
+	| <DOT: "." >
+	| <COMMA: "," >
+	| <PLUS: "+" >
+	| <MINUS: "-" >
+	| <#DIGIT: ["0"-"9"] >
+	| <POSITIVE_INTEGER: (<DIGIT>)+ >
+	| <SIGN: (<PLUS> | <MINUS>) >
+	| <#EXPONENT: ("E"|"e") (<SIGN>)? <POSITIVE_INTEGER> >
+	| <FLOATING_NUMBER:(<SIGN>)?
+	         ( 
+		  (<DIGIT>)* <DOT> (<DIGIT>)* (<EXPONENT>)?
+		| <POSITIVE_INTEGER> (<EXPONENT>)
+		)
+		 >
+	| <TRANSLATE: "translate">
+	| <ROTATE: "rotate">
+	| <SCALE: "scale">
+	| <SKEWX:"skewX">
+	| <SKEWY:"skewY">
+	}
+
+
+SKIP :
+	{
+	" "
+	| "\t"
+	| "\n"
+	| "\r"	}
+
+public AffineTransform transform():{AffineTransform tr=null;}
+	{
+	( tr= node() )* <EOF>
+		{
+		return tr;
+		}
+	}
+
+private AffineTransform node():{AffineTransform tr;}	
+	{
+	(tr=translate()|tr=rotate()|tr=scale()|tr=skewx()|tr=skewy()) {
+		return tr;
+		}
+	}
+
+private AffineTransform translate():{double x=0,y=0;}	
+	{
+	<TRANSLATE> <OPAR> x=number() (<COMMA> y=number())? <CPAR> {
+		return AffineTransform.getTranslateInstance(x,y);
+		}
+	}
+private AffineTransform scale():{double x=0,y=0;}	
+	{
+	<SCALE> <OPAR> x=number() (<COMMA> y=number())? <CPAR> {
+		return AffineTransform.getTranslateInstance(x,y);
+		}
+	}
+private AffineTransform rotate():{double angle=0,x=0,y=0;boolean xy=false;}	
+	{
+	<ROTATE> <OPAR> angle=number() (<COMMA> x=number() <COMMA> y=number() {xy=true;} )? <CPAR> {
+		double theta = (angle/180.0)*Math.PI;
+		if(xy) {
+			return AffineTransform.getRotateInstance(theta,x,y);
+			}
+		else
+			{
+			return AffineTransform.getRotateInstance(theta);
+			}
+		}
+	}	
+	
+private AffineTransform skewx():{double sh;}	
+	{
+	<SKEWX> <OPAR> sh=number() <CPAR> {
+		return AffineTransform.getShearInstance(sh,0f);
+		}
+	}
+private AffineTransform skewy():{double sh;}	
+	{
+	<SKEWY> <OPAR> sh=number() <CPAR> {
+		return AffineTransform.getShearInstance(0f, sh);
+		}
+	}
+	
+
+
+private double number():{double f;}
+	{
+	(f=integer()|f=floating())
+		{
+		return f;
+		}
+	}
+
+private double floating():{Token t;}
+	{
+	t=<FLOATING_NUMBER> { return Double.parseDouble(t.image);}
+	}
+
+private int integer():{int n;int sig=1;}
+	{
+	(<PLUS>{sig=1;} | <MINUS>{sig=-1;})? n=positiveInteger() { return n*sig;}
+	}
+
+private int positiveInteger():{Token t;}
+	{
+	t=<POSITIVE_INTEGER> { return Integer.parseInt(t.image);}
+	}
