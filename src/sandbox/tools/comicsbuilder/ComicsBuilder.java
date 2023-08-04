@@ -162,7 +162,7 @@ public class ComicsBuilder extends Launcher {
 			DocumentBuilder db = dbf.newDocumentBuilder();
 			
 			final Document dom= db.parse(input);
-			final Element root=dom.getDocumentElement();
+			final Element root = dom.getDocumentElement();
 			if(root==null) {
 				LOG.error("root missing");
 				return -1;
@@ -209,10 +209,21 @@ public class ComicsBuilder extends Launcher {
 				final Element defs = dom.createElementNS(SVG.NS, "defs");
 				gRoot.appendChild(defs);
 				for(Element E1 :panelRects) {
-					Element E = (Element)dom.importNode(E1, true);
+					final Element E = (Element)dom.importNode(E1, true);
 					E.setAttribute("id", String.valueOf(++ID_GENERATOR));
 					defs.appendChild(E);
 				}
+				//adjust page width
+				if(!page.hasAttribute("width")) {
+					page.setAttribute("width", this.xpath.evaluate("/svg:svg/@width",pageLayout));
+					}
+				//adjust page width
+				if(!page.hasAttribute("height")) {
+					page.setAttribute("height", this.xpath.evaluate("/svg:svg/@height",pageLayout));
+					}
+				// adjust main document width
+				root.setAttribute("width", page.getAttribute("width"));
+				root.setAttribute("height", page.getAttribute("height"));
 				
 				//clean up root
 				while(gRoot.hasChildNodes()) {

@@ -42,6 +42,8 @@ public interface SVGTransformParserConstants {
   int SKEWX = 15;
   /** RegularExpression Id. */
   int SKEWY = 16;
+  /** RegularExpression Id. */
+  int MATRIX = 17;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -65,6 +67,7 @@ public interface SVGTransformParserConstants {
     "\"scale\"",
     "\"skewX\"",
     "\"skewY\"",
+    "\"matrix\"",
     "\" \"",
     "\"\\t\"",
     "\"\\n\"",

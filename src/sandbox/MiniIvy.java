@@ -6,17 +6,14 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import javax.xml.namespace.NamespaceContext;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
@@ -29,6 +26,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+
+import sandbox.xml.DefaultNamespaceContext;
 
 public class MiniIvy extends Launcher
 	{
@@ -319,27 +318,8 @@ public class MiniIvy extends Launcher
 				}
 			
 			this.xpath = XPathFactory.newInstance().newXPath();
-			this.xpath.setNamespaceContext(new NamespaceContext() {
+			this.xpath.setNamespaceContext(new DefaultNamespaceContext().put("pom",MAVEN4_NS) );
 				
-				@Override
-				public Iterator<?> getPrefixes(String namespaceURI)
-					{
-					return Collections.singleton("pom").iterator();
-					}
-				
-				@Override
-				public String getPrefix(String namespaceURI)
-					{
-					if(namespaceURI.equals("http://maven.apache.org/POM/4.0.0")) return "pom";
-					return null;
-				}
-				
-				@Override
-				public String getNamespaceURI(String prefix) {
-					if(prefix.equals("pom")) return MAVEN4_NS;
-					return null;
-				}
-			});
 			
 			Pattern ws=Pattern.compile("[\\s]+");
 			String line;

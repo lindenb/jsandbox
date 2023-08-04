@@ -65,6 +65,8 @@ TOKEN:
 	| <SCALE: "scale">
 	| <SKEWX:"skewX">
 	| <SKEWY:"skewY">
+	| <MATRIX:"matrix">
+
 	}
 
 
@@ -85,8 +87,15 @@ public AffineTransform transform():{AffineTransform tr=null;}
 
 private AffineTransform node():{AffineTransform tr;}	
 	{
-	(tr=translate()|tr=rotate()|tr=scale()|tr=skewx()|tr=skewy()) {
+	(tr=translate()|tr=rotate()|tr=scale()|tr=skewx()|tr=skewy()|tr=matrix()) {
 		return tr;
+		}
+	}
+
+private AffineTransform matrix():{double v1,v2,v3,v4,v5,v6;}	
+	{
+	<MATRIX> <OPAR> v1=number() <COMMA> v2=number() <COMMA> v3=number()  <COMMA> v4=number()  <COMMA> v5=number()  <COMMA> v6=number() <CPAR> {
+		return new AffineTransform(v1,v2,v3,v4,v5,v6);
 		}
 	}
 

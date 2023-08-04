@@ -67,6 +67,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import sandbox.xml.DefaultNamespaceContext;
+
 /**
  * PsimiWithGephi
  */
@@ -92,30 +94,7 @@ public class PsimiWithGephi
 	
 		XPathFactory xpathFactory=XPathFactory.newInstance();
 		XPath xpath=xpathFactory.newXPath();
-		xpath.setNamespaceContext(new NamespaceContext()
-			{
-			@Override
-			public Iterator<?> getPrefixes(String namespaceURI)
-				{
-				return Arrays.asList("p").iterator();
-				}
-			
-			@Override
-			public String getPrefix(String namespaceURI)
-				{
-				if(namespaceURI.equals(PSI_NS)) return "p";
-				System.err.println("?"+namespaceURI);
-				return null;
-				}
-			
-			@Override
-			public String getNamespaceURI(String prefix)
-				{
-				if(prefix.equals("p")) return PSI_NS;
-				System.err.println("?"+prefix);
-				return null;
-				}
-			});
+		xpath.setNamespaceContext(new DefaultNamespaceContext().put("p", PSI_NS));
 		
 		
 		 //Init a project - and therefore a workspace

@@ -188,13 +188,16 @@ public class GimpPatterns extends Launcher {
 		final int height;
 		final int[] pixels;
 		
-		
-		BitMapImage(int w,int h,int...array) {
+		BitMapImage(int w, int h) {
 			this.width=w;
 			this.height=h;
-			this.pixels = Arrays.copyOf(array, array.length);
-
+			this.pixels = new int[w*h];
+			}
+		
+		BitMapImage(int w,int h,int...array) {
+			this(w,h);
 			if(array.length!=(width*height)) throw new IllegalArgumentException("bad array size");
+			System.arraycopy(array, 0, this.pixels, 0, array.length);
 			}
 		@Override
 		public String getTitle() {
@@ -212,6 +215,30 @@ public class GimpPatterns extends Launcher {
 		@Override
 		public int getPixel(int x, int y) {
 			return this.pixels[y*getWidth()+x];
+			}
+		
+		void fillRect(int x,int y,int w,int h) {
+			for(int i=0;i<w;i++) {
+				for(int j=0;j<h;j++) {
+					int x2 = (x+i)%getWidth();
+					int y2 = (y+j)%getHeight();
+					this.pixels[y2*getWidth()+x2] = 1;
+					}
+				}
+			}
+		void fillOval(int cx,int cy,int r) {
+			int x= cx-r;
+			int y= cy-r;
+			int w = r*2;
+			int h = r*2;
+			for(int i=0;i<w;i++) {
+				for(int j=0;j<h;j++) {
+					if(Math.sqrt(i*i+j*j)>r) continue;
+					int x2 = (x+i)%getWidth();
+					int y2 = (y+j)%getHeight();
+					this.pixels[y2*getWidth()+x2] = 1;
+					}
+				}
 			}
 		}
 	

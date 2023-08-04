@@ -100,6 +100,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import sandbox.xml.DefaultNamespaceContext;
+
 class RDF
 	{
 	public static final String NS="http://www.w3.org/1999/02/22-rdf-syntax-ns#";
@@ -585,51 +587,13 @@ implements OntObjectProperty
 	}
 
 
-class NamespaceContextImpl
-	implements NamespaceContext
+class NamespaceContextImpl extends DefaultNamespaceContext
 	{
-	private Map<String, String> uri2prefix=new HashMap<String, String>();
 	public NamespaceContextImpl()
 		{
-		uri2prefix.put(RDF.NS, "rdf");
-		uri2prefix.put(RDFS.NS, "rdfs");
-		}
-	
-	public Set<String> getPrefixes()
-		{
-		return new HashSet<String>(this.uri2prefix.values());
-		}
-	
-	public void setPrefixNs(String prefix,String ns)
-		{
-		String oldP=this.uri2prefix.get(ns);
-		if(oldP!=null)
-			{
-			if(oldP.equals(prefix)) return;
-			throw new IllegalArgumentException("duplicate prefix/uri "+prefix);
-			}
-		this.uri2prefix.put(ns, prefix);
-		}
-	
-	@Override
-	public String getNamespaceURI(String prefix)
-		{
-		for(String uri:this.uri2prefix.keySet())
-			{
-			if(getPrefix(uri).equals(prefix)) return uri;
-			}
-		return null;
-		}
-	@Override
-	public String getPrefix(String namespaceURI)
-		{
-		return this.uri2prefix.get(namespaceURI);
-		}
-	
-	@Override
-	public Iterator<String> getPrefixes(String namespaceURI)
-		{
-		return  this.uri2prefix.values().iterator();
+		super();
+		put(RDF.NS, "rdf");
+		put(RDFS.NS, "rdfs");
 		}
 	}
 
@@ -643,9 +607,9 @@ class OntModelImpl
 	
 	public OntModelImpl()
 		{
-		this.nsCtx.setPrefixNs("my", MY.NS);
-		this.nsCtx.setPrefixNs("owl", OWL.NS);
-		this.nsCtx.setPrefixNs("xsd", XSD.NS);
+		this.nsCtx.put("my", MY.NS);
+		this.nsCtx.put("owl", OWL.NS);
+		this.nsCtx.put("xsd", XSD.NS);
 		}
 	
 	@Override
@@ -696,7 +660,7 @@ class OntModelImpl
 			for(int i=0;i< list.getLength();++i)
 				{
 				Attr attr=(Attr)list.item(i);
-				this.nsCtx.setPrefixNs(attr.getLocalName(),attr.getValue());
+				this.nsCtx.put(attr.getLocalName(),attr.getValue());
 				}
 			list=(NodeList)xpath.evaluate("rdfs:Class[@rdf:about]",root,XPathConstants.NODESET);
 			
