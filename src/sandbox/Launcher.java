@@ -1,8 +1,11 @@
 package sandbox;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -73,6 +76,20 @@ public abstract class Launcher
 		if(path.getFileName().toString().toLowerCase().endsWith(".gz")) os=new GZIPOutputStream(os);
 		return os;
 		}
+	
+	protected PrintWriter openPathAsPrintWriter(final Path path) throws IOException {
+		if( path==null) {
+			return new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out)));
+			}
+		else if(path.getFileName().toString().toLowerCase().endsWith(".gz")) {
+			return new PrintWriter(new BufferedWriter((new OutputStreamWriter(new GZIPOutputStream(Files.newOutputStream(path))))));
+			}
+		else
+			{
+			return new PrintWriter(Files.newBufferedWriter(path));
+			}
+		}
+
 	
 	protected BufferedReader  openBufferedReader(final List<String> args) throws IOException {
 		return openBufferedReader(oneFileOrNull(args));

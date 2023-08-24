@@ -281,6 +281,7 @@ $(eval $(call compile,swap2bits,sandbox.tools.swap2bits.SwapTwoBits,${jcommander
 $(eval $(call compile,biostarsblame,sandbox.tools.biostars.BiostarsBlame,${jcommander.jar} ${apache.httpclient.jars} ${jtidy.jars}))
 $(eval $(call compile,gimppatterns,sandbox.tools.gimppat.GimpPatterns,${jcommander.jar}))
 $(eval $(call compile,test,sandbox.tools.xml2ppt.XmlToPPT,${jcommander.jar} ${apache.poi.jar}))
+$(eval $(call compile,tonic,sandbox.tools.tonic.Tonic,${jcommander.jar}))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 
