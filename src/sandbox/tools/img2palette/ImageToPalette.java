@@ -1,9 +1,12 @@
-package sandbox;
+package sandbox.tools.img2palette;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,8 +17,16 @@ import javax.imageio.ImageIO;
 
 import com.beust.jcommander.Parameter;
 
+import sandbox.Launcher;
+import sandbox.Logger;
+import sandbox.StringUtils;
+import sandbox.io.IOUtils;
+
 public class ImageToPalette extends Launcher {
 	private static final Logger LOG=Logger.builder(ImageToPalette.class).build();
+	@Parameter(names={"-o"},description=OUTPUT_OR_STANDOUT)
+	private Path output;
+
 	@Parameter(names={"-n"},description="palette size")
 	private int palette_size=16;
 	
@@ -31,10 +42,21 @@ public class ImageToPalette extends Launcher {
 	public int doWork(final List<String> args) {
 		try {
 			final String input = super.oneFileOrNull(args);
-			BufferedImage img = 
-					input==null?
-					ImageIO.read(System.in):
-					ImageIO.read(new File(input));
+			final BufferedImage img ;
+			
+			if(input==null) {
+				img = ImageIO.read(System.in);
+				} else if(IOUtils.isURL(input)) {
+					try(InputStream in = IOUtils.openStream(input)) {
+						img = ImageIO.read(in);
+					}
+				} else
+					{
+					img=	ImageIO.read(new File(input));
+					}
+			
+					
+				
 			
 			
 			
@@ -112,15 +134,24 @@ public class ImageToPalette extends Launcher {
 					}
 				colors.add(colors1.remove(x));
 				}
+			if(this.output==null) {
+				LOG.info("file should be saved as a '.gpl' file under ${HOME}/.config/GIMP/2.10/palettes/F ");
+				}
 			
-						
-			System.out.println("GIMP Palette");
-			System.out.println("Name: img2");
-			System.out.println("Columns: "+(int)Math.ceil(Math.sqrt(colors.size())));
-			System.out.println("#");
+			final String md5=StringUtils.md5(colors.stream().
+						map(C->String.valueOf(C.getRGB())).collect(Collectors.joining(";"))
+						);
 			
-			for(Color c:colors) {
-				System.out.printf("%3d %3d %3d\n",c.getRed(),c.getGreen(),c.getBlue());
+			try(PrintWriter pw=super.openPathAsPrintWriter(this.output)) {
+				pw.println("GIMP Palette");
+				pw.println("Name: " + md5.substring(0,5)+"."+this.palette_size);
+				pw.println("Columns: "+(int)Math.ceil(Math.sqrt(colors.size())));
+				pw.println("#");
+				
+				for(Color c:colors) {
+					pw.printf("%3d %3d %3d\n",c.getRed(),c.getGreen(),c.getBlue());
+					}
+				pw.flush();
 				}
 			return 0;
 			}

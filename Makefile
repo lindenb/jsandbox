@@ -23,6 +23,9 @@ $(1)  : $(addsuffix .java,$(addprefix src/,$(subst .,/,$(2)))) $(3) dist/annotpr
 	mkdir -p ${tmp.dir}/META-INF ${bin.dir}
 	#compile
 	${JAVAC} -Xlint -d ${tmp.dir} -implicit:class -processor sandbox.annotation.processing.MyProcessor -processorpath dist/annotproc.jar -g -classpath "$$(subst $$(SPACE),:,$$(filter-out dist/annotproc.jar,$$(filter %.jar,$$^)))" -sourcepath ${src.dir} $$(filter %.java,$$^)
+	# copy source
+	mkdir -p  '${tmp.dir}/$(dir $(subst .,/,$(firstword $(2))))'
+	cp -v  '$$(firstword $$(filter %.java,$$^))'  '${tmp.dir}/$(dir $(subst .,/,$(firstword $(2))))'
 	#create META-INF/MANIFEST.MF
 	echo "Manifest-Version: 1.0" > ${tmp.dir}/tmp.mf
 	echo "Main-Class: $(2)" >> ${tmp.dir}/tmp.mf
@@ -182,7 +185,10 @@ apache.poi.jar = \
 	$(lib.dir)/org/apache/xmlbeans/xmlbeans/4.0.0/xmlbeans-4.0.0.jar \
 	$(lib.dir)/org/apache/commons/commons-compress/1.20/commons-compress-1.20.jar
 
-all_maven_jars = $(sort $(apache.poi.jar) ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar})
+freemarker.jar=\
+	$(lib.dir)/org/freemarker/freemarker/2.3.32/freemarker-2.3.32.jar
+
+all_maven_jars = $(sort $(apache.poi.jar) ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar} ${freemarker.jar}) 
 
 
 all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
@@ -251,7 +257,7 @@ $(eval $(call compile,image2ascii,sandbox.tools.img2ascii.ImageToAscii,${jcomman
 $(eval $(call compile,cepicdcscraper,sandbox.CepicDcScraper,${jcommander.jar} ${apache.httpclient.jars}))
 $(eval $(call compile,htmlparser,sandbox.HtmlParser,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,osm2svg,sandbox.OsmToSvg,${jcommander.jar}))
-$(eval $(call compile,img2palette,sandbox.ImageToPalette,${jcommander.jar}))
+$(eval $(call compile,img2palette,sandbox.tools.img2palette.ImageToPalette,${jcommander.jar}))
 $(eval $(call compile,halftone,sandbox.drawing.Halftone,${jcommander.jar}))
 $(eval $(call compile,igpano,sandbox.ig.InstaPanorama,${jcommander.jar}))
 $(eval $(call compile,drawinggrid,sandbox.tools.drawinggrid.DrawingGrid,${jcommander.jar}))
@@ -282,6 +288,7 @@ $(eval $(call compile,biostarsblame,sandbox.tools.biostars.BiostarsBlame,${jcomm
 $(eval $(call compile,gimppatterns,sandbox.tools.gimppat.GimpPatterns,${jcommander.jar}))
 $(eval $(call compile,test,sandbox.tools.xml2ppt.XmlToPPT,${jcommander.jar} ${apache.poi.jar}))
 $(eval $(call compile,tonic,sandbox.tools.tonic.Tonic,${jcommander.jar}))
+$(eval $(call compile,xml2jni,sandbox.tools.jni.XmlToJNI,${jcommander.jar} ${freemarker.jar}))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 

@@ -94,7 +94,7 @@ private class BigSorterImpl implements ExternalSort<T>
 
 		@Override
 		protected T advance() {
-			if(this.nRead>=this.total) {
+			if(this.nRead>=this.total || this.dis==null) {
 				close();
 				return null;
 				}
@@ -110,7 +110,7 @@ private class BigSorterImpl implements ExternalSort<T>
 		@Override
 		public void close() {
 			this.nRead=this.total;
-			IOUtils.close(this.dis);
+			if(dis!=null) IOUtils.close(this.dis);
 			dis=null;
 			try{Files.deleteIfExists(this.path);} catch(IOException err) {}
 			}
@@ -195,6 +195,8 @@ private class BigSorterImpl implements ExternalSort<T>
 			final StoredFileIterator sf3 = new StoredFileIterator();
 			sf.path = Files.createTempFile(this.tmpDir,"tmp.", ".dat");
 			sf.total = f1.total + f2.total;
+			f1.open();
+			f2.open();
 			
 			try(MergingIterator<T> merger= new MergingIterator<>(this.comparator, Arrays.asList(f1,f2))) {
 				try(DataOutputStream dos=new DataOutputStream(Files.newOutputStream(sf.path))) {
