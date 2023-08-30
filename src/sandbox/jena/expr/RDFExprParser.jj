@@ -1,0 +1,176 @@
+options {
+	STATIC=false;
+	DEBUG_TOKEN_MANAGER=true;
+	DEBUG_PARSER=true;
+	IGNORE_CASE=true;
+	}
+PARSER_BEGIN(RDFExprParser)
+/**
+
+
+java -cp ~/packages/javacc/target/javacc.jar  javacc RDFExprParser.jj
+
+**/
+
+package sandbox.jena.expr;
+import java.util.*;
+import java.io.*;
+import org.apache.jena.rdf.model.*;
+import org.apache.jena.util.iterator.*;
+
+
+public class RDFExprParser
+	{
+
+	
+	public static class Context {
+		Model model;
+		Object current;
+		public Context setModel(Model model) {
+			this.model = model;
+			return this;
+			}
+		public Model getModel() {
+			return this.model;
+			}
+		public Context setCurrent(Object current) {
+			this.current = current;
+			return this;
+			}
+		public Object getCurrent() {
+			return current;
+			}
+		public <T> T getCurrent(Class<T> clazz) {
+			return clazz.cast(getCurrent());
+			}
+		};
+	
+	private Context context;
+	
+	protected Context getContext() {
+		return this.context;
+		}
+	
+    public static ExtendedIterator<?> iterator(Context ctx,final String query) {
+    	try(StringReader r= new StringReader(query)) {
+    		final RDFExprParser parser = new RDFExprParser(ctx,r);
+    		return parser.iterator();
+    		}
+    	catch(Throwable err) {
+    		throw new IllegalArgumentException(err);
+    		}
+    	}
+    
+    private RDFExprParser(Context context,final Reader r) {
+    	this(r);
+    	this.context = context;
+    }
+
+	
+	}	
+PARSER_END(RDFExprParser)
+
+SKIP:{
+ " "
+|"\n"
+| <"--" (~["\n"])* "\n">
+| <"/*" (~["\n"])* "*/">
+}
+
+TOKEN:
+{
+  <LIST: "list">
+| <FIRST: "first">
+|  <#LETTER:(["a"-"z"]|["A"-"Z"]|"_")>
+| <#DIGIT:["0"-"9"]>
+| <INT: <DIGIT>(<DIGIT>)* >
+| <IDENTIFIER1: <LETTER> (<DIGIT>|<LETTER>)*  >
+| <IDENTIFIER2: "`"(<IDENTIFIER1>) "`" >
+| <QNAME: <IDENTIFIER1> ":" <IDENTIFIER1>>
+| <URI: "<"  (~["\'","\\","\n","\r",">","<"])*  ">" >
+| <VARIABLE: "@"("@")?<IDENTIFIER1> >
+| <STAR:"*">
+| <LPAR:"(">
+| <RPAR:")">
+| <COMMA:",">
+| <DOT:".">
+| <#ESCAPE_CHAR: "\\" ["n","t","b","r","f","\\","'","\""] >
+| <SIMPLE_QUOTE_LITERAL: "\'"( (~["\'","\\","\n","\r"])| <ESCAPE_CHAR>)* "\'">
+| <DOUBLE_QUOTE_LITERAL: "\""( (~["\'","\\","\n","\r"])| <ESCAPE_CHAR>)* "\"">
+}
+
+private ExtendedIterator<?> iterator():{ExtendedIterator<?> IT;}
+	{
+	IT=list() {
+		return IT;
+		}
+	}
+
+	
+private StmtIterator list(): {RDFNode s,p,o;}
+	{
+	<LIST> <LPAR> s=rdfNode() <COMMA> p=rdfNode() <COMMA> o=rdfNode() <RPAR> {
+		final Selector selector = new SimpleSelector(
+			(Resource)s,
+            (p==null?null:getContext().getModel().createProperty(Resource.class.cast(p).getURI())),
+			(RDFNode)o
+			);
+		return getContext().getModel().listStatements(selector);
+		}
+	}
+	
+
+private RDFNode qname(): {Token t;}
+	{
+	t=<QNAME> {
+		final String s = t.image;
+		final String uri = getContext().getModel().expandPrefix(s);
+		return getContext().getModel().createResource(uri);
+		}
+	}
+
+private RDFNode uri(): {Token t;}
+	{
+	t=<URI> {
+		final String uri = t.image;
+		return  getContext().getModel().createResource(uri);
+		}
+	}
+
+
+
+
+private RDFNode rdfNode():{RDFNode r;}
+	{
+	(r=uri()|r=qname()|r=literal()) {
+		return r;
+		}
+	}
+
+private RDFNode literal():{RDFNode r;}
+	{
+	r=xsdString() {
+		return r;
+		}
+	}
+
+private RDFNode xsdString():{Token t;}
+	{
+	(t=<SIMPLE_QUOTE_LITERAL>|t=<DOUBLE_QUOTE_LITERAL>) {
+		final String s = t.image;
+		return getContext().getModel().createLiteral(s);
+		}
+	}
+	
+private RDFNode dot():{}
+	{
+	<DOT> 	{
+		return getContext().getCurrent(RDFNode.class);
+		}
+	}
+private RDFNode star():{}
+	{
+	<STAR> {
+		return null;
+		}
+	}

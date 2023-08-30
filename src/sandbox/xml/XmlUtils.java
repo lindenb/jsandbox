@@ -14,12 +14,16 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.xml.stream.Location;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 import javax.xml.transform.Result;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.w3c.dom.Attr;
 import org.w3c.dom.CharacterData;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Element;
@@ -201,6 +205,43 @@ public static <T extends Node> List<T> asList(final Class<T> clazz,final NodeLis
 			return L.getLength();
 			}
 		};
+	}
+
+public static void writeStartElement(XMLStreamWriter w, final Element e) throws XMLStreamException {
+	if(StringUtils.isBlank(e.getNamespaceURI())) {
+		w.writeStartElement(e.getLocalName());
+		}
+	else if(StringUtils.isBlank(e.getPrefix())) {
+		w.writeStartElement(e.getNamespaceURI(), e.getLocalName());
+		}
+	else
+		{
+		w.writeStartElement(e.getPrefix(), e.getLocalName(), e.getNamespaceURI());
+		}
+	}
+public static void writeEmptyElement(XMLStreamWriter w, final Element e) throws XMLStreamException {
+	if(StringUtils.isBlank(e.getNamespaceURI())) {
+		w.writeEmptyElement(e.getLocalName());
+		}
+	else if(StringUtils.isBlank(e.getPrefix())) {
+		w.writeEmptyElement(e.getNamespaceURI(), e.getLocalName());
+		}
+	else
+		{
+		w.writeEmptyElement(e.getPrefix(), e.getLocalName(), e.getNamespaceURI());
+		}
+	}
+public static void writeAttribute(XMLStreamWriter w, final Attr att) throws XMLStreamException {
+	if(StringUtils.isBlank(att.getNamespaceURI())) {
+		w.writeAttribute(att.getLocalName(), att.getValue());
+		}
+	else if(StringUtils.isBlank(att.getPrefix())) {
+		w.writeAttribute(att.getNamespaceURI(), att.getLocalName(), att.getValue());
+		}
+	else
+		{
+		w.writeAttribute(att.getPrefix(), att.getNamespaceURI(), att.getLocalName(), att.getValue());
+		}
 	}
 
 }
