@@ -138,8 +138,18 @@ public static Stream<Node> stream(final NodeList nl) {
  * @return the path
  */
 public static String getNodePath(final org.w3c.dom.Node node) {
-	if(node==null) return null;
-	return "(todo)";
+	if(node==null) return "null";
+	String s;
+	switch(node.getNodeType()) {
+		case Node.CDATA_SECTION_NODE: s= "#cdata"; break;
+		case Node.COMMENT_NODE: s= "#comment"; break;
+		case Node.TEXT_NODE: s= "#text"; break;
+		case Node.DOCUMENT_NODE: s= "<doc>"; break;
+		case Node.ATTRIBUTE_NODE: s= "@"+Attr.class.cast(node).getNodeName(); break;
+		case Node.ELEMENT_NODE: s= Element.class.cast(node).getNodeName(); break;
+		default: s="TODO";break;
+		}
+	return (node.getParentNode()!=null?getNodePath(node.getParentNode())+"/":"")+s;
 	}
 
 /** return true if 'n' is not a  Node.ELEMENT_NODE

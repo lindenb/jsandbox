@@ -40,6 +40,15 @@ public class DefaultNamespaceContext implements NamespaceContext {
 	@Override
 	public String getPrefix(final String namespaceURI) {
 		if(namespaceURI==null) throw new IllegalArgumentException("null namespaceURI");
+		
+		System.err.println("getPrefix for"+namespaceURI+"=" +this.prefix2ns.
+				entrySet().
+				stream().
+				filter(KV->KV.getValue().equals(namespaceURI)).
+				map(KV->KV.getKey()).
+				findFirst().
+				orElse(null));
+
 		return this.prefix2ns.
 				entrySet().
 				stream().

@@ -1,7 +1,7 @@
 options {
 	STATIC=false;
-	DEBUG_TOKEN_MANAGER=true;
-	DEBUG_PARSER=true;
+	DEBUG_TOKEN_MANAGER=false;
+	DEBUG_PARSER=false;
 	IGNORE_CASE=true;
 	}
 PARSER_BEGIN(RDFExprParser)
@@ -9,7 +9,8 @@ PARSER_BEGIN(RDFExprParser)
 
 
 java -cp ~/packages/javacc/target/javacc.jar  javacc RDFExprParser.jj
-
+ java -cp ~/package/javacc/javacc-javacc-7.0.12/target/javacc.jar  javacc RDFExprParser.jj
+ 
 **/
 
 package sandbox.jena.expr;
@@ -17,32 +18,100 @@ import java.util.*;
 import java.io.*;
 import org.apache.jena.rdf.model.*;
 import org.apache.jena.util.iterator.*;
+import java.math.BigInteger;
+import java.math.BigDecimal;
 
-
+@SuppressWarnings("unused")
 public class RDFExprParser
 	{
+	private static final Resource ANY_RSRC = ResourceFactory.createResource("https://github.com/lindenb/jsandbox/jena/expr/any-rsrc");
 
-	
-	public static class Context {
-		Model model;
-		Object current;
-		public Context setModel(Model model) {
-			this.model = model;
-			return this;
-			}
-		public Model getModel() {
-			return this.model;
-			}
-		public Context setCurrent(Object current) {
-			this.current = current;
-			return this;
-			}
-		public Object getCurrent() {
-			return current;
-			}
-		public <T> T getCurrent(Class<T> clazz) {
-			return clazz.cast(getCurrent());
-			}
+        private static abstract class DelegateIterator  extends NiceIterator {
+                protected final ExtendedIterator delegate;
+                protected Object curr = null;
+                DelegateIterator(ExtendedIterator delegate) {
+                        this.delegate=delegate;
+                        }
+                public boolean hasNext() {
+                        if(this.curr==null) {
+                                this.curr = advance();
+                                }
+                        return curr!=null;
+                        }
+                @Override
+                public Object next() {
+                        if(this.curr!=null) {
+                        	Object o = this.curr;
+                                this.curr=null;
+                                return o;
+                                }
+                        Object o = advance();
+                        if(o==null) throw new IllegalStateException("no next");
+                        return o;
+                        }
+                protected abstract Object advance();
+                @Override
+                public void close() {
+                        delegate.close();
+                        curr=null;
+                        }
+                }
+
+        private static class EmptyIterator  extends NiceIterator {
+                        public boolean hasNext() { return false;}
+                        @Override
+                        public Object next() {throw new IllegalStateException("no next");}
+                        }
+
+        private static class LimitIterator extends DelegateIterator {
+                private final long limit;
+                private long count=0L;
+                LimitIterator( ExtendedIterator delegate,long limit) {
+                        super(delegate);
+                        this.limit = limit;
+                        }
+                @Override
+                protected Object advance() {
+                        if(count>= limit || !delegate.hasNext()) return null;
+                        ++count;
+                        return delegate.next();
+                        }
+                }
+
+        
+        private static class ObjectExtractor extends DelegateIterator  {
+        	ObjectExtractor( ExtendedIterator delegate) {
+        		super(delegate);
+        		}
+        	@Override
+        	protected Object advance() {
+	        	Object o = advance();
+	        	if(o==null) return null;
+	        	if(o instanceof Statement) return Statement.class.cast(o).getSubject();
+	        	if(o instanceof RDFNode) return RDFNode.class;
+        		throw new IllegalArgumentException("can extract object from "+o.getClass()+"="+o);
+	        	}
+        	}
+
+		private static class PropertyExtractor extends DelegateIterator  {
+        	PropertyExtractor( ExtendedIterator delegate) {
+        		super(delegate);
+        		}
+        	@Override
+        	protected Object advance() {
+	        	Object o = advance();
+	        	if(o==null) return null;
+	        	if(o instanceof Statement) return Statement.class.cast(o).getSubject();
+	        	if(o instanceof Property) return Property.class.cast(o);
+        		throw new IllegalArgumentException("can extract property from "+o.getClass()+"="+o);
+	        	}
+        	}
+
+
+	public static interface Context {
+		public Model getModel();
+		public Object getCurrent();
+		public Object getVariable(final String varName);
 		};
 	
 	private Context context;
@@ -50,8 +119,16 @@ public class RDFExprParser
 	protected Context getContext() {
 		return this.context;
 		}
-	
-    public static ExtendedIterator<?> iterator(Context ctx,final String query) {
+	 public static String valueOf(Context ctx,final String query) {
+    	try(StringReader r= new StringReader(query)) {
+    		final RDFExprParser parser = new RDFExprParser(ctx,r);
+    		return parser.asCharacter();
+    		}
+    	catch(Throwable err) {
+    		throw new IllegalArgumentException(err);
+    		}
+    	}
+    public static ExtendedIterator iterator(Context ctx,final String query) {
     	try(StringReader r= new StringReader(query)) {
     		final RDFExprParser parser = new RDFExprParser(ctx,r);
     		return parser.iterator();
@@ -72,6 +149,7 @@ PARSER_END(RDFExprParser)
 
 SKIP:{
  " "
+|"\t"
 |"\n"
 | <"--" (~["\n"])* "\n">
 | <"/*" (~["\n"])* "*/">
@@ -81,9 +159,17 @@ TOKEN:
 {
   <LIST: "list">
 | <FIRST: "first">
-|  <#LETTER:(["a"-"z"]|["A"-"Z"]|"_")>
+| <TRUE: "true">
+| <FALSE: "false">
+| <SUBJECT_OF: "subject-of">
+| <PROPERTY_OF: "property-of">
+| <OBJECT_OF: "object-of">
+| <LIMIT: "limit">
+| <#LETTER:(["a"-"z"]|["A"-"Z"]|"_")>
 | <#DIGIT:["0"-"9"]>
 | <INT: <DIGIT>(<DIGIT>)* >
+| <#EXPONENT: (["e","E"] (["+","-"])? (<INT>)+) >
+| <DECIMAL_LITERAL: (<INT> (["."]<INT>)? (<EXPONENT>)? ) >
 | <IDENTIFIER1: <LETTER> (<DIGIT>|<LETTER>)*  >
 | <IDENTIFIER2: "`"(<IDENTIFIER1>) "`" >
 | <QNAME: <IDENTIFIER1> ":" <IDENTIFIER1>>
@@ -99,26 +185,111 @@ TOKEN:
 | <DOUBLE_QUOTE_LITERAL: "\""( (~["\'","\\","\n","\r"])| <ESCAPE_CHAR>)* "\"">
 }
 
-private ExtendedIterator<?> iterator():{ExtendedIterator<?> IT;}
+
+private String asCharacter(): {Object o;}
 	{
-	IT=list() {
-		return IT;
+	o=atom() {
+		return o.toString();
 		}
 	}
 
-	
-private StmtIterator list(): {RDFNode s,p,o;}
+private ExtendedIterator iterator(): {Object s,p,o;BigInteger bi;ExtendedIterator<?> delegate;}
 	{
-	<LIST> <LPAR> s=rdfNode() <COMMA> p=rdfNode() <COMMA> o=rdfNode() <RPAR> {
-		final Selector selector = new SimpleSelector(
-			(Resource)s,
-            (p==null?null:getContext().getModel().createProperty(Resource.class.cast(p).getURI())),
-			(RDFNode)o
-			);
+	(
+	<OBJECT_OF> <LPAR> delegate=iterator() <RPAR> {
+		return new ObjectExtractor(delegate);
+		}
+	| <PROPERTY_OF> <LPAR> delegate=iterator() <RPAR> {
+		return new PropertyExtractor(delegate);
+		}
+	| <LIMIT> <LPAR> delegate=iterator() <COMMA> bi=bigInteger() <RPAR> {
+		return new LimitIterator(delegate,bi.longValue());
+		}
+	| <LIST> <LPAR> s=atom() <COMMA> p=atom() <COMMA> o=atom() <RPAR> {
+		/** set subject */
+		final Resource ss;
+		if(s==null) throw new IllegalArgumentException("subject is null");
+		if(s.equals(ANY_RSRC))
+			{
+			ss=null;
+			}
+		else if(s instanceof Resource)
+			{
+			ss = Resource.class.cast(s);
+			}
+		else
+			{
+			throw new IllegalArgumentException("subject is not a resource : "+s);
+			}
+
+		/** set predicate */
+		final Property sp;
+		if(p==null) throw new IllegalArgumentException("predicate is null");
+		if(p.equals(ANY_RSRC))
+			{
+			sp=null;
+			}
+		else if(p instanceof Property)
+			{
+			sp = Property.class.cast(s);
+			}
+		else if(p instanceof Resource)
+			{
+			sp = ResourceFactory.createProperty(Resource.class.cast(p).getURI());
+			}
+		else
+			{
+			throw new IllegalArgumentException("predicate is not a property : "+p);
+			}
+		/** set object */
+		final RDFNode so;
+		if(o==null) throw new IllegalArgumentException("object is null");
+		if(o.equals(ANY_RSRC))
+			{
+			so=null;
+			}
+		else if(o instanceof RDFNode)
+			{
+			so = RDFNode.class.cast(s);
+			}
+		else if((o instanceof Number) || (o instanceof String) || (o instanceof Boolean) ) {
+			so = ResourceFactory.createTypedLiteral(o);
+			}
+		else
+			{
+			throw new IllegalArgumentException("object is not a rdfnode : "+ o);
+			}
+		final Selector selector = new SimpleSelector(ss,sp,so);
 		return getContext().getModel().listStatements(selector);
 		}
+	)
 	}
-	
+
+private Object  atom():{Object o;}
+	{
+	(o=uri()|o=qname()|o=primitive()|o=star()|o=dot()|o=objectOf()|o=propertyOf()) {
+		return o;
+		}
+	}
+
+private RDFNode objectOf():{Object o;}
+	{
+	<OBJECT_OF> <LPAR> o=atom() <RPAR> {
+		if(o instanceof Statement) return Statement.class.cast(o).getObject();
+		if(o instanceof RDFNode) return RDFNode.class.cast(o);
+		throw new IllegalArgumentException("object is not a rdfnode : "+ o);
+		}
+	}
+
+private Property propertyOf():{Object o;}
+	{
+	<PROPERTY_OF> <LPAR> o=atom() <RPAR> {
+		if(o instanceof Statement) return Statement.class.cast(o).getPredicate();
+		if(o instanceof Property) return Property.class.cast(o);
+		throw new IllegalArgumentException("object is not a property : "+ o);
+		}
+	}
+
 
 private RDFNode qname(): {Token t;}
 	{
@@ -133,44 +304,60 @@ private RDFNode uri(): {Token t;}
 	{
 	t=<URI> {
 		final String uri = t.image;
-		return  getContext().getModel().createResource(uri);
+		return  getContext().getModel().createResource(uri.substring(1,uri.length()-1));
 		}
 	}
 
-
-
-
-private RDFNode rdfNode():{RDFNode r;}
+private Object primitive():{Object o;}
 	{
-	(r=uri()|r=qname()|r=literal()) {
-		return r;
+	(o=string()|o=bool()|o=number()) {
+		return o;
 		}
 	}
 
-private RDFNode literal():{RDFNode r;}
+private Boolean bool(): {}
 	{
-	r=xsdString() {
-		return r;
-		}
+	(<TRUE> { return Boolean.TRUE;} |
+	<FALSE> { return Boolean.FALSE;})
 	}
 
-private RDFNode xsdString():{Token t;}
+private Number number():{Number o;}
+	{
+	(o=bigDecimal()|o=bigInteger()) {
+		return o;
+		}
+	} 
+
+ 
+private BigDecimal bigDecimal():{Token t;}
+	{
+	t=<DECIMAL_LITERAL> {
+		return new BigDecimal(t.image);
+		}
+	} 
+private BigInteger bigInteger():{Token t;}
+	{
+	t=<INT> {
+		return new BigInteger(t.image);
+		}
+	}
+ 
+private String string():{Token t;}
 	{
 	(t=<SIMPLE_QUOTE_LITERAL>|t=<DOUBLE_QUOTE_LITERAL>) {
-		final String s = t.image;
-		return getContext().getModel().createLiteral(s);
+		return t.image;
 		}
 	}
 	
-private RDFNode dot():{}
+private Object dot():{}
 	{
 	<DOT> 	{
-		return getContext().getCurrent(RDFNode.class);
+		return getContext().getCurrent();
 		}
 	}
 private RDFNode star():{}
 	{
 	<STAR> {
-		return null;
+		return ANY_RSRC;
 		}
 	}
