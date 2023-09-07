@@ -243,10 +243,11 @@ private ExtendedIterator iterator(): {Object s,p,o;BigInteger bi;ExtendedIterato
 			}
 		/** set object */
 		final RDFNode so;
+		final Set<RDFNode> so_set = null;
 		if(o==null) throw new IllegalArgumentException("object is null");
 		if(o.equals(ANY_RSRC))
 			{
-			so=null;
+			so = null;
 			}
 		else if(o instanceof RDFNode)
 			{
@@ -255,12 +256,42 @@ private ExtendedIterator iterator(): {Object s,p,o;BigInteger bi;ExtendedIterato
 		else if((o instanceof Number) || (o instanceof String) || (o instanceof Boolean) ) {
 			so = ResourceFactory.createTypedLiteral(o);
 			}
+		else if(o instanceof Iterator) {
+			
+			so_set = new HashSet<>();
+			final Iterator r2 = Iterator.class.cast(o);
+			while(!r2.hasNext()) {
+				final Object o2 = r2.next();
+				if(!(o2 instanceof RDFNode)) throw new IllegalArgumentException("object is not a rdfnode : "+ o2);
+				so_set.add(o2);
+				}
+			if(r2 instanceof ExtendedIterator) ExtendedIterator.class.cast(r2).close();
+			if(so_set.size()==1) {
+				so = so_set.iterator().next();
+				so_set = null;
+				}
+			else
+				{
+				so = null;
+				}
+			}
 		else
 			{
 			throw new IllegalArgumentException("object is not a rdfnode : "+ o);
 			}
+		
 		final Selector selector = new SimpleSelector(ss,sp,so);
-		return getContext().getModel().listStatements(selector);
+		final StmtIterator stmtIter= getContext().getModel().listStatements(selector);
+		if(so==null && so_set!=null) {
+			final Set<RDFNode> final_so_set = so_set;
+			return stmtIter.filterKeep(new Predicate<Statement>() {
+					@Override
+					public boolean test(final Statement stmt) {
+						return final_so_set.contains(stmt.getObject());
+						}
+					});
+			}
+		return stmtIter;
 		}
 	)
 	}
