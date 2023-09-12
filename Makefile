@@ -290,6 +290,7 @@ $(eval $(call compile,test,sandbox.tools.xml2ppt.XmlToPPT,${jcommander.jar} ${ap
 $(eval $(call compile,tonic,sandbox.tools.tonic.Tonic,${jcommander.jar}))
 $(eval $(call compile,xml2jni,sandbox.tools.jni.XmlToJNI,${jcommander.jar} ${freemarker.jar}))
 $(eval $(call compile,rdftemplate,sandbox.tools.rdftemplate.RDFTemplate,${jcommander.jar} ${jena-core.jars}))
+$(eval $(call compile,rdf2graph,sandbox.tools.rdf2graph.RdfToGraph,${jcommander.jar} ${jena-core.jars}))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 
