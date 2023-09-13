@@ -9,13 +9,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.NodeIterator;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.ResIterator;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.vocabulary.DC;
@@ -40,9 +41,15 @@ private boolean hideLiterals = false;
 
 
 @Override
-public int doWork(List<String> args) {
+public int doWork(final List<String> args) {
 	try {
-		Model model = ModelFactory.createDefaultModel();
+		final Set<Property> propertiesForName = new HashSet<>();
+		propertiesForName.add(RDFS.label);
+		propertiesForName.add(DC.title);
+		propertiesForName.add(ResourceFactory.createProperty("http://xmlns.com/foaf/0.1/", "name"));
+		
+		
+		final Model model = ModelFactory.createDefaultModel();
 		for(String arg: args) {
 			if(!IOUtils.isURL(arg)) {
 				arg = Paths.get(arg).toUri().toString();
@@ -113,7 +120,7 @@ public int doWork(List<String> args) {
 				StmtIterator iter2 =model.listStatements(sub, null, RDFNode.class.cast(null));
 				while(iter2.hasNext()) {
 					final Statement stmt = iter2.next();
-					if(!(stmt.getPredicate().equals(RDFS.label) || stmt.getPredicate().equals(DC.title))) continue;
+					if(!propertiesForName.contains(stmt.getPredicate())) continue;
 					if(!stmt.getObject().isLiteral()) continue;
 					title = stmt.getObject().asLiteral().getString();
 					break;
@@ -129,8 +136,7 @@ public int doWork(List<String> args) {
 				if(stmt.getPredicate().equals(RDF.type)) continue;
 				if(!subjects2id.containsKey(stmt.getSubject())) continue;
 				if(stmt.getSubject().isLiteral() && this.hideLiterals) continue;
-				if(stmt.getPredicate().equals(DC.title)) continue;
-				if(stmt.getPredicate().equals(RDFS.label)) continue;
+				if(propertiesForName.contains(stmt.getPredicate())) continue;
 				
 				final String objectid;
 				if(stmt.getObject().isResource() && subjects2id.containsKey(stmt.getObject().asResource())) {
@@ -145,7 +151,7 @@ public int doWork(List<String> args) {
 					else
 						{
 						pw.print(objectid);
-						pw.print("[shape=square;label=\""+StringUtils.escapeC(stmt.getObject().toString())+"\"");
+						pw.print("[shape=oval;style=filled;fillcolor=pink;label=\"<"+StringUtils.escapeC(stmt.getObject().toString())+">\"");
 						pw.println("]");
 						}
 					}

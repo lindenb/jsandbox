@@ -142,7 +142,7 @@ public class BiostarsBlame extends Launcher {
 				page++;
 				}
 			for(Post post:this.posts) {
-				System.out.print("/p/"+post.id);
+				System.out.print("https://www.biostars.org/p/"+post.id);
 				System.out.print(" ");
 				}
 			System.out.println();
