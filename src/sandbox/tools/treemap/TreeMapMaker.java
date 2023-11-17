@@ -1,23 +1,26 @@
 package sandbox.tools.treemap;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.geom.Rectangle2D;
-import java.io.BufferedReader;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamWriter;
 
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.w3c.dom.Attr;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 import com.beust.jcommander.Parameter;
 
@@ -51,9 +54,12 @@ public class TreeMapMaker extends Launcher
     private Path cacheDirectory = null;
 	@Parameter(names={"-c","--cookies"},description=CookieStoreUtils.OPT_DESC)
 	private Path cookieStoreFile  = null;
+	@Parameter(names={"--show-weight"},description="append score to label")
+	private boolean show_scores_with_label =false;
 
 
     private DataCache dataCache = null;
+    private int ID_GENERATOR=0;
     
     private String format(double f) {
     	return String.format("%.2f",f);
@@ -61,24 +67,19 @@ public class TreeMapMaker extends Launcher
     
 	private class Frame implements TreePack
 		{
+		private final int ID = ID_GENERATOR++;
+		final Element domNode;
 		private final List<Frame> children=new ArrayList<>();
-		private Frame parent=null;
-		private Map<String,String> properties; 
-		private Rectangle2D bounds=new Rectangle2D.Double();
-		Frame(final Map<String,String> props)
+		private final Frame parent;
+		private Rectangle2D.Double nodeBounds = null;
+		private Rectangle2D.Double childrenBounds = null;
+		private Rectangle2D.Double titleBounds  = null;
+		Frame(Frame parent,final Element domNode)
 			{
-			this.properties = new HashMap<>(props);
+			this.parent = parent;
+			this.domNode = domNode;
 			}
-		public boolean hasAttribute(final String id) {
-			return !StringUtils.isBlank(getAttribute(id,""));
-			}
-		public String getParentId() {
-			String s = getAttribute("parent", null);
-			if(StringUtils.isBlank(s)) s= getAttribute("parent-id", null);
-			if(StringUtils.isBlank(s)) s= getAttribute("parent_id", null);
-			return s;
-			}
-		String getId() { return getAttribute("id", null);}
+		
 		
 		@Override
 		public double getWeight()
@@ -102,23 +103,17 @@ public class TreeMapMaker extends Launcher
 			return children.isEmpty();
 			}
 
-		boolean isRoot() {
-		return this.parent == null;
-		}
 		
 		@Override
 		public Rectangle2D getBounds() {
-			return this.bounds;
+			return this.nodeBounds;
 			}
-		@Override
-		public void setBounds(final Rectangle2D bounds) {
-			this.bounds = new Rectangle2D.Double(
-					bounds.getX(),bounds.getY(),bounds.getWidth(),bounds.getHeight());
-			}
+		
 		
 		protected String getAttribute(final String name,String def)
 			{
-			return this.properties.getOrDefault(name,(def==null?"":def));
+			final Attr att=this.domNode.getAttributeNode(name);
+			return att==null?def:att.getValue();
 			}
 		
 		protected String getStyle(final String sel,final String def)
@@ -150,6 +145,17 @@ public class TreeMapMaker extends Launcher
 			{
 			return getAttribute("label",null);
 			}
+		
+		public String getLabelAndWeight()
+			{
+			String s = getLabel();
+			if(show_scores_with_label) {
+					s=(s==null?"":s+" ");
+					s+="("+getWeight()+")";
+				}
+			return s;
+			}
+		
 		public String getDescription()
 			{
 			return getAttribute("description",getLabel());
@@ -171,64 +177,11 @@ public class TreeMapMaker extends Launcher
 			}
 		
 		
-		Rectangle2D getChildrenRect() {
-			return getRects()[0];
-		}
-		
-		private Rectangle2D[] getRects()
-			{
-			Rectangle2D.Double r=new Rectangle2D.Double();
-			r.setRect(this.bounds);
-			if(parent==null) return new Rectangle2D[]{r,null};
-			
-			
-			if(r.width>4*MARGIN)
-				{
-				r.x+=MARGIN;
-				r.width-=(MARGIN*2);
-				}
-			else
-				{
-				double L=r.getWidth()*0.05;
-				r.x+=L;
-				r.width-=(L*2.0);
-				}
-			if(r.height>4*MARGIN)
-				{
-				r.y+=MARGIN;
-				r.height-=(MARGIN*2);
-				}
-			else
-				{
-				double L=r.getHeight()*0.05;
-				r.y+=L;
-				r.height-=(L*2.0);
-				}
-			
-			Rectangle2D.Double r2= null;;
-			if(StringUtils.isBlank(this.getLabel())) {
-				   if(r.getMaxY()+6 < this.bounds.getMaxY())
-					   {
-					   r2=new Rectangle2D.Double(
-							   this.bounds.getX(),
-							   r.getMaxY()+2,
-							   this.bounds.getWidth(),
-							   (this.bounds.getMaxY()-r.getMaxY())-4
-							   );
-					   }
-				   else if(r.getMaxX()+6 < this.bounds.getMaxX())
-					   {
-					   r2=new Rectangle2D.Double(
-							  r.getMaxX(),
-							  this.bounds.getY(),
-							  (this.bounds.getMaxX()-r.getMaxX()),
-							  this.bounds.getHeight()
-							  );
-					   }
-				   }
-			
-			return new Rectangle2D[]{r,r2};
+	@Override
+	public void setBounds(Rectangle2D bounds) {
+			this.nodeBounds = new Rectangle2D.Double(bounds.getX(),bounds.getY(),bounds.getWidth(),bounds.getHeight());
 			}
+
 		
 		int getDepth()
 			{
@@ -236,25 +189,120 @@ public class TreeMapMaker extends Launcher
 			}
 		
 		private void pack(final TreePacker packer) {
-		   packer.layout(this.children,this.getChildrenRect());
+			
+			
+			this.childrenBounds = new Rectangle2D.Double(nodeBounds.getX(),nodeBounds.getY(),nodeBounds.getWidth(),nodeBounds.getHeight());
+
+			 
+			
+			if(this.childrenBounds.width>4*MARGIN)
+				{
+				this.childrenBounds.x+=MARGIN;
+				this.childrenBounds.width-=(MARGIN*2);
+				}
+			else
+				{
+				final double L=this.childrenBounds.getWidth()*0.05;
+				this.childrenBounds.x+=L;
+				this.childrenBounds.width-=(L*2.0);
+				}
+			if(this.childrenBounds.height>4*MARGIN)
+				{
+				this.childrenBounds.y+=MARGIN;
+				this.childrenBounds.height-=(MARGIN*2);
+				}
+			else
+				{
+				final double L=this.childrenBounds.getHeight()*0.05;
+				this.childrenBounds.y+=L;
+				this.childrenBounds.height-=(L*2.0);
+				}
+			
+			if(!StringUtils.isBlank(this.getLabelAndWeight()) && !isLeaf()) {
+				   double fract = 0.9;
+				   double h2 =this.nodeBounds.getHeight()*fract;
+				  
+				   this.titleBounds = new Rectangle2D.Double(
+						   this.nodeBounds.x,
+						   this.nodeBounds.y,
+						   this.nodeBounds.width,
+						   this.nodeBounds.getHeight() -  h2
+						 );
+				   this.childrenBounds.y = this.childrenBounds.getMaxY()-h2;
+				   this.childrenBounds.height=h2;
+				   }
+		  packer.layout(this.children,this.childrenBounds);
+		 
 		   for(final Frame c:this.children)
 			   {
 			   c.pack(packer);
 			   }
 			}
 		
+		private void writeText(final XMLStreamWriter w,String label,final Rectangle2D area) throws Exception {
+			
+			final int label_length = label.length();
+			final double fontSize;
+			final boolean rotate = area.getHeight()> 1.5* area.getWidth();
+			final double font_scale = 0.7;
+			if(rotate) {
+				fontSize = Math.min(area.getWidth(),area.getHeight()/label_length)*font_scale;
+				}
+			else
+				{
+				fontSize = Math.min(area.getWidth()/label_length,area.getHeight())*font_scale;
+				}
+			
+			
+			w.writeStartElement("text");
+			w.writeAttribute("x",format(area.getCenterX()));
+			w.writeAttribute("y",format(area.getCenterY() /* +fontSize/2.0 */));
+			if(rotate) {
+				w.writeAttribute("transform","rotate(90,"+format(area.getCenterX())+","+format(area.getCenterY())+")");
+				}
+			if(!StringUtils.isBlank(getImage())) {
+				w.writeAttribute("fill-opacity","0.7");
+				}
+			w.writeAttribute("text-anchor",getStyle("text-anchor", "middle"));
+			w.writeAttribute("dominant-baseline","central");
+			w.writeAttribute("fill",getStyle("text-fill", "blue"));
+			w.writeAttribute("font-size",getStyle("font-size", format(fontSize)));
+			
+			String style = getStyle("font-family",null);
+			if(!StringUtils.isBlank(style)) w.writeAttribute("font-family",style);
+			//w.writeStartElement("textPath");
+			//w.writeAttribute("href","#"+path_id);
+			//w.writeAttribute("method","stretch");
+			//w.writeAttribute("lengthAdjust","spacingAndGlyphs");
+			w.writeCharacters(label);
+			//w.writeEndElement();//textPath
+			w.writeEndElement();//mtext
+			
+			
+			 }
+		
 		private void svg(final XMLStreamWriter w)throws Exception
 		   {
-		   String url= this.getUrl(); 
+			final   String url= this.getUrl(); 
 		   String selector=null;
-		   
+		   final StringBuilder stylestr = new StringBuilder();
 		   w.writeStartElement("g");
 		   selector=this.getStyle("stroke",null);
-		   if(selector!=null)  w.writeAttribute("stroke",selector);
+		   if(selector!=null)  stylestr.append("stroke:").append(selector).append(";");
 		   selector=this.getStyle("fill",null);
-		   if(selector!=null)  w.writeAttribute("fill",selector);
+		   if(selector!=null)  {
+			   stylestr.append("fill:").append(selector).append(";");
+		   		}
+		   else
+			   	{
+			   	float f =  (0.9f-(float)((this.ID/(float)ID_GENERATOR)*0.4f));
+				final Color c=   new Color(f,f,f);
+				stylestr.append("fill:").append("rgb("+c.getRed()+","+c.getGreen()+","+c.getBlue()+");");
+			   	}
 		   selector=this.getStyle("stroke-width",String.valueOf(Math.max(0.2,2/(this.getDepth()+1.0))));
-		   w.writeAttribute("stroke-width",selector);
+		   stylestr.append("stroke-width").append(selector).append(";");
+		   
+			w.writeAttribute("style",stylestr.toString());
 		   
 		   if(!StringUtils.isBlank(url)) {
 			   w.writeStartElement("a");
@@ -262,11 +310,10 @@ public class TreeMapMaker extends Launcher
 		   		}
 		   
 		   w.writeStartElement("rect");
-		   w.writeAttribute("fill",getStyle("fill",isRoot()?"none":"gray"));
-		   w.writeAttribute("x",format(this.bounds.getX()));
-		   w.writeAttribute("y",format(this.bounds.getY()));
-		   w.writeAttribute("width",format(this.bounds.getWidth()));
-		   w.writeAttribute("height",format(this.bounds.getHeight()));
+		   w.writeAttribute("x",format(this.nodeBounds.getX()));
+		   w.writeAttribute("y",format(this.nodeBounds.getY()));
+		   w.writeAttribute("width",format(this.nodeBounds.getWidth()));
+		   w.writeAttribute("height",format(this.nodeBounds.getHeight()));
 		 
 		   
 		   w.writeStartElement("title");
@@ -285,85 +332,57 @@ public class TreeMapMaker extends Launcher
 			    	LOG.warning(err);
 			    	imgPath=null;
 			    	}
-			   
+			    if(!StringUtils.isBlank(url)) {
+					   w.writeStartElement("a");
+					   w.writeAttribute("href", escapeURL(url));
+				   		}
 				if(!StringUtils.isBlank(imgPath)) {
 					w.writeComment(getImage());
 					w.writeStartElement("image");
 					w.writeAttribute("href",imgPath);
-					w.writeAttribute("x",format(this.bounds.getX()));
-			   		w.writeAttribute("y",format(this.bounds.getY()));
-			   		w.writeAttribute("width",format(this.bounds.getWidth()));
-			   		w.writeAttribute("height",format(this.bounds.getHeight()));
+					w.writeAttribute("x",format(this.nodeBounds.getX()));
+			   		w.writeAttribute("y",format(this.nodeBounds.getY()));
+			   		w.writeAttribute("width",format(this.nodeBounds.getWidth()));
+			   		w.writeAttribute("height",format(this.nodeBounds.getHeight()));
 					w.writeAttribute("preserveAspectRatio",this.getStyle("preserveAspectRatio","xMidYMid slice"));
 					w.writeEndElement();
 					}
-				if(!StringUtils.isBlank(getLabel())) {
-					String label = this.getLabel();
-					final int label_length = label.length();
-					final double fontSize;
-					final boolean rotate = this.bounds.getHeight()> 1.5* this.bounds.getWidth();
-					
-					if(rotate) {
-						fontSize = Math.min(this.bounds.getWidth(),this.bounds.getHeight()/label_length);
-						}
-					else
-						{
-						fontSize = Math.min(this.bounds.getWidth()/label_length,this.bounds.getHeight());
-						}
-					
-					if(!StringUtils.isBlank(url)) {
-					   w.writeStartElement("a");
-					   w.writeAttribute("href", escapeURL(url));
-				   		}
-					
-					w.writeStartElement("text");
-					w.writeAttribute("x",format(this.bounds.getCenterX()));
-					w.writeAttribute("y",format(this.bounds.getCenterY() /* +fontSize/2.0 */));
-					if(rotate) {
-						w.writeAttribute("transform","rotate(90,"+format(this.bounds.getCenterX())+","+format(this.bounds.getCenterY())+")");
-						}
-					if(!StringUtils.isBlank(getImage())) {
-						w.writeAttribute("fill-opacity","0.7");
-						}
-					w.writeAttribute("text-anchor",getStyle("text-anchor", "middle"));
-					w.writeAttribute("dominant-baseline","central");
-					w.writeAttribute("fill",getStyle("text-fill", "blue"));
-					w.writeAttribute("font-size",getStyle("font-size", format(fontSize)));
-					
-					String style = getStyle("font-family",null);
-					if(!StringUtils.isBlank(style)) w.writeAttribute("font-family",style);
-					//w.writeStartElement("textPath");
-					//w.writeAttribute("href","#"+path_id);
-					//w.writeAttribute("method","stretch");
-					//w.writeAttribute("lengthAdjust","spacingAndGlyphs");
-					w.writeCharacters(label);
-					//w.writeEndElement();//textPath
-					w.writeEndElement();//mtext
-					
-					 if(!StringUtils.isBlank(url)) {
-					    w.writeEndElement();
-				   		}
+				if(!StringUtils.isBlank(getLabelAndWeight())) {
+					 writeText(w, getLabelAndWeight(),this.nodeBounds);
 					}
 
 			   Optional<Dimension> imgDimOpt = Optional.empty();
 			   String imgUrl = this.getImage();
 
-			   
+			  
 			   
 			   if(imgDimOpt.isPresent()) {
 				   w.writeEmptyElement("img");
 				   w.writeAttribute("src", imgUrl);
 				   //
+				   
+			 
+			  if(!StringUtils.isBlank(url)) {
+				   w.writeEndElement();//a
+			   		} 
 			   }
 		   } else
 			   	{
+			    if(this.titleBounds!=null) {
+			    	if(!StringUtils.isBlank(url)) {
+						   w.writeStartElement("a");
+						   w.writeAttribute("href", escapeURL(url));
+					   		}
+			    	 writeText(w, getLabelAndWeight(),this.titleBounds);
+			    	 if(!StringUtils.isBlank(url)) {
+						   w.writeEndElement();//a
+					   		} 
+			    	}
 				for(Frame c:this.children) c.svg(w);   
 			   	}
 		   
 		   
-		   if(!StringUtils.isBlank(url)) {
-			   w.writeEndElement();//a
-		   		} 
+		  
 		   w.writeEndElement();//g
 		   }
 		}
@@ -373,6 +392,17 @@ public class TreeMapMaker extends Launcher
 		return url;
 	}
     
+	private Frame build(Frame parent,Element root) {
+		final Frame f = new Frame(parent,root);
+		for(Node c=root.getFirstChild();c!=null;c=c.getNextSibling()) {
+			if(c.getNodeType()!=Node.ELEMENT_NODE) continue;
+			final Element E =Element.class.cast(c);
+			if(c.getNodeName().equals("node")) {
+				f.children.add(build(f,E));
+				}
+			}
+		return f;
+		}
     
     @Override
     public int doWork(final List<String> args) {
@@ -391,61 +421,22 @@ public class TreeMapMaker extends Launcher
 					setDirectory(this.cacheDirectory).
 					setUrlInputStreamProvider(urlInputStreamProvider).
 					make();
-			final Frame root = new  Frame(Collections.emptyMap());
-			root.properties.put("id", "default");
-			final Map<String, Frame> id2frame = new HashMap<>();
-			id2frame.put(root.getId(),root);
-			Map<String, String> item = new HashMap<>();
-			try(BufferedReader br = super.openBufferedReader(args)) {
-				for(;;) {
-					String line = br.readLine();
-					if(line==null || StringUtils.isBlank(line)) {
-						if(!item.isEmpty()) {
-							final Frame frame = new Frame(item);
-							if(!StringUtils.isBlank(frame.getId())) {
-								if(id2frame.containsKey(frame.getId())) {
-									LOG.error("duplicate id "+frame.getId());
-									return -1;
-									}
-								id2frame.put(frame.getId(),frame);
-								}
-							Frame theParent = root;
-							if(!StringUtils.isBlank(frame.getParentId())) {
-								theParent = id2frame.get( frame.getParentId());
-								if(theParent==null) {
-									LOG.error("unknown parent id  '"+ frame.getParentId()+"'");
-									return -1;
-									}
-								}
-							frame.parent = theParent;
-							theParent.children.add(frame);
-							}
-						
-						if(line==null) break;
-						item.clear();
-						continue;
-						}
-					int delim = line.indexOf(':');
-					if(delim<=0) delim = line.indexOf("=");
-					if(delim<=0) delim = line.indexOf(" ");
-					if(delim<=0) {
-						LOG.warning("No delimiter in "+line);
-						continue;
-						}
-					final String left = line.substring(0,delim).trim().toLowerCase();
-					if(item.containsKey(left)) {
-						LOG.error("Duplicate key "+line +" in "+item);
-						return -1;
-						}
-					final String right = line.substring(delim+1).trim();
-					if(StringUtils.isBlank(left)) continue;
-					if(StringUtils.isBlank(right)) continue;
-					item.put(left, right);
-					}
+			DocumentBuilderFactory dbf= DocumentBuilderFactory.newInstance();
+			DocumentBuilder db= dbf.newDocumentBuilder();
+			
+			final String input = oneFileOrNull(args);
+			final Document dom;
+			if(StringUtils.isBlank(input)) {
+				dom = db.parse(System.in);
+				} else
+				{
+				dom = db.parse(input);
 				}
 			
-			final  Rectangle2D drawingArea= new Rectangle2D.Double(0,0,this.viewRect.getWidth(),this.viewRect.getHeight());
-			root.bounds.setRect(drawingArea);
+			final Frame root = build(null,dom.getDocumentElement());
+
+						
+			root.setBounds(new Rectangle2D.Double(0,0,this.viewRect.getWidth(),this.viewRect.getHeight()));
 			root.pack(new TreePacker());
 			LOG.debug(root.children.size());
 			try(OutputStream os = IOUtils.openPathAsOutputStream(this.out)) {

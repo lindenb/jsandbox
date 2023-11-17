@@ -236,7 +236,7 @@ $(eval $(call compile,java2graph,sandbox.Java2Graph,${apache.commons.cli}  ))
 $(eval $(call compile,gribouille,sandbox.Gribouille,${jcommander.jar}  ))
 $(eval $(call compile,weatherarchive,sandbox.WeatherArchive,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}  ${apache.httpclient.jars} ))
 $(eval $(call compile,velocityjson,sandbox.tools.velocityjson.VelocityJson,${jcommander.jar}  ${velocity.jars} ${google.gson.jars}  ))
-$(eval $(call compile,treemapviewer,sandbox.TreeMapViewer,  ))
+$(eval $(call compile,treemapviewer,sandbox.tools.treemap.TreeMapViewer,  ))
 $(eval $(call compile,treemapmaker,sandbox.tools.treemap.TreeMapMaker,${jcommander.jar} ${apache.httpclient.jars}))
 $(eval $(call compile,comicstrip,sandbox.ComicsStrip, ))
 $(eval $(call compile,genisansbouillir,sandbox.GeniSansBouillir,${jcommander.jar} ${apache.httpclient.jars}  ${jtidy.jars}))
@@ -353,37 +353,4 @@ clean_maven_jars :
 
 
 
-## JNLP
-
-ifneq (${webstart.remotedir},)
-
-define sign_with_jarsigner
-	jarsigner $(if ${FASTJARSIGN},,-tsa http://timestamp.digicert.com ) \
-		-keystore .secret.keystore \
-		-keypass "$(if ${keytool.keypass},${keytool.keypass},KEYTOOLPASS)" \
-		-storepass "$(if ${keytool.storepass},${keytool.storepass},KEYTOOLSTOREPASS)" \
-		"$(1)" secret ;
-endef
-
-
-scp-webstart: compile-webstart
-	scp -r webstart/* "${webstart.remotedir}"
-
-
-compile-webstart : .secret.keystore treemapviewer
-	rm -rf webstart
-	mkdir -p webstart
-	cp dist/treemapviewer.jar webstart/
-	sed 's/__BASE__/webstart.remotedir/' src/sandbox/TreeMapViewer.jnlp > webstart/TreeMapViewer.jnlp
-	$(call sign_with_jarsigner,webstart/treemapviewer.jar)
-	chmod 755 webstart/*.html webstart/*.jar webstart/*.jnlp
-
-
-endif
-
-.secret.keystore :
-	-keytool -genkeypair -keystore $@ -alias secret \
-	       	-keypass "$(if ${keytool.keypass},${keytool.keypass},KEYTOOLPASS)" \
-		-storepass "$(if ${keytool.storepass},${keytool.storepass},KEYTOOLSTOREPASS)" \
-		-dname "CN=Pierre Lindenbaum, OU=INSERM, O=INSERM, L=Nantes, ST=Nantes, C=Fr"
 

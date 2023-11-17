@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.tools.treemap;
 
 
 import java.awt.BorderLayout;
