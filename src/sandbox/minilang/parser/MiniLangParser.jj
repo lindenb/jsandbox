@@ -99,7 +99,20 @@ TOKEN : /* LITERALS */
 | <DOUBLE_QUOTE_LITERAL: "\"" ( (~["\"","\\","\n","\r"]) | <ESCAPE_CHAR> )*"\"" >
 }
 
+private map() :{}
+	{
+	<O_BRACKED> <COLON> <C_BRACKET> {
+		return Collections.emptyMap()
+		}
+	
+	}
 
+private Map.Entry<Node,Node> pair() : {Node key; Node value;}
+	{
+	key=node() <COLON> value=node() {
+		return new AbstractMap.SimpleEntry<String,Node>(key,value);
+		}
+	} 
 
 private AstNode doubleNumber() : {Token t;} {
 	t= <FLOATING_NUMBER> {

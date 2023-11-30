@@ -1,6 +1,5 @@
 package sandbox.ig;
 
-import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -10,12 +9,13 @@ import javax.imageio.ImageIO;
 
 import com.beust.jcommander.Parameter;
 
-import sandbox.ColorParser;
 import sandbox.ImageUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.StringUtils;
-import sandbox.ColorParser.Converter;
+import sandbox.colors.Color;
+import sandbox.colors.NamedColors;
+import sandbox.colors.parser.ColorParser;
 import sandbox.jcommander.NoSplitter;
 
 public class InstaPanorama extends Launcher {
@@ -27,7 +27,7 @@ public class InstaPanorama extends Launcher {
 	@Parameter(names={"--size"},description="Output size")
 	private int ig_size = 1080;
 	@Parameter(names={"-b","--background"},description="background Color",converter=ColorParser.Converter.class,splitter=NoSplitter.class)
-	private Color bckgColor = Color.WHITE;
+	private Color bckgColor = NamedColors.getInstance().findByName("white").get();
 
 
 	
@@ -53,7 +53,7 @@ public class InstaPanorama extends Launcher {
 			int n = 1;
 			while(x< img.getWidth()) {
 				final Graphics2D g = imageUtils.createGraphics(sliceImg);
-				g.setColor(this.bckgColor);
+				g.setColor(this.bckgColor.toAWT());
 				g.fillRect(0, 0, this.ig_size, this.ig_size);
 				
 				System.err.println("dx2 "+Math.min(img.getWidth()-(x+this.ig_size), this.ig_size));

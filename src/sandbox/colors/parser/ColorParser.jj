@@ -1,0 +1,142 @@
+options {
+STATIC=false;
+LOOKAHEAD=2;
+FORCE_LA_CHECK=true;
+}
+
+
+PARSER_BEGIN(ColorParser)
+
+package sandbox.colors.parser;
+import sandbox.colors.Color;
+import com.beust.jcommander.IStringConverter;
+import java.util.*;
+import java.io.*;
+
+@SuppressWarnings("unchecked")
+public class ColorParser
+{
+public static final String OPT_DESC = "";
+public static class Converter implements IStringConverter<Color> {
+	@Override
+	public Color convert(String str) {
+		return Color.parse(str);
+		}
+	}
+	
+
+private static Color create(int r,int g,int b) {
+	return Color.create(r,g,b);
+	}
+
+private static Color create(int r,int g,int b,int a) {
+	return Color.create(r,g,b,a);
+	}
+
+public static Color parse(final String s)
+	{
+	try
+		{
+		final StringReader sr=new StringReader(s);
+		return new ColorParser(sr).input();
+			
+		}
+	catch(final Throwable err)
+		{
+		throw new IllegalArgumentException(err);
+		}
+	}
+
+public static void main(String args[])  throws Exception
+	{
+	for(String arg:args)
+		{
+		Color c=parse(arg);
+		if(c==null)
+			{
+			System.out.println("null");
+			continue;
+			}
+		System.out.println("rgba("+c.getRed()+","+c.getGreen()+","+c.getBlue()+","+c.getAlpha()+")");
+		}
+	}
+}
+
+
+PARSER_END(ColorParser)
+
+SKIP :
+{
+" "
+| "\t"
+| "\n"
+| "\r"
+}
+
+
+TOKEN:
+{
+
+  <#DIGIT: ["0"-"9"] >
+| <#SIGN: ["-","+"]>
+
+| <#EXPONENT: ("E"|"e") (<SIGN>)? (<DIGIT>)+ >
+| <FLOATING_NUMBER: (<DIGIT>)* "." (<DIGIT>)* ( ("F"|"f") | (<EXPONENT>) ) ?
+| (<DIGIT>)+ (<EXPONENT>) >
+| <INT_NUMBER: (<DIGIT>)+ >
+| <#HEXACHAR: ( <DIGIT> | ["A"-"F"]) >
+| <HEXA: "#" (<HEXACHAR>)* >
+| <RGBA:"rgba">
+| <RGB:"rgb">
+| <LPAR:"(">
+| <RPAR:")">
+| <COMMA:",">
+| <#LETTER: ["_","a"-"z","A"-"Z"] >
+| <NAMED: (<LETTER>)+ >
+}
+
+private Color input():{Color c;}
+	{
+	 ( c=namedcolor() |  c=rgbcolor() | c=hexaColor() ) <EOF>
+		{
+		return c;
+		}
+	}
+
+
+private Color rgbcolor():{int r,g,b,a=255; float fr,fg,fb,fa=1.0f; Color c;}
+	{
+	(<RGB>|<RGBA>) <LPAR> ( 
+		        ( r=int255() <COMMA> g=int255() <COMMA> b=int255() (<COMMA> a=int255() )? )  {  create(r,g,b,a); }
+		     |  ( r=int255() )  {  c= create(r,r,r); }
+		     |  ( fr=float1() <COMMA> fg=float1() <COMMA> fb=float1()  (<COMMA> fa=float1() )? )  {  create(fr,fg,fb,fa); }
+		     |  ( fr=float1() )  {  c= create(fr,fr,fr); }
+		     )
+	<RPAR> { return c;}
+	}
+
+
+private int int255():{Token t;}
+	{
+	t=<INT_NUMBER> { return Math.min(255,Math.max(0,Integer.parseInt(t.image)));}
+	}
+
+private float float1():{Token t;}
+	{
+	t=<FLOATING_NUMBER> { return Math.min(1.0f,Math.max(0.0f,Float.parseFloat(t.image)));}
+	}
+
+private Color hexaColor():{Token t;}
+	{
+	t=<HEXA> { return new Color( Integer.valueOf(t.image.substring(1),16) );}
+	}
+
+private Color namedcolor():{Token t;}
+	{
+    t = <NAMED> 
+            {
+            final String s = t.image;
+            return NamedColors.getInstance().findByName(s).orThrow("");
+            }
+	}
+

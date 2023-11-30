@@ -1,6 +1,5 @@
 package sandbox.tools.mosaic;
 
-import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -27,10 +26,11 @@ import org.apache.http.impl.client.HttpClientBuilder;
 
 import com.beust.jcommander.Parameter;
 
-import sandbox.ColorParser;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.StringUtils;
+import sandbox.colors.Color;
+import sandbox.colors.parser.ColorParser;
 import sandbox.http.CookieStoreUtils;
 import sandbox.io.ArchiveFactory;
 import sandbox.io.IOUtils;
@@ -152,7 +152,7 @@ public class MosaicOfPictures extends Launcher
 			
 			
 			final List<String>  picts;	
-			final Color background= ColorParser.getInstance().apply(this.backgroundStr);
+			final Color background= ColorParser.parse(this.backgroundStr);
 			if(background==null) {
 				LOG.error("Bad background color : "+this.backgroundStr);
 				return -1;
@@ -207,7 +207,7 @@ public class MosaicOfPictures extends Launcher
 					final Graphics2D g=img.createGraphics();
 					g.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
 					g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-					g.setColor(background);
+					g.setColor(background.toAWT());
 					g.fillRect(0,0,image_size,image_size);
 					
 					final List<String> picts2 = new ArrayList<>(images_per_page);

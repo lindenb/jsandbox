@@ -2,7 +2,6 @@ package sandbox.drawing;
 
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
-import java.awt.Color;
 import java.awt.Composite;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -23,11 +22,12 @@ import java.util.function.Supplier;
 
 import com.beust.jcommander.Parameter;
 
-import sandbox.ColorParser;
 import sandbox.ImageUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.StringUtils;
+import sandbox.colors.NamedColors;
+import sandbox.colors.parser.ColorParser;
 import sandbox.jcommander.DimensionConverter;
 import sandbox.jcommander.DoubleParamSupplier;
 import sandbox.jcommander.NoSplitter;
@@ -37,7 +37,7 @@ public class WiggleGrid extends Launcher {
 	@Parameter(names= {"-D","--size","--dim","--dimension"},converter=DimensionConverter.StringConverter.class,description=DimensionConverter.OPT_DESC,required=true)
 	protected Dimension dimIn = null;
 	@Parameter(names= {"-b","--background","--paper"},description="background-color. "+ColorParser.OPT_DESC,converter=ColorParser.Converter.class,splitter=NoSplitter.class)
-	protected Color bckg = Color.WHITE;
+	protected sandbox.colors.Color bckg = NamedColors.getInstance().findByName("white").get();
 	@Parameter(names= {"-o","--output",},description="output")
 	protected Path output = null;
 	
@@ -82,7 +82,7 @@ public class WiggleGrid extends Launcher {
 			final BufferedImage img= new BufferedImage(dimIn.width, dimIn.height, BufferedImage.TYPE_INT_RGB);
 			final Graphics2D g=img.createGraphics();
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			g.setColor(bckg);
+			g.setColor(bckg.toAWT());
 			g.fillRect(0, 0, img.getWidth(), img.getHeight());
 				
 			
@@ -109,7 +109,7 @@ public class WiggleGrid extends Launcher {
 					double d = Point.distance(x1, y1, x2, y2);
 
 					float gray = Math.max(0,Math.min(1f,(float)grayValue.getAsDouble()));
-					g.setColor(new Color(gray,gray,gray));
+					g.setColor(new java.awt.Color(gray,gray,gray));
 					g.setStroke(strokeSupplier.get());
 					g.setComposite(alphaSupplier.get());
 					
