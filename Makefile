@@ -291,6 +291,7 @@ $(eval $(call compile,tonic,sandbox.tools.tonic.Tonic,${jcommander.jar}))
 $(eval $(call compile,xml2jni,sandbox.tools.jni.XmlToJNI,${jcommander.jar} ${freemarker.jar}))
 $(eval $(call compile,rdftemplate,sandbox.tools.rdftemplate.RDFTemplate,${jcommander.jar} ${jena-core.jars}))
 $(eval $(call compile,rdf2graph,sandbox.tools.rdf2graph.RdfToGraph,${jcommander.jar} ${jena-core.jars}))
+$(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommander.jar} ./src/sandbox/tools/streamplot/parser/StreamPlotParser.java))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 
@@ -313,8 +314,15 @@ $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	#rm -rf tmp
 	$(foreach F,alleleAnnotationmethods  alleleAnnotations  annotateAllelemethods beacon  genotypephenotype common metadata, echo "${F}" && curl -L -o "${F}.avdl" "https://raw.githubusercontent.com/ga4gh/schemas/master/src/main/resources/avro/${F}.avdl" && cat   "${F}.avdl" | java -cp $@ sandbox.Avdl2Xml  | xmllint --format - ; )
 
-src/sandbox/AutoLexYacc.java : src/sandbox/AutoLexYacc.jj
-	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<
+define runjavacc
+
+$$(addsuffix .java,$$(basename $(1))) : $(1)
+	${javacc.exe} -OUTPUT_DIRECTORY=$$(dir $$@) $$<
+
+endef
+
+$(eval $(call runjavacc,./src/sandbox/colors/parser/ColorParser.jj))
+$(eval $(call runjavacc,./src/sandbox/tools/streamplot/parser/StreamPlotParser.jj))
 
 
 gimpprocs2xml: ./src/sandbox/GimpProcedures.jj

@@ -20,6 +20,7 @@ import javax.imageio.ImageIO;
 
 import com.beust.jcommander.Parameter;
 
+import sandbox.colors.parser.ColorParser;
 import sandbox.io.IOUtils;
 /**
  * 
@@ -47,7 +48,6 @@ public class ImageMap extends Launcher {
 	@Parameter(names={"-ho","--horizontal"},description="horizontal table layout")
 	private boolean horizontal_table_layout = false;
 
-	private final ColorParser colorParser = ColorParser.getInstance();
 	
 	private List<Color> getPalette() {
 		final Set<Color> colorset=new HashSet<>();
@@ -59,8 +59,9 @@ public class ImageMap extends Launcher {
 				colorset.addAll(
 					r.lines().
 					filter(L->!(L.startsWith("#") || L.trim().isEmpty())).
-					map(colorParser).
+					map(S->ColorParser.parse(S)).
 					filter(C->C!=null).
+					map(C->C.toAWT()).
 					collect(Collectors.toSet())
 					);
 				r.close();
@@ -106,9 +107,9 @@ public class ImageMap extends Launcher {
 			final String tokens[]=paletteName.split("[;]");
 			for(final String s:tokens) {
 				if(s.trim().isEmpty()) continue;
-				final Color c= this.colorParser.apply(s);
+				final sandbox.colors.Color c= ColorParser.parse(s);
 				if(c==null) continue;
-				colorset.add(c);
+				colorset.add(c.toAWT());
 				}
 			}
 		final List<Color> array=new ArrayList<>(colorset);

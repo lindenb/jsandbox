@@ -6,10 +6,10 @@ import java.nio.file.Path;
 
 import com.beust.jcommander.Parameter;
 
-import sandbox.ColorParser;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.SimpleGraphics;
+import sandbox.colors.parser.ColorParser;
 import sandbox.io.IOUtils;
 import sandbox.jcommander.DimensionConverter;
 
