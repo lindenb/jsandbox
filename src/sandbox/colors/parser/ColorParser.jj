@@ -1,6 +1,5 @@
 options {
 STATIC=false;
-LOOKAHEAD=2;
 FORCE_LA_CHECK=true;
 }
 
@@ -9,6 +8,7 @@ PARSER_BEGIN(ColorParser)
 
 package sandbox.colors.parser;
 import sandbox.colors.Color;
+import sandbox.colors.NamedColors;
 import com.beust.jcommander.IStringConverter;
 import java.util.*;
 import java.io.*;
@@ -32,6 +32,10 @@ private static Color create(int r,int g,int b) {
 private static Color create(int r,int g,int b,int a) {
 	return Color.create(r,g,b,a);
 	}
+
+private static int f2i(float f) {
+    return (int)(f*255);
+    }
 
 public static Color parse(final String s)
 	{
@@ -104,13 +108,11 @@ private Color input():{Color c;}
 	}
 
 
-private Color rgbcolor():{int r,g,b,a=255; float fr,fg,fb,fa=1.0f; Color c;}
+private Color rgbcolor():{int r,g=-1,b=-1,a=255; float fr,fg=-1f,fb=-1f,fa=1.0f; Color c;}
 	{
-	(<RGB>|<RGBA>) <LPAR> ( 
-		        ( r=int255() <COMMA> g=int255() <COMMA> b=int255() (<COMMA> a=int255() )? )  {  create(r,g,b,a); }
-		     |  ( r=int255() )  {  c= create(r,r,r); }
-		     |  ( fr=float1() <COMMA> fg=float1() <COMMA> fb=float1()  (<COMMA> fa=float1() )? )  {  create(fr,fg,fb,fa); }
-		     |  ( fr=float1() )  {  c= create(fr,fr,fr); }
+	(<RGB>|<RGBA>) <LPAR>   (  
+		        ( r=int255() (<COMMA> g=int255() <COMMA> b=int255() (<COMMA> a=int255() )?)? )  { if(b==-1) c=create(r,r,r); else c=create(r,g,b,a); }
+		     |  ( fr=float1() (<COMMA> fg=float1() <COMMA> fb=float1()  (<COMMA> fa=float1() )?)? )  {if(fg==-1f) c=create(f2i(fr),f2i(fr),f2i(fr)); else c= create(f2i(fr),f2i(fg),f2i(fb),f2i(fa)); }
 		     )
 	<RPAR> { return c;}
 	}
@@ -128,7 +130,7 @@ private float float1():{Token t;}
 
 private Color hexaColor():{Token t;}
 	{
-	t=<HEXA> { return new Color( Integer.valueOf(t.image.substring(1),16) );}
+	t=<HEXA> { return Color.of( Integer.valueOf(t.image.substring(1),16) );}
 	}
 
 private Color namedcolor():{Token t;}
@@ -136,7 +138,13 @@ private Color namedcolor():{Token t;}
     t = <NAMED> 
             {
             final String s = t.image;
-            return NamedColors.getInstance().findByName(s).orThrow("");
+            final java.util.function.Supplier<Throwable> ex = new java.util.function.Supplier<Throwable>() {
+                @Override                
+                public Throwable get() {
+                    return new RuntimeException("cannot convert '"+s+"' to color");
+                    }
+                };
+            return NamedColors.getInstance().findByName(s).orElseThrow(ex);
             }
 	}
 
