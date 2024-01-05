@@ -11,8 +11,11 @@ public interface Color {
 	public default java.awt.Color toAWT() {
 		return new java.awt.Color(getRed(),getGreen(),getBlue(),getAlpha());
 		}
-	public static Color ofAWT( java.awt.Color c) {
+	public static Color ofAWT(final  java.awt.Color c) {
 		return create(c.getRed(),c.getGreen(),c.getBlue(),c.getAlpha());
+		}
+    public static Color of( int rgb) {
+		return ofAWT(new java.awt.Color(rgb));
 		}
 
 	public static Color parse(final String s) {

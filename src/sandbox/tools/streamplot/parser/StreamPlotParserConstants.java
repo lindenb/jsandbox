@@ -27,23 +27,27 @@ public interface StreamPlotParserConstants {
   /** RegularExpression Id. */
   int IMAGE = 12;
   /** RegularExpression Id. */
-  int LETTER = 13;
+  int RGB = 13;
   /** RegularExpression Id. */
-  int DIGIT = 14;
+  int LETTER = 14;
   /** RegularExpression Id. */
-  int SIGN = 15;
+  int DIGIT = 15;
   /** RegularExpression Id. */
-  int DOT1 = 16;
+  int SIGN = 16;
   /** RegularExpression Id. */
-  int EXPONENT = 17;
+  int SEMICOLON = 17;
   /** RegularExpression Id. */
-  int FLOATING_NUMBER = 18;
+  int DOT1 = 18;
   /** RegularExpression Id. */
-  int INT_NUMBER = 19;
+  int EXPONENT = 19;
   /** RegularExpression Id. */
-  int DOT = 20;
+  int FLOATING_NUMBER = 20;
   /** RegularExpression Id. */
-  int IDENTIFIER = 21;
+  int INT_NUMBER = 21;
+  /** RegularExpression Id. */
+  int DOT = 22;
+  /** RegularExpression Id. */
+  int IDENTIFIER = 23;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -63,9 +67,11 @@ public interface StreamPlotParserConstants {
     "\",\"",
     "\"TYPE_INT_RGB\"",
     "\"image\"",
+    "<RGB>",
     "<LETTER>",
     "<DIGIT>",
     "<SIGN>",
+    "\";\"",
     "\".\"",
     "<EXPONENT>",
     "<FLOATING_NUMBER>",

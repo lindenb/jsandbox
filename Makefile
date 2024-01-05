@@ -317,7 +317,7 @@ $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 define runjavacc
 
 $$(addsuffix .java,$$(basename $(1))) : $(1)
-	${javacc.exe} -OUTPUT_DIRECTORY=$$(dir $$@) $$<
+	${javacc.exe} -JDK_VERSION=17 -OUTPUT_DIRECTORY=$$(dir $$@) $$<
 
 endef
 

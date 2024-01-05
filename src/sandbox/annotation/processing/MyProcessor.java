@@ -24,7 +24,7 @@ import javax.tools.StandardLocation;
 
 import sandbox.annotation.IncludeUrl;
 
-@SupportedSourceVersion(SourceVersion.RELEASE_8)
+@SupportedSourceVersion(SourceVersion.RELEASE_17)
 public class MyProcessor extends AbstractProcessor {
 private static final Logger LOG = Logger.getLogger(MyProcessor.class.getName());
 private Filer filer =null;
