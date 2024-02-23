@@ -47,13 +47,13 @@ public class NamedNodeMapImpl extends AbstractList<Node>  implements NamedNodeMa
 		int i=0;
 		while(i<array.size()) {
 			if(filter.test(this.array.get(i))) {
-				this.array.set(i, arg);
-				return arg;
+				Node old = this.array.set(i, arg);
+				return old;
 				}
 			i++;
 			}
 		this.array.add(arg);
-		return arg;
+		return null;
 		}
 	
 	@Override

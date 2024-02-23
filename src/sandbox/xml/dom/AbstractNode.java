@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
+import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
@@ -141,7 +142,7 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		}
 	
 	public boolean hasNamespaceURI() {
-		return !StringUtils.isBlank(getNamespaceURI());
+		return !getNamespaceURI().equals(XMLConstants.NULL_NS_URI);
 		}
 	
 	public boolean hasNamespaceURI(final ElementImpl other) {
@@ -161,7 +162,7 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 	@Override
 	public String getNamespaceURI() {
 		final QName qN = this.getQName();
-		return qN==null?null:qN.getNamespaceURI();
+		return qN==null?XMLConstants.NULL_NS_URI:qN.getNamespaceURI();
 		}
 	@Override
 	public String getLocalName() {
@@ -178,7 +179,7 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 	@Override
 	public String getPrefix() {
 		final QName qN = this.getQName();
-		return qN==null?null:qN.getPrefix();
+		return qN==null?XMLConstants.DEFAULT_NS_PREFIX:qN.getPrefix();
 		}
 	
 	public String getNodeName() {
