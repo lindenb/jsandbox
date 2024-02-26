@@ -1,5 +1,7 @@
 package sandbox.xml.dom;
 
+import javax.xml.stream.XMLEventFactory;
+import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
@@ -46,4 +48,9 @@ public class CDataSectionImpl extends AbstractTextNode implements org.w3c.dom.CD
 	public void write(XMLStreamWriter w) throws XMLStreamException {
 		w.writeCData(getData());
 		}
+	@Override
+	public void write(XMLEventWriter w, XMLEventFactory factory) throws XMLStreamException {
+		w.add(factory.createCData(getData()));
+		}
+
 	}

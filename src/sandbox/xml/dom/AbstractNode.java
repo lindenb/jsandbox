@@ -9,6 +9,8 @@ import java.util.function.Predicate;
 
 import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
+import javax.xml.stream.XMLEventFactory;
+import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
@@ -72,6 +74,7 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		if(getParentNode()!=null) getParentNode().removeChild(this);
 		return this;
 		}
+	
 	/** 
 	 * remove all child nodes
 	 * @return this
@@ -142,7 +145,7 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		}
 	
 	public boolean hasNamespaceURI() {
-		return !getNamespaceURI().equals(XMLConstants.NULL_NS_URI);
+		return !XMLConstants.NULL_NS_URI.equals(getNamespaceURI());
 		}
 	
 	public boolean hasNamespaceURI(final ElementImpl other) {
@@ -237,7 +240,7 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 	
 	
 	@Override
-	public NodeListImpl<AbstractNode> getChildNodes() {
+	public final NodeListImpl<AbstractNode> getChildNodes() {
 		if(!hasChildNodes()) {
 			return NodeListImpl.emptyNodeList();
 			}
@@ -610,7 +613,12 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		}
 
 	public abstract void write(XMLStreamWriter w) throws XMLStreamException;
+	public abstract void write(XMLEventWriter w,XMLEventFactory factory) throws XMLStreamException;
 	
+	public void write(XMLEventWriter w) throws XMLStreamException {
+		this.write(w,XMLEventFactory.newFactory());
+		}
+
 	/*
 	public void print() {
 		final TransformerFactory trf = TransformerFactory.newInstance();

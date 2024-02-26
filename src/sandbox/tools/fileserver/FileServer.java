@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.tools.fileserver;
 
 import java.io.File;
 import java.util.List;
@@ -10,6 +10,9 @@ import org.eclipse.jetty.server.handler.ResourceHandler;
 
 
 import com.beust.jcommander.Parameter;
+
+import sandbox.Launcher;
+import sandbox.Logger;
 
 public class FileServer extends Launcher
 	{
@@ -24,6 +27,7 @@ public class FileServer extends Launcher
 		try {
 			if(this.baseDir==null)
 				{
+				LOG.warning("using ucrren tdirecotry");
 				this.baseDir = new File(System.getProperty("user.dir","."));
 				}
 		
@@ -41,7 +45,7 @@ public class FileServer extends Launcher
 			server.join();
 			return 0;
 			}
-		catch(final Exception err) {
+		catch(final Throwable err) {
 			LOG.error(err);
 			return -1;
 			}
