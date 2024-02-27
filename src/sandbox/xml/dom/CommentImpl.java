@@ -1,5 +1,7 @@
 package sandbox.xml.dom;
 
+import javax.xml.stream.XMLEventFactory;
+import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
@@ -43,6 +45,10 @@ public class CommentImpl extends AbstractTextNode implements org.w3c.dom.Comment
 	@Override
 	public void write(XMLStreamWriter w) throws XMLStreamException {
 		w.writeComment(getData());
+		}
+	@Override
+	public void write(XMLEventWriter w, XMLEventFactory factory) throws XMLStreamException {
+		w.add(factory.createComment(getData()));
 		}
 	
 	@Override

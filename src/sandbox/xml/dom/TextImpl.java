@@ -1,9 +1,14 @@
 package sandbox.xml.dom;
 
+import javax.xml.stream.XMLEventFactory;
+import javax.xml.stream.XMLEventReader;
+import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
 import org.w3c.dom.Text;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 
 public class TextImpl extends AbstractTextNode implements Text {
 	TextImpl(DocumentImpl downer,final String text) {
@@ -41,9 +46,19 @@ public class TextImpl extends AbstractTextNode implements Text {
 			}
 		return s;
 		}
-	
+	@Override
+	public void sax(DefaultHandler handler) throws SAXException {
+		final char[] array = getData().toCharArray();
+		handler.characters(array,0,array.length);
+		}
+
 	@Override
 	public void write(XMLStreamWriter w) throws XMLStreamException {
 		w.writeCharacters(getData());
 		}
+	@Override
+	public void write(XMLEventWriter w,XMLEventFactory factory) throws XMLStreamException {
+		w.add(factory.createCharacters(getData()));
+		}
+
 	}

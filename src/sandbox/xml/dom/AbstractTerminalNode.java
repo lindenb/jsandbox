@@ -62,8 +62,4 @@ public abstract class AbstractTerminalNode extends AbstractNode {
 		return false;
 		}
 	
-	@Override
-	public final NodeListImpl<AbstractNode> getChildNodes() {
-		return null;
-		}
 	}
