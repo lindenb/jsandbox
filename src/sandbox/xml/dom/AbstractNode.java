@@ -24,15 +24,31 @@ import sandbox.StringUtils;
 
 public abstract class AbstractNode implements org.w3c.dom.Node {
 	private /*final no, node can be 'adopted' */ DocumentImpl ownerDoc;
-	private AbstractNode parentNode = null;
-	private AbstractNode firstChild = null;
-	private AbstractNode lastChild = null;
-	private AbstractNode nextSibling = null;
-	private AbstractNode prevSibling = null;
 	private Map<String,Object> userProperties  = null;
+	
+	
+	
 	protected AbstractNode(final DocumentImpl ownerDoc) {
 		this.ownerDoc = ownerDoc;
 		}
+	
+	protected void setParentNode(AbstractNode p) {
+		throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "setParentNode");
+		}
+	protected void setFirstChild(AbstractNode p) {
+		throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "setFirstChild");
+		}
+	protected void setLastChild(AbstractNode p) {
+		throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "setLastChild");
+		}
+	protected void setPrevSibling(AbstractNode p) {
+		throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "setPrevSibling");
+		}
+	protected void setNextSibling(AbstractNode p) {
+		throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "setNextSibling");
+		}
+
+	
 	
 	/** called by Document.adoptNode */
 	protected AbstractNode adoptDoc(final DocumentImpl doc) {
@@ -60,16 +76,20 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		return getParentNode()!=null;
 		}
 	
-	@Override
-	public AbstractNode getParentNode() {
-		return this.parentNode;
-		}
 	
-	/** remove this node from it's parent if any
+	/** remove this node from it's parent and siblings if any
 	 * @return this
 	 */
 	public AbstractNode unlink() {
-		if(getParentNode()!=null) getParentNode().removeChild(this);
+		if(getParentNode()!=null) {
+			getParentNode().removeChild(this);
+			}
+		if(getNextSibling()!=null) {
+			getNextSibling().setPrevSibling(getPreviousSibling());
+			}
+		if(getPreviousSibling()!=null) {
+			getPreviousSibling().setNextSibling(getNextSibling());
+			}
 		return this;
 		}
 	/** 
@@ -78,22 +98,20 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 	 */
 	public AbstractNode removeAllChildNodes() {
 		if(hasChildNodes()) {
-			AbstractNode n1 = this.firstChild;
+			AbstractNode n1 = this.getFirstChild();
 			while(n1!=null) {
 				final AbstractNode n2 = n1.getNextSibling();
-				n1.nextSibling = null;
-				n1.prevSibling = null;
-				n1.parentNode = null;
+				n1.unlink();
 				n1 = n2;
 				}
-			this.firstChild = null;
-			this.lastChild = null;
+			this.setFirstChild(null);
+			this.setLastChild(null);
 			}
 		return this;
 		}
 	
 	public boolean isRoot() {
-		return this.parentNode==null;
+		return this.getParentNode()==null;
 		}
 	@Override
 	public /*final$*/ DocumentImpl getOwnerDocument() {
@@ -101,22 +119,14 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		}
 	
 	@Override
-	public AbstractNode getPreviousSibling() {
-		return this.prevSibling;
-		}
+	public abstract AbstractNode getPreviousSibling() ;
 	@Override
-	public AbstractNode getNextSibling() {
-		return this.nextSibling;
-		}
+	public abstract AbstractNode getNextSibling();
 	@Override
-	public AbstractNode getFirstChild() {
-		return this.firstChild;
-		}
+	public abstract AbstractNode getFirstChild();
 
 	@Override
-	public AbstractNode getLastChild() {
-		return this.lastChild;
-		}
+	public abstract AbstractNode getLastChild();
 	
 	@Override
 	public NamedNodeMapImpl getAttributes() {
@@ -293,17 +303,17 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		AbstractNode last = null;
 		for(final AbstractNode n : nodes ) {
 			n.unlink();
-			if(firstChild==null) {
-				this.firstChild=n;
-				this.lastChild=n;
+			if(getFirstChild()==null) {
+				this.setFirstChild(n);
+				this.setLastChild(n);;
 				}
 			else
 				{
-				this.lastChild.nextSibling = n;
-				n.prevSibling  = this.lastChild;
-				this.lastChild = n;
+				this.getLastChild().setNextSibling(n);
+				n.setPrevSibling(this.getLastChild());
+				this.setLastChild(n);
 				}
-			n.parentNode = this;
+			n.setParentNode(this);
 			last = n;
 			}
 		return last;
@@ -467,7 +477,7 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		return getChildCount(N->true);
 		}
 
-	public int getChildCount(Predicate<AbstractNode> predicate) {
+	public int getChildCount(final Predicate<AbstractNode> predicate) {
 		if(!hasChildNodes()) {
 			return 0;
 			}
