@@ -114,6 +114,12 @@ public static String normalizeSpaces(final String s) {
 	return s.replaceAll("\\s+"," ").trim();
 	}
 
+/** convert first char to UpperCase */
+public static String getJavaName(final String s) {
+	if(s.length()<2) return s.toUpperCase();
+	return s.substring(0, 1).toUpperCase()+s.substring(1);
+}
+
 //https://stackoverflow.com/questions/13700333/convert-escaped-unicode-character-back-to-actual-character
 public static  String unescapeUnicode(final String s) {
 	try

@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamWriter;
@@ -23,6 +24,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdf.model.StmtIterator;
+import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.vocabulary.DC;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -41,12 +43,14 @@ private static final Logger LOG=Logger.builder(RdfToGraph.class).build();
 private enum Format {graphviz,gexf};
 @Parameter(names={"-o"},description=OUTPUT_OR_STANDOUT)
 private Path output;
+@Parameter(names={"--schema"},description="don't print instances of classes but show relationships between the class/properties")
+private boolean show_schema = false;
 @Parameter(names={"--literals"},description="hide literals")
 private boolean hideLiterals = false;
 @Parameter(names={"--format"},description="output format")
 private Format outputFormat = Format.graphviz;
 
-private String nodeToTitle(final Model model,final Resource sub,Set<Property> propertiesForName) {
+private String nodeToTitle(final Model model,final Resource sub, final Set<Property> propertiesForName) {
 	String title= sub.toString();
 	StmtIterator iter2 =model.listStatements(sub, null, RDFNode.class.cast(null));
 	while(iter2.hasNext()) {
@@ -59,6 +63,79 @@ private String nodeToTitle(final Model model,final Resource sub,Set<Property> pr
 	iter2.close();
 	return title;
 	}
+
+private Model extractSchema(final Model  model,final Set<Property> propertiesForName) {
+	final Model modelOut = ModelFactory.createDefaultModel();
+	
+	/* add classes names */
+	final Consumer<Resource> appendLabels = (RSRC->{
+		StmtIterator iter = model.listStatements(RSRC, null,(RDFNode)null);
+		while(iter.hasNext()) {
+			final Statement stmt = iter.next();
+			if(!propertiesForName.contains(stmt.getPredicate())) continue;
+			if(!stmt.getObject().isLiteral()) continue;
+			modelOut.add(stmt);
+			}
+		iter.close();
+		});
+	
+	StmtIterator iter2 =model.listStatements();
+	while(iter2.hasNext()) {
+		final Statement stmt = iter2.next();
+		final ExtendedIterator<Resource> iter_s = model.
+				listObjectsOfProperty(stmt.getResource(), RDF.type).
+				filterKeep(N->N.isResource()).
+				mapWith(N->N.asResource());
+		while(iter_s.hasNext()) {
+			final Resource subject_type = iter_s.next();
+			appendLabels.accept(subject_type);
+
+			
+			final ExtendedIterator<Resource> iter_p = model.
+					listObjectsOfProperty(stmt.getPredicate(), RDF.type).
+					filterKeep(N->N.isResource()).
+					mapWith(N->N.asResource());
+			
+			
+			
+			while(iter_p.hasNext()) {
+				final Property predicate_type =modelOut.createProperty(iter_p.next().getURI());
+				appendLabels.accept(predicate_type);
+				
+				/* it's a literal, just add one example of value */
+				if(stmt.getObject().isLiteral()) {
+					ExtendedIterator<Statement> iter_o = modelOut.
+						listStatements(subject_type,predicate_type,(RDFNode)null).
+						filterKeep(S->S.getObject().isLiteral());
+					/* no example provided before ? */
+					if(!iter_o.hasNext()) {
+						modelOut.add(subject_type,predicate_type,stmt.getObject().asLiteral());
+						}
+					iter_o.close();
+					}
+				else if(stmt.getObject().isResource() && !stmt.getObject().isAnon())
+					{
+					final ExtendedIterator<Resource> iter_o = model.
+							listObjectsOfProperty(stmt.getObject().asResource(), RDF.type).
+							filterKeep(N->N.isResource()).
+							mapWith(N->N.asResource());
+					while(iter_o.hasNext()) {
+						final Resource object_type = iter_o.next();
+						appendLabels.accept(object_type);
+						modelOut.add(subject_type,predicate_type,object_type);
+						}
+					iter_o.close();
+					}
+				}
+			
+			}
+		iter_s.close();
+		
+		
+		}
+	return modelOut;
+	}
+
 @Override
 public int doWork(final List<String> args) {
 	try {
@@ -68,14 +145,22 @@ public int doWork(final List<String> args) {
 		propertiesForName.add(ResourceFactory.createProperty("http://xmlns.com/foaf/0.1/", "name"));
 		
 		
-		final Model model = ModelFactory.createDefaultModel();
+		final Model model0 = ModelFactory.createDefaultModel();
 		for(String arg: args) {
 			if(!IOUtils.isURL(arg)) {
 				arg = Paths.get(arg).toUri().toString();
 				}
-			model.read(arg);
+			model0.read(arg);
 			}
-		
+		final Model model;
+		if(show_schema) {
+			model = extractSchema(model0,propertiesForName);
+			}
+		else	
+			{
+			model = model0;
+			}
+			
 		if(model.isEmpty()) {
 			LOG.error("empty rdfstore");
 			return -1;

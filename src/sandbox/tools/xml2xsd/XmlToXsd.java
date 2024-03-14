@@ -1,18 +1,15 @@
-package sandbox;
+package sandbox.tools.xml2xsd;
 import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+
 /**
  * Author:
  * 	Pierre Lindenbaum PhD
@@ -46,12 +43,23 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 
-public class XmlToXsd extends AbstractApplication
-	{
+import com.beust.jcommander.Parameter;
+
+import sandbox.Launcher;
+import sandbox.io.IOUtils;
+
+public class XmlToXsd extends Launcher {
 	private static final String XSD=XMLConstants.W3C_XML_SCHEMA_NS_URI;
 	private static final String JXB="http://java.sun.com/xml/ns/jaxb";
-	private boolean supportingJaxb=true;
+	
+	@Parameter(names= {"-jaxb","--jaxb"},description="add JAXB support")
+	private boolean supportingJaxb=false;
+	@Parameter(names= {"-package","--package"},description="package name for jaxb/java")
 	private String packageName="generated";
+	
+	@Parameter(names= {"-java","--java"},description="export java code to this file",hidden=true)
+	private Path exportJavaFile = null;
+
 	
 	private static class XsdNode
 		{
@@ -60,11 +68,11 @@ public class XmlToXsd extends AbstractApplication
 		/** node name */
 		String name;
 		/** all the DOM elements for this kind of node */
-		List<Element> elements=new ArrayList<Element>();
+		final List<Element> elements=new ArrayList<Element>();
 		/** child nodes */
-		List<XsdNode> children=new ArrayList<XsdNode>();
+		final List<XsdNode> children=new ArrayList<XsdNode>();
 		/** all the attributes for the elements */
-		Map<String,List<Attr>> attributes=new HashMap<String,List<Attr> >();
+		final Map<String,List<Attr>> attributes=new HashMap<String,List<Attr> >();
 		
 		/** finds a node by is tagName */
 		XsdNode findNodeByName(String tagName)
@@ -115,6 +123,13 @@ public class XmlToXsd extends AbstractApplication
 				childNode.recurse(e1);
 				}
 			}
+		
+		private String getJavaType(List<?> domNodes) {
+			String s= getXsdType(domNodes);
+			if(s.equals("xs:string")) return "String";
+			return "todo";
+			}
+		
 		/** guess xsd type for a set of Nodes */
 		private String getXsdType(List<?> domNodes)
 			{
@@ -127,7 +142,7 @@ public class XmlToXsd extends AbstractApplication
 			boolean is_boolean=true;
 			for(Object o:domNodes)
 				{
-				String text=((Node)o).getTextContent();
+				final String text=((Node)o).getTextContent();
 				if(text==null) return null;
 				if(is_double)
 					{
@@ -198,6 +213,48 @@ public class XmlToXsd extends AbstractApplication
 			return "xsd:string";
 			}
 		
+		String getJavaName() {
+			return this.name;
+			}
+		
+		void exportJava(PrintWriter w) {
+			w.println("public class "+getJavaName()+"{");
+			for(String attName:this.attributes.keySet())
+				{
+				w.println("private "+ getJavaType(this.attributes.get(attName))+" "+attName+";");
+				}
+			
+			w.println("private void parse(XmlStreamReader r,StartElement startE) {");
+
+			
+			for(String attName:this.attributes.keySet())
+				{
+				
+				}
+			w.println("}");
+			
+			w.println("}");
+			}
+		
+		private int[] getOccurrence() {
+			int[] occ=new int[] {Integer.MAX_VALUE,1};
+			if(parent!=null) {
+				for(Element self:parent.elements)
+					{
+					int count=0;
+					for(Node n1=self.getFirstChild();n1!=null;n1=n1.getNextSibling())
+						{
+						if(n1.getNodeType()!=Node.ELEMENT_NODE) continue;
+						final Element e1=Element.class.cast(n1);
+						if(!e1.getTagName().equals(this.name)) continue;
+						++count;
+						}
+					occ[0] = Math.max(occ[0], count);
+					occ[1] = Math.min(occ[1], count);
+					}
+				}
+			return occ;
+			}
 		
 		/** write to XSD */
 		public void write(XMLStreamWriter w) throws XMLStreamException
@@ -206,23 +263,9 @@ public class XmlToXsd extends AbstractApplication
 			w.writeAttribute("name", name);
 			if(parent!=null)
 				{
-				int minOccur=Integer.MAX_VALUE;
-				int maxOccur=1;
-				for(Element self:parent.elements)
-					{
-					int count=0;
-					for(Node n1=self.getFirstChild();n1!=null;n1=n1.getNextSibling())
-						{
-						if(n1.getNodeType()!=Node.ELEMENT_NODE) continue;
-						Element e1=Element.class.cast(n1);
-						if(!e1.getTagName().equals(this.name)) continue;
-						++count;
-						}
-					maxOccur=Math.max(maxOccur, count);
-					minOccur=Math.min(minOccur, count);
-					}
-				if(minOccur==0) w.writeAttribute("minOccurs", "0");
-				if(maxOccur!=1) w.writeAttribute("maxOccurs", "unbounded");
+				final int[] occ = getOccurrence();
+				if(occ[0]==0) w.writeAttribute("minOccurs", "0");
+				if(occ[1]!=1) w.writeAttribute("maxOccurs", "unbounded");
 				}
 			
 			if(this.children.isEmpty() && this.attributes.isEmpty())
@@ -269,11 +312,11 @@ public class XmlToXsd extends AbstractApplication
 			}
 		}
 
-	public void parse(final Document dom) throws XMLStreamException
+	public void parse(final Document dom) throws XMLStreamException,IOException
 		{
 		
-		XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
-		XMLStreamWriter w= xmlfactory.createXMLStreamWriter(System.out,"UTF-8");
+		final XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
+		final XMLStreamWriter w= xmlfactory.createXMLStreamWriter(System.out,"UTF-8");
 		w.writeStartDocument("UTF-8","1.0");
 		w.writeStartElement("xsd","schema",XSD);
 		w.writeAttribute("xmlns", XMLConstants.XML_NS_URI, "xsd",XSD);
@@ -300,8 +343,8 @@ public class XmlToXsd extends AbstractApplication
 	    w.writeEndElement();
 	    w.writeEndElement();
 		
-		Element root=dom.getDocumentElement();
-		XsdNode node=new XsdNode();
+	    final Element root=dom.getDocumentElement();
+	    final XsdNode node=new XsdNode();
 		node.name=root.getTagName();
 		node.elements.add(root);
 		node.recurse(root);
@@ -310,65 +353,43 @@ public class XmlToXsd extends AbstractApplication
 		w.writeEndElement();
 		w.writeEndDocument();
 		w.flush();
+		
+		if(exportJavaFile!=null) {
+			try(PrintWriter pw = IOUtils.openPathAsPrintWriter(this.exportJavaFile)) {
+				pw.println("package "+this.packageName+";");
+				pw.println("import javax.xml.namespace.QName;");
+				pw.println("import javax.xml.stream.*;");
+				node.exportJava(pw);
+				pw.flush();
+				}
+			}
+		
 		}
 
 	@Override
-	protected int execute(final CommandLine cmd) {
-		final List<String> args = cmd.getArgList();
-		try
-			{
-			/*
-				else if(args[optind].equals("-j"))
-					{
-					app.supportingJaxb=false;
-					}
-				else if(args[optind].equals("-p"))
-					{
-					app.packageName=args[++optind];
-					}
-				else if(args[optind].equals("--"))
-					{
-					optind++;
-					break;
-					}
-				else if(args[optind].startsWith("-"))
-					{
-					System.err.println("Unknown option "+args[optind]);
-					return;
-					}
-				else 
-					{
-					break;
-					}
-				++optind;
-				}
-			*/
-			
-			DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
+	public int doWork(final List<String> args) {
+		try {	
+			final DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
 			factory.setCoalescing(true);
 			factory.setExpandEntityReferences(true);
 			factory.setValidating(false);
 			factory.setIgnoringComments(true);
 			factory.setIgnoringElementContentWhitespace(true);
-			DocumentBuilder builder=factory.newDocumentBuilder();
-			Document dom;
-			if(args.isEmpty())
+			final DocumentBuilder builder=factory.newDocumentBuilder();
+			final Document dom;
+			final String input = oneFileOrNull(args);
+			if(input==null)
 				{
 				dom=builder.parse(System.in);
 				}
-			else if(args.size()==1)
-				{
-				dom=builder.parse(new File(args.get(0)));
-				}
 			else
 				{
-				System.err.println("Illegal number of arguments");
-				return -1;
+				dom=builder.parse(new File(input));
 				}
 			this.parse(dom);
 			return 0;
 			}
-		catch(Exception error)
+		catch(Throwable error)
 			{
 			error.printStackTrace();
 			return -1;

@@ -231,7 +231,7 @@ $(eval $(call compile,nashornserver,sandbox.NashornServer,${apache.commons.cli} 
 $(eval $(call compile,filesaveserver,sandbox.http.FileSaveServer,${jcommander.jar} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars} ${log4j.jars}))
 $(eval $(call compile,urlsurveyserver,sandbox.http.UrlSurveyServer,${jcommander.jar} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars} ${log4j.jars}))
 $(eval $(call compile,githistory,sandbox.GitHistory,${apache.commons.cli}  ))
-$(eval $(call compile,xml2xsd,sandbox.XmlToXsd,${apache.commons.cli}  ))
+$(eval $(call compile,xml2xsd,sandbox.tools.xmls2xsd.XmlToXsd,${jcommander.jar}))
 $(eval $(call compile,java2graph,sandbox.Java2Graph,${apache.commons.cli}  ))
 $(eval $(call compile,gribouille,sandbox.Gribouille,${jcommander.jar}  ))
 $(eval $(call compile,weatherarchive,sandbox.WeatherArchive,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}  ${apache.httpclient.jars} ))
