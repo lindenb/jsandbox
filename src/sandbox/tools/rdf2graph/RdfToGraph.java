@@ -11,9 +11,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import javax.xml.stream.XMLOutputFactory;
-import javax.xml.stream.XMLStreamWriter;
-
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.NodeIterator;
@@ -36,6 +33,7 @@ import sandbox.Logger;
 import sandbox.StringUtils;
 import sandbox.gexf.Gexf;
 import sandbox.io.IOUtils;
+import sandbox.xml.stream.XmlStreamWriter;
 
 public class RdfToGraph extends Launcher
 {
@@ -82,52 +80,43 @@ private Model extractSchema(final Model  model,final Set<Property> propertiesFor
 	StmtIterator iter2 =model.listStatements();
 	while(iter2.hasNext()) {
 		final Statement stmt = iter2.next();
+		
+		
 		final ExtendedIterator<Resource> iter_s = model.
-				listObjectsOfProperty(stmt.getResource(), RDF.type).
+				listObjectsOfProperty(stmt.getSubject(), RDF.type).
 				filterKeep(N->N.isResource()).
 				mapWith(N->N.asResource());
 		while(iter_s.hasNext()) {
 			final Resource subject_type = iter_s.next();
 			appendLabels.accept(subject_type);
+			
+			appendLabels.accept(stmt.getPredicate());
 
 			
-			final ExtendedIterator<Resource> iter_p = model.
-					listObjectsOfProperty(stmt.getPredicate(), RDF.type).
-					filterKeep(N->N.isResource()).
-					mapWith(N->N.asResource());
-			
-			
-			
-			while(iter_p.hasNext()) {
-				final Property predicate_type =modelOut.createProperty(iter_p.next().getURI());
-				appendLabels.accept(predicate_type);
-				
-				/* it's a literal, just add one example of value */
-				if(stmt.getObject().isLiteral()) {
-					ExtendedIterator<Statement> iter_o = modelOut.
-						listStatements(subject_type,predicate_type,(RDFNode)null).
-						filterKeep(S->S.getObject().isLiteral());
-					/* no example provided before ? */
-					if(!iter_o.hasNext()) {
-						modelOut.add(subject_type,predicate_type,stmt.getObject().asLiteral());
-						}
-					iter_o.close();
+			/* it's a literal, just add one example of value */
+			if(stmt.getObject().isLiteral()) {
+				final ExtendedIterator<Statement> iter_o = modelOut.
+					listStatements(subject_type,stmt.getPredicate(),(RDFNode)null).
+					filterKeep(S->S.getObject().isLiteral());
+				/* no example provided before ? */
+				if(!iter_o.hasNext()) {
+					modelOut.add(subject_type,stmt.getPredicate(),stmt.getObject().asLiteral());
 					}
-				else if(stmt.getObject().isResource() && !stmt.getObject().isAnon())
-					{
-					final ExtendedIterator<Resource> iter_o = model.
-							listObjectsOfProperty(stmt.getObject().asResource(), RDF.type).
-							filterKeep(N->N.isResource()).
-							mapWith(N->N.asResource());
-					while(iter_o.hasNext()) {
-						final Resource object_type = iter_o.next();
-						appendLabels.accept(object_type);
-						modelOut.add(subject_type,predicate_type,object_type);
-						}
-					iter_o.close();
-					}
+				iter_o.close();
 				}
-			
+			else if(stmt.getObject().isResource() && !stmt.getObject().isAnon())
+				{
+				final ExtendedIterator<Resource> iter_o = model.
+						listObjectsOfProperty(stmt.getObject().asResource(), RDF.type).
+						filterKeep(N->N.isResource()).
+						mapWith(N->N.asResource());
+				while(iter_o.hasNext()) {
+					final Resource object_type = iter_o.next();
+					appendLabels.accept(object_type);
+					modelOut.add(subject_type,stmt.getPredicate(),object_type);
+					}
+				iter_o.close();
+				}
 			}
 		iter_s.close();
 		
@@ -182,8 +171,7 @@ public int doWork(final List<String> args) {
 			case gexf:
 				{
 				try(PrintWriter pw = super.openPathAsPrintWriter(this.output)) {
-		    		final XMLOutputFactory xmlfactory= XMLOutputFactory.newInstance();
-		    		final  XMLStreamWriter w= xmlfactory.createXMLStreamWriter(pw);		    		
+		    		final  XmlStreamWriter w= XmlStreamWriter.of(pw);		    		
 		    		w.writeStartDocument("UTF-8","1.0");
 		    		w.writeStartElement("gexf");
 		    		w.writeAttribute("xmlns", Gexf.XMLNS);

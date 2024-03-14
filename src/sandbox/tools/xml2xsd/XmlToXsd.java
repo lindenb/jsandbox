@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.xml.XMLConstants;
+import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLOutputFactory;
@@ -47,6 +48,7 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.io.IOUtils;
+import sandbox.lang.StorageTypePredictor;
 
 public class XmlToXsd extends Launcher {
 	private static final String XSD=XMLConstants.W3C_XML_SCHEMA_NS_URI;
@@ -133,84 +135,15 @@ public class XmlToXsd extends Launcher {
 		/** guess xsd type for a set of Nodes */
 		private String getXsdType(List<?> domNodes)
 			{
-			boolean is_bigdecimal=true;
-			boolean is_biginteger=true;
-			boolean is_double=true;
-			boolean is_float=true;
-			boolean is_long=true;
-			boolean is_int=true;
-			boolean is_boolean=true;
+			final StorageTypePredictor predictor = new StorageTypePredictor();
 			for(Object o:domNodes)
 				{
 				final String text=((Node)o).getTextContent();
 				if(text==null) return null;
-				if(is_double)
-					{
-					try {
-						Double.parseDouble(text);
-						} 
-					catch (Exception e2) {
-						is_double=false;
-						}
-					}
-				if(is_float)
-					{
-					try {
-						Float.parseFloat(text);
-						} 
-					catch (Exception e2) {
-						is_float=false;
-						}
-					}
-				if(is_long)
-					{
-					try {
-						Long.parseLong(text);
-						} 
-					catch (Exception e2) {
-						is_long=false;
-						}
-					}
-				if(is_int)
-					{
-					try {
-						Integer.parseInt(text);
-						} 
-					catch (Exception e2) {
-						is_int=false;
-						}
-					}
-				if(is_boolean && !(text.equals("true") || text.equals("false")))
-					{
-					is_boolean=false;
-					}
-				if(is_bigdecimal)
-					{
-					try {
-						new BigDecimal(text);
-						} 
-					catch (Exception e2) {
-						is_bigdecimal=false;
-						}
-					}
-				if(is_biginteger)
-					{
-					try {
-						new BigInteger(text);
-						} 
-					catch (Exception e2) {
-						is_biginteger=false;
-						}
-					}
+				predictor.accept(text);
 				}
-			if(is_int) return "xsd:int";
-			if(is_long) return "xsd:long";
-			if(is_biginteger) return "xsd:integer";
-			if(is_float) return "xsd:float";
-			if(is_double) return "xsd:double";
-			if(is_bigdecimal) return "xsd:decimal";
-			if(is_boolean) return "xsd:bool";
-			return "xsd:string";
+			final QName qN = predictor.getXsdType();
+			return qN.getPrefix()+":"+qN.getLocalPart();
 			}
 		
 		String getJavaName() {
