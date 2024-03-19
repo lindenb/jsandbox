@@ -10,6 +10,15 @@ import java.util.Properties;
 
 public class StringUtils {
 
+public static String repeat( int count,char c) {
+	final StringBuilder sb = new StringBuilder(count);
+	while(count>0) {
+		sb.append(c);
+		count--;
+		}
+	return sb.toString();
+	}
+	
 public static String ltrim(final String s) {
 	int x=0;
 	while(x<s.length() && Character.isSpaceChar(s.charAt(x))) {
