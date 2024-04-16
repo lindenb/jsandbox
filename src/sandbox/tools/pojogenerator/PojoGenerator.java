@@ -1,55 +1,78 @@
-options {
-STATIC=false;
-}
+package sandbox.tools.pojogenerator;
 
-
-PARSER_BEGIN(PojoGenerator)
-
-package sandbox;
-import java.util.List;
-import java.math.BigInteger;
+import java.io.PrintWriter;
+import java.nio.file.Path;
 import java.util.ArrayList;
-import java.io.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import java.util.List;
 
-    
-@SuppressWarnings("unchecked")
-public class PojoGenerator
-{
+public class PojoGenerator {
 
-private static abstract class TypeDef
-    {
-    public String name;
-    
-    public String getJavaName()
-        {
-        return name.substring(0,1).toUpperCase()+name.substring(1);
-        }
-    }
-
-private static class ColumnDef extends TypeDef
-    {
-    public String type;
-    public String getPropertyName()
-    	{
-    	return name.toUpperCase()+"_PROPERTY";
-    	}
-    }
-
-private static class ClassDef extends TypeDef
-    {
-    public List<ColumnDef> columns=new ArrayList<ColumnDef>();
+	public static class Type {
+		
+		}
+	
+	public static class SimpleType extends Type {
+		final String type;
+		SimpleType(final String type){
+			this.type = type;
+			}
+		}
+	
+	public static class ListOf extends Type {
+		final Type type;
+		ListOf(final Type type){
+			this.type = type;
+			}
+		}
+	public static class MapOf extends Type {
+		final Type key;
+		final Type value;
+		MapOf(Type key,Type value) {
+			this.key = key;
+			this.value = value;
+		}
 	}
 
+	
+	public abstract class TypeDef
+	    {
+	    protected final String name;
+	    protected TypeDef(final String name) {
+	    	this.name = name;
+	    	}
+	    
+	    public String getJavaName()
+	        {
+	        return name.substring(0,1).toUpperCase()+name.substring(1);
+	        }
+	    }
 
-/** Code Generator */
-private static class CodeGenerator
-	{
+	public class ColumnDef extends TypeDef
+	    {
+	    public Type type;
+		ColumnDef(final String name,final Type type)  {
+			super(name);
+			this.type = type;
+			}
+	    public String getPropertyName()
+	    	{
+	    	return name.toUpperCase()+"_PROPERTY";
+	    	}
+	    }
+
+	public class ClassDef extends TypeDef
+	    {
+	    public List<ColumnDef> columns=new ArrayList<ColumnDef>();
+	    ClassDef(final String name)  {
+			super(name);
+			}
+		}
+
+	
 	boolean createInterface=false;
 	boolean createListeners=false;
 	String packageName="generated";
-	File fileout=null;
+	Path fileout=null;
 	List<ClassDef> defs=new ArrayList<ClassDef>();
 	
 	/** print class */
@@ -153,6 +176,19 @@ private static class CodeGenerator
        
         out.println("\t}");
         }
+    
+    public Type createMapOf(Type key,Type value) {
+    	return new MapOf(key,value);
+    	}
+    
+    public Type createListOf(Type t) {
+    	return new ListOf(t);
+    	}
+    
+    public Type createSimpleType(String s) {
+    	return new SimpleType(s);
+    	}
+
 	
 	private void run() throws Exception
 		{
@@ -202,10 +238,8 @@ private static class CodeGenerator
 			
 			}
 		}
-	}	
-
-
-public static void main(String[] args)
+	
+	public static void main(String[] args)
     {
     try {
  	    CodeGenerator app=new CodeGenerator();
@@ -264,117 +298,5 @@ public static void main(String[] args)
         e.printStackTrace();
         }
     }
+
 }
-
-
-PARSER_END(PojoGenerator)
-
-SKIP :
-{
-" "
-| "\t"
-| "\n"
-| "\r"
-| <"//" (~["\n"])* "\n">
-| <"/*">: INSIDE_COMMENT
-}
-
-<INSIDE_COMMENT>
-SKIP:
-{
-        <"*/">: DEFAULT
-|       <~[]>
-}
-
-
-TOKEN : /* LITERALS */
-{
-  <CLASS: "class">
-| <PACKAGE: "package">
-| <LBRACKET: "{" >
-| <RBRACKET: "}" >
-| <SEMICOLON: ";">
-| <DOT: ".">
-| <#LETTER: ["_","a"-"z","A"-"Z"] >
-| <#DIGIT: ["0"-"9"] >
-| <#SIGN: ["-","+"]>
-| <#EXPONENT: ("E"|"e") (<SIGN>)? (<DIGIT>)+ >
-| <FLOATING_NUMBER: (<DIGIT>)* "." (<DIGIT>)* (<EXPONENT>)?
-| (<DIGIT>)+ (<EXPONENT>) >
-| <INT_NUMBER: (<DIGIT>)+ >
-| <IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
-| <#ESCAPE_CHAR: "\\" ["n","t","b","r","f","\\","'","\""] >
-| <SIMPLE_QUOTE_LITERAL: "\'" ( (~["\'","\\","\n","\r"]) | <ESCAPE_CHAR> )* "\'" >
-| <DOUBLE_QUOTE_LITERAL: "\"" ( (~["\"","\\","\n","\r"]) | <ESCAPE_CHAR> )*"\"" >
-| <COMMA: "," >
-}
-
-
-
-public List<ClassDef> input(): { String packageName; ClassDef c;List<ClassDef> L = new ArrayList<ClassDef>();  }
-    {
-      c= classDecl() { L.add(c); }
-    ( c= classDecl() { L.add(c); } )*
-    <EOF>
-    {return L;}
-    }
-
-private ClassDef classDecl():
-    { String className; ClassDef def=new ClassDef(); List<ColumnDef> cols; }
-    {
-    (
-    <CLASS> className=identifier() { def.name=className;}
-    <LBRACKET>
-    ( cols=columnDecl() {def.columns.addAll(cols);})*
-    <RBRACKET>
-    )
-    {return def;}
-    }
-
-
-private List<ColumnDef> columnDecl():
-    {List<ColumnDef> cols=new ArrayList<ColumnDef>();String t; List<String> names;}
-    {
-    (t=typename() names=identifiers() <SEMICOLON>)
-        {
-        for(String n:names)
-	        {
-	        ColumnDef col=new ColumnDef();
-	        col.type=t;
-	        col.name=n;
-	        cols.add(col);
-	        }
-        return cols;
-        }
-    }
-
-private List<String> identifiers():{List<String> L=new ArrayList<String>(); String s;}
-	{
-	(s=identifier() { L.add(s);} (<COMMA> s=identifier() { L.add(s);} )* )
-		{
-		return L;
-		}
-	}
-
-private String typename():
-    {
-    StringBuilder b=new StringBuilder();
-    String s1;
-    String s2;
-    }
-    {
-    ( s1=identifier() { b.append(s1);} ( <DOT> s2=identifier() { b.append("."); b.append(s2);} )* )
-        {
-        return b.toString();
-        }
-    }
-
-private String identifier():
-    {
-    Token t;
-    }
-    {
-    t=<IDENTIFIER> { return t.image;}
-    }
-
-

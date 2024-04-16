@@ -1,0 +1,157 @@
+options {
+STATIC=false;
+}
+
+
+PARSER_BEGIN(PojoParser)
+
+package sandbox;
+import java.util.List;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.io.*;
+
+    
+@SuppressWarnings("unchecked")
+public class PojoParser
+	{
+	
+	}
+
+
+PARSER_END(PojoGenerator)
+
+SKIP :
+{
+" "
+| "\t"
+| "\n"
+| "\r"
+| <"//" (~["\n"])* "\n">
+| <"/*">: INSIDE_COMMENT
+}
+
+<INSIDE_COMMENT>
+SKIP:
+{
+        <"*/">: DEFAULT
+|       <~[]>
+}
+
+
+TOKEN : /* LITERALS */
+{
+  <CLASS: "class">
+| <PACKAGE: "package">
+| <LBRACKET: "{" >
+| <RBRACKET: "}" >
+| <LT: "<" >
+| <GT: ">" >
+| <COMMA: "," >
+| <SEMICOLON: ";">
+| <DOT: ".">
+| <#LETTER: ["_","a"-"z","A"-"Z"] >
+| <#DIGIT: ["0"-"9"] >
+| <#SIGN: ["-","+"]>
+| <#EXPONENT: ("E"|"e") (<SIGN>)? (<DIGIT>)+ >
+| <FLOATING_NUMBER: (<DIGIT>)* "." (<DIGIT>)* (<EXPONENT>)?
+| (<DIGIT>)+ (<EXPONENT>) >
+| <INT_NUMBER: (<DIGIT>)+ >
+| <MAP:( "java.util.Map" | "Map") >
+| <LIST:( "java.util.List" | "List") >
+| <IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
+| <#ESCAPE_CHAR: "\\" ["n","t","b","r","f","\\","'","\""] >
+| <SIMPLE_QUOTE_LITERAL: "\'" ( (~["\'","\\","\n","\r"]) | <ESCAPE_CHAR> )* "\'" >
+| <DOUBLE_QUOTE_LITERAL: "\"" ( (~["\"","\\","\n","\r"]) | <ESCAPE_CHAR> )*"\"" >
+
+}
+
+
+
+public List<ClassDef> input(): { String packageName; ClassDef c;List<ClassDef> L = new ArrayList<ClassDef>();  }
+    {
+      c= classDecl() { L.add(c); }
+    ( c= classDecl() { L.add(c); } )*
+    <EOF>
+    {return L;}
+    }
+
+private ClassDef classDecl():
+    { String className; ClassDef def=new ClassDef(); List<ColumnDef> cols; }
+    {
+    (
+    <CLASS> className=identifier() { def.name=className;}
+    <LBRACKET>
+    ( cols=columnDecl() {def.columns.addAll(cols);})*
+    <RBRACKET>
+    )
+    {return def;}
+    }
+
+
+private List<ColumnDef> columnDecl():
+    {List<ColumnDef> cols=new ArrayList<ColumnDef>();Type t; List<String> names;}
+    {
+    (t=anyType() names=identifiers() <SEMICOLON>)
+        {
+        for(String n:names)
+	        {
+	        cols.add(new ColumnDef(name,t));
+	        }
+        return cols;
+        }
+    }
+
+private List<String> identifiers():{List<String> L=new ArrayList<String>(); String s;}
+	{
+	(s=identifier() { L.add(s);} (<COMMA> s=identifier() { L.add(s);} )* )
+		{
+		return L;
+		}
+	}
+
+private Type anyType():{PojoGenerator.Typ p;} {
+	(
+	  p = listOf()
+	| p = mapOf()
+	| p = simpleType() 
+	) {
+		return p;
+		}
+	}
+
+private PojoGenerator.Type listOf(): {Type p;} {
+	<LIST> <LT> p=type() <GT> {
+		return generator.createListOf(p);
+		}
+	}
+
+private P mapOf(): {Type p1,p2;} {
+	<MAP> <LT> p1=type() <COMMA>  p2=type() <GT> {
+		return generator.createMapOf(p1,p2);
+		}
+	}
+
+
+private PojoGenerator.Type simpleType():
+    {
+    StringBuilder b=new StringBuilder();
+    String s1;
+    String s2;
+    }
+    {
+    ( s1=identifier() { b.append(s1);} ( <DOT> s2=identifier() { b.append(".").append(s2);} )* )
+        {
+        return generator.createSimpleType(b.toString());
+        }
+    }
+
+private String identifier():
+    {
+    Token t;
+    }
+    {
+    t=<IDENTIFIER> { return t.image;}
+    }
+
+
