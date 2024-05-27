@@ -3,6 +3,8 @@ package sandbox.xml.dom;
 import java.util.function.Predicate;
 
 import javax.xml.namespace.QName;
+import javax.xml.stream.XMLEventFactory;
+import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
@@ -21,27 +23,13 @@ import sandbox.StringUtils;
 
 public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Element {
 	protected NamedNodeMapImpl namedNodeMap = null;
-	protected AbstractNode parentNode;
-	protected AbstractNode firstChildNode;
-	protected AbstractNode lastChildNode;
-	protected AbstractNode nextSibNode;
-	protected AbstractNode prevSibNode;
 
 	
 	public ElementImpl(final DocumentImpl owner,final QName qName) {
 		super(owner, qName);
 		}
 
-	@Override protected void setParentNode(AbstractNode p) {this.parentNode=p;}
-	@Override public AbstractNode getParentNode() {return this.parentNode;}
-	@Override protected void setFirstChild(AbstractNode p) {this.firstChildNode=p;}
-	@Override public AbstractNode getFirstChild() {return this.firstChildNode;}
-	@Override protected void setLastChild(AbstractNode p) {this.lastChildNode=p;}
-	@Override public AbstractNode getLastChild() {return this.lastChildNode;}
-	@Override protected void setNextSibling(AbstractNode p) {this.nextSibNode=p;}
-	@Override public AbstractNode getNextSibling() {return this.nextSibNode;}
-	@Override protected void setPrevSibling(AbstractNode p) {this.prevSibNode=p;}
-	@Override public AbstractNode getPreviousSibling() {return this.prevSibNode;}
+
 
 	@Override
 	public final String getTagName() {
@@ -220,7 +208,7 @@ public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Elemen
 					}
 				}
 			if(i>=0) indexstr="["+(i+1)+"]";
-			s=getParentNode().getPath()+indexstr+"/"+s;
+			s= parentNode.getPath()+indexstr+"/"+s;
 			}
 		return s;
 		}
@@ -427,5 +415,15 @@ public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Elemen
 			w.writeEndElement();
 			}
 		
+		}
+
+	@Override
+	public void write(XMLEventWriter w, XMLEventFactory factory) throws XMLStreamException {
+		throw new UnsupportedOperationException();
+		}
+
+	@Override
+	public AbstractNode removeChild(Node oldChild) throws DOMException {
+		throw new UnsupportedOperationException();
 		}
 	}

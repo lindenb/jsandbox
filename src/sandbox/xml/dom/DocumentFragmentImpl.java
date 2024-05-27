@@ -1,5 +1,8 @@
 package sandbox.xml.dom;
 
+
+import javax.xml.stream.XMLEventFactory;
+import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
@@ -11,18 +14,20 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 public class DocumentFragmentImpl extends AbstractNode implements NodeList,DocumentFragment{
-	private AbstractNode parentNode;
-	private AbstractNode firstChild;
+
 	DocumentFragmentImpl(DocumentImpl doc) {
 		super(doc);
 		}
+
+	
 	@Override
-	protected void setParentNode(AbstractNode p) {
-		this.parentNode=p;
+	public final AbstractNode getNextSibling() {
+		return null;
 		}
-	
-	
-	@Override public AbstractNode getFirstChild() { return this.firstChild; }
+	@Override
+	public final AbstractNode getPreviousSibling() {
+		return null;
+		}
 	
 	public boolean isEmpty() {
 		return !hasChildNodes();
@@ -64,10 +69,17 @@ public class DocumentFragmentImpl extends AbstractNode implements NodeList,Docum
 	
 	@Override
 	public void write(XMLStreamWriter w) throws XMLStreamException {
-		throw new XMLStreamException("Cannot run XMLStreamWriter on DocumentFragment ");
+		for(AbstractNode n=getFirstChild();n!=null;n=n.getNextSibling()) {
+			n.write(w);
+			}	
 		}
 	
-	
+	@Override
+	public void write(XMLEventWriter w, XMLEventFactory factory) throws XMLStreamException {
+		for(AbstractNode n=getFirstChild();n!=null;n=n.getNextSibling()) {
+			n.write(w, factory);
+			}
+		}
 	
 	@Override
 	public final String getPath() {
@@ -85,5 +97,9 @@ public class DocumentFragmentImpl extends AbstractNode implements NodeList,Docum
 	@Override
 	public final String getNodeValue() throws DOMException {
 		return null;
+		}
+	@Override
+	public AbstractNode removeChild(Node oldChild) throws DOMException {
+		throw new UnsupportedOperationException();
 		}
 	}

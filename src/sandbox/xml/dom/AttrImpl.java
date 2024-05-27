@@ -1,6 +1,8 @@
 package sandbox.xml.dom;
 
 import javax.xml.namespace.QName;
+import javax.xml.stream.XMLEventFactory;
+import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
@@ -156,5 +158,12 @@ public class AttrImpl extends AbstractTerminalNode implements org.w3c.dom.Attr {
 	@Override
 	public String toString() {
 		return "@"+getNodeName()+"="+getValue();
+		}
+
+
+	@Override
+	public void write(XMLEventWriter w, XMLEventFactory factory) throws XMLStreamException {
+		// TODO Auto-generated method stub
+		
 		}
 	}

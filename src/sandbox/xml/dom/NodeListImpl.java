@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.w3c.dom.Node;
@@ -66,4 +67,11 @@ public class NodeListImpl<T extends Node> extends AbstractList<T> implements Nod
 	public NodeListImpl<ElementImpl> asElements() {
 		return map(X->ElementImpl.class.cast(X));
 		}
+	
+	public static <T extends Node> Collector<T, ?, NodeListImpl<T>> collect() {
+		return Collectors.collectingAndThen(Collectors.toList(),
+				L->new NodeListImpl<>(L)
+				);
+		}
+	
 	}

@@ -3,7 +3,7 @@ SPACE := $(EMPTY) $(EMPTY)
 .PHONY: all all_maven_jars clean_maven_jars eclipse_classpath
 here.dir=$(dir $(realpath $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))))
 bin.dir =${here.dir}dist
-javacc.exe ?= javacc
+javacc.exe ?= java -cp ${HOME}/packages/javacc/target/javacc.jar  javacc
 lib.dir=${here.dir}maven
 src.dir=${here.dir}src
 tmp.dir=tmp
@@ -200,7 +200,7 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
 	pcaviewer swap2bits
 
 
-$(eval $(call compile,miniivy,sandbox.MiniIvy,${jcommander.jar}))
+$(eval $(call compile,miniivy,sandbox.tools.miniivy.MiniIvy,${jcommander.jar}))
 $(eval $(call compile,mywordle,sandbox.MyWordle,${jcommander.jar}))
 $(eval $(call compile,jfxwatcher,sandbox.JFXWatcher,))
 $(eval $(call compile,twitter01,sandbox.Twitter01, ${twitter.hbc.jars}))
@@ -292,6 +292,7 @@ $(eval $(call compile,xml2jni,sandbox.tools.jni.XmlToJNI,${jcommander.jar} ${fre
 $(eval $(call compile,rdftemplate,sandbox.tools.rdftemplate.RDFTemplate,${jcommander.jar} ${jena-core.jars}))
 $(eval $(call compile,rdf2graph,sandbox.tools.rdf2graph.RdfToGraph,${jcommander.jar} ${jena-core.jars}))
 $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommander.jar} ./src/sandbox/tools/streamplot/parser/StreamPlotParser.java))
+$(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/sandbox/tools/pojogenerator/parser/PojoParser.java))
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 
@@ -314,6 +315,12 @@ $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
 	#rm -rf tmp
 	$(foreach F,alleleAnnotationmethods  alleleAnnotations  annotateAllelemethods beacon  genotypephenotype common metadata, echo "${F}" && curl -L -o "${F}.avdl" "https://raw.githubusercontent.com/ga4gh/schemas/master/src/main/resources/avro/${F}.avdl" && cat   "${F}.avdl" | java -cp $@ sandbox.Avdl2Xml  | xmllint --format - ; )
 
+
+${tmp.dir}/WEB-INF/js/jquery.js:
+	mkdir -p $(dir $@)
+	wget -O $@ "http://code.jquery.com/jquery-latest.js"
+
+
 define runjavacc
 
 $$(addsuffix .java,$$(basename $(1))) : $(1)
@@ -323,7 +330,7 @@ endef
 
 $(eval $(call runjavacc,./src/sandbox/colors/parser/ColorParser.jj))
 $(eval $(call runjavacc,./src/sandbox/tools/streamplot/parser/StreamPlotParser.jj))
-
+$(eval $(call runjavacc,./src/sandbox/tools/pojogenerator/parser/PojoParser.jj))
 
 gimpprocs2xml: ./src/sandbox/GimpProcedures.jj
 	mkdir -p ${tmp.dir}/sandbox ${tmp.dir}/META-INF ${bin.dir}

@@ -4,6 +4,8 @@ package sandbox.xml.dom;
 
 import org.w3c.dom.CharacterData;
 import org.w3c.dom.DOMException;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * base class for text, CDATA, Comment...
@@ -11,10 +13,14 @@ import org.w3c.dom.DOMException;
  */
 public abstract class AbstractCharacterNode extends AbstractTerminalNode implements CharacterData,CharSequence {
 	protected final StringBuilder text ;
+
 	protected AbstractCharacterNode(final DocumentImpl owner,final String text) {
 		super(owner);
 		this.text = new StringBuilder(text);
 		}
+	
+
+
 	
 	@Override
 	public final int hashCode() {
@@ -98,6 +104,9 @@ public abstract class AbstractCharacterNode extends AbstractTerminalNode impleme
 	public String substringData(int offset, int count) throws DOMException {
 		return this.text.substring(offset, offset+count);
 		}
+	
+
+
 	
 	@Override
 	public final String toString() {

@@ -1,5 +1,7 @@
 package sandbox.xml.dom;
 
+import javax.xml.stream.XMLEventFactory;
+import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
@@ -38,7 +40,7 @@ public class ProcessingInstructionImpl extends AbstractCharacterNode implements 
 	public String getPath() {
 		String s= getTarget()+"()";
 		if(hasParent()) {
-			s= getParentNode().getPath()+"/"+s;
+			s= parentNode.getPath()+"/"+s;
 			}
 		return s;
 		}
@@ -50,4 +52,10 @@ public class ProcessingInstructionImpl extends AbstractCharacterNode implements 
 	public void write(XMLStreamWriter w) throws XMLStreamException {
 		w.writeProcessingInstruction(getTarget(), getData());
 		}
+	
+	@Override
+	public void write(XMLEventWriter w, XMLEventFactory factory) throws XMLStreamException {
+		w.add(factory.createProcessingInstruction(getTarget(), getData()));
+	}
+	
 }

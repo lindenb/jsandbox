@@ -85,7 +85,7 @@ public class AtomToHtml extends Launcher {
 		String url = null;
 		String img = null;
 		String categoryLabel=null;
-		String userName =null;
+		final Set<String> userNames = new HashSet<>();
 		String license = null;
 		for(Node c1= root.getFirstChild();c1!=null;c1=c1.getNextSibling()) {
 			if(c1.getNodeType()!=Node.ELEMENT_NODE) continue;
@@ -126,7 +126,13 @@ public class AtomToHtml extends Launcher {
 					final Element e2 = Element.class.cast(c2);
 					final String localName2 = e2.getLocalName();
 					if(localName2.equals("name")) {
-						userName = e2.getTextContent();
+						userNames.add(e2.getTextContent());
+						}
+					else if(localName2.equals("uri")) {
+						userNames.add(e2.getTextContent());
+						}
+					else if(localName2.equals("nsid") && "flickr".equals(e2.getPrefix())) {
+						userNames.add(e2.getTextContent());
 						}
 					}
 				}
@@ -145,7 +151,7 @@ public class AtomToHtml extends Launcher {
 				}
 			}
 				
-		if(userName!=null && this.excludeUsers.contains(userName)) {
+		if(this.excludeUsers.stream().anyMatch(S->userNames.contains(S))) {
 			return null;
 			}
 		
@@ -188,7 +194,7 @@ public class AtomToHtml extends Launcher {
 		if(width>0) imgE.setAttribute("width", String.valueOf(width));
 		a.appendChild(imgE);
 		if(!StringUtils.isBlank(title)) imgE.setAttribute("alt", title);
-		if(!StringUtils.isBlank(title)) a.setAttribute("title", title + (StringUtils.isBlank(userName)?"":" \""+userName+"\"")+(StringUtils.isBlank(updated)?"":" "+updated));
+		if(!StringUtils.isBlank(title)) a.setAttribute("title", title + (userNames.isEmpty()?"":" \""+userNames.iterator().next()+"\"")+(StringUtils.isBlank(updated)?"":" "+updated));
 		imgE.setAttribute("src", img);
 		saveImage(img,client);
 		return retE;

@@ -3,11 +3,14 @@ package sandbox.xml.dom;
 
 
 import javax.xml.namespace.QName;
+import javax.xml.stream.XMLEventFactory;
 import javax.xml.stream.XMLEventReader;
+import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
+import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 
 import org.w3c.dom.Attr;
@@ -34,6 +37,7 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 	private String documentUri  = null;
 	private boolean strictErrorChecking =false;
 	private boolean standalone =true;
+
 	public DocumentImpl() {
 		super(null);
 		}
@@ -41,6 +45,8 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 	public final DocumentImpl getOwnerDocument() {
 		return this;
 		}
+	
+
 	@Override
 	public final String getNodeName() {
 		return "#document"; // in spec
@@ -50,6 +56,9 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 	public final AbstractNode getParentNode() {
 		return null;
 		}
+	@Override
+	public final AbstractNode getPreviousSibling() { return null; }
+	public final AbstractNode getNextSibling() { return null; }
 
 	@Override
 	public AbstractNode appendChild(Node newChild) throws DOMException {
@@ -60,6 +69,7 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 			}
 		return super.appendChild(newChild);
 		}
+	
 	
 	@Override
 	public final String getNodeValue() throws DOMException {
@@ -324,6 +334,35 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 		w.writeEndDocument();
 		}
 	
+	@Override
+	public void write(XMLEventWriter w, XMLEventFactory factory) throws XMLStreamException {
+		w.add(factory.createStartDocument(this.xmlEncoding, this.xmlVersion, this.standalone));
+		for(AbstractNode n=getFirstChild();n!=null;n=n.getNextSibling()) {
+			n.write(w,factory);
+			}
+		w.add(factory.createEndDocument());
+		}
+	
+	public DocumentFragmentImpl read(XMLEventReader r) throws XMLStreamException {
+		DocumentFragmentImpl frag = this.createDocumentFragment();
+		while(r.hasNext()) {
+			final XMLEvent evt=r.nextEvent();
+			switch(evt.getEventType()) {
+				case TEXT_NODE: frag.appendChild( this.createTextNode(r.getElementText())); break;
+				case COMMENT_NODE: frag.appendChild( this.createComment(r.getElementText())); break;
+				case CDATA_SECTION_NODE: frag.appendChild( this.createCDATASection(r.getElementText())); break;
+				case ELEMENT_NODE:
+					StartElement start = evt.asStartElement();
+					ElementImpl e = this.createElement(start.getName());
+					e.appendChild(read(r));
+					frag.appendChild(e);
+					break;
+				}
+			}
+		return frag;
+		}
+	
+	
 	private void load(AbstractNode root, XMLStreamReader r)  throws XMLStreamException {
 		while(r.hasNext()) {
 			final int type = r.nextTag();
@@ -388,6 +427,10 @@ public class DocumentImpl extends AbstractNode implements org.w3c.dom.Document  
 	public void load(final XMLStreamReader r)  throws XMLStreamException {
 		this.removeAllChildNodes();
 		load(this,r);
+		}
+	@Override
+	public AbstractNode removeChild(Node oldChild) throws DOMException {
+		throw new UnsupportedOperationException();
 		}
 	
 	}

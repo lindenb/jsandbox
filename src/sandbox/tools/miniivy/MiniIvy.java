@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.tools.miniivy;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -27,15 +27,26 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import com.beust.jcommander.Parameter;
+
+import sandbox.Launcher;
+import sandbox.Logger;
 import sandbox.xml.DefaultNamespaceContext;
 
 public class MiniIvy extends Launcher
 	{
+	private static final Logger LOG = Logger.builder(Launcher.class).build();
 	private XPath xpath=null;
 	private final Map<Dependency,Dependency> dep2deps = new HashMap<Dependency,Dependency>();
 	private final Map<String, Set<Dependency>> target2dependencies = new HashMap<String, Set<Dependency>>();
 	private static final String MAVEN4_NS="http://maven.apache.org/POM/4.0.0";
-	
+	@Parameter(names= {"-d"},description="debug")
+	private boolean debug_flag=false;
+
+	private void debug(Object o) {
+		if(!debug_flag) return;
+		LOG.debug(o);
+	}
 	
 	private static String fixArray( String s)
 	{
@@ -192,6 +203,7 @@ public class MiniIvy extends Launcher
 		
 		private Set<Dependency> resolve() throws IOException
 			{
+			debug("resolve "+this);
 			try {
 				if(this.dependencies!=null) return this.dependencies;
 				this.dependencies=new HashSet<>();
@@ -321,24 +333,31 @@ public class MiniIvy extends Launcher
 			this.xpath.setNamespaceContext(new DefaultNamespaceContext().put("pom",MAVEN4_NS) );
 				
 			
-			Pattern ws=Pattern.compile("[\\s]+");
+			final Pattern ws=Pattern.compile("[\\s]+");
 			String line;
 			while((line=r.readLine())!=null)
 				{
 				if(line.isEmpty() || line.startsWith("#")) continue;
 				String tokens[]= ws.split(line);
-				if(tokens.length<=1) continue;
+				if(tokens.length<=1) {
+					debug("skipping "+line);
+					continue;
+				}
 				if(target2dependencies.containsKey(tokens[0]))
 					{
 					System.err.println("Duplicate key:"+tokens[0]);
+					r.close();
 					return -1;
 					}
-				Set<Dependency> deps= new HashSet<>();
+				final Set<Dependency> deps= new HashSet<>();
 				for(int i=1;i< tokens.length;++i)
 					{
-					Pattern colon=Pattern.compile("[\\:]");
-					String token2s[] =colon.split(tokens[i]);
-					if(token2s.length<2) throw new IllegalArgumentException("Expected 3 tokens in "+tokens[i]);
+					final Pattern colon=Pattern.compile("[\\:]");
+					final String token2s[] =colon.split(tokens[i]);
+					if(token2s.length<2) {
+						r.close();
+						throw new IllegalArgumentException("Expected 3 tokens in "+tokens[i]);
+						}
 					Dependency dep = new Dependency();
 					dep.group = token2s[0];
 					dep.artifactId = token2s[1];

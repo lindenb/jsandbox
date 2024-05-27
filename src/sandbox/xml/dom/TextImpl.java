@@ -1,7 +1,6 @@
 package sandbox.xml.dom;
 
 import javax.xml.stream.XMLEventFactory;
-import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
@@ -42,14 +41,9 @@ public class TextImpl extends AbstractTextNode implements Text {
 	public String getPath() {
 		String s= "text()";
 		if(getParentNode()!=null) {
-			s=getParentNode().getPath()+"/"+s;
+			s= parentNode.getPath()+"/"+s;
 			}
 		return s;
-		}
-	@Override
-	public void sax(DefaultHandler handler) throws SAXException {
-		final char[] array = getData().toCharArray();
-		handler.characters(array,0,array.length);
 		}
 
 	@Override

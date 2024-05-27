@@ -6,8 +6,6 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
 import org.w3c.dom.Node;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.DefaultHandler;
 
 public class CommentImpl extends AbstractTextNode implements org.w3c.dom.Comment {
 	CommentImpl(DocumentImpl owner,final String text) {
@@ -37,10 +35,7 @@ public class CommentImpl extends AbstractTextNode implements org.w3c.dom.Comment
 		return getOwnerDocument().createComment(this.getData());
 		}
 	
-	
-	@Override
-	public void sax(final DefaultHandler handler) throws SAXException {
-	}
+
 
 	@Override
 	public void write(XMLStreamWriter w) throws XMLStreamException {
@@ -55,7 +50,7 @@ public class CommentImpl extends AbstractTextNode implements org.w3c.dom.Comment
 	public String getPath() {
 		String s= "comment()";
 		if(getParentNode()!=null) {
-			s=getParentNode().getPath()+"/"+s;
+			s= parentNode.getPath()+"/"+s;
 			}
 		return s;
 		}

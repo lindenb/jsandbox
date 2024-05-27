@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 import javax.xml.XMLConstants;
@@ -27,27 +28,15 @@ import sandbox.StringUtils;
 public abstract class AbstractNode implements org.w3c.dom.Node {
 	private /*final no, node can be 'adopted' */ DocumentImpl ownerDoc;
 	private Map<String,Object> userProperties  = null;
-	
-	
+	protected AbstractNode parentNode = null;
+	protected AbstractNode prevSibling = null;
+	protected AbstractNode nextSibling = null;
+	protected AbstractNode firstChild = null;
+	protected AbstractNode lastChild = null;
+
 	
 	protected AbstractNode(final DocumentImpl ownerDoc) {
 		this.ownerDoc = ownerDoc;
-		}
-	
-	protected void setParentNode(AbstractNode p) {
-		throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "setParentNode");
-		}
-	protected void setFirstChild(AbstractNode p) {
-		throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "setFirstChild");
-		}
-	protected void setLastChild(AbstractNode p) {
-		throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "setLastChild");
-		}
-	protected void setPrevSibling(AbstractNode p) {
-		throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "setPrevSibling");
-		}
-	protected void setNextSibling(AbstractNode p) {
-		throw new DOMException(DOMException.NOT_SUPPORTED_ERR, "setNextSibling");
 		}
 
 	
@@ -86,11 +75,11 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		if(getParentNode()!=null) {
 			getParentNode().removeChild(this);
 			}
-		if(getNextSibling()!=null) {
-			getNextSibling().setPrevSibling(getPreviousSibling());
+		if(this.nextSibling!=null) {
+			this.nextSibling.prevSibling=this.prevSibling;
 			}
-		if(getPreviousSibling()!=null) {
-			getPreviousSibling().setNextSibling(getNextSibling());
+		if(this.prevSibling!=null) {
+			this.prevSibling.nextSibling = this.nextSibling;
 			}
 		return this;
 		}
@@ -101,14 +90,14 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 	 */
 	public AbstractNode removeAllChildNodes() {
 		if(hasChildNodes()) {
-			AbstractNode n1 = this.getFirstChild();
+			AbstractNode n1 = this.firstChild;
 			while(n1!=null) {
-				final AbstractNode n2 = n1.getNextSibling();
+				final AbstractNode n2 = n1.nextSibling;
 				n1.unlink();
 				n1 = n2;
 				}
-			this.setFirstChild(null);
-			this.setLastChild(null);
+			this.firstChild=null;
+			this.lastChild=null;
 			}
 		return this;
 		}
@@ -122,14 +111,18 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		}
 	
 	@Override
-	public abstract AbstractNode getPreviousSibling() ;
+	public  AbstractNode getPreviousSibling()  { return this.prevSibling;}
 	@Override
-	public abstract AbstractNode getNextSibling();
+	public AbstractNode getNextSibling() { return this.nextSibling;}
 	@Override
-	public abstract AbstractNode getFirstChild();
-
+	public  AbstractNode getFirstChild() { return this.firstChild;}
 	@Override
-	public abstract AbstractNode getLastChild();
+	public AbstractNode getLastChild() { return this.lastChild;}
+	
+	@Override
+	public Node getParentNode() {
+		return this.parentNode;
+		}
 	
 	@Override
 	public NamedNodeMapImpl getAttributes() {
@@ -234,9 +227,19 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		}
 	
 	@Override
-	public boolean isSameNode(Node arg) {
+	public final boolean isSameNode(Node other) {
+		return isSameNode(createDefaultNodeComparator(),other);
+		}
+	
+	static BiPredicate<Node,Node> createDefaultNodeComparator() {
 		throw new UnsupportedOperationException();
 		}
+	
+	public boolean isSameNode(BiPredicate<Node,Node> pred,Node other) {
+		return pred.test(this, other);
+		}
+	
+	
 	@Override
 	public boolean isSupported(String feature, String version) {
 		return false;
@@ -271,7 +274,7 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 	
 	
 	@Override
-	public Object getUserData(String key) {
+	public Object getUserData(final String key) {
 		if(this.userProperties==null) return null;
 		return this.userProperties.get(key);
 		}
@@ -306,17 +309,17 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		AbstractNode last = null;
 		for(final AbstractNode n : nodes ) {
 			n.unlink();
-			if(getFirstChild()==null) {
-				this.setFirstChild(n);
-				this.setLastChild(n);;
+			if(this.firstChild==null) {
+				this.firstChild=n;
+				this.lastChild=n;
 				}
 			else
 				{
-				this.getLastChild().setNextSibling(n);
-				n.setPrevSibling(this.getLastChild());
-				this.setLastChild(n);
+				this.lastChild.nextSibling=n;
+				n.prevSibling=this.lastChild;
+				this.lastChild=n;
 				}
-			n.setParentNode(this);
+			n.parentNode=this;
 			last = n;
 			}
 		return last;
@@ -341,7 +344,6 @@ public abstract class AbstractNode implements org.w3c.dom.Node {
 		n.parentNode = null;
 		return n;
 		}
-	
 	@Override
 	public AbstractNode insertBefore(final Node newChild, final Node refChild) throws DOMException {
 		if(newChild==null) return null;

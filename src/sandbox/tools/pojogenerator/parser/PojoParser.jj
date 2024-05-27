@@ -5,21 +5,26 @@ STATIC=false;
 
 PARSER_BEGIN(PojoParser)
 
-package sandbox;
+package sandbox.tools.pojogenerator.parser;
 import java.util.List;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.io.*;
+import sandbox.tools.pojogenerator.PojoGenerator;
 
     
 @SuppressWarnings("unchecked")
 public class PojoParser
 	{
-	
+	private PojoGenerator generator = null;
+	public PojoParser(PojoGenerator generator,final Reader r) {
+		this(r);
+		this.generator=generator;
+		}
 	}
 
 
-PARSER_END(PojoGenerator)
+PARSER_END(PojoParser)
 
 SKIP :
 {
@@ -68,7 +73,7 @@ TOKEN : /* LITERALS */
 
 
 
-public List<ClassDef> input(): { String packageName; ClassDef c;List<ClassDef> L = new ArrayList<ClassDef>();  }
+public List<PojoGenerator.ClassDef> input(): { String packageName; PojoGenerator.ClassDef c;List<PojoGenerator.ClassDef> L = new ArrayList<PojoGenerator.ClassDef>();  }
     {
       c= classDecl() { L.add(c); }
     ( c= classDecl() { L.add(c); } )*
@@ -76,11 +81,11 @@ public List<ClassDef> input(): { String packageName; ClassDef c;List<ClassDef> L
     {return L;}
     }
 
-private ClassDef classDecl():
-    { String className; ClassDef def=new ClassDef(); List<ColumnDef> cols; }
+private PojoGenerator.ClassDef classDecl():
+    { String className; PojoGenerator.ClassDef def=null; List<PojoGenerator.ColumnDef> cols; }
     {
     (
-    <CLASS> className=identifier() { def.name=className;}
+    <CLASS> className=identifier() { def=generator.createClass(className);}
     <LBRACKET>
     ( cols=columnDecl() {def.columns.addAll(cols);})*
     <RBRACKET>
@@ -89,14 +94,14 @@ private ClassDef classDecl():
     }
 
 
-private List<ColumnDef> columnDecl():
-    {List<ColumnDef> cols=new ArrayList<ColumnDef>();Type t; List<String> names;}
+private List<PojoGenerator.ColumnDef> columnDecl():
+    {List<PojoGenerator.ColumnDef> cols=new ArrayList<PojoGenerator.ColumnDef>();PojoGenerator.Type t; List<String> names;}
     {
     (t=anyType() names=identifiers() <SEMICOLON>)
         {
         for(String n:names)
 	        {
-	        cols.add(new ColumnDef(name,t));
+	        cols.add(generator.createColumn(n,t));
 	        }
         return cols;
         }
@@ -110,7 +115,7 @@ private List<String> identifiers():{List<String> L=new ArrayList<String>(); Stri
 		}
 	}
 
-private Type anyType():{PojoGenerator.Typ p;} {
+private PojoGenerator.Type anyType():{PojoGenerator.Type p;} {
 	(
 	  p = listOf()
 	| p = mapOf()
@@ -120,14 +125,14 @@ private Type anyType():{PojoGenerator.Typ p;} {
 		}
 	}
 
-private PojoGenerator.Type listOf(): {Type p;} {
-	<LIST> <LT> p=type() <GT> {
+private PojoGenerator.Type listOf(): {PojoGenerator.Type p;} {
+	<LIST> <LT> p=anyType() <GT> {
 		return generator.createListOf(p);
 		}
 	}
 
-private P mapOf(): {Type p1,p2;} {
-	<MAP> <LT> p1=type() <COMMA>  p2=type() <GT> {
+private PojoGenerator.Type mapOf(): {PojoGenerator.Type p1,p2;} {
+	<MAP> <LT> p1=anyType() <COMMA>  p2=anyType() <GT> {
 		return generator.createMapOf(p1,p2);
 		}
 	}

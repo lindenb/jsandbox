@@ -30,6 +30,7 @@ public class CDataSectionImpl extends AbstractTextNode implements org.w3c.dom.CD
 		return CDATA_SECTION_NODE;
 		}
 	
+	
 	@Override
 	public Node cloneNode(boolean deep) {
 		return getOwnerDocument().createCDATASection(this.getData());
@@ -39,7 +40,7 @@ public class CDataSectionImpl extends AbstractTextNode implements org.w3c.dom.CD
 	public String getPath() {
 		String s= "cdata()";
 		if(getParentNode()!=null) {
-			s=getParentNode().getPath()+"/"+s;
+			s= super.parentNode.getPath()+"/"+s;
 			}
 		return s;
 		}

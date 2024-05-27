@@ -5,6 +5,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.xml.XMLConstants;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+
 public class PojoGenerator {
 
 	public static class Type {
@@ -62,10 +66,15 @@ public class PojoGenerator {
 
 	public class ClassDef extends TypeDef
 	    {
-	    public List<ColumnDef> columns=new ArrayList<ColumnDef>();
+	    public final List<ColumnDef> columns=new ArrayList<ColumnDef>();
 	    ClassDef(final String name)  {
 			super(name);
 			}
+	    public void writeXsd(XMLStreamWriter w) throws XMLStreamException {
+	    	w.writeStartElement("xsd", "element", XMLConstants.W3C_XML_SCHEMA_NS_URI);
+	    	
+	    	w.writeEndElement();
+	    	}
 		}
 
 	
@@ -188,110 +197,27 @@ public class PojoGenerator {
     public Type createSimpleType(String s) {
     	return new SimpleType(s);
     	}
-
+    
+ 	public ClassDef createClass(String s) {
+    	return new ClassDef(s);
+    	}
 	
+	public ColumnDef createColumn(final String name,final Type type)  {
+		return new ColumnDef(name,type);
+		}
+		
+		
 	private void run() throws Exception
 		{
-		if(fileout==null)
-			{
-			
-			}
-		else if(fileout.getName().toLowerCase().endsWith(".zip"))
-			{
-			ZipEntry entry;
-			String path=packageName.replaceAll("[\\.]+","/");
-			path="pojo/"+path;
-			if(path.startsWith("/")) path=path.substring(1);
-			FileOutputStream fout=new FileOutputStream(fileout);
-			ZipOutputStream zout = new ZipOutputStream(fout);
-			PrintWriter out;
-			for(ClassDef c:defs)
-				{
-				if(this.createInterface)
-					{
-					entry= new ZipEntry(path+c.getJavaName()+".java");
-					zout.putNextEntry(entry);
-					out=new PrintWriter(zout);
-					printInterface(out,c);
-					out.flush();
-					zout.closeEntry();
-					zout.flush();
-					}
-				entry= new ZipEntry(path+c.getJavaName()+"Impl.java");
-				zout.putNextEntry(entry);
-				out=new PrintWriter(zout);
-				printClass(out,c);
-				out.flush();
-				zout.closeEntry();
-				zout.flush();
-				}
-			zout.finish();
-			fout.flush();
-			fout.close();
-			}
-		else if(fileout.isDirectory())
-			{
-			
-			}
-		else
-			{
-			
-			}
+
 		}
 	
 	public static void main(String[] args)
     {
+
     try {
- 	    CodeGenerator app=new CodeGenerator();
-        int optind=0;
-        while(optind<args.length)
-            {
-            if(args[optind].equals("-h"))
-                {
-                System.out.println("-o <directory|*.zip> (default:stdout)");
-                System.out.println("-p <package> default:"+app.packageName);
-                return;
-                }
-            else if(args[optind].equals("-o"))
-                {
-                app.fileout=new File(args[++optind]);
-                }
-            else if(args[optind].equals("-p"))
-                {
-                app.packageName= args[++optind];
-                }
-            else if(args[optind].equals("--"))
-                {
-                optind++;
-                break;
-                }
-            else if(args[optind].startsWith("-"))
-                {
-                System.err.println("Unnown option: "+args[optind]);
-                return;
-                }
-            else
-                {
-                break;
-                }
-            ++optind;
-            }
-        
-        if(optind==args.length)
-            {
-            app.defs.addAll(new PojoGenerator(new InputStreamReader(System.in)).input());
-            }
-        else
-            {
-            while(optind< args.length)
-                {
-                String inputName=args[optind++];
-                FileReader in=new FileReader(inputName);
-                app.defs.addAll(new PojoGenerator(in).input());
-                in.close();
-                }
-            }
-        app.run();
+ 	   
+       
         } 
     catch (Exception e)
         {
