@@ -5,7 +5,7 @@ import org.w3c.dom.Element;
 
 import sandbox.xml.XmlUtils;
 
-class PaneLayout extends AbstractNode{
+class PaneLayout extends Node{
 	private final PageLayout owner;
 	PaneLayout(PageLayout owner,Element root) {
 		super(root);

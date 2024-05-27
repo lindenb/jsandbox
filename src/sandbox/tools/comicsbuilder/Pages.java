@@ -18,7 +18,7 @@ import org.w3c.dom.Node;
 import sandbox.xml.XMLException;
 import sandbox.xml.XmlUtils;
 
-public class Pages extends AbstractNode {
+public class Pages extends Node {
 	private final List<Page> pages = new ArrayList<>();
 	private final ComicsBuilder comicsBuilder;
 	Pages(final ComicsBuilder comicsBuilder,Element root) {

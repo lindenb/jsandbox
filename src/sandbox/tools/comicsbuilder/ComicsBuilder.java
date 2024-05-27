@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -54,6 +55,36 @@ import sandbox.xml.XMLException;
 import sandbox.xml.XmlUtils;
 
 public class ComicsBuilder extends Launcher {
+	private abstract class AbstractNode {
+		private ElementNode parent=null;
+		public abstract List<AbstractNode> getChildren();
+		public boolean hasChildren() {
+			return !getChildren().isEmpty();
+			}
+		}
+	
+	private class TextNode extends AbstractNode {
+		final String text="";
+		public final List<AbstractNode> getChildren() {
+			return Collections.emptyList();
+			}
+		
+		public String getText() {
+			return text;
+			}
+		}
+	private class ElementNode extends AbstractNode  {
+		private List<Supplier<AbstractNode>> _children=new ArrayList<>();
+		public <T extends AbstractNode> T as(Class<T> clazz) {
+			return clazz.cast(this);
+			}
+		@Override
+		public List<AbstractNode> getChildren() {
+			return _children.stream().map(T->T.get()).collect(Collectors.toList());
+			}
+		}
+	
+
 	
 	private static final Logger LOG = Logger.builder(ComicsBuilder.class).build();
 	private static final String NS="uri:comics";
@@ -155,8 +186,22 @@ public class ComicsBuilder extends Launcher {
 	@Override
 	public int doWork(List<String> args) {
 		try {
-			Pages pages = null;
 			final String input = oneAndOnlyOneFile(args);
+			final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+			dbf.setNamespaceAware(true);
+			final DocumentBuilder db = dbf.newDocumentBuilder();
+			
+			final Document dom= db.parse(input);
+			return 0;
+			}
+		catch(Throwable err) {
+			return -1;
+			}
+		}
+	public int doWork2(List<String> args) {
+		try {
+			Pages pages = null;
+			
 			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 			dbf.setNamespaceAware(true);
 			DocumentBuilder db = dbf.newDocumentBuilder();

@@ -5,7 +5,7 @@ import javax.xml.stream.XMLStreamWriter;
 
 import sandbox.awt.HasDimension;
 
-public class RemoteImage extends AbstractNode implements HasDimension{
+public class RemoteImage extends Node implements HasDimension{
 
 	@Override
 	public double getWidth() {
