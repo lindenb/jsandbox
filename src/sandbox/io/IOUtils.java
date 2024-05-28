@@ -182,21 +182,29 @@ public static Reader openReader(final String path) throws IOException {
 public static Reader openReader(final File path) throws IOException {
 	return new InputStreamReader(openStream(path));
 	}
+public static InputStream openPathAsInputStream(final Path path) throws IOException {
+	return mayGzipInputStream(Files.newInputStream(path));
+	}
+
+public static Reader openPathAsReader(final Path path) throws IOException {
+	return new InputStreamReader(openPathAsInputStream(path));
+	}
+
 
 
 public static InputStream openStream(final String path) throws IOException {
-	InputStream in = null;
 	if(isURL(path)) {
-		in = new java.net.URL(path).openStream();
+		final InputStream in = new java.net.URL(path).openStream();
+		return mayGzipInputStream(in);
 	}
 	else {
-		in = Files.newInputStream(Paths.get(path));
+		return openPathAsInputStream(Paths.get(path));
 	}
-	return mayGzipInputStream(in);
+	
 }
 
 public static InputStream openStream(final File path) throws IOException {
-	return mayGzipInputStream( new FileInputStream(path));
+	return openPathAsInputStream(path.toPath());
 	}
 
 /**

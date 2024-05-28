@@ -1,11 +1,11 @@
 package sandbox.xml.minidom;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.function.Consumer;
@@ -15,6 +15,8 @@ import java.util.stream.StreamSupport;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
+import javax.xml.stream.events.Attribute;
+import javax.xml.stream.events.StartElement;
 
 import org.w3c.dom.NamedNodeMap;
 
@@ -31,23 +33,23 @@ protected QName qName;
 public Element() {
 	}
 
-public Element(QName qName) {
+public Element(final QName qName) {
 	this.qName = qName;
 	}
-public Element(String tag) {
+public Element(final String tag) {
 	this(new QName(tag));
 	}
 
-public Element(QName qName,Object content) {
+public Element(final QName qName,Object content) {
 	this(qName);
 	if(content!=null) setTextContent(content);
 	}
 
-public Element(String tag,Object content) {
+public Element(final String tag,final Object content) {
 	this(new QName(tag),content);
 	}
 
-public Element(org.w3c.dom.Element root) {
+public Element(final org.w3c.dom.Element root) {
 	this.qName = toQName(root);
 	if(root.hasAttributes()) {
 		final NamedNodeMap atts=root.getAttributes();
@@ -58,8 +60,21 @@ public Element(org.w3c.dom.Element root) {
 		}
 	}
 
+public Element(final StartElement startElement) {
+	this.qName=startElement.getName();
+	for(Iterator<?> iter=startElement.getAttributes();iter.hasNext();) {
+		setAttribute((Attribute)iter.next());
+		}
+	}
+
+
 public QName getQName() {
 	return qName;
+	}
+
+/** return prefix:localName or tagName */
+public String getQualifiedName() {
+	return (hasPrefix()?getPrefix()+":":"")+getLocalName();
 	}
 
 public String getLocalName() {
@@ -83,7 +98,10 @@ public boolean hasChildNodes() {
 
 public String getPrefix() {
 	return getQName().getPrefix();
-}
+	}
+public boolean hasPrefix() {
+	return !StringUtils.isBlank(getPrefix());
+	}
 
 @Override
 public Iterator<Node> iterator() {
@@ -118,17 +136,29 @@ public Stream<Node> stream() {
             );
 	}
 
+/** returns all child Elements */
+public Stream<Element> elements() {
+	return stream().filter(N->N.isElement()).map(E->E.asElement());
+	}
 
 
 public Node getFirstChild() {
 	return firstChild;
 	}
 
+public Node getLastChild() {
+	return lastChild;
+	}
+
 public boolean hasAttributes() {
 	return !this.attributes.isEmpty();
 }
 
-public void setAttribute(QName qName,Object value) {
+public void setAttribute(Attribute att) {
+	this.attributes.put(att.getName(), att.getValue());
+	}
+
+public void setAttribute(final QName qName,final Object value) {
 	if(value==null) {
 		this.attributes.remove(qName);
 		return;
@@ -145,45 +175,65 @@ public boolean hasAttribute(String s) {
 public boolean hasAttribute(QName qN) {
 	return this.attributes.containsKey(qN);
 }
-public Optional<String> getAttribute(QName q) {
+
+public boolean hasAttribute(String ns,String lclName) {
+	return hasAttribute(new QName(ns,lclName));
+}
+
+public Optional<String> getAttribute(final QName q) {
 	return Optional.ofNullable(this.attributes.getOrDefault(q, null));
 }
 public Optional<String> getAttribute(String q) {
 	return getAttribute(new QName(q));
 }
 
+public OptionalDouble getDoubleAttribute(String tag) {
+	return getDoubleAttribute(new QName(tag));
+	}
+
+public OptionalDouble getDoubleAttribute(QName q) {
+	Optional<String> opt= getAttribute(q);
+	return opt.isPresent()?OptionalDouble.of(Double.valueOf(opt.get())):OptionalDouble.empty();
+	}
+
+public OptionalInt getIntAttribute(String tag) {
+	return getIntAttribute(new QName(tag));
+	}
+
+public OptionalInt getIntAttribute(QName q) {
+	Optional<String> opt= getAttribute(q);
+	return opt.isPresent()?OptionalInt.of(Integer.valueOf(opt.get())):OptionalInt.empty();
+	}
+
+
 public Map<QName,String> getAttributes() {
 	return this.attributes;
 }
 
 public void removeChild(final Node c) {
-	Node rm=null;
+	if(c==null) return;
+	stream().filter(N->N==c).findFirst().orElseThrow(()->new IllegalArgumentException("node was not found"));
+	
+	if(c.prevSibling!=null) {
+		c.prevSibling.nextSibling = c.nextSibling; 
+		}
+	if(c.nextSibling!=null) {
+		c.nextSibling.prevSibling = c.prevSibling; 
+		}
 	if(this.firstChild==c) {
-		rm=this.firstChild;
 		this.firstChild=c.nextSibling;
 		}
 	if(this.lastChild==c) {
-		rm=this.lastChild;
 		this.lastChild=c.prevSibling;
 		}
-	if(rm==null) {
-		rm = stream().filter(N->N==c).findFirst().get();
-		}
-	
-	if(rm.prevSibling!=null) {
-		rm.prevSibling.nextSibling = rm.nextSibling; 
-		}
-	if(rm.nextSibling!=null) {
-		rm.nextSibling.prevSibling = rm.prevSibling; 
-		}
-		
-	rm.parentNode=null;
-	rm.nextSibling=null;
-	rm.prevSibling=null;
+	c.parentNode=null;
+	c.nextSibling=null;
+	c.prevSibling=null;
 	}
 
 
 public void appendChild(Node n) {
+	if(n==null) return;
 	n.unlink();
 	if(this.firstChild==null) {
 		this.firstChild=n;
@@ -222,6 +272,7 @@ public void setTextContent(Object o) {
 
 @Override
 public String getTextContent() {
+	if(!hasChildNodes()) return "";
 	final StringBuilder sb = new StringBuilder();
 	for(Node n1=getFirstChild();n1!=null;n1=n1.getNextSibling()) {
 		sb.append(n1.getTextContent());
@@ -230,53 +281,115 @@ public String getTextContent() {
 	}
 
 @Override
-	public void write(XMLStreamWriter w) throws XMLStreamException {
-		if(!hasChildNodes()) {
-			if(!hasNamespaceURI()) {
-				w.writeEmptyElement(getLocalName());
-				}
-			else if(StringUtils.isBlank(getPrefix())) {
-				w.writeEmptyElement(getNamespaceURI(), getLocalName());
-				}
-			else
-				{
-				w.writeEmptyElement(getPrefix(),getLocalName(), getNamespaceURI());
-				}
+public void write(final XMLStreamWriter w) throws XMLStreamException {
+	if(!hasChildNodes()) {
+		if(!hasNamespaceURI()) {
+			w.writeEmptyElement(getLocalName());
+			}
+		else if(!hasPrefix()) {
+			w.writeEmptyElement(getNamespaceURI(), getLocalName());
 			}
 		else
 			{
-			if(!hasNamespaceURI()) {
-				w.writeStartElement(getLocalName());
-				}
-			else if(StringUtils.isBlank(getPrefix())) {
-				w.writeStartElement(getNamespaceURI(), getLocalName());
-				}
-			else
-				{
-				w.writeStartElement(getPrefix(),getLocalName(), getNamespaceURI());
-				}
-			}
-			
-		for(QName key: this.attributes.keySet()) {
-			if(StringUtils.isBlank(key.getNamespaceURI())) {
-				w.writeStartElement(getLocalName());
-				}
-			else if(StringUtils.isBlank(key.getPrefix())) {
-				w.writeStartElement(getNamespaceURI(), getLocalName());
-				}
-			else
-				{
-				w.writeStartElement(key.getPrefix(),key.getLocalPart(), key.getNamespaceURI());
-				}
-			}
-			
-		
-		if(hasChildNodes())
-			{
-			for(Node c= getFirstChild(); c!=null; c=c.getNextSibling()) {
-				c.write(w);
-				}
-			w.writeEndElement();
+			w.writeEmptyElement(getPrefix(),getLocalName(), getNamespaceURI());
 			}
 		}
+	else
+		{
+		if(!hasNamespaceURI()) {
+			w.writeStartElement(getLocalName());
+			}
+		else if(!hasPrefix()) {
+			w.writeStartElement(getNamespaceURI(), getLocalName());
+			}
+		else
+			{
+			w.writeStartElement(getPrefix(),getLocalName(), getNamespaceURI());
+			}
+		}
+		
+	for(QName key: this.attributes.keySet()) {
+		if(StringUtils.isBlank(key.getNamespaceURI())) {
+			w.writeStartElement(getLocalName());
+			}
+		else if(StringUtils.isBlank(key.getPrefix())) {
+			w.writeStartElement(getNamespaceURI(), getLocalName());
+			}
+		else
+			{
+			w.writeStartElement(key.getPrefix(),key.getLocalPart(), key.getNamespaceURI());
+			}
+		}
+		
+	
+	if(hasChildNodes())
+		{
+		for(Node c= getFirstChild(); c!=null; c=c.getNextSibling()) {
+			c.write(w);
+			}
+		w.writeEndElement();
+		}
 	}
+	
+@Override
+public Node clone(boolean deep) {
+	final Element cp = new Element(this.getQName());
+	cp.attributes.putAll(this.attributes);
+	for(Node c= getFirstChild(); c!=null && deep; c=c.getNextSibling()) {
+		cp.appendChild(c.clone(deep));
+		}
+	return cp;
+	}
+
+@Override
+public String getPath() {
+	String s=getQualifiedName();
+	if(hasParentNode()) {
+		int i=0;
+		for(Node c=getParentNode().getFirstChild();c!=null;c=c.getNextSibling()) {
+			if(!c.isElement()) continue;
+			if(c.asElement().getQName().equals(this.getQName())) {
+				i++;
+				if(c==this) {
+					s+="["+i+"]";
+					break;
+					}
+				}
+			}
+		}
+	else
+		{
+		s="/"+s;
+		}
+	return s;
+	}
+
+@Override
+public org.w3c.dom.Element toDOM(org.w3c.dom.Document owner) {
+	org.w3c.dom.Element E;
+	if(hasNamespaceURI()) {
+		E = owner.createElementNS(getNamespaceURI(), getQualifiedName());
+		}
+	else
+		{
+		E = owner.createElement(getLocalName());
+		}
+	for(QName key: getAttributes().keySet()) {
+		final String value = getAttribute(key).get();
+		if(StringUtils.isBlank(key.getNamespaceURI())) {
+			E.setAttribute(key.getLocalPart(), value);
+			}
+		else
+			{
+			E.setAttributeNS(key.getNamespaceURI(), (StringUtils.isBlank(key.getPrefix())?"":key.getPrefix()+":")+key.getLocalPart(), value);
+			}
+		}
+	for(Node c= getFirstChild();c!=null;c=c.getNextSibling()) {
+		E.appendChild(c.toDOM(owner));
+		}
+
+	return E;
+	}
+
+
+}
