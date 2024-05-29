@@ -293,6 +293,8 @@ $(eval $(call compile,rdftemplate,sandbox.tools.rdftemplate.RDFTemplate,${jcomma
 $(eval $(call compile,rdf2graph,sandbox.tools.rdf2graph.RdfToGraph,${jcommander.jar} ${jena-core.jars}))
 $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommander.jar} ./src/sandbox/tools/streamplot/parser/StreamPlotParser.java))
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/sandbox/tools/pojogenerator/parser/PojoParser.java))
+$(eval $(call compile,theses2gexf,sandbox.tools.thesesfr.ThesesfrToGraph, ${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
+
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 

@@ -16,6 +16,10 @@ public class Text extends Node implements CharSequence {
 		return StringUtils.isBlank(getTextContent());
 	}
 	
+	public void appendData(Object s) {
+		this.content+=(s==null?"":Node.toString(s));
+	}
+	
 	@Override
 	public final boolean isText() {
 		return true;
@@ -73,6 +77,11 @@ public class Text extends Node implements CharSequence {
 	@Override
 	public org.w3c.dom.Node toDOM(org.w3c.dom.Document owner) {
 		return owner.createTextNode(getTextContent());
+		}
+	public boolean isEqualNode(final Node other) {
+		if(other==null || !other.isText()) return false;
+		if(this.isSameNode(other)) return true;
+		return getTextContent().equals(other.asText().getTextContent());
 		}
 
 	}

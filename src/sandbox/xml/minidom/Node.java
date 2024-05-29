@@ -73,31 +73,23 @@ public static String toString(Object o) {
 	return String.valueOf(o);
 	}
 
+public abstract boolean isEqualNode(final Node other);
+
+@Override
+public boolean equals(final Object obj) {
+	if(obj==this) return true;
+	if(obj==null || !(obj instanceof Node)) return false;
+	return isEqualNode((Node)obj);
+	}
+
+public boolean isSameNode(Node other) {
+	return this==other;
+	}
 
 public abstract void setTextContent(Object o);
 public abstract String getTextContent();
 
-public static Node importDOM(org.w3c.dom.Node root,final Function<org.w3c.dom.Element,Element> elementConverter) {
-	switch(root.getNodeType()) {
-		case org.w3c.dom.Node.ELEMENT_NODE:
-			Element E= new Element( org.w3c.dom.Element.class.cast(root));
-			if(root.hasChildNodes()) {
-				for(org.w3c.dom.Node x=root.getFirstChild();x!=null;x=x.getNextSibling()) {
-					final Node n= Node.importDOM(x,elementConverter);
-					if(n==null) continue;
-					E.appendChild(n);
-					}
-				}
-			return E;
-		case org.w3c.dom.Node.TEXT_NODE:
-		case org.w3c.dom.Node.CDATA_SECTION_NODE:
-			return new Text(root.getTextContent());
-		default: return null;
-		}
-	}
-public static Node importDOM(org.w3c.dom.Node root) {
-	return importDOM(root,ELT->new Element( org.w3c.dom.Element.class.cast(ELT)));
-	}
+
 
 public abstract org.w3c.dom.Node toDOM(org.w3c.dom.Document owner);
 

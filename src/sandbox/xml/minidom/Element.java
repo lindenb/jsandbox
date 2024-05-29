@@ -210,9 +210,51 @@ public Map<QName,String> getAttributes() {
 	return this.attributes;
 }
 
+public void normalize() {
+	for(Node c=getFirstChild();c!=null;c=c.getNextSibling()) {
+		if(c.isText()) {
+		for(;;) {
+			Node next = c.getNextSibling();
+			if ( next==null ||!next.isText()) break;
+	        this.asText().appendData(next.getTextContent());
+	        removeChild( next );
+			}
+		}
+	}
+}
+
+
+public void insertBefore(final Node newNode, final Node referenceNode) {
+	if(referenceNode==null) {
+		appendChild(newNode);
+		return;
+		}
+	if(newNode.isSameNode(referenceNode)) throw new IllegalArgumentException();
+	assertNotAncestor(referenceNode);
+	for(Node c=getFirstChild();c!=null;c=c.getNextSibling()) {
+		if(c.isSameNode(referenceNode)) {
+			newNode.unlink();
+			if(referenceNode.prevSibling!=null) 
+				{
+				referenceNode.prevSibling.nextSibling = newNode;
+				newNode.prevSibling =referenceNode.prevSibling;
+				}
+			else
+				{
+				this.firstChild = newNode;
+				}
+			newNode.nextSibling=referenceNode;
+			referenceNode.prevSibling=newNode;
+			newNode.parentNode=this;
+			return;
+			}
+		}
+	throw new IllegalArgumentException("node "+referenceNode.getPath()+" is not a child of "+this.getPath());
+	}
+
 public void removeChild(final Node c) {
 	if(c==null) return;
-	stream().filter(N->N==c).findFirst().orElseThrow(()->new IllegalArgumentException("node was not found"));
+	stream().filter(N->N.isSameNode(c)).findFirst().orElseThrow(()->new IllegalArgumentException("node "+c.getPath()+" is not a child of "+this.getPath()));
 	
 	if(c.prevSibling!=null) {
 		c.prevSibling.nextSibling = c.nextSibling; 
@@ -231,9 +273,17 @@ public void removeChild(final Node c) {
 	c.prevSibling=null;
 	}
 
+private void assertNotAncestor(final Node n) {
+	Element p = getParentNode();
+	while(p!=null) {
+		if(p.isSameNode(n)) throw new IllegalArgumentException(n.getPath()+" is an ancestor of "+this.getPath());
+		p = p.getParentNode();
+		}
+	}
 
 public void appendChild(Node n) {
 	if(n==null) return;
+	assertNotAncestor(n);
 	n.unlink();
 	if(this.firstChild==null) {
 		this.firstChild=n;
@@ -390,6 +440,39 @@ public org.w3c.dom.Element toDOM(org.w3c.dom.Document owner) {
 
 	return E;
 	}
+@Override
+public int hashCode() {
+	int i= this.attributes.hashCode();
+	for(Node c= getFirstChild();c!=null;c=c.getNextSibling()) {
+		i=i%31 + c.hashCode();
+		}
+	return i;
+	}
 
+@Override
+public boolean isEqualNode(final Node other) {
+	if(other==null || !other.isElement()) return false;
+	if(isSameNode(other)) return true;
+	Element o=other.asElement();
+	if(!getQName().equals(o.getQName())) return false;
+	if(this.getAttributes().size()!=o.getAttributes().size()) return false;
+	for(QName k:this.getAttributes().keySet()) {
+		if(!o.hasAttribute(k)) return false;
+		if(!this.getAttribute(k).get().equals(o.getAttribute(k).get())) return false;
+		}
+	Node c1=this.getFirstChild();
+	Node c2=o.getFirstChild();
+	for(;;) {
+		if(c1==null && c2==null) return true; 
+		if(c1==null || c2==null) return false;
+		if(!c1.isEqualNode(c2)) return false;
+		c1=c1.getNextSibling();
+		c2=c2.getNextSibling();
+		}
+	}
 
+@Override
+public String toString() {
+	return "<"+getQualifiedName()+"/>";
+	}
 }
