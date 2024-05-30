@@ -95,6 +95,8 @@ public class ThesesfrToGraph extends Launcher {
             return this.id.equals(These.class.cast(obj).id);
             }
         @Override
+        boolean isAuthor() { return false;}
+        @Override
         boolean isThese() { return true;}
 		@Override
 		public String toString() {
@@ -112,16 +114,19 @@ public class ThesesfrToGraph extends Launcher {
             }
         @Override
         public int hashCode() {
-            return property.hashCode()*21+these.hashCode();
+            return these.hashCode();
             }
         @Override
         public boolean equals(Object obj) {
             if(obj==this) return true;
             if(obj==null || !(obj instanceof Relation)) return false;
-            Relation cp = Relation.class.cast(obj);
-            return this.property.equals(cp.property) &&
-                    this.these.equals(cp.these);
+            final Relation cp = Relation.class.cast(obj);
+            return  this.these.equals(cp.these);
             }
+        @Override
+        public String toString() {
+        	return property+"->"+these.id;
+        	}
         }
 
     private JsonElement json(final String urlstr) {
@@ -140,6 +145,7 @@ public class ThesesfrToGraph extends Launcher {
     private final Map<String,Entity> id2entity = new HashMap<>(500_000);
 
     private Author findAuthorById(String id) {
+    	if(id.isEmpty()) throw new IllegalArgumentException();
         Entity entity = id2entity.get(id);
         if(entity!=null) {
             if(!entity.isAuthor()) throw new IllegalStateException();
@@ -151,6 +157,7 @@ public class ThesesfrToGraph extends Launcher {
         return a;
         }
     private These findTheseById(String id) {
+    	if(id.isEmpty()) throw new IllegalArgumentException();
         Entity entity = id2entity.get(id);
         if(entity!=null) {
             if(!entity.isThese()) throw new IllegalStateException();
@@ -175,6 +182,7 @@ public class ThesesfrToGraph extends Launcher {
             	 entity.flag=true;
             	continue;
             	}
+
             JsonElement json = json(entity.getURL());
             entity.flag=true;
             if(!json.isJsonObject()) continue;
@@ -190,7 +198,10 @@ public class ThesesfrToGraph extends Launcher {
                 for(Map.Entry<String,JsonElement> kv:object.entrySet()) {
                 	if(!kv.getValue().isJsonArray()) continue;
                     final List<JsonElement> array;
-                    if(kv.getValue().isJsonArray()) {
+                    if(entity.level > max_depth) {
+                    	array = Collections.emptyList();
+                    	}
+                    else if(kv.getValue().isJsonArray()) {
                     	array=new ArrayList<>();
                     	for(int i=0;i< kv.getValue().getAsJsonArray().size();i++) {
                     		array.add(kv.getValue().getAsJsonArray().get(i));
@@ -214,18 +225,22 @@ public class ThesesfrToGraph extends Launcher {
 	                }
                 }
             else if(entity.isAuthor()) {
+            	final Author au = Author.class.cast(entity);
+            	au.nom = object.has("nom")?object.get("nom").getAsString():"";
+                au.prenom = object.has("prenom")?object.get("prenom").getAsString():"";
             	if(object.has("theses")) {
             		 JsonObject o2 = object.get("theses").getAsJsonObject();
             		 for(Map.Entry<String,JsonElement> kv:o2.entrySet()) {
             			 final JsonArray array = kv.getValue().getAsJsonArray();
 	            		 for(int i=0;i<array.size();i++) {
 	                         final JsonObject o3=array.get(i).getAsJsonObject();
-	                         These a = findTheseById(o3.get("id").getAsString());
+	                         final These a = findTheseById(o3.get("id").getAsString());
 	                         a.level= Math.min(a.level, entity.level+1);
 	                         a.title = o3.get("titre").getAsString();
 	                         if(short_title>-1 && a.title.length()>short_title ) {
 	                         	a.title=a.title.substring(0,short_title);
 	                         	}
+	                         au.relations.add(new Relation(kv.getKey(), a));
 	                         }
 	            		 }
             		}
@@ -338,8 +353,9 @@ public class ThesesfrToGraph extends Launcher {
 		  w.writeStartElement("edges");
 		  for(final Entity entity:this.id2entity.values())
 		 	{
-			 if(!entity.isAuthor()) continue;
-			 Author t = (Author)entity;
+			if(!entity.isAuthor()) continue;
+			final Author t = (Author)entity;
+			System.err.println(t+" "+t.relations);
 			for(final Relation rel: t.relations)
 				{
 				w.writeStartElement("edge");
