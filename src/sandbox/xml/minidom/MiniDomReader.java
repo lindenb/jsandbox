@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.nio.file.Path;
+import java.util.function.Function;
 
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
@@ -16,11 +17,19 @@ import sandbox.io.IOUtils;
 import sandbox.io.RuntimeIOException;
 
 public class MiniDomReader {
+	private Function<StartElement,Element> elementCreator= (SE)->new Element(SE);
 	public Text createText(Characters chars) {
 		return new Text(chars.getData());
 		}
+	
+	
+	public MiniDomReader setElementCreator(Function<StartElement, Element> elementCreator) {
+		this.elementCreator = elementCreator;
+		return this;
+		}
+	
 	public Element createElement(StartElement se) {
-		return new Element(se);
+		return this.elementCreator.apply(se);
 		}
 	
 	protected XMLInputFactory newXMLInputFactory() {

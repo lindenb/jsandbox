@@ -9,6 +9,8 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -135,7 +137,7 @@ public class ThesesfrToGraph extends Launcher {
         	}
         }
 
-    private final Map<String,Entity> id2entity = new HashMap<>();
+    private final Map<String,Entity> id2entity = new HashMap<>(500_000);
 
     private Author findAuthorById(String id) {
         Entity entity = id2entity.get(id);
@@ -143,7 +145,7 @@ public class ThesesfrToGraph extends Launcher {
             if(!entity.isAuthor()) throw new IllegalStateException();
             return (Author)entity;
             }
-       final  Author a=new Author();
+        final  Author a=new Author();
         a.id=id;
         this.id2entity.put(id, a);
         return a;
@@ -178,25 +180,36 @@ public class ThesesfrToGraph extends Launcher {
             if(!json.isJsonObject()) continue;
             JsonObject object = json.getAsJsonObject();
             if(entity.isThese()) {
-            	final String props[]= {"membresJury","directeurs","auteurs","rapporteurs"};
+            	//final String props[]= {"membresJury","directeurs","auteurs","rapporteurs"};
                 final These these = These.class.cast(entity);
                 these.title = object.get("titrePrincipal").getAsString();
                 if(short_title>-1 && these.title.length()>short_title ) {
                 	these.title=these.title.substring(0,short_title);
                 	}
-                
                 these.date_soutenance = object.has("dateSoutenance") && !object.get("dateSoutenance").isJsonNull() ? object.get("dateSoutenance").getAsString():"";
-                for(final String prop:props) {
-	                if(!object.has(prop)) continue;
-                    JsonArray array = object.get(prop).getAsJsonArray();
+                for(Map.Entry<String,JsonElement> kv:object.entrySet()) {
+                	if(!kv.getValue().isJsonArray()) continue;
+                    final List<JsonElement> array;
+                    if(kv.getValue().isJsonArray()) {
+                    	array=new ArrayList<>();
+                    	for(int i=0;i< kv.getValue().getAsJsonArray().size();i++) {
+                    		array.add(kv.getValue().getAsJsonArray().get(i));
+                    		}
+                    	}
+                    else {
+                    	array=Collections.singletonList(kv.getValue());
+                    	}
+                    
                     for(int i=0;i<array.size();i++) {
-                        JsonObject o2=array.get(i).getAsJsonObject();
+                    	if(!array.get(i).isJsonObject()) continue;
+                        final JsonObject o2=array.get(i).getAsJsonObject();
                         if(!o2.has("ppn") || o2.get("ppn").isJsonNull()) continue;
+                        if(o2.has("type") && (o2.get("type").isJsonNull() || o2.get("type").getAsString().equals("Laboratoire"))) continue;
                         final Author a = findAuthorById(o2.get("ppn").getAsString());
                         a.level= Math.min(a.level, entity.level+1);
-                        a.nom = o2.get("nom").getAsString();
-                        a.prenom = o2.get("prenom").getAsString();
-                        a.relations.add(new Relation(prop, these));
+                        a.nom = o2.has("nom")?o2.get("nom").getAsString():"";
+                        a.prenom = o2.has("prenom")?o2.get("prenom").getAsString():"";
+                        a.relations.add(new Relation(kv.getKey(), these));
                         }
 	                }
                 }
@@ -270,7 +283,7 @@ public class ThesesfrToGraph extends Launcher {
 		  w.writeAttribute("mode", "static");
 		  w.writeEndElement();//attributes
 			
-		  w.writeStartElement("attributes");                                                                                     
+		  w.writeStartElement("attributes");
 		  w.writeAttribute("class", "edge");
 		  w.writeAttribute("mode", "static");
 			  

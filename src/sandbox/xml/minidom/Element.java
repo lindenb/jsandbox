@@ -1,7 +1,9 @@
 package sandbox.xml.minidom;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -30,6 +32,7 @@ protected Node firstChild=null;
 protected Node lastChild=null;
 protected final Map<QName,String> attributes = new HashMap<>();
 protected QName qName;
+
 public Element() {
 	}
 
@@ -66,6 +69,14 @@ public Element(final StartElement startElement) {
 		setAttribute((Attribute)iter.next());
 		}
 	}
+
+public boolean hasLocalName(final String name) {
+	return getLocalName().equals(name);
+	}
+public boolean isA(final String ns,final String lclName) {
+	return hasNamespaceURI(ns) && hasLocalName(lclName);
+	}
+
 
 
 public QName getQName() {
@@ -126,6 +137,12 @@ public void find(final Consumer<Node> consumer) {
 
 public Element getRoot() {
 	return hasParentNode()?getParentNode().getRoot():this;
+	}
+
+public List<Node> getAllNodes() {
+	final List<Node> all = new ArrayList<>();
+	find(N->all.add(N));
+	return all;
 	}
 
 public Stream<Node> stream() {
