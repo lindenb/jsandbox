@@ -70,9 +70,16 @@ public Element(final StartElement startElement) {
 		}
 	}
 
-public boolean hasLocalName(final String name) {
-	return getLocalName().equals(name);
+public boolean hasLocalName(final String lclName) {
+	return getLocalName().equals(lclName);
 	}
+
+/** check element has given localName and return this */
+public Element assertHasLocalName(final String lclName) {
+	if(!hasLocalName(lclName)) throw new IllegalArgumentException("Expected <"+lclName+"> but got <"+getLocalName()+"> in "+this.getPath());
+	return this;
+	}
+
 public boolean isA(final String ns,final String lclName) {
 	return hasNamespaceURI(ns) && hasLocalName(lclName);
 	}
@@ -91,6 +98,7 @@ public String getQualifiedName() {
 public String getLocalName() {
 	return getQName().getLocalPart();
 	}
+
 
 public boolean hasNamespaceURI(String ns) {
 	return getNamespaceURI().equals(ns);

@@ -121,12 +121,25 @@ public class Lexer implements Closeable {
 
     public String peekRegex(final String pattern) throws IOException {
 		return peekRegex(0,pattern);
-}
+    	}
+    
 
     
     public String peekRegex(int pos,final String pattern) throws IOException {
     	return peek(pos,Pattern.compile(pattern));
     }
+    
+    public boolean matchRegex(final Pattern pattern) throws IOException {
+    	return peek(pattern)!=null;
+    	}
+    
+    public String nextRegex(final Pattern pattern) throws IOException {
+    	String s = peek(pattern);
+    	if(s!=null) {
+    		consume(s.length());
+    		}
+    	return s;
+    	}
     
     public String peek(int pos,final Pattern pattern) throws IOException {
     	String prevMatch=null;
