@@ -188,7 +188,10 @@ apache.poi.jar = \
 freemarker.jar=\
 	$(lib.dir)/org/freemarker/freemarker/2.3.32/freemarker-2.3.32.jar
 
-all_maven_jars = $(sort $(apache.poi.jar) ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar} ${freemarker.jar}) 
+jaxb.jar=\
+	$(lib.dir)/javax/xml/bind/jaxb-api/2.4.0-b180830.0359/jaxb-api-2.4.0-b180830.0359.jar
+
+all_maven_jars = $(sort $(apache.poi.jar) ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar} ${freemarker.jar}) ${jaxb.jar} 
 
 
 all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
@@ -294,6 +297,7 @@ $(eval $(call compile,rdf2graph,sandbox.tools.rdf2graph.RdfToGraph,${jcommander.
 $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommander.jar} ./src/sandbox/tools/streamplot/parser/StreamPlotParser.java))
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/sandbox/tools/pojogenerator/parser/PojoParser.java))
 $(eval $(call compile,theses2gexf,sandbox.tools.thesesfr.ThesesfrToGraph, ${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
+$(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander.jar} ${jaxb.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

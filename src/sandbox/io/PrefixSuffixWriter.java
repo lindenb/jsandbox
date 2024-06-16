@@ -23,7 +23,21 @@ public class PrefixSuffixWriter extends Writer {
 			at_start=(c=='\n');
 			}
 		}
+	
+	public void print(final String s) {
+		try {
+			write(s);
+			}
+		catch(IOException err) {
+			throw new RuntimeIOException(err);
+			}
+		}
 
+	public void println(final String s) {
+		print(s);
+		print("\n");
+		}
+	
 	@Override
 	public void flush() throws IOException {
 		this.delegate.flush();

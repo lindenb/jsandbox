@@ -1,13 +1,11 @@
 package sandbox.tools.jaxb2java;
 
-import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -16,24 +14,25 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlValue;
-import javax.xml.namespace.QName;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.events.Attribute;
-import javax.xml.stream.events.XMLEvent;
+import javax.xml.datatype.XMLGregorianCalendar;
 
-import org.apache.jena.atlas.io.IndentedWriter;
+import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
+import sandbox.StringUtils;
 import sandbox.io.IndentWriter;
-import sandbox.io.PrefixSuffixWriter;
-import sandbox.ncbi.gb.GBFeaturePartial5;
-import sandbox.ncbi.gb.GBSet;
-import sandbox.ncbi.gbc.INSDSeq;
 
 public class JaxbToJava extends Launcher{
+	@Parameter(names={"-o"},description=OUTPUT_OR_STANDOUT)
+	private Path outputPath = null;
+	@Parameter(names={"--package"},description="package name")
+	private String packageName = "";
+
+	private Class<?> rootClass;
+
 	private IndentWriter w;
-	final Set<Class<?>> seen= new HashSet<>();
-	final Set<Class<?>> toBeDone= new HashSet<>();
+	private final Set<Class<?>> seen= new HashSet<>();
+	private final Set<Class<?>> toBeDone= new HashSet<>();
 	
 	private abstract class AbstractField<T extends  java.lang.annotation.Annotation> {
 		protected final Field field;
@@ -49,7 +48,21 @@ public class JaxbToJava extends Launcher{
 		public String getGetter() {
 			return getter(getLocalName());
 			}
-		public abstract Class<?> getRange();
+		public boolean isList() {
+			Class<?> fieldType0 = field.getType();
+			return fieldType0.isAssignableFrom(List.class);
+			}
+		public Class<?> getRange() {
+			Class<?> fieldType0 = field.getType();
+			if(fieldType0.isAssignableFrom(List.class)) {
+				ParameterizedType pt = (ParameterizedType) field.getGenericType();
+				return (Class<?>)(pt.getActualTypeArguments()[0]);
+				}
+			else
+				{
+				return fieldType0;
+				}
+			}		
 		public abstract String getNamespaceURI();
 		public abstract String getLocalName();
 		public abstract T getAnnotation();
@@ -60,13 +73,25 @@ public class JaxbToJava extends Launcher{
 			if(getRange().equals(String.class)) {
 				return varName;
 				}
-			else if(getRange().equals(Integer.class)) {
+			else if(getRange().equals(Integer.class) || getRange().equals(Integer.TYPE)) {
 				return "Integer.parseInt("+varName+")";
 				}
-			else if(getRange().equals(Double.class)) {
+			else if(getRange().equals(Double.class) || getRange().equals(Double.TYPE)) {
 				return "Double.parseDouble("+varName+")";
 				}
+			else if(getRange().equals(Float.class) || getRange().equals(Float.TYPE)) {
+				return "Float.parseFloat("+varName+")";
+				}
+			else if(getRange().equals(Boolean.class) || getRange().equals(Boolean.TYPE)) {
+				return "Boolean.parseBoolean("+varName+")";
+				}
+			else if(getRange().equals(XMLGregorianCalendar.class)) {
+				return "javax.xml.datatype.DatatypeFactory.newInstance().newXMLGregorianCalendar("+varName+")";
+				}
 			throw new IllegalArgumentException(""+getRange());
+			}
+		public String encodeString(String varName) {
+			return "String.valueOf("+varName+")";
 			}
 		}
 	
@@ -74,14 +99,12 @@ public class JaxbToJava extends Launcher{
 		FieldAsAttribute(final  Field field) {
 			super(field);
 			}
-		public Class<?> getRange() {
-			return field.getType();
-			}
 		
-
 		@Override
 		public String getLocalName() {
-			return getAnnotation().name();
+			String s= getAnnotation().name();
+			if(s.equals("##default")) return field.getName();
+			return s;
 			}
 		@Override
 		public String getNamespaceURI() {
@@ -106,36 +129,23 @@ public class JaxbToJava extends Launcher{
 			}
 		public void write(IndentWriter w) {
 			w.println("attValue = root."+getGetter()+"();");
-			w.println("if(attValue!=null) w.writeAttribute(\""+getAnnotation().name()+"\",String.valueOf(attValue));");
+			w.println("if(attValue!=null) w.writeAttribute(\""+getAnnotation().name()+"\","+encodeString("attValue")+");");
 			}
 	}
 	private class FieldAsElement extends AbstractField<XmlElement> {
 		FieldAsElement(final  Field field) {
 			super(field);
 			}
-		public boolean isList() {
-			Class<?> fieldType0 = field.getType();
-			return fieldType0.isAssignableFrom(List.class);
-			}
-		@Override
-		public Class<?> getRange() {
-			Class<?> fieldType0 = field.getType();
-			if(fieldType0.isAssignableFrom(List.class)) {
-				ParameterizedType pt = (ParameterizedType) field.getGenericType();
-				return (Class<?>)(pt.getActualTypeArguments()[0]);
-				}
-			else
-				{
-				return fieldType0;
-				}
-			}
+	
 		@Override
 		public String getNamespaceURI() {
 			return getAnnotation().namespace();
 			}
 		@Override
 		public String getLocalName() {
-			return getAnnotation().name();
+			String s= getAnnotation().name();
+			if(s.equals("##default")) return field.getName();
+			return s;
 			}
 		@Override
 		public XmlElement getAnnotation() {
@@ -183,13 +193,21 @@ public class JaxbToJava extends Launcher{
 				}
 			else if(getRange().equals(String.class))
 				{
+				w.println("if(root."+getGetter()+"()!=null) {");
+				w.push();
 				w.println("w.writeStartElement(\""+getLocalName() +"\");");
 				w.println("w.writeCharacters(root."+getGetter()+"());");
 				w.println("w.writeEndElement();");
+				w.pop();
+				w.println("}");
 				}
 			else
 				{
+				w.println("if(root."+getGetter()+"()!=null) {");
+				w.push();
 				w.println("write"+javaName(getAnnotation().name())+"(w,root."+getGetter()+"());");
+				w.pop();
+				w.println("}");
 				}
 			}
 	}
@@ -288,14 +306,38 @@ public class JaxbToJava extends Launcher{
 	private void doXmlRoot(final Class<?> clazz) throws Exception {
 		if(seen.contains(clazz)) return;
 		seen.add(clazz);
-		XmlRootElement xmlRootElement =clazz.getAnnotation(XmlRootElement.class);
-		if(xmlRootElement==null) throw new IllegalArgumentException("no XMLroot for "+clazz);
+		final XmlRootElement optXmlRootElement =clazz.getAnnotation(XmlRootElement.class);
+		final String xmlRootElementName = (optXmlRootElement==null?clazz.getSimpleName():optXmlRootElement.name());
 		final List<AbstractField<? extends Annotation>> fields = getFields(clazz);
+		if(fields.isEmpty()) return;
+		if(clazz.equals(this.rootClass)) {
+			w.println("	   public "+ clazz.getName()+" parse"+clazz.getSimpleName()+"(final XMLEventReader r) throws XMLStreamException {");
+			w.println("		   while(r.hasNext()) {");
+			w.println("			   final XMLEvent evt= r.nextEvent();");
+			w.println("		         if(evt.isStartElement()) {");
+			w.println("		        	 return parse"+ clazz.getSimpleName()+"(r,evt.asStartElement());");
+			w.println("		         	}");
+			w.println("		         else if(evt.isStartDocument() || evt.isEndDocument()) {");
+			w.println("		        	continue; ");
+			w.println("		         	}");
+			w.println("		         else if(evt.isCharacters() && evt.asCharacters().getData().trim().isEmpty()) {");
+			w.println("		        	 continue;");
+			w.println("		         }");
+			w.println("		         else  {");
+			w.println("		        	 throw new XMLStreamException(\"unexpected element\",evt.getLocation());");
+			w.println("		         }");
+			w.println("		   }");
+			w.println("		   return null;");
+			w.println("	   }");
+			}
+
+		
+		
 		w.push();
 		w.println("public "+clazz.getName()+" parse"+clazz.getSimpleName()+"(final XMLEventReader r,final StartElement se) throws XMLStreamException {");
 		w.push();
 		w.println("final QName qName = se.getName();");
-		w.println("if(!isA(qName,\""+ xmlRootElement.namespace()+"\",\""+xmlRootElement.name()+""+"\")) throw new XMLStreamException(\"\");");
+		w.println("if(!qName.getLocalPart().equals(\""+xmlRootElementName+"\")) throw new XMLStreamException(\"unecpetded element\",se.getLocation());");
 		w.println("final "+clazz.getName()+" instance = new "+clazz.getName()+"();");
 
 		
@@ -320,6 +362,7 @@ public class JaxbToJava extends Launcher{
 		
 		
 		w.println("while (r.hasNext()) {");
+		w.push();
 		w.println("final XMLEvent evt= r.nextEvent();");
 		w.println("if(evt.isStartElement()) {");
 		w.push();
@@ -330,20 +373,25 @@ public class JaxbToJava extends Launcher{
 		for(FieldAsElement field: fields.stream().filter(F->F.isElement()).map(F->FieldAsElement.class.cast(F)).collect(Collectors.toList())) {
 			field.read(w);
 			elsestr="else ";
-			if(toBeDone.add(field.getRange()));
+			toBeDone.add(field.getRange());
 			}
 		
 		
 		
 		w.println(elsestr+" {");
-		w.println("unknownElement(se);");
+		w.push();
+		w.println("throw new XMLStreamException(\"unexpected element\",E.getLocation());");
+		w.pop();
 		w.println("}");
 		
 		
 		w.pop();
 		w.println("	}");
 		w.println("else if(evt.isEndElement()) {");
-		w.println("    return instance;");
+		w.push();
+		w.println("if(!evt.asEndElement().getName().getLocalPart().equals(\""+xmlRootElementName+"\")) throw new XMLStreamException(\"unecpetded element\",evt.getLocation());");
+		w.println("return instance;");
+		w.pop();
 		w.println("}");
 		w.println("else if(evt.isCharacters()) {");
 		FieldAsValue fieldAsValue= fields.stream().filter(F->F.isValue()).map(F->FieldAsValue.class.cast(F)).findFirst().orElse(null);
@@ -359,10 +407,12 @@ public class JaxbToJava extends Launcher{
 			w.println("if(!textContent.isEmpty()) throw new XMLStreamException(\"unecpedted content\", evt.getLocation());");
 			w.pop();
 			}
-		w.println("	}");
+		w.println("}");
+		w.println("else  {");
+		w.println("throw new XMLStreamException(\"unecpedted event. \", evt.getLocation());");
+		w.println("}");
 		
-		
-	
+		w.pop();
 		w.println("} // end of loop");
 		w.println("throw new XMLStreamException(\"boum\");");
 		w.pop();
@@ -373,7 +423,7 @@ public class JaxbToJava extends Launcher{
 		w.push();
 		w.println("public void write"+clazz.getSimpleName()+"(final XMLStreamWriter w,final "+clazz.getName()+" root) throws XMLStreamException {");
 		w.push();
-		w.println("w.writeStartElement(\""+xmlRootElement.name()+"\");");
+		w.println("w.writeStartElement(\""+ xmlRootElementName +"\");");
 		if(fields.stream().anyMatch(F->F.isAttribute())) {
 			w.println("Object attValue=null;");
 			}
@@ -399,56 +449,41 @@ public class JaxbToJava extends Launcher{
 	@Override
 	public int doWork(List<String> args) {
 		try  {
+			this.rootClass = Class.forName(oneAndOnlyOneFile(args));
+			toBeDone.add(this.rootClass);
 			seen.add(String.class);
 			seen.add(Integer.class);
 			seen.add(List.class);
 			seen.add(Long.class);
 			seen.add(Boolean.class);
-			this.w=new IndentWriter(this.openPathAsPrintWriter(Paths.get("/home/lindenb/src/jsandbox/src/sandbox/tools/jaxb2java/BlastFactory.java")));
+			this.w=new IndentWriter(this.openPathAsPrintWriter(this.outputPath));
 			
-			this.w.println("package sandbox.tools.jaxb2java;");
+			if(!StringUtils.isBlank(packageName)) this.w.println("package "+packageName+";");
 			this.w.println("import java.util.Iterator;");
-			this.w.println("import java.util.List;");
 			this.w.println("import javax.xml.namespace.QName;");
 			this.w.println("import javax.xml.stream.XMLStreamException;");
 			this.w.println("import javax.xml.stream.XMLEventReader;");
 			this.w.println("import javax.xml.stream.XMLStreamWriter;");
 			this.w.println("import javax.xml.stream.events.StartElement;");
-			this.w.println("import javax.xml.stream.events.EndElement;");
 			this.w.println("import javax.xml.stream.events.XMLEvent;");
 			this.w.println("import javax.xml.stream.events.Attribute;");
 			
 			
 		
-			this.w.println("public class BlastFactory {");
+			this.w.println("public class "+this.rootClass.getSimpleName()+"Factory {");
 			this.w.push();
-			this.w.println("private void unknownElement(final StartElement se) throws XMLStreamException {");
-			this.w.println("}");
-
-			this.w.println("private boolean isA(final QName qName,final String ns,final String localName) {");
-			this.w.println("if(!qName.getLocalPart().equals(localName)) return false;");
-			this.w.println("if(!ns.equals(\"##default\") && !ns.equals(qName.getNamespaceURI())) return false;");
-			this.w.println("return true;");
-			this.w.println("}");
+			
+			while(!toBeDone.isEmpty()) {
+				Class<?> remain = toBeDone.iterator().next();
+				toBeDone.remove(remain);
+				if(seen.contains(remain)) continue;
+				doXmlRoot(remain);
+			}
 			
 			
 			this.w.pop();
-			
-			toBeDone.add(GBSet.class);
-			toBeDone.add(INSDSeq.class);
-			
-			for(final String arg:args) {
-				Class<?> clazz= Class.forName(arg);
-				doXmlRoot(clazz);
-				}
-			while(!toBeDone.isEmpty()) {
-				Class<?> clazz = toBeDone.iterator().next();
-				toBeDone.remove(clazz);
-				doXmlRoot(clazz);
-				}
 			this.w.println("}");
 			this.w.flush();
-			System.err.println("done");
 			return 0;
 			}
 		catch(Throwable err ) {
@@ -457,7 +492,7 @@ public class JaxbToJava extends Launcher{
 			}
 		}
 	public static void main(String[] args) {
-		new JaxbToJava().instanceMainWithExit(new String[] {"sandbox.ncbi.blast.BlastOutput"});
+		new JaxbToJava().instanceMainWithExit(args);
 
 	}
 
