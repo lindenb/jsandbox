@@ -1,8 +1,8 @@
 package sandbox.tools.jaxb2java;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -27,14 +27,17 @@ public class JaxbToJava extends Launcher{
 	private Path outputPath = null;
 	@Parameter(names={"--package"},description="package name")
 	private String packageName = "";
+	@Parameter(names={"--namespace"},description="namespace")
+	private String globalNamespace = "";
 
 	private Class<?> rootClass;
 
 	private IndentWriter w;
 	private final Set<Class<?>> seen= new HashSet<>();
 	private final Set<Class<?>> toBeDone= new HashSet<>();
+	private boolean with_dom=false;
 	
-	private abstract class AbstractField<T extends  java.lang.annotation.Annotation> {
+	private abstract class AbstractField {
 		protected final Field field;
 		AbstractField(final  Field field) {
 			this.field=field;
@@ -65,13 +68,18 @@ public class JaxbToJava extends Launcher{
 			}		
 		public abstract String getNamespaceURI();
 		public abstract String getLocalName();
-		public abstract T getAnnotation();
 		public boolean isAttribute() { return false;}
 		public boolean isElement() { return false;}
 		public boolean isValue() { return false;}
 		public String decodeString(String varName) {
 			if(getRange().equals(String.class)) {
 				return varName;
+				}
+			else if(isList() && isAttribute() && (getRange().equals(Integer.class) || getRange().equals(Integer.TYPE))) {
+				return "java.util.Arrays.stream("+varName+".split(\",\")).map(it->Integer.parseInt(i)).collect(Collectors.toList())";
+				}
+			else if(isList() && isAttribute() ) {
+				throw new IllegalStateException("TODO");
 				}
 			else if(getRange().equals(Integer.class) || getRange().equals(Integer.TYPE)) {
 				return "Integer.parseInt("+varName+")";
@@ -88,6 +96,9 @@ public class JaxbToJava extends Launcher{
 			else if(getRange().equals(XMLGregorianCalendar.class)) {
 				return "javax.xml.datatype.DatatypeFactory.newInstance().newXMLGregorianCalendar("+varName+")";
 				}
+			else if(getRange().equals(BigInteger.class)) {
+				return "new java.math.BigInteger("+varName+")";
+				}
 			throw new IllegalArgumentException(""+getRange());
 			}
 		public String encodeString(String varName) {
@@ -95,11 +106,13 @@ public class JaxbToJava extends Launcher{
 			}
 		}
 	
-	private class FieldAsAttribute extends AbstractField<XmlAttribute> {
+	private class FieldAsAttribute extends AbstractField {
 		FieldAsAttribute(final  Field field) {
 			super(field);
 			}
-		
+		boolean isRequired() {
+			return getAnnotation().required();
+			}
 		@Override
 		public String getLocalName() {
 			String s= getAnnotation().name();
@@ -110,8 +123,7 @@ public class JaxbToJava extends Launcher{
 		public String getNamespaceURI() {
 			return getAnnotation().namespace();
 			}
-		@Override
-		public XmlAttribute getAnnotation() {
+		private XmlAttribute getAnnotation() {
 			return this.field.getAnnotation(XmlAttribute.class);
 			}
 		@Override
@@ -131,24 +143,29 @@ public class JaxbToJava extends Launcher{
 			w.println("attValue = root."+getGetter()+"();");
 			w.println("if(attValue!=null) w.writeAttribute(\""+getAnnotation().name()+"\","+encodeString("attValue")+");");
 			}
+		public void toDOM(IndentWriter w) {
+			w.println("attValue = root."+getGetter()+"();");
+			w.println("if(attValue!=null) root.setArribute(\""+getAnnotation().name()+"\","+encodeString("attValue")+");");
+			}
 	}
-	private class FieldAsElement extends AbstractField<XmlElement> {
+	private class FieldAsElement extends AbstractField {
 		FieldAsElement(final  Field field) {
 			super(field);
 			}
 	
 		@Override
 		public String getNamespaceURI() {
-			return getAnnotation().namespace();
+			XmlElement xe= getAnnotation();
+			return xe.namespace();
 			}
 		@Override
 		public String getLocalName() {
-			String s= getAnnotation().name();
+			XmlElement xe= getAnnotation();
+			String s= (xe==null?this.field.getName():getAnnotation().name());
 			if(s.equals("##default")) return field.getName();
 			return s;
 			}
-		@Override
-		public XmlElement getAnnotation() {
+		private XmlElement getAnnotation() {
 			return this.field.getAnnotation(XmlElement.class);
 			}
 		@Override
@@ -175,12 +192,16 @@ public class JaxbToJava extends Launcher{
 			w.pop();
 			w.println("}");
 			}
+		public void toDOM(IndentWriter w) {
+			w.println("//TODO");
+			}
+
 		void write(IndentWriter w) {
 			if(isList()) {
 				w.println("for("+getRange().getName()+" item: root."+getGetter()+"()) {");
 				w.push();
 				if(getRange().equals(String.class)) {
-					w.println("w.writeStartElement(\""+getLocalName() +"\");");
+					w.println(writeStartElement(getLocalName()));
 					w.println("w.writeCharacters(item);");
 					w.println("w.writeEndElement();");
 					}
@@ -195,7 +216,7 @@ public class JaxbToJava extends Launcher{
 				{
 				w.println("if(root."+getGetter()+"()!=null) {");
 				w.push();
-				w.println("w.writeStartElement(\""+getLocalName() +"\");");
+				w.println(writeStartElement(getLocalName()));
 				w.println("w.writeCharacters(root."+getGetter()+"());");
 				w.println("w.writeEndElement();");
 				w.pop();
@@ -205,14 +226,14 @@ public class JaxbToJava extends Launcher{
 				{
 				w.println("if(root."+getGetter()+"()!=null) {");
 				w.push();
-				w.println("write"+javaName(getAnnotation().name())+"(w,root."+getGetter()+"());");
+				w.println("write"+javaName(getLocalName())+"(w,root."+getGetter()+"());");
 				w.pop();
 				w.println("}");
 				}
 			}
 	}
 	
-	private class FieldAsValue extends AbstractField<XmlValue> {
+	private class FieldAsValue extends AbstractField {
 		FieldAsValue(final  Field field) {
 			super(field);
 			}
@@ -224,8 +245,7 @@ public class JaxbToJava extends Launcher{
 		public String getNamespaceURI() {
 			return "";
 			}
-		@Override
-		public XmlValue getAnnotation() {
+		private XmlValue getAnnotation() {
 			return this.field.getAnnotation(XmlValue.class);
 			}
 		@Override
@@ -249,6 +269,9 @@ public class JaxbToJava extends Launcher{
 			}
 		void write(IndentWriter w) {
 			w.println("w.writeCharacters(root."+getGetter()+"());");
+			}
+		public void toDOM(IndentWriter w) {
+			w.println("root.appendChild(doc.createTextNode(root."+getGetter()+"()));");
 			}
 	}
 	
@@ -279,8 +302,8 @@ public class JaxbToJava extends Launcher{
 	}
 
 	
-	private List<AbstractField<? extends Annotation>> getFields(final Class<?> clazz) throws Exception {
-		 List<AbstractField<? extends Annotation>> L = new ArrayList<>();
+	private List<AbstractField> getFields(final Class<?> clazz) throws Exception {
+		 final List<AbstractField> L = new ArrayList<>();
 		 for(Field field: clazz.getDeclaredFields()) {
 				field.setAccessible(true);
 				if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
@@ -289,15 +312,17 @@ public class JaxbToJava extends Launcher{
 					L.add(new FieldAsAttribute(field));
 					continue;
 					}
-				XmlElement xmlElement = field.getAnnotation(XmlElement.class);
-				if(xmlElement!=null){
-					L.add(new FieldAsElement(field));
-					continue;
-					}
-				XmlValue xmlValue = field.getAnnotation(XmlValue.class);
-				if(xmlValue!=null){
-					L.add(new FieldAsValue(field));
-					continue;
+				else
+					{
+					XmlValue xmlValue = field.getAnnotation(XmlValue.class);
+					if(xmlValue!=null){
+						L.add(new FieldAsValue(field));
+						continue;
+						}
+					else
+						{
+						L.add(new FieldAsElement(field));
+						}
 					}
 				}
 		return L;
@@ -308,7 +333,8 @@ public class JaxbToJava extends Launcher{
 		seen.add(clazz);
 		final XmlRootElement optXmlRootElement =clazz.getAnnotation(XmlRootElement.class);
 		final String xmlRootElementName = (optXmlRootElement==null?clazz.getSimpleName():optXmlRootElement.name());
-		final List<AbstractField<? extends Annotation>> fields = getFields(clazz);
+		final String xmlElementRootNs = (optXmlRootElement==null || optXmlRootElement.namespace().equals("##default")?null:optXmlRootElement.namespace());
+		final List<AbstractField> fields = getFields(clazz);
 		if(fields.isEmpty()) return;
 		if(clazz.equals(this.rootClass)) {
 			w.println("	   public "+ clazz.getName()+" parse"+clazz.getSimpleName()+"(final XMLEventReader r) throws XMLStreamException {");
@@ -334,6 +360,11 @@ public class JaxbToJava extends Launcher{
 		
 		
 		w.push();
+		w.println("/*");
+		w.println(" * ");
+		w.println(" * parse "+clazz.getSimpleName()+" from XMLStream");
+		w.println(" * ");
+		w.println(" */");
 		w.println("public "+clazz.getName()+" parse"+clazz.getSimpleName()+"(final XMLEventReader r,final StartElement se) throws XMLStreamException {");
 		w.push();
 		w.println("final QName qName = se.getName();");
@@ -358,6 +389,9 @@ public class JaxbToJava extends Launcher{
 		w.pop();
 		w.println("}");
 
+		for(FieldAsAttribute field: fields.stream().filter(F->F.isAttribute()).map(F->FieldAsAttribute.class.cast(F)).filter(F->F.isRequired()).collect(Collectors.toList())) {
+			w.println("if(se.getAttribute(new QName(\""+ field.getLocalName() +"\"))==null) throw new XMLStreamException(\"missing required @"+ field.getLocalName() +"\",se.getLocation());");
+			}
 		
 		
 		
@@ -394,7 +428,7 @@ public class JaxbToJava extends Launcher{
 		w.pop();
 		w.println("}");
 		w.println("else if(evt.isCharacters()) {");
-		FieldAsValue fieldAsValue= fields.stream().filter(F->F.isValue()).map(F->FieldAsValue.class.cast(F)).findFirst().orElse(null);
+		final FieldAsValue fieldAsValue= fields.stream().filter(F->F.isValue()).map(F->FieldAsValue.class.cast(F)).findFirst().orElse(null);
 		if(fieldAsValue!=null){
 			w.push();
 			fieldAsValue.read(w);
@@ -421,9 +455,20 @@ public class JaxbToJava extends Launcher{
 		
 		
 		w.push();
+
+		w.println("/*");
+		w.println(" * ");
+		w.println(" * serialize "+clazz.getSimpleName()+" to XMLStreamWriter");
+		w.println(" * ");
+		w.println(" */");
+		
+		
 		w.println("public void write"+clazz.getSimpleName()+"(final XMLStreamWriter w,final "+clazz.getName()+" root) throws XMLStreamException {");
 		w.push();
-		w.println("w.writeStartElement(\""+ xmlRootElementName +"\");");
+		w.println(writeStartElement(xmlRootElementName));
+		if(this.rootClass.equals(clazz)) {
+			w.println("w.writeDefaultNamespace(\""+ this.globalNamespace +"\");");
+			}
 		if(fields.stream().anyMatch(F->F.isAttribute())) {
 			w.println("Object attValue=null;");
 			}
@@ -443,8 +488,46 @@ public class JaxbToJava extends Launcher{
 		w.println("w.writeEndElement();");
 		w.pop();
 		w.println("}");
+		
+		
+		if(with_dom) {
+			w.println("public org.w3c.Element toDOM"+clazz.getSimpleName()+"(final org.w3c.Document doc,final "+clazz.getName()+" root) throws XMLStreamException {");
+			w.push();
+			w.println("final Element root = doc.createElement(\""+ xmlRootElementName +"\");");
+			if(fields.stream().anyMatch(F->F.isAttribute())) {
+				w.println("Object attValue=null;");
+				}
+			for(FieldAsAttribute field: fields.stream().filter(F->F.isAttribute()).map(F->FieldAsAttribute.class.cast(F)).collect(Collectors.toList())) {
+				field.toDOM(w);
+				}
+	
+			
+			for(FieldAsElement field: fields.stream().filter(F->F.isElement()).map(F->FieldAsElement.class.cast(F)).collect(Collectors.toList())) {
+				field.toDOM(w);
+				}
+			
+			if(fieldAsValue!=null) {
+				fieldAsValue.toDOM(w);
+				}
+			
+			w.println("return root;");
+			w.pop();
+			w.println("}");
+			}
+		
+		
 		w.pop();
+
+		
 		}
+	
+	private String writeStartElement(final String localName) {
+		return "w.writeStartElement("+ (isNamespaceAware()?"getDefaultNamespace(),":"") +"\""+ localName +"\");";
+	}
+	
+	private boolean isNamespaceAware() {
+		return !StringUtils.isBlank(this.globalNamespace);
+	}
 	
 	@Override
 	public int doWork(List<String> args) {
@@ -472,6 +555,15 @@ public class JaxbToJava extends Launcher{
 		
 			this.w.println("public class "+this.rootClass.getSimpleName()+"Factory {");
 			this.w.push();
+			
+			if(isNamespaceAware()) {
+				this.w.println("private static final String NAMESPACE=\""+this.globalNamespace+"\";");
+				this.w.println("protected String getDefaultNamespace() {");
+				this.w.push();
+				this.w.println("return NAMESPACE;");
+				this.w.pop();
+				this.w.println("}");
+				}
 			
 			while(!toBeDone.isEmpty()) {
 				Class<?> remain = toBeDone.iterator().next();
