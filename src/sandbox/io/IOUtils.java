@@ -356,6 +356,6 @@ public static void close(final Object...array)
 	}
 
 public static String getUserAgent() {
-	return "Mozilla/5.0 (X11; Linux i686; rv:76.0) Gecko/20100101 Firefox/76.0";
+	return "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0";
 	}
 }

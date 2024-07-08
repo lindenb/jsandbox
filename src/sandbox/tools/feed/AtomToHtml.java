@@ -20,7 +20,9 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.protocol.HttpContext;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -258,7 +260,14 @@ public class AtomToHtml extends Launcher {
 	
 	private Node parseFeed(CloseableHttpClient client,final String url) throws Exception {
 		final RssToAtom rss2atom = new RssToAtom();
-		final Document rss = parseUrl(client, url);
+		final Document rss;
+		try {
+			rss=parseUrl(client, url);
+			}
+		catch(Throwable err) {
+			LOG.error(err);
+			return null;
+			}
 		if(rss==null) return null;
 		final Document atom = rss2atom.apply(rss);
 		if(atom==null) return null;
@@ -307,6 +316,13 @@ public class AtomToHtml extends Launcher {
 		
 			final HttpClientBuilder builder = HttpClientBuilder.create();
 			builder.setUserAgent(IOUtils.getUserAgent());
+			builder.setRetryHandler(new DefaultHttpRequestRetryHandler() {
+				@Override
+				public boolean retryRequest(IOException ex, int executionCount, HttpContext context) {
+					LOG.warning("cannot retry fetch url."+ex.getMessage());
+					return false;
+					}
+				});
 			if(this.cookieStoreFile!=null) {
 				final BasicCookieStore cookies = CookieStoreUtils.readTsv(this.cookieStoreFile);
 				builder.setDefaultCookieStore(cookies);
@@ -322,6 +338,8 @@ public class AtomToHtml extends Launcher {
 			Element dl = this.document.createElement("dl");
 			body.appendChild(dl);
 			try(CloseableHttpClient client = builder.build()) {
+			
+				
 				for(final String url:args) {
 					Node n = parseFeed(client, url);
 					if(n!=null) dl.appendChild(n);
