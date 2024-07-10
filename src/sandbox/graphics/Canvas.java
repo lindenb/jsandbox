@@ -4,20 +4,28 @@ import java.awt.Graphics2D;
 import java.awt.Shape;
 import java.awt.geom.GeneralPath;
 import java.awt.geom.Line2D;
+import java.awt.geom.PathIterator;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.imageio.ImageIO;
+import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
+
 import sandbox.StringUtils;
-import sandbox.functional.FunctionalMap;
+import sandbox.io.IOUtils;
 import sandbox.svg.SVG;
+import sandbox.util.function.FunctionalMap;
 
 public abstract class Canvas implements AutoCloseable {
 	
@@ -26,10 +34,41 @@ public abstract class Canvas implements AutoCloseable {
 	
 	protected Canvas() {
 		}
-
+	protected static int toInt(Object o) {
+		Objects.requireNonNull(o, "object is null");
+		if(o instanceof Number) {
+			return Number.class.cast(o).intValue();
+			}
+		if(o instanceof String) {
+			return Integer.parseInt(String.class.cast(o));
+			}
+		throw new IllegalArgumentException("cannot cast object "+o.getClass()+" as int");
+		}
+	
+	public static Canvas open(Path output,FunctionalMap<String, Object> props) throws IOException {
+		int width = toInt(props.getOrDefault("width", 500));
+		int height = toInt(props.getOrDefault("height", 500));
+		if(output==null) {
+			return new PSCanvas(null, width, height);
+			}
+		String extension  = IOUtils.getFileSuffix(output).toLowerCase();
+		if(extension.equals(".png") || extension.equals(".jpg") || extension.equals(".jpeg")) {
+			return new Graphics2DCanvas(output.toFile(), width, height, BufferedImage.TYPE_INT_RGB);
+			}
+		
+		if(extension.equals(".svg")) {
+			return new SVGCanvas(output, width, height);
+			}
+		if(extension.equals(".ps")) {
+			return new PSCanvas(output, width, height);
+			}
+		throw new IllegalArgumentException("unknown extension:"+output);
+		}
+	
 	public abstract Canvas line(double x1,double y1,double x2,double y2,FunctionalMap<String, Object> props);
 	public abstract Canvas polygon(double[] x,double[] y,FunctionalMap<String, Object> props);
 	public abstract Canvas circle(double cx,double cy,double r,FunctionalMap<String, Object> props);
+	public abstract Canvas draw(Shape shape,FunctionalMap<String, Object> props);
 
 	
 	public Canvas rectangle(double x,double y, double width,double height,FunctionalMap<String, Object> props) {
@@ -89,9 +128,20 @@ public abstract class Canvas implements AutoCloseable {
 			return shape(g,props);
 			}
 		@Override
+		public Canvas draw(Shape shape, FunctionalMap<String, Object> props) {
+			return shape(shape,props);
+			}
+		@Override
 		public void close()  throws IOException {
 			this.g2d.dispose();
-			ImageIO.write(this.image, "", this.outputFile);
+			if(this.outputFile==null) {
+				ImageIO.write(this.image, "JPG",System.out);
+				}
+			else
+				{
+				final String format= this.outputFile.getName().toLowerCase().endsWith(".png")?"PNG":"JPG";
+				ImageIO.write(this.image, format, this.outputFile);
+				}
 			}
 		}
 	
@@ -99,11 +149,15 @@ public abstract class Canvas implements AutoCloseable {
 		final int width;
 		final int height;
 		final PrintWriter out;
-		PSCanvas(int width,int height) {
+		PSCanvas(Path outputOrNull,int width,int height) throws IOException{
 			this.width=width;
 			this.height=height;
-			this.out=new PrintWriter(new StringWriter());
+			this.out= outputOrNull==null?
+					new PrintWriter(System.out):
+					new PrintWriter(Files.newBufferedWriter(outputOrNull))
+					;
 			this.out.println("%PS");
+			this.out.println("%%BoundingBox: 0 0 "+width+" "+height);
 			}
 		@Override
 		public void close() throws IOException {
@@ -152,16 +206,71 @@ public abstract class Canvas implements AutoCloseable {
 			out.append(" closepath");
 			return this;
 			}
-		
+		@Override
+		public Canvas draw(Shape shape,FunctionalMap<String, Object> props) {
+			float coords[]=new float[6];
+			out.append(" newpath");
+			PathIterator iter = shape.getPathIterator(null);
+			while(!iter.isDone()) {
+				switch(iter.currentSegment(coords))
+				{
+				case PathIterator.SEG_MOVETO:
+					{
+					out.append(" ");
+					out.append(coord(coords[0],coords[1]));
+					out.append(" moveto");
+					break;
+					}
+				case PathIterator.SEG_LINETO:
+					{
+					out.append(" ");
+					out.append(coord(coords[0],coords[1]));
+					out.append(" lineto");
+					break;
+					}
+				case PathIterator.SEG_QUADTO:
+					{
+					//TODO
+					break;
+					}
+				case PathIterator.SEG_CUBICTO:
+					{
+					out.append(" ");
+					out.append(coord(coords[0],coords[1]));
+					out.append(" ");
+					out.append(coord(coords[2],coords[3]));
+					out.append(" ");
+					out.append(coord(coords[4],coords[5]));
+					out.append(" curveto");
+					break;
+					}
+				case PathIterator.SEG_CLOSE:
+					{
+					out.append(" closepath");
+					break;
+					}
+				}
+			
+			iter.next();
+			}
+			return this;
+			}
 		}
-	private static class DOMCanvas extends Canvas {
+	private static class SVGCanvas extends Canvas {
 		final int width;
 		final int height;
+		OutputStream outputStream;
 		XMLStreamWriter w;
-		DOMCanvas(int width,int height) throws IOException {
+		SVGCanvas(final Path outputOrNull,int width,int height) throws IOException {
 			this.width=width;
 			this.height=height;
 			try {
+				XMLOutputFactory xof = XMLOutputFactory.newFactory();
+				this.outputStream = outputOrNull==null?
+						System.out:
+						Files.newOutputStream(outputOrNull)
+						;
+				w=xof.createXMLStreamWriter(this.outputStream, "UTF-8");
 				w.writeStartDocument("UTF-8", "1.0");
 				w.writeStartElement(SVG.NS, "svg");
 				w.writeAttribute("width", String.valueOf(width));
@@ -179,6 +288,8 @@ public abstract class Canvas implements AutoCloseable {
 				w.writeEndElement();
 				w.writeEndDocument();
 				w.flush();
+				outputStream.flush();
+				outputStream.close();
 				}
 			catch(XMLStreamException err) {
 				throw new IOException(err);
@@ -232,7 +343,24 @@ public abstract class Canvas implements AutoCloseable {
 				w.writeAttribute("style", css);
 				}
 			}
-		
+		@Override
+		public Canvas rectangle(double x, double y, double width, double height, FunctionalMap<String, Object> props) {
+			try {
+				beginWrap(props);
+				w.writeStartElement(SVG.NS, "rect");
+				w.writeAttribute("x", String.valueOf(x));
+				w.writeAttribute("x", String.valueOf(y));
+				w.writeAttribute("width", String.valueOf(width));
+				w.writeAttribute("height", String.valueOf(height));
+				style(props);
+				inner(props);
+				w.writeEndElement();
+				return endWrap(props);
+				}
+			catch(XMLStreamException err) {
+				throw new RuntimeException(err);
+				}
+		}
 		@Override
 		public Canvas circle(double cx, double cy, double r, FunctionalMap<String, Object> props) {
 			try {
@@ -259,6 +387,7 @@ public abstract class Canvas implements AutoCloseable {
 				w.writeAttribute("y1", String.valueOf(y1));
 				w.writeAttribute("x2", String.valueOf(x2));
 				w.writeAttribute("y2", String.valueOf(y2));
+				style(props);
 				inner(props.minus("fill"));
 				w.writeEndElement();
 				return endWrap(props);
@@ -268,11 +397,71 @@ public abstract class Canvas implements AutoCloseable {
 				}
 			}
 		@Override
-		public Canvas polygon(double[] x, double[] y, FunctionalMap<String, Object> props) {
+		public Canvas polygon(final double[] x, final double[] y, FunctionalMap<String, Object> props) {
 			try {
 				beginWrap(props);
-				w.writeStartElement(SVG.NS, "shape");
-				w.writeAttribute("p", String.valueOf(""));
+				w.writeStartElement(SVG.NS, "polygon");
+				w.writeAttribute("points",
+						IntStream.rangeClosed(0, x.length-1).
+							mapToObj(IDX->String.valueOf(x[IDX])+" "+
+						    String.valueOf(y[IDX])).collect(Collectors.joining(" "))
+						);
+				style(props);
+				inner(props);
+				w.writeEndElement();
+				return endWrap(props);
+				}
+			catch(XMLStreamException err) {
+				throw new RuntimeException(err);
+				}
+			}
+		@Override
+		public Canvas draw(Shape shape, FunctionalMap<String, Object> props) {
+			try {
+				final StringBuilder path = new StringBuilder();
+				double tab[] = new double[6];
+				PathIterator pathiterator = shape.getPathIterator(null);
+
+				while(!pathiterator.isDone())
+					{
+						int currSegmentType= pathiterator.currentSegment(tab);
+						switch(currSegmentType) {
+						case PathIterator.SEG_MOVETO: {
+							path.append( "M " + (tab[0]) + " " + (tab[1]) + " ");
+							break;
+						}
+						case PathIterator.SEG_LINETO: {
+							path.append( "L " + (tab[0]) + " " + (tab[1]) + " ");
+							break;
+						}
+						case PathIterator.SEG_CLOSE: {
+							path.append( "Z ");
+							break;
+						}
+						case PathIterator.SEG_QUADTO: {
+							path.append( "Q " + (tab[0]) + " " + (tab[1]));
+							path.append( " "  + (tab[2]) + " " + (tab[3]));
+							path.append( " ");
+							break;
+						}
+						case PathIterator.SEG_CUBICTO: {
+							path.append( "C " + (tab[0]) + " " + (tab[1]));
+							path.append( " "  + (tab[2]) + " " + (tab[3]));
+							path.append( " "  + (tab[4]) + " " + (tab[5]));
+							path.append( " ");
+							break;
+						}
+						default:
+						{
+							throw new IllegalStateException("Cannot handled "+currSegmentType);
+						}
+						}
+						pathiterator.next();
+					}
+				beginWrap(props);
+				w.writeStartElement(SVG.NS, "path");
+				w.writeAttribute("d",  path.toString());
+				style(props);
 				inner(props);
 				w.writeEndElement();
 				return endWrap(props);

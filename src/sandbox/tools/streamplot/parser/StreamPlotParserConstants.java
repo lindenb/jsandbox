@@ -11,46 +11,82 @@ public interface StreamPlotParserConstants {
   /** End of File. */
   int EOF = 0;
   /** RegularExpression Id. */
-  int O_BRACKET = 5;
+  int OFUN = 9;
   /** RegularExpression Id. */
-  int C_BRACKET = 6;
+  int OPAR = 10;
   /** RegularExpression Id. */
-  int O_PAR = 7;
+  int CPAR = 11;
   /** RegularExpression Id. */
-  int C_PAR = 8;
+  int SEMICOLON = 12;
   /** RegularExpression Id. */
-  int ASSIGN = 9;
+  int COLON = 13;
   /** RegularExpression Id. */
-  int COMMA = 10;
+  int QUESTION = 14;
   /** RegularExpression Id. */
-  int TYPE_INT_RGB = 11;
+  int DOT = 15;
   /** RegularExpression Id. */
-  int IMAGE = 12;
+  int COMMA = 16;
   /** RegularExpression Id. */
-  int RGB = 13;
+  int EQ = 17;
   /** RegularExpression Id. */
-  int LETTER = 14;
+  int NE = 18;
   /** RegularExpression Id. */
-  int DIGIT = 15;
+  int LE = 19;
   /** RegularExpression Id. */
-  int SIGN = 16;
+  int GE = 20;
   /** RegularExpression Id. */
-  int SEMICOLON = 17;
+  int LT = 21;
   /** RegularExpression Id. */
-  int DOT1 = 18;
+  int GT = 22;
   /** RegularExpression Id. */
-  int EXPONENT = 19;
+  int PLUS = 23;
   /** RegularExpression Id. */
-  int FLOATING_NUMBER = 20;
+  int MINUS = 24;
   /** RegularExpression Id. */
-  int INT_NUMBER = 21;
+  int MUL = 25;
   /** RegularExpression Id. */
-  int DOT = 22;
+  int DIV = 26;
   /** RegularExpression Id. */
-  int IDENTIFIER = 23;
+  int LINE = 27;
+  /** RegularExpression Id. */
+  int ASSIGN = 28;
+  /** RegularExpression Id. */
+  int LEX_TRUE = 29;
+  /** RegularExpression Id. */
+  int LEX_FALSE = 30;
+  /** RegularExpression Id. */
+  int LEX_NIL = 31;
+  /** RegularExpression Id. */
+  int WIDTH = 32;
+  /** RegularExpression Id. */
+  int HEIGHT = 33;
+  /** RegularExpression Id. */
+  int LETTER = 34;
+  /** RegularExpression Id. */
+  int DIGIT = 35;
+  /** RegularExpression Id. */
+  int SIGN = 36;
+  /** RegularExpression Id. */
+  int EXPONENT = 37;
+  /** RegularExpression Id. */
+  int PERCENT = 38;
+  /** RegularExpression Id. */
+  int FLOATING_NUMBER = 39;
+  /** RegularExpression Id. */
+  int INT_NUMBER = 40;
+  /** RegularExpression Id. */
+  int IDENTIFIER = 41;
+  /** RegularExpression Id. */
+  int ESCAPE_CHAR = 42;
+  /** RegularExpression Id. */
+  int SIMPLE_QUOTE_LITERAL = 43;
+  /** RegularExpression Id. */
+  int DOUBLE_QUOTE_LITERAL = 44;
 
   /** Lexical state. */
   int DEFAULT = 0;
+  /** Lexical state. */
+  int INSIDE_COMMENT = 1;
 
   /** Literal token values. */
   String[] tokenImage = {
@@ -59,25 +95,46 @@ public interface StreamPlotParserConstants {
     "\"\\t\"",
     "\"\\n\"",
     "\"\\r\"",
-    "\"{\"",
-    "\"}\"",
+    "<token of kind 5>",
+    "\"/*\"",
+    "\"*/\"",
+    "<token of kind 8>",
+    "<OFUN>",
     "\"(\"",
     "\")\"",
-    "\"=\"",
+    "\";\"",
+    "\":\"",
+    "\"?\"",
+    "\".\"",
     "\",\"",
-    "\"TYPE_INT_RGB\"",
-    "\"image\"",
-    "<RGB>",
+    "\"==\"",
+    "\"!=\"",
+    "\"<=\"",
+    "\">=\"",
+    "\"<\"",
+    "\">\"",
+    "\"+\"",
+    "\"-\"",
+    "\"*\"",
+    "\"/\"",
+    "\"line\"",
+    "\"=\"",
+    "\"true\"",
+    "\"false\"",
+    "\"nil\"",
+    "\"width\"",
+    "\"height\"",
     "<LETTER>",
     "<DIGIT>",
     "<SIGN>",
-    "\";\"",
-    "\".\"",
     "<EXPONENT>",
+    "<PERCENT>",
     "<FLOATING_NUMBER>",
     "<INT_NUMBER>",
-    "<DOT>",
     "<IDENTIFIER>",
+    "<ESCAPE_CHAR>",
+    "<SIMPLE_QUOTE_LITERAL>",
+    "<DOUBLE_QUOTE_LITERAL>",
   };
 
 }

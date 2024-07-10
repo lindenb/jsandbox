@@ -3,101 +3,199 @@ package sandbox.util.function;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.BiPredicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import sandbox.util.Sets;
 
-public interface FunctionalMap<K,V> {
+import java.util.Objects;
 
-	public boolean isEmpty();
-	public V get(K k);
-	public int size();
-	public FunctionalMap<K,V> remove(K key);
-	public FunctionalMap<K,V> removeAll(Collection<K> keys);
-	public FunctionalMap<K,V> put(K key, V value);
-	public FunctionalMap<K,V> putAll(Map<K,V> map);
-	public FunctionalMap<K,V> putAll(FunctionalMap<K,V> map);
-	public FunctionalSet<K> keySet();
-	public Stream<Map.Entry<K,V>> stream();
-	public Map<K,V> asMap();
-
-	public static <K,V> FunctionalMap<K,V> empty()  {
-		return new MapImpl<>();
+public class FunctionalMap<K,V> implements Iterable<FunctionalMap.Pair<K, V>> {
+	public interface Pair<K,V> {
+		public K getKey();
+		public V getValue();
 		}
-	
-	public static <K,V> FunctionalMap<K,V> of(final Map<K,V> h)  {
-		return new MapImpl<>(h);
-	}
-	
-	static class MapImpl<K,V> implements FunctionalMap<K,V>{
-		private final Map<K,V> hash;
-		MapImpl() {
-			this.hash = Collections.emptyMap();
+	private static class PairImpl<K,V> implements Pair<K,V> {
+		private final K key;
+		private final V value;
+		PairImpl(K key,V value) {
+			this.key = key;
+			this.value = value;
 			}
-		MapImpl(final Map<K,V> hash) {
-			this.hash = new HashMap<>(hash);
+		PairImpl(Map.Entry<K, V> e) {
+			this(e.getKey(),e.getValue());
 			}
 		@Override
-		public V get(final K key) {
-			return this.hash.get(key);
+		public K getKey() {
+			return this.key;
 			}
 		@Override
-		public boolean isEmpty() {
-			return this.hash.isEmpty();
-			}
-		@Override
-		public int size() {
-			return this.hash.size();
+		public V getValue() {
+			return this.value;
 			}
 		
 		@Override
-		public MapImpl<K,V> remove(K key) {
-			return removeAll(Collections.singleton(key));
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + Objects.hash(key, value);
+			return result;
+		}
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			PairImpl<?,?> other = PairImpl.class.cast(obj);
+			return Objects.equals(key, other.key) && Objects.equals(value, other.value);
 			}
 		@Override
-		public MapImpl<K,V> removeAll(Collection<K> keys) {
-			MapImpl<K,V> cp = new MapImpl<K,V>(this.hash);
-			for(K key:keys) {
-				cp.hash.remove(key);
-				}
-			return cp;
-			}
-		@Override
-		public MapImpl<K,V> put(K key,V value) {
-			MapImpl<K,V> cp = new MapImpl<K,V>(this.hash);
-			cp.put(key,value);
-			return cp;
-			}
-		@Override
-		public MapImpl<K,V> putAll(Map<K,V> m) {
-			MapImpl<K,V> cp = new MapImpl<K,V>(this.hash);
-			cp.putAll(m);
-			return cp;
-			}
-		@Override
-		public MapImpl<K,V> putAll(FunctionalMap<K,V> m) {
-			if(this==m) return this;
-			final MapImpl<K,V> cp = new MapImpl<K,V>(this.hash);
-			for(final K k:m.keySet()) {
-				cp.hash.put(k, m.get(k));
-				}
-			return cp;
-			}
-		@Override
-		public Stream<Map.Entry<K, V>> stream() {
-			return this.hash.entrySet().stream();
-			}
-		@Override
-		public FunctionalSet<K> keySet() {
-			return FunctionalSet.of(this.hash.keySet());
-			}
-		@Override
-		public Map<K,V> asMap() {
-			return Collections.unmodifiableMap(this.hash);
-			}
-		
-		public MapImpl<K,V> clone() {
-			return new MapImpl<K,V>(this.hash);
+		public String toString() {
+			return String.valueOf(key)+"="+value;
 			}
 		}
-	}
+	private final Map<K,V> delegate = new HashMap<>();
+	public FunctionalMap() {
+		}
+	public FunctionalMap(FunctionalMap<K,V> copy) {
+		this(copy.delegate);
+		}
+	public FunctionalMap(Map<K,V> copy) {
+		this.delegate.putAll(copy);
+		}
+	public FunctionalMap(K k1,V v1) {
+		this.delegate.put(k1,v1);
+		}
+	
+	public FunctionalMap(K k1,V v1,K k2,V v2) {
+		this(k1,v1);
+		this.delegate.put(k2,v2);
+		}
+	
+	public FunctionalMap(K k1,V v1,K k2,V v2,K k3,V v3) {
+		this(k1,v1,k2,v2);
+		this.delegate.put(k3,v3);
+		}
+	public FunctionalMap(K k1,V v1,K k2,V v2,K k3,V v3,K k4,V v4) {
+		this(k1,v1,k2,v2,k3,v3);
+		this.delegate.put(k4,v4);
+		}
+	public FunctionalMap<K,V> plus(Pair<K,V> p) {
+		return plus(p.getKey(),p.getValue());
+		}
+	public FunctionalMap<K,V> plus(K k1,V v1) {
+		final FunctionalMap<K,V> o = clone();
+		o.delegate.put(k1,v1);
+		return o;
+		}
+	public FunctionalMap<K,V> plus(K k1,V v1,K k2,V v2) {
+		FunctionalMap<K,V> o = plus(k1,v1);
+		o.delegate.put(k2,v2);
+		return o;
+		}
+	public FunctionalMap<K,V> plus(K k1,V v1,K k2,V v2,K k3,V v3) {
+		FunctionalMap<K,V> o = plus(k1,v1,k2,v2);
+		o.delegate.put(k3,v3);
+		return o;
+		}
+	
+	public FunctionalMap<K,V> plus(FunctionalMap<K,V> o) {
+		return plus(o.delegate);
+		}
+	
+	public FunctionalMap<K,V> plus(Map<K,V> hash) {
+		FunctionalMap<K,V> o = clone();
+		o.delegate.putAll(hash);
+		return o;
+		}
+	
+	public FunctionalMap<K,V> minus(K k1) {
+		return minus(Collections.singleton(k1));
+		}
+	
+	public FunctionalMap<K,V> minus(K k1, K k2) {
+		return minus(Sets.of(k1, k2));
+		}
+	
+	public FunctionalMap<K,V> minus(final Set<K> toRemove) {
+		if(toRemove.stream().noneMatch(K->this.delegate.containsKey(K))) return this;
+		final FunctionalMap<K,V> o = clone();
+		for(K k:toRemove) {
+			o.delegate.remove(k);
+			}
+		return o;
+		}
+	
+	public FunctionalMap<K,V> removeIf(BiPredicate<K,V> remover) {
+		FunctionalMap<K,V> o = new FunctionalMap<>();
+		for(K k: this.delegate.keySet()) {
+			V v = this.delegate.get(k);
+			if(!remover.test(k,v)) {
+				o.delegate.put(k, v);
+				}
+			}
+		return o;
+		}
+	
+	public boolean containsKey(K k) {
+		return this.delegate.containsKey(k);
+		}
+	public V get(K k) {
+		return this.delegate.get(k);
+		}
+	
+	public V getOrDefault(K k,V d) {
+		return this.delegate.getOrDefault(k,d);
+		}
+	public boolean isEmpty() {
+		return this.delegate.isEmpty();
+		}
+	public int size() {
+		return this.delegate.size();
+		}
+	
+	@Override
+	public Iterator<Pair<K, V>> iterator() {
+		return entrySet().iterator();
+		}
+	
+	public Set<K> keySet() {
+		return Collections.unmodifiableSet(this.delegate.keySet());
+		}
+	public Collection<V> values() {
+		return Collections.unmodifiableCollection(this.delegate.values());
+		}
+	public Set<Pair<K,V>> entrySet() {
+		return stream().collect(Collectors.toSet());
+		}
+	public Stream<Pair<K,V>> stream() {
+		return this.delegate.entrySet().stream().map(p->new PairImpl<>(p));
+		}
+
+	@Override
+	protected FunctionalMap<K,V> clone() {
+		return new FunctionalMap<>(this);
+		}
+	@Override
+	public boolean equals(Object obj) {
+		if(obj==this) return true;
+		if(obj==null || !(obj instanceof FunctionalMap)) return false;
+		FunctionalMap<?,?> o = FunctionalMap.class.cast(obj);
+		return this.delegate.equals(o.delegate);
+		}
+	@Override
+	public int hashCode() {
+		return this.delegate.hashCode();
+		}
+	@Override
+	public String toString() {
+		return this.delegate.toString();
+		}
+}

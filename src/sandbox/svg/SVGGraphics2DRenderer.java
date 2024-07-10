@@ -264,7 +264,7 @@ static public String shapeToPath(Shape shape)
  */
 static public void shapeToPath(Appendable path,Shape shape)
 {
-
+	
 	double tab[] = new double[6];
 	PathIterator pathiterator = shape.getPathIterator(null);
 

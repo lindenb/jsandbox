@@ -3,7 +3,6 @@ package sandbox.io;
 import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.Flushable;
 import java.io.IOException;
@@ -49,6 +48,9 @@ public static Path getDefaultTmpDirPath() {
 
 public static List<String> unroll(final List<String> args) throws IOException {
 	if(args.isEmpty()) return Collections.emptyList();
+	if(args.size()==1 && args.get(0).equals("-")) {
+		return Collections.emptyList();
+		}
 	if(args.size()==1 && args.get(0).endsWith(".list")) {
 		try(BufferedReader br =openBufferedReader(args.get(0))) {
 			return br.lines().filter(S->!StringUtils.isBlank(S)).collect(Collectors.toList());
