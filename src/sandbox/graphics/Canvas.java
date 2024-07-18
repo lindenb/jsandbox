@@ -27,6 +27,10 @@ import sandbox.io.IOUtils;
 import sandbox.svg.SVG;
 import sandbox.util.function.FunctionalMap;
 
+/**
+ * Multiple format drawing class
+ *
+ */
 public abstract class Canvas implements AutoCloseable {
 	
 	public abstract int getWidth();
@@ -51,12 +55,12 @@ public abstract class Canvas implements AutoCloseable {
 		if(output==null) {
 			return new PSCanvas(null, width, height);
 			}
-		String extension  = IOUtils.getFileSuffix(output).toLowerCase();
+		final String extension  = IOUtils.getFileSuffix(output).toLowerCase();
 		if(extension.equals(".png") || extension.equals(".jpg") || extension.equals(".jpeg")) {
 			return new Graphics2DCanvas(output.toFile(), width, height, BufferedImage.TYPE_INT_RGB);
 			}
 		
-		if(extension.equals(".svg")) {
+		if(extension.equals(".svg") || output.toString().toLowerCase().endsWith(".svg.gz")) {
 			return new SVGCanvas(output, width, height);
 			}
 		if(extension.equals(".ps")) {
@@ -265,14 +269,15 @@ public abstract class Canvas implements AutoCloseable {
 			this.width=width;
 			this.height=height;
 			try {
-				XMLOutputFactory xof = XMLOutputFactory.newFactory();
+				final XMLOutputFactory xof = XMLOutputFactory.newFactory();
 				this.outputStream = outputOrNull==null?
 						System.out:
-						Files.newOutputStream(outputOrNull)
+						IOUtils.openPathAsOutputStream(outputOrNull)
 						;
 				w=xof.createXMLStreamWriter(this.outputStream, "UTF-8");
 				w.writeStartDocument("UTF-8", "1.0");
-				w.writeStartElement(SVG.NS, "svg");
+				w.writeStartElement("svg");
+				w.writeDefaultNamespace(SVG.NS);
 				w.writeAttribute("width", String.valueOf(width));
 				w.writeAttribute("height", String.valueOf(height));
 				w.writeStartElement(SVG.NS, "g");
@@ -284,9 +289,9 @@ public abstract class Canvas implements AutoCloseable {
 		@Override
 		public void close() throws IOException {
 			try {
-				w.writeEndElement();
-				w.writeEndElement();
-				w.writeEndDocument();
+				w.writeEndElement();//g
+				w.writeEndElement();//svg
+				w.writeEndDocument();// document
 				w.flush();
 				outputStream.flush();
 				outputStream.close();
@@ -308,15 +313,15 @@ public abstract class Canvas implements AutoCloseable {
 		private void beginWrap(FunctionalMap<String, Object> props) throws XMLStreamException {
 			final String href = props.getOrDefault("href","").toString();
 			if(!StringUtils.isBlank(href)) {
-				w.writeStartElement(SVG.NS, "a");
+				w.writeStartElement( "a");
 				w.writeAttribute("href", href);
 				}
 			}
 		private void inner(FunctionalMap<String, Object> props) throws XMLStreamException {
 			final Object t = props.getOrDefault("title","");
-			final String s = t==null?"":t.toString();
+			final String s = t==null?"":toString(t);
 			if(!StringUtils.isBlank(s)) {
-				w.writeStartElement(SVG.NS, "title");
+				w.writeStartElement("title");
 				w.writeCharacters(s);
 				w.writeEndElement();
 				}
@@ -347,7 +352,7 @@ public abstract class Canvas implements AutoCloseable {
 		public Canvas rectangle(double x, double y, double width, double height, FunctionalMap<String, Object> props) {
 			try {
 				beginWrap(props);
-				w.writeStartElement(SVG.NS, "rect");
+				w.writeStartElement("rect");
 				w.writeAttribute("x", String.valueOf(x));
 				w.writeAttribute("x", String.valueOf(y));
 				w.writeAttribute("width", String.valueOf(width));
@@ -365,7 +370,7 @@ public abstract class Canvas implements AutoCloseable {
 		public Canvas circle(double cx, double cy, double r, FunctionalMap<String, Object> props) {
 			try {
 				beginWrap(props);
-				w.writeStartElement(SVG.NS, "circle");
+				w.writeStartElement("circle");
 				w.writeAttribute("cx", String.valueOf(cx));
 				w.writeAttribute("cy", String.valueOf(cy));
 				w.writeAttribute("r", String.valueOf(r));
@@ -382,7 +387,7 @@ public abstract class Canvas implements AutoCloseable {
 		public Canvas line(double x1, double y1, double x2, double y2, FunctionalMap<String, Object> props) {
 			try {
 				beginWrap(props);
-				w.writeStartElement(SVG.NS, "line");
+				w.writeStartElement("line");
 				w.writeAttribute("x1", String.valueOf(x1));
 				w.writeAttribute("y1", String.valueOf(y1));
 				w.writeAttribute("x2", String.valueOf(x2));
@@ -400,7 +405,7 @@ public abstract class Canvas implements AutoCloseable {
 		public Canvas polygon(final double[] x, final double[] y, FunctionalMap<String, Object> props) {
 			try {
 				beginWrap(props);
-				w.writeStartElement(SVG.NS, "polygon");
+				w.writeStartElement("polygon");
 				w.writeAttribute("points",
 						IntStream.rangeClosed(0, x.length-1).
 							mapToObj(IDX->String.valueOf(x[IDX])+" "+
@@ -459,7 +464,7 @@ public abstract class Canvas implements AutoCloseable {
 						pathiterator.next();
 					}
 				beginWrap(props);
-				w.writeStartElement(SVG.NS, "path");
+				w.writeStartElement("path");
 				w.writeAttribute("d",  path.toString());
 				style(props);
 				inner(props);
