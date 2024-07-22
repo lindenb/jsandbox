@@ -335,8 +335,12 @@ $$(addsuffix .java,$$(basename $(1))) : $(1)
 endef
 
 $(eval $(call runjavacc,./src/sandbox/colors/parser/ColorParser.jj))
-$(eval $(call runjavacc,./src/sandbox/tools/streamplot/parser/StreamPlotParser.jj))
 $(eval $(call runjavacc,./src/sandbox/tools/pojogenerator/parser/PojoParser.jj))
+
+
+src/sandbox/tools/streamplot/parser/StreamPlotParser.java : src/sandbox/tools/streamplot/parser/StreamPlotGrammar.jj
+	$(javacc.exe) -OUTPUT_DIRECTORY=$(dir $@) $<
+
 
 gimpprocs2xml: ./src/sandbox/GimpProcedures.jj
 	mkdir -p ${tmp.dir}/sandbox ${tmp.dir}/META-INF ${bin.dir}

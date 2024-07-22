@@ -11,77 +11,385 @@ public interface StreamPlotParserConstants {
   /** End of File. */
   int EOF = 0;
   /** RegularExpression Id. */
-  int OFUN = 9;
+  int OPAR = 9;
   /** RegularExpression Id. */
-  int OPAR = 10;
+  int CPAR = 10;
   /** RegularExpression Id. */
-  int CPAR = 11;
+  int OBRACKET = 11;
   /** RegularExpression Id. */
-  int SEMICOLON = 12;
+  int CBRACKET = 12;
   /** RegularExpression Id. */
-  int COLON = 13;
+  int OARRAY = 13;
   /** RegularExpression Id. */
-  int QUESTION = 14;
+  int CARRAY = 14;
   /** RegularExpression Id. */
-  int DOT = 15;
+  int SEMICOLON = 15;
   /** RegularExpression Id. */
-  int COMMA = 16;
+  int COLON = 16;
   /** RegularExpression Id. */
-  int EQ = 17;
+  int QUESTION = 17;
   /** RegularExpression Id. */
-  int NE = 18;
+  int DOT = 18;
   /** RegularExpression Id. */
-  int LE = 19;
+  int COMMA = 19;
   /** RegularExpression Id. */
-  int GE = 20;
+  int EQ = 20;
   /** RegularExpression Id. */
-  int LT = 21;
+  int NE = 21;
   /** RegularExpression Id. */
-  int GT = 22;
+  int LE = 22;
   /** RegularExpression Id. */
-  int PLUS = 23;
+  int GE = 23;
   /** RegularExpression Id. */
-  int MINUS = 24;
+  int LT = 24;
   /** RegularExpression Id. */
-  int MUL = 25;
+  int GT = 25;
   /** RegularExpression Id. */
-  int DIV = 26;
+  int PLUS = 26;
   /** RegularExpression Id. */
-  int LINE = 27;
+  int MINUS = 27;
   /** RegularExpression Id. */
-  int ASSIGN = 28;
+  int MUL = 28;
   /** RegularExpression Id. */
-  int LEX_TRUE = 29;
+  int DIV = 29;
   /** RegularExpression Id. */
-  int LEX_FALSE = 30;
+  int ALICEBLUE = 30;
   /** RegularExpression Id. */
-  int LEX_NIL = 31;
+  int ANTIQUEWHITE = 31;
   /** RegularExpression Id. */
-  int WIDTH = 32;
+  int AQUA = 32;
   /** RegularExpression Id. */
-  int HEIGHT = 33;
+  int AQUAMARINE = 33;
   /** RegularExpression Id. */
-  int LETTER = 34;
+  int AZURE = 34;
   /** RegularExpression Id. */
-  int DIGIT = 35;
+  int BEIGE = 35;
   /** RegularExpression Id. */
-  int SIGN = 36;
+  int BISQUE = 36;
   /** RegularExpression Id. */
-  int EXPONENT = 37;
+  int BLACK = 37;
   /** RegularExpression Id. */
-  int PERCENT = 38;
+  int BLANCHEDALMOND = 38;
   /** RegularExpression Id. */
-  int FLOATING_NUMBER = 39;
+  int BLUE = 39;
   /** RegularExpression Id. */
-  int INT_NUMBER = 40;
+  int BLUEVIOLET = 40;
   /** RegularExpression Id. */
-  int IDENTIFIER = 41;
+  int BROWN = 41;
   /** RegularExpression Id. */
-  int ESCAPE_CHAR = 42;
+  int BURLYWOOD = 42;
   /** RegularExpression Id. */
-  int SIMPLE_QUOTE_LITERAL = 43;
+  int CADETBLUE = 43;
   /** RegularExpression Id. */
-  int DOUBLE_QUOTE_LITERAL = 44;
+  int CHARTREUSE = 44;
+  /** RegularExpression Id. */
+  int CHOCOLATE = 45;
+  /** RegularExpression Id. */
+  int CORAL = 46;
+  /** RegularExpression Id. */
+  int CORNFLOWERBLUE = 47;
+  /** RegularExpression Id. */
+  int CORNSILK = 48;
+  /** RegularExpression Id. */
+  int CRIMSON = 49;
+  /** RegularExpression Id. */
+  int CYAN = 50;
+  /** RegularExpression Id. */
+  int DARKBLUE = 51;
+  /** RegularExpression Id. */
+  int DARKCYAN = 52;
+  /** RegularExpression Id. */
+  int DARKGOLDENROD = 53;
+  /** RegularExpression Id. */
+  int DARKGRAY = 54;
+  /** RegularExpression Id. */
+  int DARKGREEN = 55;
+  /** RegularExpression Id. */
+  int DARKGREY = 56;
+  /** RegularExpression Id. */
+  int DARKKHAKI = 57;
+  /** RegularExpression Id. */
+  int DARKMAGENTA = 58;
+  /** RegularExpression Id. */
+  int DARKOLIVEGREEN = 59;
+  /** RegularExpression Id. */
+  int DARKORANGE = 60;
+  /** RegularExpression Id. */
+  int DARKORCHID = 61;
+  /** RegularExpression Id. */
+  int DARKRED = 62;
+  /** RegularExpression Id. */
+  int DARKSALMON = 63;
+  /** RegularExpression Id. */
+  int DARKSEAGREEN = 64;
+  /** RegularExpression Id. */
+  int DARKSLATEBLUE = 65;
+  /** RegularExpression Id. */
+  int DARKSLATEGRAY = 66;
+  /** RegularExpression Id. */
+  int DARKSLATEGREY = 67;
+  /** RegularExpression Id. */
+  int DARKTURQUOISE = 68;
+  /** RegularExpression Id. */
+  int DARKVIOLET = 69;
+  /** RegularExpression Id. */
+  int DEEPPINK = 70;
+  /** RegularExpression Id. */
+  int DEEPSKYBLUE = 71;
+  /** RegularExpression Id. */
+  int DIMGRAY = 72;
+  /** RegularExpression Id. */
+  int DIMGREY = 73;
+  /** RegularExpression Id. */
+  int DODGERBLUE = 74;
+  /** RegularExpression Id. */
+  int FIREBRICK = 75;
+  /** RegularExpression Id. */
+  int FLORALWHITE = 76;
+  /** RegularExpression Id. */
+  int FORESTGREEN = 77;
+  /** RegularExpression Id. */
+  int FUCHSIA = 78;
+  /** RegularExpression Id. */
+  int GAINSBORO = 79;
+  /** RegularExpression Id. */
+  int GHOSTWHITE = 80;
+  /** RegularExpression Id. */
+  int GOLD = 81;
+  /** RegularExpression Id. */
+  int GOLDENROD = 82;
+  /** RegularExpression Id. */
+  int GRAY = 83;
+  /** RegularExpression Id. */
+  int GREEN = 84;
+  /** RegularExpression Id. */
+  int GREENYELLOW = 85;
+  /** RegularExpression Id. */
+  int GREY = 86;
+  /** RegularExpression Id. */
+  int HONEYDEW = 87;
+  /** RegularExpression Id. */
+  int HOTPINK = 88;
+  /** RegularExpression Id. */
+  int INDIANRED = 89;
+  /** RegularExpression Id. */
+  int INDIGO = 90;
+  /** RegularExpression Id. */
+  int IVORY = 91;
+  /** RegularExpression Id. */
+  int KHAKI = 92;
+  /** RegularExpression Id. */
+  int LAVENDER = 93;
+  /** RegularExpression Id. */
+  int LAVENDERBLUSH = 94;
+  /** RegularExpression Id. */
+  int LAWNGREEN = 95;
+  /** RegularExpression Id. */
+  int LEMONCHIFFON = 96;
+  /** RegularExpression Id. */
+  int LIGHTBLUE = 97;
+  /** RegularExpression Id. */
+  int LIGHTCORAL = 98;
+  /** RegularExpression Id. */
+  int LIGHTCYAN = 99;
+  /** RegularExpression Id. */
+  int LIGHTGOLDENRODYELLOW = 100;
+  /** RegularExpression Id. */
+  int LIGHTGRAY = 101;
+  /** RegularExpression Id. */
+  int LIGHTGREEN = 102;
+  /** RegularExpression Id. */
+  int LIGHTGREY = 103;
+  /** RegularExpression Id. */
+  int LIGHTPINK = 104;
+  /** RegularExpression Id. */
+  int LIGHTSALMON = 105;
+  /** RegularExpression Id. */
+  int LIGHTSEAGREEN = 106;
+  /** RegularExpression Id. */
+  int LIGHTSKYBLUE = 107;
+  /** RegularExpression Id. */
+  int LIGHTSLATEGRAY = 108;
+  /** RegularExpression Id. */
+  int LIGHTSLATEGREY = 109;
+  /** RegularExpression Id. */
+  int LIGHTSTEELBLUE = 110;
+  /** RegularExpression Id. */
+  int LIGHTYELLOW = 111;
+  /** RegularExpression Id. */
+  int LIME = 112;
+  /** RegularExpression Id. */
+  int LIMEGREEN = 113;
+  /** RegularExpression Id. */
+  int LINEN = 114;
+  /** RegularExpression Id. */
+  int MAGENTA = 115;
+  /** RegularExpression Id. */
+  int MAROON = 116;
+  /** RegularExpression Id. */
+  int MEDIUMAQUAMARINE = 117;
+  /** RegularExpression Id. */
+  int MEDIUMBLUE = 118;
+  /** RegularExpression Id. */
+  int MEDIUMORCHID = 119;
+  /** RegularExpression Id. */
+  int MEDIUMPURPLE = 120;
+  /** RegularExpression Id. */
+  int MEDIUMSEAGREEN = 121;
+  /** RegularExpression Id. */
+  int MEDIUMSLATEBLUE = 122;
+  /** RegularExpression Id. */
+  int MEDIUMSPRINGGREEN = 123;
+  /** RegularExpression Id. */
+  int MEDIUMTURQUOISE = 124;
+  /** RegularExpression Id. */
+  int MEDIUMVIOLETRED = 125;
+  /** RegularExpression Id. */
+  int MIDNIGHTBLUE = 126;
+  /** RegularExpression Id. */
+  int MINTCREAM = 127;
+  /** RegularExpression Id. */
+  int MISTYROSE = 128;
+  /** RegularExpression Id. */
+  int MOCCASIN = 129;
+  /** RegularExpression Id. */
+  int NAVAJOWHITE = 130;
+  /** RegularExpression Id. */
+  int NAVY = 131;
+  /** RegularExpression Id. */
+  int OLDLACE = 132;
+  /** RegularExpression Id. */
+  int OLIVE = 133;
+  /** RegularExpression Id. */
+  int OLIVEDRAB = 134;
+  /** RegularExpression Id. */
+  int ORANGE = 135;
+  /** RegularExpression Id. */
+  int ORANGERED = 136;
+  /** RegularExpression Id. */
+  int ORCHID = 137;
+  /** RegularExpression Id. */
+  int PALEGOLDENROD = 138;
+  /** RegularExpression Id. */
+  int PALEGREEN = 139;
+  /** RegularExpression Id. */
+  int PALETURQUOISE = 140;
+  /** RegularExpression Id. */
+  int PALEVIOLETRED = 141;
+  /** RegularExpression Id. */
+  int PAPAYAWHIP = 142;
+  /** RegularExpression Id. */
+  int PEACHPUFF = 143;
+  /** RegularExpression Id. */
+  int PERU = 144;
+  /** RegularExpression Id. */
+  int PINK = 145;
+  /** RegularExpression Id. */
+  int PLUM = 146;
+  /** RegularExpression Id. */
+  int POWDERBLUE = 147;
+  /** RegularExpression Id. */
+  int PURPLE = 148;
+  /** RegularExpression Id. */
+  int RED = 149;
+  /** RegularExpression Id. */
+  int ROSYBROWN = 150;
+  /** RegularExpression Id. */
+  int ROYALBLUE = 151;
+  /** RegularExpression Id. */
+  int SADDLEBROWN = 152;
+  /** RegularExpression Id. */
+  int SALMON = 153;
+  /** RegularExpression Id. */
+  int SANDYBROWN = 154;
+  /** RegularExpression Id. */
+  int SEAGREEN = 155;
+  /** RegularExpression Id. */
+  int SEASHELL = 156;
+  /** RegularExpression Id. */
+  int SIENNA = 157;
+  /** RegularExpression Id. */
+  int SILVER = 158;
+  /** RegularExpression Id. */
+  int SKYBLUE = 159;
+  /** RegularExpression Id. */
+  int SLATEBLUE = 160;
+  /** RegularExpression Id. */
+  int SLATEGRAY = 161;
+  /** RegularExpression Id. */
+  int SLATEGREY = 162;
+  /** RegularExpression Id. */
+  int SNOW = 163;
+  /** RegularExpression Id. */
+  int SPRINGGREEN = 164;
+  /** RegularExpression Id. */
+  int STEELBLUE = 165;
+  /** RegularExpression Id. */
+  int TAN = 166;
+  /** RegularExpression Id. */
+  int TEAL = 167;
+  /** RegularExpression Id. */
+  int THISTLE = 168;
+  /** RegularExpression Id. */
+  int TOMATO = 169;
+  /** RegularExpression Id. */
+  int TURQUOISE = 170;
+  /** RegularExpression Id. */
+  int VIOLET = 171;
+  /** RegularExpression Id. */
+  int WHEAT = 172;
+  /** RegularExpression Id. */
+  int WHITE = 173;
+  /** RegularExpression Id. */
+  int WHITESMOKE = 174;
+  /** RegularExpression Id. */
+  int YELLOW = 175;
+  /** RegularExpression Id. */
+  int YELLOWGREEN = 176;
+  /** RegularExpression Id. */
+  int RGB = 177;
+  /** RegularExpression Id. */
+  int LINE = 178;
+  /** RegularExpression Id. */
+  int RECT = 179;
+  /** RegularExpression Id. */
+  int CIRCLE = 180;
+  /** RegularExpression Id. */
+  int ASSIGN = 181;
+  /** RegularExpression Id. */
+  int WITH = 182;
+  /** RegularExpression Id. */
+  int LEX_TRUE = 183;
+  /** RegularExpression Id. */
+  int LEX_FALSE = 184;
+  /** RegularExpression Id. */
+  int LEX_NIL = 185;
+  /** RegularExpression Id. */
+  int WIDTH = 186;
+  /** RegularExpression Id. */
+  int HEIGHT = 187;
+  /** RegularExpression Id. */
+  int LETTER = 188;
+  /** RegularExpression Id. */
+  int DIGIT = 189;
+  /** RegularExpression Id. */
+  int SIGN = 190;
+  /** RegularExpression Id. */
+  int EXPONENT = 191;
+  /** RegularExpression Id. */
+  int PERCENT = 192;
+  /** RegularExpression Id. */
+  int FLOATING_NUMBER = 193;
+  /** RegularExpression Id. */
+  int INT_NUMBER = 194;
+  /** RegularExpression Id. */
+  int IDENTIFIER = 195;
+  /** RegularExpression Id. */
+  int ESCAPE_CHAR = 196;
+  /** RegularExpression Id. */
+  int SIMPLE_QUOTE_LITERAL = 197;
+  /** RegularExpression Id. */
+  int DOUBLE_QUOTE_LITERAL = 198;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -99,9 +407,12 @@ public interface StreamPlotParserConstants {
     "\"/*\"",
     "\"*/\"",
     "<token of kind 8>",
-    "<OFUN>",
     "\"(\"",
     "\")\"",
+    "\"{\"",
+    "\"}\"",
+    "\"[\"",
+    "\"]\"",
     "\";\"",
     "\":\"",
     "\"?\"",
@@ -117,8 +428,159 @@ public interface StreamPlotParserConstants {
     "\"-\"",
     "\"*\"",
     "\"/\"",
+    "\"aliceblue\"",
+    "\"antiquewhite\"",
+    "\"aqua\"",
+    "\"aquamarine\"",
+    "\"azure\"",
+    "\"beige\"",
+    "\"bisque\"",
+    "\"black\"",
+    "\"blanchedalmond\"",
+    "\"blue\"",
+    "\"blueviolet\"",
+    "\"brown\"",
+    "\"burlywood\"",
+    "\"cadetblue\"",
+    "\"chartreuse\"",
+    "\"chocolate\"",
+    "\"coral\"",
+    "\"cornflowerblue\"",
+    "\"cornsilk\"",
+    "\"crimson\"",
+    "\"cyan\"",
+    "\"darkblue\"",
+    "\"darkcyan\"",
+    "\"darkgoldenrod\"",
+    "\"darkgray\"",
+    "\"darkgreen\"",
+    "\"darkgrey\"",
+    "\"darkkhaki\"",
+    "\"darkmagenta\"",
+    "\"darkolivegreen\"",
+    "\"darkorange\"",
+    "\"darkorchid\"",
+    "\"darkred\"",
+    "\"darksalmon\"",
+    "\"darkseagreen\"",
+    "\"darkslateblue\"",
+    "\"darkslategray\"",
+    "\"darkslategrey\"",
+    "\"darkturquoise\"",
+    "\"darkviolet\"",
+    "\"deeppink\"",
+    "\"deepskyblue\"",
+    "\"dimgray\"",
+    "\"dimgrey\"",
+    "\"dodgerblue\"",
+    "\"firebrick\"",
+    "\"floralwhite\"",
+    "\"forestgreen\"",
+    "\"fuchsia\"",
+    "\"gainsboro\"",
+    "\"ghostwhite\"",
+    "\"gold\"",
+    "\"goldenrod\"",
+    "\"gray\"",
+    "\"green\"",
+    "\"greenyellow\"",
+    "\"grey\"",
+    "\"honeydew\"",
+    "\"hotpink\"",
+    "\"indianred\"",
+    "\"indigo\"",
+    "\"ivory\"",
+    "\"khaki\"",
+    "\"lavender\"",
+    "\"lavenderblush\"",
+    "\"lawngreen\"",
+    "\"lemonchiffon\"",
+    "\"lightblue\"",
+    "\"lightcoral\"",
+    "\"lightcyan\"",
+    "\"lightgoldenrodyellow\"",
+    "\"lightgray\"",
+    "\"lightgreen\"",
+    "\"lightgrey\"",
+    "\"lightpink\"",
+    "\"lightsalmon\"",
+    "\"lightseagreen\"",
+    "\"lightskyblue\"",
+    "\"lightslategray\"",
+    "\"lightslategrey\"",
+    "\"lightsteelblue\"",
+    "\"lightyellow\"",
+    "\"lime\"",
+    "\"limegreen\"",
+    "\"linen\"",
+    "\"magenta\"",
+    "\"maroon\"",
+    "\"mediumaquamarine\"",
+    "\"mediumblue\"",
+    "\"mediumorchid\"",
+    "\"mediumpurple\"",
+    "\"mediumseagreen\"",
+    "\"mediumslateblue\"",
+    "\"mediumspringgreen\"",
+    "\"mediumturquoise\"",
+    "\"mediumvioletred\"",
+    "\"midnightblue\"",
+    "\"mintcream\"",
+    "\"mistyrose\"",
+    "\"moccasin\"",
+    "\"navajowhite\"",
+    "\"navy\"",
+    "\"oldlace\"",
+    "\"olive\"",
+    "\"olivedrab\"",
+    "\"orange\"",
+    "\"orangered\"",
+    "\"orchid\"",
+    "\"palegoldenrod\"",
+    "\"palegreen\"",
+    "\"paleturquoise\"",
+    "\"palevioletred\"",
+    "\"papayawhip\"",
+    "\"peachpuff\"",
+    "\"peru\"",
+    "\"pink\"",
+    "\"plum\"",
+    "\"powderblue\"",
+    "\"purple\"",
+    "\"red\"",
+    "\"rosybrown\"",
+    "\"royalblue\"",
+    "\"saddlebrown\"",
+    "\"salmon\"",
+    "\"sandybrown\"",
+    "\"seagreen\"",
+    "\"seashell\"",
+    "\"sienna\"",
+    "\"silver\"",
+    "\"skyblue\"",
+    "\"slateblue\"",
+    "\"slategray\"",
+    "\"slategrey\"",
+    "\"snow\"",
+    "\"springgreen\"",
+    "\"steelblue\"",
+    "\"tan\"",
+    "\"teal\"",
+    "\"thistle\"",
+    "\"tomato\"",
+    "\"turquoise\"",
+    "\"violet\"",
+    "\"wheat\"",
+    "\"white\"",
+    "\"whitesmoke\"",
+    "\"yellow\"",
+    "\"yellowgreen\"",
+    "\"rgb\"",
     "\"line\"",
+    "<RECT>",
+    "\"circle\"",
     "\"=\"",
+    "\"with\"",
     "\"true\"",
     "\"false\"",
     "\"nil\"",

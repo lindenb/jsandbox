@@ -32,20 +32,24 @@ public int doWork(List<String> args) {
 				plus("width", dimension.getWidth(),"height", dimension.getHeight());
 		final List<Path> paths=IOUtils.unrollPaths(args);
 		try(Canvas canvas = Canvas.open(outPath, props)) {
-		if(paths.isEmpty()) {
-			final StreamPlotParser parser=new StreamPlotParser(System.in);
-			parser.setCanvas(canvas);
-			parser.input();
-			}
-		else for(Path p:paths) {
-			try(InputStream in =  IOUtils.openPathAsInputStream(p)) {
-				final StreamPlotParser parser=new StreamPlotParser(in);
+			if(paths.isEmpty()) {
+				final StreamPlotParser parser=new StreamPlotParser(System.in);
 				parser.setCanvas(canvas);
 				parser.input();
 				}
+			else for(Path p:paths) {
+				try(InputStream in =  IOUtils.openPathAsInputStream(p)) {
+					final StreamPlotParser parser=new StreamPlotParser(in);
+					parser.setCanvas(canvas);
+					parser.input();
+					}
+				}
+			return 0;
 			}
-		return 0;
-		}
+		catch(Throwable err) {
+			LOG.error(err);
+			return -1;
+			}
 	} catch (Throwable e) {
 		LOG.error(e);
 		return -1;
