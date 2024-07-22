@@ -161,6 +161,7 @@ public class FunctionalMap<K,V> implements Iterable<FunctionalMap.Pair<K, V>> {
 		return this.delegate.size();
 		}
 	
+	
 	@Override
 	public Iterator<Pair<K, V>> iterator() {
 		return entrySet().iterator();
@@ -180,7 +181,7 @@ public class FunctionalMap<K,V> implements Iterable<FunctionalMap.Pair<K, V>> {
 		}
 
 	@Override
-	protected FunctionalMap<K,V> clone() {
+	public FunctionalMap<K,V> clone() {
 		return new FunctionalMap<>(this);
 		}
 	@Override

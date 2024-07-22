@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.OptionalDouble;
+import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -26,6 +27,7 @@ import javax.xml.stream.XMLStreamWriter;
 
 
 import sandbox.StringUtils;
+import sandbox.hershey.Hershey;
 import sandbox.io.IOUtils;
 import sandbox.svg.SVG;
 import sandbox.util.function.FunctionalMap;
@@ -35,12 +37,25 @@ import sandbox.util.function.FunctionalMap;
  *
  */
 public abstract class Canvas implements Closeable {
-	
+	public static final String KEY_FILL="fill";
+	public static final String KEY_STROKE="stroke";
+	public static final String KEY_LINE_WIDTH="line-width";
+	public static final String KEY_FONT_FAMILY="font-family";
+	public static final String KEY_FONT_SIZE="font-size";
 	public abstract int getWidth();
 	public abstract int getHeight();
-	
+	protected final Stack<FunctionalMap<String, Object>> stack = new Stack<>();
+	protected final Hershey hershey=new Hershey();
 	protected Canvas() {
+		FunctionalMap<String, Object> fm=new FunctionalMap<String, Object>().
+				plus(KEY_FONT_SIZE,10).
+				plus(KEY_FONT_FAMILY,"Courier").
+				plus(KEY_LINE_WIDTH,1.0).
+				plus(KEY_FILL,Color.WHITE).
+				plus(KEY_STROKE,Color.DARK_GRAY);
+		stack.push(fm);
 		}
+	
 	protected static int toInt(Object o) {
 		Objects.requireNonNull(o, "object is null");
 		if(o instanceof Number) {
@@ -78,6 +93,10 @@ public abstract class Canvas implements Closeable {
 	public abstract Canvas polygon(double[] x,double[] y,FunctionalMap<String, Object> props);
 	public abstract Canvas circle(double cx,double cy,double r,FunctionalMap<String, Object> props);
 	public abstract Canvas draw(Shape shape,FunctionalMap<String, Object> props);
+	public Canvas comment(String s) 
+		{
+		return this;
+		}
 
 	
 	public Canvas rectangle(double x,double y, double width,double height,FunctionalMap<String, Object> props) {
@@ -85,6 +104,12 @@ public abstract class Canvas implements Closeable {
 		double[] ay = new double[] {y,y,y+height,y+height};
 		return polygon(ax,ay,props);
 		}
+	
+	public Canvas hershey(double x,double y, double width,double height, String content,FunctionalMap<String, Object> props) {
+		if(StringUtils.isBlank(content)) return this;
+		return draw(this.hershey.toShape(content, x, y, width, height),props.plus(KEY_FILL,null));
+		}
+
 	
 	private OptionalDouble toDouble(Object o) {
 		if(o==null ) return OptionalDouble.empty();
@@ -101,20 +126,28 @@ public abstract class Canvas implements Closeable {
 		return null;
 		}
 	protected OptionalDouble getLineWidth(FunctionalMap<String, Object> props) {
-		return toDouble(props.getOrDefault("line-width", null));
+		return toDouble(props.getOrDefault(KEY_LINE_WIDTH, null));
 		}
 	
 	protected Color getStroke(FunctionalMap<String, Object> props) {
-		Object o = props.getOrDefault("stroke", null);
+		Object o = props.getOrDefault(KEY_STROKE, null);
 		if(o==null ) return null;
 		return toColor(o);
 		}
 	protected Color getFill(FunctionalMap<String, Object> props) {
-		Object o = props.getOrDefault("fill", null);
+		Object o = props.getOrDefault(KEY_FILL, null);
 		if(o==null) return null;
 		return toColor(o);
 		}
-	
+	public Canvas begin(FunctionalMap<String, Object> props) {
+		FunctionalMap<String, Object> fm = this.stack.peek().clone().plus(props);
+		this.stack.push(fm);
+		return this;
+		}
+	public Canvas end() {
+		this.stack.pop();
+		return this;
+		}
 	
 	private static class Graphics2DCanvas extends Canvas {
 		final File outputFile;
@@ -222,7 +255,7 @@ public abstract class Canvas implements Closeable {
 			return this.height;
 			}
 		String coord(double x,double y) {
-			return String.valueOf(x)+" "+String.valueOf(y);
+			return String.valueOf(x)+" "+String.valueOf(getHeight()-y);
 			}
 		
 		private String setrgbcolor(Color c) {
@@ -239,8 +272,8 @@ public abstract class Canvas implements Closeable {
 					);
 			}
 		
-		private Canvas fillAndStroke(FunctionalMap<String, Object> props) {
-			
+		private Canvas fillAndStroke() {
+			FunctionalMap<String, Object> props=this.stack.peek();
 			Color c= getFill(props);
 			if(c!=null) {
 				out.print(" gsave");
@@ -288,16 +321,17 @@ public abstract class Canvas implements Closeable {
 		@Override
 		public Canvas text(double x,double y,String text,FunctionalMap<String, Object> props) {
 			if(StringUtils.isBlank(text)) return this;
-			out.print(" /"+props.getOrDefault("font-family", "Times-Roman")+" findfont");
-			out.print(" "+props.getOrDefault("font-size", "12")+" scalefont");
-			out.print(" setfont");
-			out.print(" newpath");
+			begin(props);
+			out.print(" /"+ stack.peek().getOrDefault(KEY_FONT_FAMILY, "Times-Roman")+" findfont");
+			out.print(" "+ stack.peek().getOrDefault(KEY_FONT_SIZE, "12")+" scalefont");
+			out.print(" setfont newpath ");
 			out.print(coord(x,y)+" moveto");
 			out.print(" ("+escape(text)+") show");
-			return this;
+			return end();
 			}
 		@Override
 		public Canvas circle(double cx, double cy, double r, FunctionalMap<String, Object> props) {
+			begin(props);
 			out.append(" newpath");
 			out.append(" ");
 			out.append(coord(cx,cy));
@@ -305,15 +339,16 @@ public abstract class Canvas implements Closeable {
 			out.append(String.valueOf(r));
 			out.append(" 0 360 arc");
 			out.append(" closepath");
-			return fillAndStroke(props);
+			return fillAndStroke().end();
 			}
 		
 		@Override
 		public Canvas line(double x1, double y1, double x2, double y2, FunctionalMap<String, Object> props) {
-			return polygon(new double[] {x1,x2},new double[] {x1,y2},props.minus("fill"));
+			return polygon(new double[] {x1,x2},new double[] {x1,y2},props.plus(KEY_FILL,null));
 			}
 		@Override
 		public Canvas polygon(double[] x, double[] y, FunctionalMap<String, Object> props) {
+			begin(props);
 			out.append(" newpath");
 			for(int i=0;i< x.length;++i) {
 				out.append(" ");
@@ -322,10 +357,11 @@ public abstract class Canvas implements Closeable {
 				out.append(i==0?"moveto":"lineto");
 				}
 			out.append(" closepath");
-			return fillAndStroke(props);
+			return fillAndStroke().end();
 			}
 		@Override
 		public Canvas draw(Shape shape,FunctionalMap<String, Object> props) {
+			begin(props);
 			float coords[]=new float[6];
 			out.append(" newpath");
 			PathIterator iter = shape.getPathIterator(null);
@@ -371,9 +407,21 @@ public abstract class Canvas implements Closeable {
 				
 				iter.next();
 				}
-			return fillAndStroke(props);
+			return fillAndStroke().end();
 			}
+		
+		@Override
+		public Canvas comment(String s) {
+			if(!StringUtils.isBlank(s)) {
+				out.print("\n% ");
+				out.print(s);
+				out.println();
+				}
+			return this;
+			}
+		
 		}
+	
 	private static class SVGCanvas extends Canvas {
 		final int width;
 		final int height;
@@ -402,6 +450,32 @@ public abstract class Canvas implements Closeable {
 		private String toString(final double v) {
 			return String.valueOf(v);
 			}
+		
+		@Override
+		public Canvas begin(FunctionalMap<String, Object> props) {
+			super.begin(props);
+			try {
+				w.writeStartElement("g");
+				super.end();
+				}
+			catch(XMLStreamException err) {
+				throw new RuntimeException(err);
+				}
+			return this;
+			}
+		
+		@Override
+		public Canvas end() {
+			try {
+				w.writeEndElement();//g
+				super.end();
+				}
+			catch(XMLStreamException err) {
+				throw new RuntimeException(err);
+				}
+			return super.end();
+			}
+		
 		@Override
 		public void close() throws IOException {
 			try {
@@ -453,6 +527,20 @@ public abstract class Canvas implements Closeable {
 		private String toString(Object o) {
 			return o.toString();
 			}
+		
+		@Override
+		public Canvas comment(String s) {
+			if(!StringUtils.isBlank(s)) {
+				try {
+					w.writeComment(s);
+					}
+				catch(XMLStreamException err) {
+					throw new RuntimeException(err);
+					}
+				}
+			return this;
+			}
+		
 		
 		private void style(FunctionalMap<String, Object> props) throws XMLStreamException {
 			String css=props.

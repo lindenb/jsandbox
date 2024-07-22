@@ -42,6 +42,8 @@ private double toY(Object o) {
       case LINE:
       case RECT:
       case CIRCLE:
+      case TEXT:
+      case HERSHEY:
       case WITH:{
         ;
         break;
@@ -67,6 +69,14 @@ private double toY(Object o) {
         block();
         break;
         }
+      case TEXT:{
+        text();
+        break;
+        }
+      case HERSHEY:{
+        hershey();
+        break;
+        }
       default:
         jj_la1[1] = jj_gen;
         jj_consume_token(-1);
@@ -75,14 +85,16 @@ private double toY(Object o) {
     }
 }
 
-  final private void block() throws ParseException {
+  final private void block() throws ParseException {FunctionalMap<String,Object> fm=new FunctionalMap<String,Object>();
     jj_consume_token(WITH);
     jj_consume_token(OARRAY);
-    functionalMap();
+    fm = functionalMap();
+canvas.begin(fm);
     jj_consume_token(CARRAY);
     jj_consume_token(OBRACKET);
     blockContent();
     jj_consume_token(CBRACKET);
+canvas.end();
 }
 
   final private void line() throws ParseException {Object x1,y1,x2,y2;
@@ -158,6 +170,82 @@ canvas.circle(toX(cx),toY(cy),objectToDouble(r), fm);
 canvas.rectangle(toX(x),toY(y),toX(w),toY(h),fm);
 }
 
+  final private void hershey() throws ParseException {Object x,y,w,h,content;FunctionalMap<String,Object> fm=new FunctionalMap<String,Object>();
+    jj_consume_token(HERSHEY);
+    jj_consume_token(OPAR);
+    x = coord();
+    jj_consume_token(COMMA);
+    y = coord();
+    jj_consume_token(COMMA);
+    w = coord();
+    jj_consume_token(COMMA);
+    h = coord();
+    jj_consume_token(COMMA);
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case DOUBLE_QUOTE_LITERAL:{
+      content = string();
+      break;
+      }
+    case FLOATING_NUMBER:{
+      content = floating();
+      break;
+      }
+    default:
+      jj_la1[5] = jj_gen;
+      jj_consume_token(-1);
+      throw new ParseException();
+    }
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case COMMA:{
+      jj_consume_token(COMMA);
+      fm = functionalMap();
+      break;
+      }
+    default:
+      jj_la1[6] = jj_gen;
+      ;
+    }
+    jj_consume_token(CPAR);
+    jj_consume_token(SEMICOLON);
+canvas.hershey(toX(x),toY(y),toX(w),toY(h),String.valueOf(content),fm);
+}
+
+  final private void text() throws ParseException {Object x,y,content;FunctionalMap<String,Object> fm=new FunctionalMap<String,Object>();
+    jj_consume_token(TEXT);
+    jj_consume_token(OPAR);
+    x = coord();
+    jj_consume_token(COMMA);
+    y = coord();
+    jj_consume_token(COMMA);
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case DOUBLE_QUOTE_LITERAL:{
+      content = string();
+      break;
+      }
+    case FLOATING_NUMBER:{
+      content = floating();
+      break;
+      }
+    default:
+      jj_la1[7] = jj_gen;
+      jj_consume_token(-1);
+      throw new ParseException();
+    }
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case COMMA:{
+      jj_consume_token(COMMA);
+      fm = functionalMap();
+      break;
+      }
+    default:
+      jj_la1[8] = jj_gen;
+      ;
+    }
+    jj_consume_token(CPAR);
+    jj_consume_token(SEMICOLON);
+canvas.text(toX(x),toY(y),String.valueOf(content),fm);
+}
+
   final private Object coord() throws ParseException {Token t;String s;double f;int i;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case FLOATING_NUMBER:{
@@ -176,7 +264,7 @@ canvas.rectangle(toX(x),toY(y),toX(w),toY(h),fm);
       break;
       }
     default:
-      jj_la1[5] = jj_gen;
+      jj_la1[9] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
     }
@@ -227,7 +315,7 @@ hash.put(kv.getKey(),kv.getValue());
         break;
         }
       default:
-        jj_la1[6] = jj_gen;
+        jj_la1[10] = jj_gen;
         break label_2;
       }
       jj_consume_token(COMMA);
@@ -249,7 +337,7 @@ hash.put(kv.getKey(),kv.getValue());
       break;
       }
     default:
-      jj_la1[7] = jj_gen;
+      jj_la1[11] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
     }
@@ -411,7 +499,7 @@ hash.put(kv.getKey(),kv.getValue());
       break;
       }
     default:
-      jj_la1[8] = jj_gen;
+      jj_la1[12] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
     }
@@ -578,7 +666,7 @@ String pairKey=k;
       break;
       }
     default:
-      jj_la1[9] = jj_gen;
+      jj_la1[13] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
     }
@@ -601,7 +689,7 @@ String pairKey=k;
       break;
       }
     default:
-      jj_la1[10] = jj_gen;
+      jj_la1[14] = jj_gen;
       ;
     }
     jj_consume_token(CPAR);
@@ -1347,7 +1435,7 @@ String pairKey=k;
       break;
       }
     default:
-      jj_la1[11] = jj_gen;
+      jj_la1[15] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
     }
@@ -1363,7 +1451,7 @@ String pairKey=k;
   public Token jj_nt;
   private int jj_ntk;
   private int jj_gen;
-  final private int[] jj_la1 = new int[12];
+  final private int[] jj_la1 = new int[16];
   static private int[] jj_la1_0;
   static private int[] jj_la1_1;
   static private int[] jj_la1_2;
@@ -1381,25 +1469,25 @@ String pairKey=k;
 	   jj_la1_init_6();
 	}
 	private static void jj_la1_init_0() {
-	   jj_la1_0 = new int[] {0x0,0x0,0x80000,0x80000,0x80000,0x0,0x80000,0x0,0xc0000000,0xc0000000,0x80000,0xc0000000,};
+	   jj_la1_0 = new int[] {0x0,0x0,0x80000,0x80000,0x80000,0x0,0x80000,0x0,0x80000,0x0,0x80000,0x0,0xc0000000,0xc0000000,0x80000,0xc0000000,};
 	}
 	private static void jj_la1_init_1() {
-	   jj_la1_1 = new int[] {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xffffffff,0xffffffff,0x0,0xffffffff,};
+	   jj_la1_1 = new int[] {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xffffffff,0xffffffff,0x0,0xffffffff,};
 	}
 	private static void jj_la1_init_2() {
-	   jj_la1_2 = new int[] {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xffffffff,0xffffffff,0x0,0xffffffff,};
+	   jj_la1_2 = new int[] {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xffffffff,0xffffffff,0x0,0xffffffff,};
 	}
 	private static void jj_la1_init_3() {
-	   jj_la1_3 = new int[] {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xffffffff,0xffffffff,0x0,0xffffffff,};
+	   jj_la1_3 = new int[] {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xffffffff,0xffffffff,0x0,0xffffffff,};
 	}
 	private static void jj_la1_init_4() {
-	   jj_la1_4 = new int[] {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xffffffff,0xffffffff,0x0,0xffffffff,};
+	   jj_la1_4 = new int[] {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xffffffff,0xffffffff,0x0,0xffffffff,};
 	}
 	private static void jj_la1_init_5() {
-	   jj_la1_5 = new int[] {0x5c0000,0x5c0000,0x0,0x0,0x0,0x0,0x0,0x0,0x3ffff,0x3ffff,0x0,0x1ffff,};
+	   jj_la1_5 = new int[] {0x17c0000,0x17c0000,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x3ffff,0x3ffff,0x0,0x1ffff,};
 	}
 	private static void jj_la1_init_6() {
-	   jj_la1_6 = new int[] {0x0,0x0,0x0,0x0,0x0,0x46,0x0,0x48,0x40,0x0,0x0,0x0,};
+	   jj_la1_6 = new int[] {0x0,0x0,0x0,0x0,0x0,0x108,0x0,0x108,0x0,0x118,0x0,0x120,0x100,0x0,0x0,0x0,};
 	}
 
   /** Constructor with InputStream. */
@@ -1413,7 +1501,7 @@ String pairKey=k;
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 12; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 16; i++) jj_la1[i] = -1;
   }
 
   /** Reinitialise. */
@@ -1427,7 +1515,7 @@ String pairKey=k;
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 12; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 16; i++) jj_la1[i] = -1;
   }
 
   /** Constructor. */
@@ -1437,7 +1525,7 @@ String pairKey=k;
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 12; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 16; i++) jj_la1[i] = -1;
   }
 
   /** Reinitialise. */
@@ -1455,7 +1543,7 @@ String pairKey=k;
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 12; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 16; i++) jj_la1[i] = -1;
   }
 
   /** Constructor with generated Token Manager. */
@@ -1464,7 +1552,7 @@ String pairKey=k;
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 12; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 16; i++) jj_la1[i] = -1;
   }
 
   /** Reinitialise. */
@@ -1473,7 +1561,7 @@ String pairKey=k;
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 12; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 16; i++) jj_la1[i] = -1;
   }
 
   private Token jj_consume_token(int kind) throws ParseException {
@@ -1524,12 +1612,12 @@ String pairKey=k;
   /** Generate ParseException. */
   public ParseException generateParseException() {
 	 jj_expentries.clear();
-	 boolean[] la1tokens = new boolean[199];
+	 boolean[] la1tokens = new boolean[201];
 	 if (jj_kind >= 0) {
 	   la1tokens[jj_kind] = true;
 	   jj_kind = -1;
 	 }
-	 for (int i = 0; i < 12; i++) {
+	 for (int i = 0; i < 16; i++) {
 	   if (jj_la1[i] == jj_gen) {
 		 for (int j = 0; j < 32; j++) {
 		   if ((jj_la1_0[i] & (1<<j)) != 0) {
@@ -1556,7 +1644,7 @@ String pairKey=k;
 		 }
 	   }
 	 }
-	 for (int i = 0; i < 199; i++) {
+	 for (int i = 0; i < 201; i++) {
 	   if (la1tokens[i]) {
 		 jj_expentry = new int[1];
 		 jj_expentry[0] = i;

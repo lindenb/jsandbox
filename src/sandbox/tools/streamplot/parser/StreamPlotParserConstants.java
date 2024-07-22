@@ -355,41 +355,45 @@ public interface StreamPlotParserConstants {
   /** RegularExpression Id. */
   int CIRCLE = 180;
   /** RegularExpression Id. */
-  int ASSIGN = 181;
+  int TEXT = 181;
   /** RegularExpression Id. */
-  int WITH = 182;
+  int HERSHEY = 182;
   /** RegularExpression Id. */
-  int LEX_TRUE = 183;
+  int ASSIGN = 183;
   /** RegularExpression Id. */
-  int LEX_FALSE = 184;
+  int WITH = 184;
   /** RegularExpression Id. */
-  int LEX_NIL = 185;
+  int LEX_TRUE = 185;
   /** RegularExpression Id. */
-  int WIDTH = 186;
+  int LEX_FALSE = 186;
   /** RegularExpression Id. */
-  int HEIGHT = 187;
+  int LEX_NIL = 187;
   /** RegularExpression Id. */
-  int LETTER = 188;
+  int WIDTH = 188;
   /** RegularExpression Id. */
-  int DIGIT = 189;
+  int HEIGHT = 189;
   /** RegularExpression Id. */
-  int SIGN = 190;
+  int LETTER = 190;
   /** RegularExpression Id. */
-  int EXPONENT = 191;
+  int DIGIT = 191;
   /** RegularExpression Id. */
-  int PERCENT = 192;
+  int SIGN = 192;
   /** RegularExpression Id. */
-  int FLOATING_NUMBER = 193;
+  int EXPONENT = 193;
   /** RegularExpression Id. */
-  int INT_NUMBER = 194;
+  int PERCENT = 194;
   /** RegularExpression Id. */
-  int IDENTIFIER = 195;
+  int FLOATING_NUMBER = 195;
   /** RegularExpression Id. */
-  int ESCAPE_CHAR = 196;
+  int INT_NUMBER = 196;
   /** RegularExpression Id. */
-  int SIMPLE_QUOTE_LITERAL = 197;
+  int IDENTIFIER = 197;
   /** RegularExpression Id. */
-  int DOUBLE_QUOTE_LITERAL = 198;
+  int ESCAPE_CHAR = 198;
+  /** RegularExpression Id. */
+  int SIMPLE_QUOTE_LITERAL = 199;
+  /** RegularExpression Id. */
+  int DOUBLE_QUOTE_LITERAL = 200;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -579,6 +583,8 @@ public interface StreamPlotParserConstants {
     "\"line\"",
     "<RECT>",
     "\"circle\"",
+    "\"text\"",
+    "\"hershey\"",
     "\"=\"",
     "\"with\"",
     "\"true\"",
