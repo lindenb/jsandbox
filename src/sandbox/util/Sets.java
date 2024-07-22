@@ -11,7 +11,7 @@ public class Sets {
 		}
 	public static <T>  Set<T> of(T v1,T v2) {
 		final Set<T> m=of(v1);
-		m.add(v1);
+		m.add(v2);
 		return m;
 		}
 	public static <T>  Set<T> of(T v1,T v2, T v3) {

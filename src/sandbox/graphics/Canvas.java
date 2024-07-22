@@ -1,8 +1,10 @@
 package sandbox.graphics;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Shape;
+import java.awt.Stroke;
 import java.awt.geom.GeneralPath;
 import java.awt.geom.Line2D;
 import java.awt.geom.PathIterator;
@@ -17,6 +19,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.OptionalDouble;
 import java.util.Stack;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -42,6 +45,8 @@ public abstract class Canvas implements Closeable {
 	public static final String KEY_LINE_WIDTH="line-width";
 	public static final String KEY_FONT_FAMILY="font-family";
 	public static final String KEY_FONT_SIZE="font-size";
+	public static final String KEY_TITLE="title";
+	public static final String KEY_HREF="href";
 	public abstract int getWidth();
 	public abstract int getHeight();
 	protected final Stack<FunctionalMap<String, Object>> stack = new Stack<>();
@@ -123,7 +128,7 @@ public abstract class Canvas implements Closeable {
 		if(o instanceof String) {
 			if( o.equals("none") || o.equals("null")) return null;
 			}
-		return null;
+		throw new IllegalStateException();
 		}
 	protected OptionalDouble getLineWidth(FunctionalMap<String, Object> props) {
 		return toDouble(props.getOrDefault(KEY_LINE_WIDTH, null));
@@ -157,6 +162,10 @@ public abstract class Canvas implements Closeable {
 			this.outputFile=outputFile;
 			this.image = new BufferedImage(width, height, imgType);
 			this.g2d = this.image.createGraphics();
+			if(imgType==BufferedImage.TYPE_INT_RGB) {
+				this.g2d.setColor(Color.WHITE);
+				this.g2d.fillRect(0, 0, width, height);
+				}
 			}
 		protected BufferedImage getImage() {
 			return image;
@@ -169,12 +178,44 @@ public abstract class Canvas implements Closeable {
 		public int getHeight() {
 			return getImage().getHeight();
 			}
-		private Canvas shape(Shape shape,FunctionalMap<String, Object> props) {
+		private Canvas shape(Shape shape, FunctionalMap<String, Object> props) {
+			props = super.stack.peek().plus(props);
+			Color c= getFill(props);
+			if(c!=null) {
+				this.g2d.setColor(c);
+				this.g2d.fill(shape);
+				}
+			OptionalDouble w=getLineWidth(props);
+			if(!w.isEmpty() &&  w.getAsDouble()>0) {
+				c= getStroke(props);
+				if(c!=null) {
+					final Stroke olstroke= this.g2d.getStroke();
+					this.g2d.setStroke(new BasicStroke((float)w.getAsDouble()));
+					this.g2d.setColor(c);
+					this.g2d.draw(shape);
+					this.g2d.setStroke(olstroke);
+					}
+				
+				}
 			return this;
 			}
 		@Override
 		public Canvas text(double x,double y,String text,FunctionalMap<String, Object> props) {
-			g2d.drawString(text, (float)x, (float)y);
+			props = super.stack.peek().plus(props);
+			Color c= getFill(props);
+			if(c!=null) {
+				g2d.drawString(text, (float)x, (float)y);
+				}
+			OptionalDouble w=getLineWidth(props);
+			if(!w.isEmpty() &&  w.getAsDouble()>0) {
+				c= getStroke(props);
+				if(c!=null) {
+					final Stroke olstroke= this.g2d.getStroke();
+					this.g2d.setStroke(new BasicStroke((float)w.getAsDouble()));
+					g2d.drawString(text, (float)x, (float)y);
+					this.g2d.setStroke(olstroke);
+					}
+				}
 			return this;
 			}
 
@@ -213,7 +254,7 @@ public abstract class Canvas implements Closeable {
 		
 		@Override
 		public void close()  throws IOException {
-			this.g2d.dispose();
+			//this.g2d.dispose();
 			if(this.outputFile==null) {
 				ImageIO.write(this.image, "JPG",System.out);
 				}
@@ -428,6 +469,7 @@ public abstract class Canvas implements Closeable {
 		OutputStream outputStream;
 		XMLStreamWriter w;
 		SVGCanvas(final Path outputOrNull,int width,int height) throws IOException {
+			super();
 			this.width=width;
 			this.height=height;
 			try {
@@ -442,6 +484,7 @@ public abstract class Canvas implements Closeable {
 				w.writeDefaultNamespace(SVG.NS);
 				w.writeAttribute("width", toString(width));
 				w.writeAttribute("height", toString(height));
+				style(stack.peek());
 				w.writeStartElement(SVG.NS, "g");
 				} catch(XMLStreamException err) {
 					throw new IOException(err);
@@ -453,8 +496,10 @@ public abstract class Canvas implements Closeable {
 		
 		@Override
 		public Canvas begin(FunctionalMap<String, Object> props) {
-			super.begin(props);
+			System.err.println("BEGIN"+stack.size());
+
 			try {
+				super.begin(props);
 				w.writeStartElement("g");
 				super.end();
 				}
@@ -467,13 +512,14 @@ public abstract class Canvas implements Closeable {
 		@Override
 		public Canvas end() {
 			try {
+				System.err.println("END"+stack.size());
+
 				w.writeEndElement();//g
-				super.end();
+				return super.end();
 				}
 			catch(XMLStreamException err) {
 				throw new RuntimeException(err);
 				}
-			return super.end();
 			}
 		
 		@Override
@@ -501,14 +547,14 @@ public abstract class Canvas implements Closeable {
 			}
 
 		private void beginWrap(FunctionalMap<String, Object> props) throws XMLStreamException {
-			final String href = props.getOrDefault("href","").toString();
+			final String href = props.getOrDefault(KEY_HREF,"").toString();
 			if(!StringUtils.isBlank(href)) {
 				w.writeStartElement( "a");
 				w.writeAttribute("href", href);
 				}
 			}
 		private void inner(FunctionalMap<String, Object> props) throws XMLStreamException {
-			final Object t = props.getOrDefault("title","");
+			final Object t = props.getOrDefault(KEY_TITLE,"");
 			final String s = t==null?"":toString(t);
 			if(!StringUtils.isBlank(s)) {
 				w.writeStartElement("title");
@@ -517,7 +563,7 @@ public abstract class Canvas implements Closeable {
 				}
 			}
 		private Canvas endWrap(FunctionalMap<String, Object> props) throws XMLStreamException {
-			final String href = props.getOrDefault("href","").toString();
+			final String href = props.getOrDefault(KEY_HREF,"").toString();
 			if(!StringUtils.isBlank(href)) {
 				w.writeEndElement();
 				}
@@ -543,10 +589,18 @@ public abstract class Canvas implements Closeable {
 		
 		
 		private void style(FunctionalMap<String, Object> props) throws XMLStreamException {
+			final Function<Object,String> toString=O->{
+				if(O==null) return "none";
+				if(O instanceof Color) {
+					Color c=Color.class.cast(O);
+					return "rgb("+c.getRed()+","+c.getGreen()+","+c.getBlue()+")";
+					}
+				return String.valueOf(O);
+				};
 			String css=props.
-					minus("title","href").
+					minus(KEY_TITLE,KEY_HREF).
 					stream().
-					map(KV->KV.getKey()+":"+KV.getValue()).
+					map(KV->KV.getKey()+":"+toString.apply(KV.getValue())).
 					collect(Collectors.joining(";"));
 			if(!StringUtils.isBlank(css)) {
 				w.writeAttribute("style", css);
@@ -555,6 +609,7 @@ public abstract class Canvas implements Closeable {
 		
 		@Override
 		public Canvas text(double x,double y,String text,FunctionalMap<String, Object> props) {
+			System.err.println("text");
 			if(StringUtils.isBlank(text)) return this;
 			try {
 				beginWrap(props);
@@ -575,6 +630,7 @@ public abstract class Canvas implements Closeable {
 		
 		@Override
 		public Canvas rectangle(double x, double y, double width, double height, FunctionalMap<String, Object> props) {
+			System.err.println("rect");
 			try {
 				beginWrap(props);
 				w.writeStartElement("rect");
@@ -593,6 +649,7 @@ public abstract class Canvas implements Closeable {
 			}
 		@Override
 		public Canvas circle(double cx, double cy, double r, FunctionalMap<String, Object> props) {
+			System.err.println("circle");
 			try {
 				beginWrap(props);
 				w.writeStartElement("circle");
@@ -610,6 +667,8 @@ public abstract class Canvas implements Closeable {
 			}
 		@Override
 		public Canvas line(double x1, double y1, double x2, double y2, final FunctionalMap<String, Object> props) {
+			System.err.println("line");
+
 			try {
 				beginWrap(props);
 				w.writeStartElement("line");
@@ -647,6 +706,7 @@ public abstract class Canvas implements Closeable {
 			}
 		@Override
 		public Canvas draw(Shape shape, FunctionalMap<String, Object> props) {
+			System.err.println("DRAW");
 			try {
 				final StringBuilder path = new StringBuilder();
 				double tab[] = new double[6];

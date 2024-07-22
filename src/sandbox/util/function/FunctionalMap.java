@@ -125,7 +125,7 @@ public class FunctionalMap<K,V> implements Iterable<FunctionalMap.Pair<K, V>> {
 		}
 	
 	public FunctionalMap<K,V> minus(final Set<K> toRemove) {
-		if(toRemove.stream().noneMatch(K->this.delegate.containsKey(K))) return this;
+		if(toRemove.isEmpty() || toRemove.stream().noneMatch(K->this.delegate.containsKey(K))) return this;
 		final FunctionalMap<K,V> o = clone();
 		for(K k:toRemove) {
 			o.delegate.remove(k);
