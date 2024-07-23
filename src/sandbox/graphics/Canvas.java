@@ -17,6 +17,7 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Stack;
 import java.util.function.Function;
@@ -30,6 +31,7 @@ import javax.xml.stream.XMLStreamWriter;
 
 
 import sandbox.StringUtils;
+import sandbox.awt.Colors;
 import sandbox.hershey.Hershey;
 import sandbox.io.IOUtils;
 import sandbox.svg.SVG;
@@ -42,6 +44,8 @@ import sandbox.util.function.FunctionalMap;
 public abstract class Canvas implements Closeable {
 	public static final String KEY_FILL="fill";
 	public static final String KEY_STROKE="stroke";
+	public static final String KEY_STROKE_LINE_JOIN="stroke-linejoin";
+	public static final String KEY_STROKE_LINE_CAP="stroke-linecap";
 	public static final String KEY_LINE_WIDTH="line-width";
 	public static final String KEY_FONT_FAMILY="font-family";
 	public static final String KEY_FONT_SIZE="font-size";
@@ -51,8 +55,11 @@ public abstract class Canvas implements Closeable {
 	public abstract int getHeight();
 	protected final Stack<FunctionalMap<String, Object>> stack = new Stack<>();
 	protected final Hershey hershey=new Hershey();
+	protected final Colors colors=Colors.getInstance();
 	protected Canvas() {
-		FunctionalMap<String, Object> fm=new FunctionalMap<String, Object>().
+		final FunctionalMap<String, Object> fm=new FunctionalMap<String, Object>().
+				plus(KEY_STROKE_LINE_JOIN,"miter").
+				plus(KEY_STROKE_LINE_CAP,"but").
 				plus(KEY_FONT_SIZE,10).
 				plus(KEY_FONT_FAMILY,"Courier").
 				plus(KEY_LINE_WIDTH,1.0).
@@ -127,12 +134,42 @@ public abstract class Canvas implements Closeable {
 		if(o instanceof Color) return Color.class.cast(o);
 		if(o instanceof String) {
 			if( o.equals("none") || o.equals("null")) return null;
+			final Optional<Color> c=colors.parse(String.class.cast(o));
+			if(c.isPresent()) return c.get();
 			}
 		throw new IllegalStateException();
 		}
 	protected OptionalDouble getLineWidth(FunctionalMap<String, Object> props) {
 		return toDouble(props.getOrDefault(KEY_LINE_WIDTH, null));
 		}
+	
+	protected int getLineCap(FunctionalMap<String, Object> props) {
+		Object o = props.getOrDefault(KEY_STROKE_LINE_CAP,BasicStroke.CAP_ROUND);
+		if(o!=null) {
+			if(o instanceof Integer) return Integer.class.cast(o);
+			if(o instanceof String) {
+				String s= String.valueOf(o).toLowerCase();
+				if(s.equals("butt")) return BasicStroke.CAP_BUTT;
+				if(s.equals("round")) return BasicStroke.CAP_ROUND;
+				if(s.equals("square")) return BasicStroke.CAP_SQUARE;
+				}
+			}
+		return BasicStroke.CAP_ROUND;
+		}
+	
+	protected int getLineJoin(FunctionalMap<String, Object> props) {
+		Object o = props.getOrDefault(KEY_STROKE_LINE_JOIN,BasicStroke.JOIN_MITER);
+		if(o!=null) {
+			if(o instanceof Integer) return Integer.class.cast(o);
+			if(o instanceof String) {
+				String s= String.valueOf(o).toLowerCase();
+				if(s.equals("bevel")) return BasicStroke.JOIN_BEVEL;
+				if(s.equals("round")) return BasicStroke.JOIN_ROUND;
+				if(s.equals("miter")) return BasicStroke.JOIN_MITER;
+				}
+			}
+		return BasicStroke.JOIN_MITER;		}
+	
 	
 	protected Color getStroke(FunctionalMap<String, Object> props) {
 		Object o = props.getOrDefault(KEY_STROKE, null);
@@ -186,11 +223,15 @@ public abstract class Canvas implements Closeable {
 				this.g2d.fill(shape);
 				}
 			OptionalDouble w=getLineWidth(props);
-			if(!w.isEmpty() &&  w.getAsDouble()>0) {
+			if(w.isPresent() &&  w.getAsDouble()>0) {
 				c= getStroke(props);
 				if(c!=null) {
 					final Stroke olstroke= this.g2d.getStroke();
-					this.g2d.setStroke(new BasicStroke((float)w.getAsDouble()));
+					this.g2d.setStroke(new BasicStroke(
+							(float)w.getAsDouble(),
+							getLineCap(props),
+							getLineJoin(props)
+							));
 					this.g2d.setColor(c);
 					this.g2d.draw(shape);
 					this.g2d.setStroke(olstroke);
@@ -207,11 +248,15 @@ public abstract class Canvas implements Closeable {
 				g2d.drawString(text, (float)x, (float)y);
 				}
 			OptionalDouble w=getLineWidth(props);
-			if(!w.isEmpty() &&  w.getAsDouble()>0) {
+			if(w.isPresent() &&  w.getAsDouble()>0) {
 				c= getStroke(props);
 				if(c!=null) {
 					final Stroke olstroke= this.g2d.getStroke();
-					this.g2d.setStroke(new BasicStroke((float)w.getAsDouble()));
+					this.g2d.setStroke(new BasicStroke(
+							(float)w.getAsDouble(),
+							getLineCap(props),
+							getLineJoin(props)
+							));
 					g2d.drawString(text, (float)x, (float)y);
 					this.g2d.setStroke(olstroke);
 					}
