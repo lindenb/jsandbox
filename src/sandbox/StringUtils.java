@@ -137,11 +137,34 @@ public static  String unescapeUnicode(final String s) {
 		p.load(new StringReader("key="+s));
 		return p.getProperty("key");
 		}
-	catch (IOException e)
+	catch (final IOException e)
 		{
 		return s;
 		}
-	
 	}
-
+public static String unescape(String s) {
+	s=unescapeUnicode(s);
+	StringBuilder sb=new StringBuilder(s.length());
+	int i=0;
+	while(i<s.length()) {
+		if(s.charAt(i)=='\\' && i+1 < s.length()) {
+			switch(s.charAt(i+1)) {
+				case 'n': sb.append("\n");break;
+				case 't': sb.append("\t");break;
+				case 'r': sb.append("\r");break;
+				case '\"': sb.append("\"");break;
+				case '\'': sb.append("\'");break;
+				case '\\': sb.append("\\");break;
+				default:break;
+				}
+			i++;
+			}
+		else
+			{
+			sb.append(s.charAt(i));
+			}	
+		i++;
+		}
+	return sb.toString();
+	}	
 }

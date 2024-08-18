@@ -2,10 +2,15 @@ package sandbox.util;
 
 import java.util.AbstractMap;
 import java.util.Map;
+import java.util.Objects;
 
 public interface Pair<K,V> {
-	public boolean hasKey(K k);
-	public boolean hasValue(V v);
+	public default boolean hasKey(K k) {
+		return Objects.equals(getKey(),k);
+		}
+	public default boolean hasValue(V v) {
+		return Objects.equals(getValue(),v);
+		}
 	public K getKey();
 	public V getValue();
 	public default Map.Entry<K, V> toEntry() {
@@ -22,30 +27,21 @@ public interface Pair<K,V> {
 			this.k=k;
 			this.v=v;
 			}
-		@Override
-		public boolean hasKey(K k) {
-			return equals(getKey(),k);
-			}
-		@Override
-		public boolean hasValue(V v) {
-			return equals(getValue(),v);
-			}
+
 		@Override
 		public int hashCode() {
-			return (k==null?0:k.hashCode())*31+(v==null?0:v.hashCode());
+			return Objects.hash(getKey(),getValue());
 			}
 		
-		private boolean equals(Object a,Object b) {
-			if(a==null && b==null) return true;
-			if(a==null || b==null) return false;
-			return a.equals(b);
-			}
+		
 		@Override
 		public boolean equals(Object obj) {
 			if(obj ==this) return true;
 			if(obj==null || !(obj instanceof Pair)) return false;
+			@SuppressWarnings("rawtypes")
 			Pair other=(Pair)obj;
-			return equals(other.getKey(),this.getKey()) && equals(other.getValue(),this.getValue());
+			return Objects.equals(other.getKey(),this.getKey()) && 
+					Objects.equals(other.getValue(),this.getValue());
 			}
 		
 		@Override

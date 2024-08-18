@@ -1,5 +1,6 @@
 package sandbox.xml.minidom;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -36,6 +37,10 @@ public class MiniDomReader {
 		return XMLInputFactory.newFactory();
 		}
 	
+	public Element parseFile(File filename) throws IOException {
+		return parsePath(filename.toPath());
+		}
+	
 	public Element parsePath(Path filename) throws IOException {
 		try(Reader is=IOUtils.openPathAsReader(filename)) {
 			return parseReader(is);
@@ -44,8 +49,8 @@ public class MiniDomReader {
 	
 	public Element parseInputStream(InputStream is)  throws IOException {
 		try {
-			XMLEventReader r=newXMLInputFactory().createXMLEventReader(is);
-			Element root= parse(r);
+			final XMLEventReader r=newXMLInputFactory().createXMLEventReader(is);
+			final Element root= parse(r);
 			r.close();
 			return root;
 			}

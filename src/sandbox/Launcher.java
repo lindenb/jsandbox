@@ -29,6 +29,11 @@ public abstract class Launcher
 	@Parameter(names = {"-h","--help"},description="print help and exit", help = true)
 	private boolean print_help = false;
 
+	
+	public Logger getLogger() {
+		return LOG;
+		}
+	
 	public int instanceMain(final String args[]) {
 		final JCommander jCommander = new JCommander();
 		try

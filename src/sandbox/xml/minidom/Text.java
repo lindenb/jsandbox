@@ -21,6 +21,17 @@ public class Text extends Node implements CharSequence {
 	}
 	
 	@Override
+	public int getNodeType() {
+		return org.w3c.dom.Node.TEXT_NODE;
+	}
+
+	
+	@Override
+	public final boolean isDataNode() {
+		return true;
+	}
+	
+	@Override
 	public final boolean isText() {
 		return true;
 		}
@@ -28,6 +39,13 @@ public class Text extends Node implements CharSequence {
 	public final boolean isElement() {
 		return false;
 		}
+	
+	@Override
+	public final boolean hasChildNodes() {
+		return false;
+	}
+
+	
 	@Override
 	public int length() {
 		return getTextContent().length();
@@ -83,5 +101,7 @@ public class Text extends Node implements CharSequence {
 		if(this.isSameNode(other)) return true;
 		return getTextContent().equals(other.asText().getTextContent());
 		}
-
+	public static Text importDOM(org.w3c.dom.CharacterData n) {
+		return new Text(n.getData());
+		}
 	}

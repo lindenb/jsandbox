@@ -11,6 +11,8 @@ import java.util.OptionalInt;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -84,6 +86,10 @@ public boolean isA(final String ns,final String lclName) {
 	return hasNamespaceURI(ns) && hasLocalName(lclName);
 	}
 
+@Override
+public int getNodeType() {
+	return org.w3c.dom.Node.ELEMENT_NODE;
+	}
 
 
 public QName getQName() {
@@ -111,6 +117,7 @@ public boolean hasNamespaceURI() {
 public String getNamespaceURI() {
 	return getQName().getNamespaceURI();
 	}
+@Override
 public boolean hasChildNodes() {
 	return getFirstChild()!=null;
 	}
@@ -143,6 +150,21 @@ public void find(final Consumer<Node> consumer) {
 		}
 	}
 
+public Optional<Element> findFirstChildElement(final Predicate<Element> predicate) {
+	for(Node c=getFirstChild();c!=null;c=c.getNextSibling()) {
+		if(!c.isElement()) continue;
+		if(!predicate.test(c.asElement())) continue;
+		return Optional.of(c.asElement());
+		}
+	return Optional.empty();
+	}
+
+
+public Optional<Element> findFirstChildElement(final String lclName) {
+	return findFirstChildElement(E->E.hasLocalName(lclName));
+	}
+
+
 public Element getRoot() {
 	return hasParentNode()?getParentNode().getRoot():this;
 	}
@@ -165,6 +187,21 @@ public Stream<Node> stream() {
 public Stream<Element> elements() {
 	return stream().filter(N->N.isElement()).map(E->E.asElement());
 	}
+
+/** return all child Element as List */
+public List<Element> getChildElements() {
+	return elements().collect(Collectors.toList());
+	}
+
+
+/** return true if there is one Element as child */
+public boolean hasChildElement() {
+	for(Node n1=getFirstChild();n1!=null;n1=n1.getNextSibling()) {
+		if(n1.isElement()) return true;
+		}
+	return false;
+	}
+
 
 
 public Node getFirstChild() {
@@ -494,6 +531,51 @@ public boolean isEqualNode(final Node other) {
 		c1=c1.getNextSibling();
 		c2=c2.getNextSibling();
 		}
+	}
+
+
+@Override
+public final boolean isDataNode() {
+	boolean has_element=false;
+	boolean has_non_ws = false;
+	for(Node n1=this.getFirstChild();n1!=null;n1=n1.getNextSibling()) {
+		if(n1.isText()&& n1.asText().isBlank()) has_non_ws=true;
+		if(n1.isElement()) has_element=true;
+		if(has_non_ws && has_element) return false;
+		if(!n1.isDataNode()) return false;
+		}
+	return true;
+	}
+
+/**
+ * @rerturn true if Element contains NO element as child and one or more Text element
+ */
+public boolean isElementWithTextOnly() {
+	boolean has_text=false;
+	for(Node n1=this.getFirstChild();n1!=null;n1=n1.getNextSibling()) {
+		if(n1.isText()) has_text=true;
+		if(n1.isElement()) return false;
+		}
+	return has_text;
+	}
+
+public static Element importDOM(org.w3c.dom.Element e,boolean deep) {
+	final Element root=new Element(e);
+	if(deep) {
+		for(org.w3c.dom.Node c1=e.getFirstChild();c1!=null;c1=c1.getNextSibling()) {
+			switch(c1.getNodeType()) {
+				case org.w3c.dom.Node.TEXT_NODE:
+				case org.w3c.dom.Node.CDATA_SECTION_NODE:
+					root.appendChild(Text.importDOM(org.w3c.dom.CharacterData.class.cast(c1)));
+					break;
+				case org.w3c.dom.Node.ELEMENT_NODE:
+					root.appendChild(Element.importDOM(org.w3c.dom.Element.class.cast(c1),deep));
+					break;
+				default: throw new IllegalArgumentException("cannot import nodetype="+c1.getNodeType());
+				}
+			}
+		}
+	return root;
 	}
 
 @Override

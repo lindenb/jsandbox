@@ -298,6 +298,7 @@ $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommand
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/sandbox/tools/pojogenerator/parser/PojoParser.java))
 $(eval $(call compile,theses2gexf,sandbox.tools.thesesfr.ThesesfrToGraph, ${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander.jar} ${jaxb.jar}))
+$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
@@ -305,12 +306,12 @@ $(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander
 ./src/sandbox/swij/SwijParser.java : ./src/sandbox/swij/Swij.jj
 	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<
 
-dist/annotproc.jar:  src/sandbox/annotation/processing/MyProcessor.java
-	rm -rf tmp
-	mkdir -p tmp $(dir $@)
-	javac -d tmp -sourcepath src $<
-	jar cvf $@ -C tmp .
-	rm -rf tmp
+./src/sandbox/expr1/parser/Expr1Parser.java: ./src/sandbox/expr1/parser/Parser.jj
+	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<
+
+dist/annotproc.jar: src/sandbox/annotation/processing/MyProcessor.java 
+	rm -rf tmp mkdir -p tmp $(dir $@) javac -d tmp -sourcepath src 
+	$< jar cvf $@ -C tmp . rm -rf tmp
 
 
 $(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj

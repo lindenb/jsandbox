@@ -1,9 +1,6 @@
 package sandbox.xml.minidom;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
@@ -51,9 +48,14 @@ public Element asElement() {
 public Text asText() {
 	return Text.class.cast(this);
 	}
+
+public boolean isRoot() {
+	return !hasParentNode();
+	}
+
 public boolean hasParentNode() {
 	return getParentNode()!=null;
-}
+	}
 public Element getParentNode() {
 	return parentNode;
 	}
@@ -63,14 +65,20 @@ public Node getPrevSibling() {
 public Node getNextSibling() {
 	return nextSibling;
 	}
+/** same as org.w3c.Node */
+public abstract int getNodeType();
 
 public int getDepth() {
 	return hasParentNode() ?1+getParentNode().getDepth():0;
 	}
+/** return true if there is at least one child */
+public abstract boolean hasChildNodes();
+
 
 public abstract String getPath();
 
 public static String toString(Object o) {
+	if(o instanceof org.w3c.dom.CharacterData) return toString(org.w3c.dom.CharacterData.class.cast(o).getData());
 	return String.valueOf(o);
 	}
 
@@ -83,8 +91,13 @@ public boolean equals(final Object obj) {
 	return isEqualNode((Node)obj);
 	}
 
-public boolean isSameNode(Node other) {
+public boolean isSameNode(final Node other) {
 	return this==other;
+	}
+/** return true if Element contains only Text, or (Element+blank text) */
+public abstract boolean isDataNode();
+public void assertIsDataNode() {
+	if(!isDataNode()) throw new IllegalStateException("not a data node:"+getPath());
 	}
 
 public abstract void setTextContent(Object o);
