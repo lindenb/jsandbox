@@ -62,7 +62,7 @@ public class Primitive {
 		return this.parseString;
 	}
 
-	public Optional<?> valueOf(final String s) {
+	public Optional<Object> valueOf(final String s) {
 		if(s==null) return Optional.empty();
 		try {
 			return Optional.of(getParseStringFunction().apply(s));

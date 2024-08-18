@@ -1,5 +1,8 @@
 package sandbox.xml.minidom;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
@@ -9,12 +12,49 @@ import javax.xml.stream.XMLStreamWriter;
 import sandbox.StringUtils;
 
 public abstract class Node {
+private static long ID_GENERATOR=0L;
+private long node_id=ID_GENERATOR++;
 protected Element parentNode=null;
 protected Node prevSibling=null;
 protected Node nextSibling=null;
+private Map<String,Object> userData=null;
 protected Node() {
 	}
 
+public final String getNodeId() {
+	return "n"+this.node_id;
+	}
+
+
+public Map<String,Object>  getUserData() {
+	if(this.userData==null) return Collections.emptyMap();
+	return Collections.unmodifiableMap(this.userData);
+	}
+
+public Object getUserData(final String key) {
+	if(this.userData==null) return null;
+	return this.userData.get(key);
+	}
+
+public Object removeUserData(String key) {
+	if(this.userData==null) return null;
+	final Object o2  = this.userData.remove(key);
+	if(this.userData.isEmpty()) this.userData=null;
+	return o2;
+	}
+
+
+public Object setUserData(String key,Object o) {
+	if(o==null) return removeUserData(key);
+	if(this.userData==null) this.userData = createUserDataMap();
+	return this.userData.put(key, o);
+	}
+
+
+/** create default map for this.userData */
+protected  Map<String,Object> createUserDataMap() {
+	return new HashMap<>();
+	}
 
 public Node unlink() {
 	if(this.parentNode!=null) {
