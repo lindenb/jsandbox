@@ -19,6 +19,7 @@ import org.w3c.dom.CharacterData;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
+
 import sandbox.Logger;
 import sandbox.StringUtils;
 import sandbox.util.Pair;
@@ -35,7 +36,8 @@ public abstract class AbstractSwingXmlContext {
 			}
 		
 		public boolean isHandlerForNode(Element root) {
-			return getType().getSimpleName().equals(root.getLocalName()) || getType().getName().equals(root.getLocalName());
+			return getType().getSimpleName().equals(root.getNodeName()) ||
+				getType().getName().equals(root.getNodeName());
 			}
 		public Optional<Object> createInstance(Element root) {
 			/** try with string as argument */
@@ -69,6 +71,7 @@ public abstract class AbstractSwingXmlContext {
 			}
 		
 		protected Optional<Object> makeInstance(Element root) {
+			LOG.info("create instance for "+XmlUtils.getNodePath(root));
 			try {
 				Optional<Object> opt=createInstance(root);
 				if(!opt.isPresent()) {
@@ -79,6 +82,7 @@ public abstract class AbstractSwingXmlContext {
 				if(opt.get() instanceof Container) {
 					fillContainer(Container.class.cast(opt.get()),root);
 					}
+				
 				return opt;
 				}
 			catch(Throwable err) {
@@ -86,15 +90,21 @@ public abstract class AbstractSwingXmlContext {
 				}
 			}
 		protected void fillContainer(Container container,Element root) {
+			LOG.info("fillContainer");
+
 			for(Node c=root.getFirstChild();c!=null;c=c.getNextSibling()) {
 				if(!XmlUtils.isElement.test(c)) continue;
 				Element e = XmlUtils.toElement.apply(c);
-				if(!e.getLocalName().equals("add")) continue;
+				if(!e.getNodeName().equals("add")) {
+					LOG.debug("not add "+e.getNodeName());
+					continue;
+					}
 				addComponent(container,e);
 				}
 			}
 		
 		protected void  addComponent(Container container,Element root) {
+				LOG.info("addComponent2");
 				Optional<Element> dataE = getDataElement(root);
 				if(!dataE.isPresent()) {
 					LOG.warning("not a data node for "+XmlUtils.getNodePath(root));
@@ -105,19 +115,23 @@ public abstract class AbstractSwingXmlContext {
 					LOG.warning("not instance found for "+XmlUtils.getNodePath(root));
 					return;
 					}
-				Object instance2 = handler.get().makeInstance(dataE.get());
-				if(!(instance2 instanceof Component)) {
+				Optional<Object> instance2 = handler.get().makeInstance(dataE.get());
+				if(!instance2.isPresent()) {
+					LOG.warning("cannot make instance");
+					return;
+					}
+				if(!(instance2.get() instanceof Component)) {
 					LOG.warning("not instance of Component");
 					return;
-				}
+					}
 				
 				String constaint = root.getAttribute("constraint");
 				if(StringUtils.isBlank(constaint)) {
-					container.add(Component.class.cast(instance2));
+					container.add(Component.class.cast(instance2.get()));
 					}
 				else
 					{
-					container.add(Component.class.cast(instance2),constaint);
+					container.add(Component.class.cast(instance2.get()),constaint);
 					}
 				}
 		
@@ -129,7 +143,7 @@ public abstract class AbstractSwingXmlContext {
 			final List<Element> L = XmlUtils.stream(root).
 					filter(XmlUtils.isElement).
 					map(XmlUtils.toElement).
-					filter(E->E.getLocalName().equals(name)).
+					filter(E->E.getNodeName().equals(name)).
 					collect(Collectors.toList());
 			if(L.isEmpty()) {
 				return Optional.empty();
@@ -192,20 +206,28 @@ public abstract class AbstractSwingXmlContext {
 			return opt.isPresent()?parseBoolean(opt.get()):Optional.empty();
 			}
 		protected Optional<Object> findObject(Element root,final String name,Class<?> clazz) {
+			//LOG.info("find Object");
 			Optional<Element> e1=findOneElement(root,name);
-			if(!e1.isPresent()) return Optional.empty();
+			if(!e1.isPresent()) {
+				//LOG.info("cannot find <"+name+"/> for "+XmlUtils.getNodePath(root));
+				return Optional.empty();
+				}
 			
-			Optional<Element> e2=getDataElement(e1.get());
-			
+			final Optional<Element> e2=getDataElement(e1.get());
+			if(!e2.isPresent()) {
+				LOG.debug("cannot find data Element under "+XmlUtils.getNodePath(e1.get()));
+				return Optional.empty();
+				}
 			final NodeHandler handler=findHandlerByElement(e2.get()).orElse(null);
 			if(handler==null) {
 				LOG.info("Cannot find handler for "+XmlUtils.getNodePath(e2.get()));
 				return Optional.empty();
 				}
-			final Optional<Object> o = handler.createInstance(e2.get());
+			LOG.info("now create instance for "+handler.getName()+" "+e2.get().getNodeName());
+			final Optional<Object> o = handler.makeInstance(e2.get());
 			if(o.isPresent()) {
 				if(!clazz.isInstance(o.get())) {
-					LOG.error("No an instance of "+clazz);
+					LOG.error(o.get().getClass().getTypeName()+"is not an instance of "+clazz);
 					return Optional.empty();
 					}
 				}
@@ -344,10 +366,15 @@ public abstract class AbstractSwingXmlContext {
 				filter(XmlUtils.isTextOrCData).
 				map(N->CharacterData.class.cast(N).getData()).
 				anyMatch(S->!StringUtils.isBlank(S))) {
+				LOG.debug("not a data element because text");
 				return Optional.empty();
 				}
-		List<Element> L  = XmlUtils.elements(root);
-		if(L.size()==1) return Optional.of(L.get(0));
+		final List<Element> L  = XmlUtils.elements(root);
+		if(L.size()==1) {
+			LOG.info("ok got it "+XmlUtils.getNodePath(L.get(0)));
+			return Optional.of(L.get(0));
+			}
+		LOG.info("no or multuple element under "+XmlUtils.getNodePath(root));
 		return Optional.empty();
 		}
 
@@ -369,7 +396,7 @@ public abstract class AbstractSwingXmlContext {
 	protected Optional<NodeHandler> findHandlerByElement(Element root) {
 		List<NodeHandler> L=this.class2handler.values().stream().filter(H->H.isHandlerForNode(root)).collect(Collectors.toList());
 		if(L.isEmpty()) return Optional.empty();
-		if(L.size()>1) LOG.warning("multiple handlers for "+root.getLocalName()+":"+L.toString());
+		if(L.size()>1) LOG.warning("multiple handlers for "+root.getNodeName()+":"+L.toString());
 		return Optional.of(L.get(0));
 		}
 	

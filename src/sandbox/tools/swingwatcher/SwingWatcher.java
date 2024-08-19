@@ -60,7 +60,8 @@ public class SwingWatcher extends Launcher {
 		System.err.println("Reload... "+this.file+" "+new Date());
 		Element root;
 		try {
-			DocumentBuilderFactory dbf=DocumentBuilderFactory.newDefaultNSInstance();
+			final DocumentBuilderFactory dbf=DocumentBuilderFactory.newDefaultNSInstance();
+			dbf.setNamespaceAware(true);
 			DocumentBuilder db=dbf.newDocumentBuilder();
 			Document dom = db.parse(this.file);
 			root=dom.getDocumentElement();

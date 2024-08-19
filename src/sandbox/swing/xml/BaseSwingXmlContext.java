@@ -3257,10 +3257,10 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 			
 			
 				{
-				
+				LOG.info("HELLO"+getName());
 					final Optional<Object> opt = findObject(root,"transferHandler",javax.swing.TransferHandler.class);
 					if(opt.isPresent()) instance.setTransferHandler(javax.swing.TransferHandler.class.cast(opt.get()));
-					
+					LOG.info("HELLO2");	
 				}
 			
 			
@@ -3275,10 +3275,12 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 			
 			
 				{
-				
+					LOG.info("HELLO"+getName()+" "+instance.getClass().getTypeName());
+
 					final Optional<Object> opt = findObject(root,"contentPane",java.awt.Container.class);
 					if(opt.isPresent()) instance.setContentPane(java.awt.Container.class.cast(opt.get()));
-					
+					LOG.info("HELLO2"+getName());
+
 				}
 			
 			
