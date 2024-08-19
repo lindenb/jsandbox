@@ -2,22 +2,27 @@ package sandbox.tools.swingwatcher;
 
 import java.awt.Dimension;
 import java.awt.Toolkit;
+import java.awt.Window;
 import java.io.File;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import javax.swing.SwingUtilities;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import sandbox.Launcher;
 import sandbox.io.IOUtils;
 import sandbox.swing.xml.SwingXmlContext;
 import sandbox.tools.central.ProgramDescriptor;
-import sandbox.xml.minidom.Element;
-import sandbox.xml.minidom.MiniDomReader;
 
-public class SwingWatcher extends Launcher{
+public class SwingWatcher extends Launcher {
 	private File file;
 	private Timer timer = new Timer();
 	private TimerTask mytask;
@@ -53,10 +58,12 @@ public class SwingWatcher extends Launcher{
 		if(this.lastModif>= last) return;
 		this.lastModif =last;
 		System.err.println("Reload... "+this.file+" "+new Date());
-		MiniDomReader xmlReader=new MiniDomReader();
 		Element root;
 		try {
-			root=xmlReader.parsePath(this.file.toPath());
+			DocumentBuilderFactory dbf=DocumentBuilderFactory.newDefaultNSInstance();
+			DocumentBuilder db=dbf.newDocumentBuilder();
+			Document dom = db.parse(this.file);
+			root=dom.getDocumentElement();
 			}
 		catch(final Throwable err)
 			{
@@ -80,8 +87,18 @@ public class SwingWatcher extends Launcher{
 			err.printStackTrace();
 			return;
 			}
-		if(!ctx.getTopWindow().isPresent()) return;
-		closeWindow( ctx.getTopWindow().get());
+		final Optional<Object> top= ctx.getInstance();
+		if(!top.isPresent()) {
+			closeWindow(null);
+			System.err.println("no object was parsed");
+			return;
+			}
+		if(!(top.get() instanceof Window)) {
+			closeWindow(null);
+			System.err.println("root in xml is not an instance of "+Window.class.getName());
+			return;
+			}
+		closeWindow( Window.class.cast(top.get()));
 		}
 	
 	@Override

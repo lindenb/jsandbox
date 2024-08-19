@@ -358,10 +358,15 @@ textlet : src/sandbox/TextletParser.jj
 	javac -sourcepath src src/sandbox/Textlet.java
 	echo "aa (<%@ include file='azda'  %>) aa <%= 2 %> <%!  int i=0; public int getI() { return this.i;} %>" | java -cp src sandbox.Textlet
 
-x : src/sandbox/EmfModelParser.jj ${emf.core.jars}
-	${javacc.exe} -OUTPUT_DIRECTORY=src/sandbox $<
-	javac -cp $(subst $(SPACE),:,${emf.core.jars}) -sourcepath src src/sandbox/EmfModel.java
-	echo "package x1 { class x2 {int a int b String c } }" | java -cp $(subst $(SPACE),:,${emf.core.jars}):src sandbox.EmfModel
+x : ./src/sandbox/swing/xml/BaseSwingXmlContext.java
+
+./src/sandbox/swing/xml/BaseSwingXmlContext.java : xslt/swingxmlcontext.xsl \
+	./src/sandbox/swing/xml/AbstractSwingXmlContext.java \
+	./src/sandbox/swing/xml/SwingXmlContext.java
+	java -jar dist/jsandbox.jar java2xml --super $(addprefix java.awt.,Dimension Point BorderLayout) $(addprefix javax.swing.,JSplitPane JTable JTree JScrollPane JTabbedPane JButton JPanel JFrame JDialog JMenu JMenuBar JMenuItem JTextArea JTextField JComboBox JScrollBar JSeparator JToggleButton JSlider JRadioButton JProgressBar JPopupMenu JPasswordField JList JLabel JDesktopPane JCheckBox JCheckBoxMenuItem ) |\
+		xmllint --format - | tee jeter.xml |\
+		xsltproc xslt/swingxmlcontext.xsl -  > ./src/sandbox/swing/xml/BaseSwingXmlContext.java
+	$(MAKE) jsandbox
 
 common.avdl :
 	curl -o $@ -L "https://raw.githubusercontent.com/ga4gh/schemas/master/src/main/resources/avro/$@"

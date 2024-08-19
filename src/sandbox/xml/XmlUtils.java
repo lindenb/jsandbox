@@ -37,6 +37,9 @@ public class XmlUtils {
 
 public static final Predicate<Node> isElement = (N) -> N!=null && 	N.getNodeType()==Node.ELEMENT_NODE;
 public static final Predicate<Node> isText = (N) -> N!=null && 	N.getNodeType()==Node.TEXT_NODE;
+public static final Predicate<Node> isCData = (N) -> N!=null && N.getNodeType()==Node.CDATA_SECTION_NODE;
+public static final Predicate<Node> isTextOrCData = (N) -> isText.test(N) || isCData.test(N);
+
 public static final Function<Node,Element> toElement = N->{
 	if(isElement.test(N)) return Element.class.cast(N);
 	throw new IllegalArgumentException("node is not an element");
@@ -116,7 +119,7 @@ public static List<Node> children(final Node root) {
 public static List<Element> elements(final Node root) {
 	return children(root).stream().
 			filter(isElement).
-			map(T->Element.class.cast(T)).
+			map(toElement).
 			collect(Collectors.toList())
 			;
 	}
@@ -124,8 +127,8 @@ public static List<Element> elements(final Node root) {
 
 public static List<Element> elements(final Node root,final Predicate<Element> predicate) {
 return children(root).stream().
-		filter(N->N.getNodeType()==Node.ELEMENT_NODE).
-		map(T->Element.class.cast(T)).
+		filter(isElement).
+		map(toElement).
 		filter(predicate).
 		collect(Collectors.toList())
 		;

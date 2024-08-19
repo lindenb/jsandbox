@@ -193,6 +193,11 @@ public List<Element> getChildElements() {
 	return elements().collect(Collectors.toList());
 	}
 
+/** count child Element  */
+public int countChildElements() {
+	return (int)elements().count();
+	}
+
 
 /** return true if there is one Element as child */
 public boolean hasChildElement() {

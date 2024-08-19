@@ -31,6 +31,9 @@ private Path output=null;
 private String packageName="generated";
 @Parameter(names= { "--name"},description="class Name")
 private String className="MyConstructor";
+@Parameter(names= { "--super"},description="use super classes")
+private boolean use_super_class=false;
+
 
 private String unJava(String s) {
 	if(s.length()>1 && Character.isUpperCase(s.charAt(0)) && Character.isUpperCase(s.charAt(1))) return s; /** setURL */
@@ -115,7 +118,9 @@ private void run(XMLStreamWriter w,final Class<?> clazz) throws Exception {
 	w.writeAttribute("simpleName", simpleName);
 	w.writeAttribute("scope", getScope(clazz.getModifiers()));
 	w.writeAttribute("final", String.valueOf(Modifier.isFinal(clazz.getModifiers())));
-
+	w.writeAttribute("abstract", String.valueOf(Modifier.isAbstract(clazz.getModifiers())));
+	if(!clazz.getSuperclass().equals(Object.class)) w.writeAttribute("extends", clazz.getSuperclass().getTypeName());
+	
 	w.writeStartElement("constructors");
 	for(Constructor<?> ctor:clazz.getConstructors()) {
 		w.writeStartElement("constructor");
@@ -129,6 +134,27 @@ private void run(XMLStreamWriter w,final Class<?> clazz) throws Exception {
 		w.writeEndElement();
 		}
 	w.writeEndElement();
+	
+	w.writeStartElement("super-class");
+	Class<?> parent=clazz.getSuperclass();
+	while(!parent.equals(Object.class)) {
+		w.writeEmptyElement("extends");
+		w.writeAttribute("class", parent.getTypeName());
+		parent=parent.getSuperclass();
+		}
+	w.writeEndElement();
+	
+	w.writeStartElement("interfaces");
+	for(Class<?> itf: clazz.getInterfaces()) {
+		w.writeEmptyElement("implements");
+		w.writeAttribute("class", itf.getTypeName());
+		if(itf.getDeclaringClass()!=null) {
+			w.writeAttribute("declared-class",itf.getDeclaringClass().getTypeName());
+			w.writeAttribute("declared",String.valueOf(itf.getDeclaringClass().equals(clazz)));
+			}
+		}
+	w.writeEndElement();
+
 	
 	w.writeStartElement("fields");
 	for(Field field:clazz.getFields()) {
@@ -148,6 +174,7 @@ private void run(XMLStreamWriter w,final Class<?> clazz) throws Exception {
 		w.writeEndElement();
 		}
 	w.writeEndElement();
+	
 	
 	w.writeStartElement("methods");
 
@@ -199,6 +226,15 @@ private void run(XMLStreamWriter w,final Class<?> clazz) throws Exception {
 	w.writeEndElement();
 	}
 
+private Set<Class<?>> superOf(Class<?> c) {
+	final Set<Class<?>> set = new HashSet<>();
+	while(!c.equals(Object.class)) {
+		set.add(c);
+		c=c.getSuperclass();
+		}
+	return set;
+}
+
 @Override
 public int doWork(List<String> args) {
 	try {
@@ -211,7 +247,12 @@ public int doWork(List<String> args) {
 			if(Modifier.isAbstract(c.getModifiers())) continue;
 			if(!Modifier.isPublic(c.getModifiers())) continue;
 			classes.add(c);
+			if(use_super_class) {
+				classes.addAll(superOf(c));
+				}
 			}
+		
+		
 		XMLOutputFactory xof=XMLOutputFactory.newDefaultFactory();
 		final Set<String> packages = classes.stream().map(C->C.getPackageName()).collect(Collectors.toSet());
 		
