@@ -363,7 +363,9 @@ x : ./src/main/java/sandbox/swing/xml/BaseSwingXmlContext.java
 ./src/main/java/sandbox/swing/xml/BaseSwingXmlContext.java : src/main/xslt/swingxmlcontext.xsl \
 	./src/main/java/sandbox/swing/xml/AbstractSwingXmlContext.java \
 	./src/main/java/sandbox/swing/xml/SwingXmlContext.java
-	java -jar dist/jsandbox.jar java2xml --super $(addprefix java.awt.,Dimension Point BorderLayout) $(addprefix javax.swing.,JSplitPane JTable JTree JScrollPane JTabbedPane JButton JPanel JFrame JDialog JMenu JMenuBar JMenuItem JTextArea JTextField JComboBox JScrollBar JSeparator JToggleButton JSlider JRadioButton JProgressBar JPopupMenu JPasswordField JList JLabel JDesktopPane JCheckBox JCheckBoxMenuItem ) |\
+	java -jar dist/jsandbox.jar java2xml --super \
+			$(addprefix java.awt.,Color Dimension Point BorderLayout BasicStroke Font) \
+			$(addprefix javax.swing.,JSplitPane JTable JTree JScrollPane JTabbedPane JButton JPanel JFrame JDialog JMenu JMenuBar JMenuItem JTextArea JTextField JComboBox JScrollBar JSeparator JToggleButton JSlider JRadioButton JProgressBar JPopupMenu JPasswordField JList JLabel JDesktopPane JCheckBox JCheckBoxMenuItem border.TitledBorder border.EmptyBorder) |\
 		xsltproc src/main/xslt/swingxmlcontext.xsl -  > ./src/main/java/sandbox/swing/xml/BaseSwingXmlContext.java
 	$(MAKE) jsandbox
 

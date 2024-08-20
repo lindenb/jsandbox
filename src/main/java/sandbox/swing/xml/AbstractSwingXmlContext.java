@@ -110,12 +110,8 @@ public abstract class AbstractSwingXmlContext {
 					LOG.warning("not a data node for "+XmlUtils.getNodePath(root));
 					return;
 					}
-				Optional<NodeHandler> handler = findHandlerByElement(dataE.get());
-				if(!handler.isPresent()) {
-					LOG.warning("not instance found for "+XmlUtils.getNodePath(root));
-					return;
-					}
-				Optional<Object> instance2 = handler.get().makeInstance(dataE.get());
+				
+				Optional<Object> instance2 =createInstanceFromElement(dataE.get());
 				if(!instance2.isPresent()) {
 					LOG.warning("cannot make instance");
 					return;
@@ -218,13 +214,7 @@ public abstract class AbstractSwingXmlContext {
 				LOG.debug("cannot find data Element under "+XmlUtils.getNodePath(e1.get()));
 				return Optional.empty();
 				}
-			final NodeHandler handler=findHandlerByElement(e2.get()).orElse(null);
-			if(handler==null) {
-				LOG.info("Cannot find handler for "+XmlUtils.getNodePath(e2.get()));
-				return Optional.empty();
-				}
-			LOG.info("now create instance for "+handler.getName()+" "+e2.get().getNodeName());
-			final Optional<Object> o = handler.makeInstance(e2.get());
+			final Optional<Object> o = createInstanceFromElement(e2.get());
 			if(o.isPresent()) {
 				if(!clazz.isInstance(o.get())) {
 					LOG.error(o.get().getClass().getTypeName()+"is not an instance of "+clazz);
@@ -338,18 +328,25 @@ public abstract class AbstractSwingXmlContext {
 			}
 		protected Optional<String> parseString(String s) {
 			return Optional.of(s) ;
+			}	
+		}
+		
+	protected Optional<Object> createInstanceFromElement(Element root) {
+		final Optional<NodeHandler> h = this.findHandlerByElement(root);
+		if(h.isPresent()) {
+			final Optional<Object> instance = h.get().makeInstance(root);
+			if(!instance.isPresent()) {
+				LOG.warning(h.get().getName() + " cannot create instance for "+XmlUtils.getNodePath(root));
+				}
+			return instance;
 			}
-		
+		else
+			{
+			LOG.warning("No handler was found for "+XmlUtils.getNodePath(root));
+			return Optional.empty();
+			}
 		}
 		
-	
-	
-	
-	public Logger getLogger() {
-		return LOG;
-		}
-	
-	
 	private static boolean isPublisStaticFinalField(Field f) {
 		final int m=f.getModifiers();
 		if(!Modifier.isPublic(m)) return false;

@@ -28,19 +28,26 @@ public class SwingWatcher extends Launcher {
 	private TimerTask mytask;
 	private long lastModif=0L;
 	private transient java.awt.Window current_window=null;
-	
+	private transient java.awt.Rectangle bounds=null;
 	private void closeWindow(final java.awt.Window newWin) {
 		try {
 			SwingUtilities.invokeAndWait(()->{
 			if(this.current_window!=null) {
+				this.bounds = this.current_window.getBounds();
 				this.current_window.setVisible(false);
 				this.current_window.dispose();
 				current_window=null;
 				}
 			if(newWin!=null) {
 				current_window=newWin;
-				final Dimension screen  = Toolkit.getDefaultToolkit().getScreenSize();
-				current_window.setBounds(50, 50, screen.width-100, screen.height-100);
+				if(this.bounds==null) {
+					final Dimension screen  = Toolkit.getDefaultToolkit().getScreenSize();
+					current_window.setBounds(50, 50, screen.width-100, screen.height-100);
+					}
+				else
+					{
+					current_window.setBounds(this.bounds);
+					}
 				current_window.setVisible(true);
 				}
 			});
@@ -62,8 +69,8 @@ public class SwingWatcher extends Launcher {
 		try {
 			final DocumentBuilderFactory dbf=DocumentBuilderFactory.newDefaultNSInstance();
 			dbf.setNamespaceAware(true);
-			DocumentBuilder db=dbf.newDocumentBuilder();
-			Document dom = db.parse(this.file);
+			final DocumentBuilder db=dbf.newDocumentBuilder();
+			final Document dom = db.parse(this.file);
 			root=dom.getDocumentElement();
 			}
 		catch(final Throwable err)

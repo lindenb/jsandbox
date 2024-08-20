@@ -112,8 +112,7 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 	protected BaseSwingXmlContext() {
 	}
 
-	@Override
-	public Logger getLogger() {
+	private Logger getLogger() {
 		return LOG;
 		}
 
