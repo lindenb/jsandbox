@@ -30,6 +30,15 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 			
 				{
 				
+					final Optional<Boolean> opt = findBoolean(root,"visible");
+					if(opt.isPresent()) instance.setVisible((boolean)opt.get());
+					
+				}
+			
+			
+			
+				{
+				
 					final Optional<Object> opt = findObject(root,"background",java.awt.Color.class);
 					if(opt.isPresent()) instance.setBackground(java.awt.Color.class.cast(opt.get()));
 					
@@ -98,15 +107,6 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 				}
 			
 			
-			
-				{
-				
-					final Optional<Boolean> opt = findBoolean(root,"visible");
-					if(opt.isPresent()) instance.setVisible((boolean)opt.get());
-					
-				}
-			
-			
 			super.fillSetters(instance,root);
 			}
 		}
@@ -130,6 +130,24 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 				
 					final Optional<Object> opt = findObject(root,"size",java.awt.Dimension.class);
 					if(opt.isPresent()) instance.setSize(java.awt.Dimension.class.cast(opt.get()));
+					
+				}
+			
+			
+			
+				{
+				
+					final Optional<Boolean> opt = findBoolean(root,"visible");
+					if(opt.isPresent()) instance.setVisible((boolean)opt.get());
+					
+				}
+			
+			
+			
+				{
+				
+					final Optional<Object> opt = findObject(root,"bounds",java.awt.Rectangle.class);
+					if(opt.isPresent()) instance.setBounds(java.awt.Rectangle.class.cast(opt.get()));
 					
 				}
 			
@@ -276,24 +294,6 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 				}
 			
 			
-			
-				{
-				
-					final Optional<Boolean> opt = findBoolean(root,"visible");
-					if(opt.isPresent()) instance.setVisible((boolean)opt.get());
-					
-				}
-			
-			
-			
-				{
-				
-					final Optional<Object> opt = findObject(root,"bounds",java.awt.Rectangle.class);
-					if(opt.isPresent()) instance.setBounds(java.awt.Rectangle.class.cast(opt.get()));
-					
-				}
-			
-			
 			super.fillSetters(instance,root);
 			}
 		}
@@ -432,6 +432,24 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 			
 				{
 				
+					final Optional<Boolean> opt = findBoolean(root,"visible");
+					if(opt.isPresent()) instance.setVisible((boolean)opt.get());
+					
+				}
+			
+			
+			
+				{
+				
+					final Optional<Object> opt = findObject(root,"bounds",java.awt.Rectangle.class);
+					if(opt.isPresent()) instance.setBounds(java.awt.Rectangle.class.cast(opt.get()));
+					
+				}
+			
+			
+			
+				{
+				
 					final Optional<Object> opt = findObject(root,"font",java.awt.Font.class);
 					if(opt.isPresent()) instance.setFont(java.awt.Font.class.cast(opt.get()));
 					
@@ -560,24 +578,6 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 				
 					final Optional<Object> opt = findObject(root,"mixingCutoutShape",java.awt.Shape.class);
 					if(opt.isPresent()) instance.setMixingCutoutShape(java.awt.Shape.class.cast(opt.get()));
-					
-				}
-			
-			
-			
-				{
-				
-					final Optional<Boolean> opt = findBoolean(root,"visible");
-					if(opt.isPresent()) instance.setVisible((boolean)opt.get());
-					
-				}
-			
-			
-			
-				{
-				
-					final Optional<Object> opt = findObject(root,"bounds",java.awt.Rectangle.class);
-					if(opt.isPresent()) instance.setBounds(java.awt.Rectangle.class.cast(opt.get()));
 					
 				}
 			
@@ -1053,6 +1053,15 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 			
 				{
 				
+					final Optional<Boolean> opt = findBoolean(root,"visible");
+					if(opt.isPresent()) instance.setVisible((boolean)opt.get());
+					
+				}
+			
+			
+			
+				{
+				
 					final Optional<Object> opt = findObject(root,"font",java.awt.Font.class);
 					if(opt.isPresent()) instance.setFont(java.awt.Font.class.cast(opt.get()));
 					
@@ -1244,15 +1253,6 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 				
 					final Optional<Boolean> opt = findBoolean(root,"doubleBuffered");
 					if(opt.isPresent()) instance.setDoubleBuffered((boolean)opt.get());
-					
-				}
-			
-			
-			
-				{
-				
-					final Optional<Boolean> opt = findBoolean(root,"visible");
-					if(opt.isPresent()) instance.setVisible((boolean)opt.get());
 					
 				}
 			
@@ -3132,6 +3132,15 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 			
 				{
 				
+					final Optional<Boolean> opt = findBoolean(root,"visible");
+					if(opt.isPresent()) instance.setVisible((boolean)opt.get());
+					
+				}
+			
+			
+			
+				{
+				
 					final Optional<Object> opt = findObject(root,"UI",javax.swing.plaf.PopupMenuUI.class);
 					if(opt.isPresent()) instance.setUI(javax.swing.plaf.PopupMenuUI.class.cast(opt.get()));
 					
@@ -3201,15 +3210,6 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 				}
 			
 			
-			
-				{
-				
-					final Optional<Boolean> opt = findBoolean(root,"visible");
-					if(opt.isPresent()) instance.setVisible((boolean)opt.get());
-					
-				}
-			
-			
 			super.fillSetters(instance,root);
 			}
 		}
@@ -3257,10 +3257,10 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 			
 			
 				{
-				LOG.info("HELLO"+getName());
+				
 					final Optional<Object> opt = findObject(root,"transferHandler",javax.swing.TransferHandler.class);
 					if(opt.isPresent()) instance.setTransferHandler(javax.swing.TransferHandler.class.cast(opt.get()));
-					LOG.info("HELLO2");	
+					
 				}
 			
 			
@@ -3275,12 +3275,10 @@ abstract class BaseSwingXmlContext extends AbstractSwingXmlContext {
 			
 			
 				{
-					LOG.info("HELLO"+getName()+" "+instance.getClass().getTypeName());
-
+				
 					final Optional<Object> opt = findObject(root,"contentPane",java.awt.Container.class);
 					if(opt.isPresent()) instance.setContentPane(java.awt.Container.class.cast(opt.get()));
-					LOG.info("HELLO2"+getName());
-
+					
 				}
 			
 			

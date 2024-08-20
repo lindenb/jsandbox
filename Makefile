@@ -5,7 +5,7 @@ here.dir=$(dir $(realpath $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))))
 bin.dir =${here.dir}dist
 javacc.exe ?= java -cp ${HOME}/packages/javacc/target/javacc.jar  javacc
 lib.dir=${here.dir}maven
-src.dir=${here.dir}src
+src.dir=${here.dir}src/main/java
 tmp.dir=tmp
 JAVAC?=javac
 JAR?=jar
@@ -18,7 +18,7 @@ define compile
 ## 2 : qualified main class name
 ## 3 : other deps
 
-$(1)  : $(addsuffix .java,$(addprefix src/,$(subst .,/,$(2)))) $(3) dist/annotproc.jar
+$(1)  : $(addsuffix .java,$(addprefix src/main/java/,$(subst .,/,$(2)))) $(3) dist/annotproc.jar
 	echo "### COMPILING $(1) ######"
 	mkdir -p ${tmp.dir}/META-INF ${bin.dir}
 	#compile
@@ -269,7 +269,7 @@ $(eval $(call compile,flickr2atom,sandbox.tools.flickr.FlickrToAtom,${jcommander
 $(eval $(call compile,wigglegrid,sandbox.drawing.WiggleGrid,${jcommander.jar}))
 $(eval $(call compile,hatching01,sandbox.drawing.Hatching01,${jcommander.jar}))
 $(eval $(call compile,randomdots01,sandbox.drawing.RandomDots01,${jcommander.jar}))
-$(eval $(call compile,swij2guile,sandbox.swij.SwijToGuile,${jcommander.jar} ./src/sandbox/swij/SwijParser.java))
+$(eval $(call compile,swij2guile,sandbox.swij.SwijToGuile,${jcommander.jar} ./src/main/java/sandbox/swij/SwijParser.java))
 $(eval $(call compile,htmltidy,sandbox.html.HtmlTidy,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,xmlstream,sandbox.xml.tools.xmlstream.XmlStream,${jcommander.jar}))
 $(eval $(call compile,finddupfiles,sandbox.tools.fdup.FindDuplicateFiles,${jcommander.jar}))
@@ -294,8 +294,8 @@ $(eval $(call compile,tonic,sandbox.tools.tonic.Tonic,${jcommander.jar}))
 $(eval $(call compile,xml2jni,sandbox.tools.jni.XmlToJNI,${jcommander.jar} ${freemarker.jar}))
 $(eval $(call compile,rdftemplate,sandbox.tools.rdftemplate.RDFTemplate,${jcommander.jar} ${jena-core.jars}))
 $(eval $(call compile,rdf2graph,sandbox.tools.rdf2graph.RdfToGraph,${jcommander.jar} ${jena-core.jars}))
-$(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommander.jar} ./src/sandbox/tools/streamplot/parser/StreamPlotParser.java))
-$(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/sandbox/tools/pojogenerator/parser/PojoParser.java))
+$(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommander.jar} ./src/main/java/sandbox/tools/streamplot/parser/StreamPlotParser.java))
+$(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/main/java/sandbox/tools/pojogenerator/parser/PojoParser.java))
 $(eval $(call compile,theses2gexf,sandbox.tools.thesesfr.ThesesfrToGraph, ${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander.jar} ${jaxb.jar}))
 $(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar}))
@@ -303,18 +303,18 @@ $(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommande
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
 
-./src/sandbox/swij/SwijParser.java : ./src/sandbox/swij/Swij.jj
+./src/main/java/sandbox/swij/SwijParser.java : ./src/main/java/sandbox/swij/Swij.jj
 	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<
 
-./src/sandbox/expr1/parser/Expr1Parser.java: ./src/sandbox/expr1/parser/Parser.jj
+./src/main/java/sandbox/expr1/parser/Expr1Parser.java: ./src/main/java/sandbox/expr1/parser/Parser.jj
 	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<
 
-dist/annotproc.jar: src/sandbox/annotation/processing/MyProcessor.java 
-	rm -rf tmp mkdir -p tmp $(dir $@) javac -d tmp -sourcepath src 
+dist/annotproc.jar: src/main/java/sandbox/annotation/processing/MyProcessor.java 
+	rm -rf tmp mkdir -p tmp $(dir $@) javac -d tmp -sourcepath src/main/java
 	$< jar cvf $@ -C tmp . rm -rf tmp
 
 
-$(bin.dir)/avdl2xml.jar: ./src/sandbox/Avdl2Xml.jj
+$(bin.dir)/avdl2xml.jar: ./src/main/java/sandbox/Avdl2Xml.jj
 	mkdir -p tmp $(dir $@)
 	${javacc.exe} -OUTPUT_DIRECTORY=tmp/sandbox -TOKEN_MANAGER_USES_PARSER=true $<
 	javac -d tmp -sourcepath tmp $(addprefix tmp/sandbox/,$(addsuffix .java,Avdl2XmlConstants Avdl2Xml Avdl2XmlTokenManager ParseException SimpleCharStream Token TokenMgrError))
@@ -335,15 +335,15 @@ $$(addsuffix .java,$$(basename $(1))) : $(1)
 
 endef
 
-$(eval $(call runjavacc,./src/sandbox/colors/parser/ColorParser.jj))
-$(eval $(call runjavacc,./src/sandbox/tools/pojogenerator/parser/PojoParser.jj))
+$(eval $(call runjavacc,./src/main/java/sandbox/colors/parser/ColorParser.jj))
+$(eval $(call runjavacc,./src/main/java/sandbox/tools/pojogenerator/parser/PojoParser.jj))
 
 
-src/sandbox/tools/streamplot/parser/StreamPlotParser.java : src/sandbox/tools/streamplot/parser/StreamPlotGrammar.jj
+src/main/java/sandbox/tools/streamplot/parser/StreamPlotParser.java : src/main/java/sandbox/tools/streamplot/parser/StreamPlotGrammar.jj
 	$(javacc.exe) -OUTPUT_DIRECTORY=$(dir $@) $<
 
 
-gimpprocs2xml: ./src/sandbox/GimpProcedures.jj
+gimpprocs2xml: ./src/main/java/sandbox/GimpProcedures.jj
 	mkdir -p ${tmp.dir}/sandbox ${tmp.dir}/META-INF ${bin.dir}
 	${javacc.exe} -OUTPUT_DIRECTORY=tmp/sandbox $<
 	javac -d ${tmp.dir} ${tmp.dir}/sandbox/*.java
@@ -353,19 +353,18 @@ gimpprocs2xml: ./src/sandbox/GimpProcedures.jj
 	${JAR} cfm ${bin.dir}/gimpprocs2xml.jar ${tmp.dir}/tmp.mf  -C ${tmp.dir} .
 	rm -rf ${tmp.dir}
 
-textlet : src/sandbox/TextletParser.jj
-	${javacc.exe} -OUTPUT_DIRECTORY=src/sandbox $<
-	javac -sourcepath src src/sandbox/Textlet.java
-	echo "aa (<%@ include file='azda'  %>) aa <%= 2 %> <%!  int i=0; public int getI() { return this.i;} %>" | java -cp src sandbox.Textlet
+textlet : src/main/java/sandbox/TextletParser.jj
+	${javacc.exe} -OUTPUT_DIRECTORY=src/main/java/sandbox $<
+	javac -sourcepath src/main/java src/main/java/sandbox/Textlet.java
+	echo "aa (<%@ include file='azda'  %>) aa <%= 2 %> <%!  int i=0; public int getI() { return this.i;} %>" | java -cp src/main/java sandbox.Textlet
 
-x : ./src/sandbox/swing/xml/BaseSwingXmlContext.java
+x : ./src/main/java/sandbox/swing/xml/BaseSwingXmlContext.java
 
-./src/sandbox/swing/xml/BaseSwingXmlContext.java : xslt/swingxmlcontext.xsl \
-	./src/sandbox/swing/xml/AbstractSwingXmlContext.java \
-	./src/sandbox/swing/xml/SwingXmlContext.java
+./src/main/java/sandbox/swing/xml/BaseSwingXmlContext.java : src/main/xslt/swingxmlcontext.xsl \
+	./src/main/java/sandbox/swing/xml/AbstractSwingXmlContext.java \
+	./src/main/java/sandbox/swing/xml/SwingXmlContext.java
 	java -jar dist/jsandbox.jar java2xml --super $(addprefix java.awt.,Dimension Point BorderLayout) $(addprefix javax.swing.,JSplitPane JTable JTree JScrollPane JTabbedPane JButton JPanel JFrame JDialog JMenu JMenuBar JMenuItem JTextArea JTextField JComboBox JScrollBar JSeparator JToggleButton JSlider JRadioButton JProgressBar JPopupMenu JPasswordField JList JLabel JDesktopPane JCheckBox JCheckBoxMenuItem ) |\
-		xmllint --format - | tee jeter.xml |\
-		xsltproc xslt/swingxmlcontext.xsl -  > ./src/sandbox/swing/xml/BaseSwingXmlContext.java
+		xsltproc src/main/xslt/swingxmlcontext.xsl -  > ./src/main/java/sandbox/swing/xml/BaseSwingXmlContext.java
 	$(MAKE) jsandbox
 
 common.avdl :
