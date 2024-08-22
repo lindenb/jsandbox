@@ -10,6 +10,20 @@ import java.util.Properties;
 
 public class StringUtils {
 
+public static String subStringBefore(String s, String delim) {
+	int i=s.indexOf(delim);
+	if(i<0) return s;
+	return s.substring(0,i);
+	}
+
+
+public static String subStringAfter(String s, String delim) {
+	int i=s.indexOf(delim);
+	if(i<0) return "";
+	return s.substring(i+delim.length());
+	}
+
+	
 public static String repeat( int count,char c) {
 	final StringBuilder sb = new StringBuilder(count);
 	while(count>0) {

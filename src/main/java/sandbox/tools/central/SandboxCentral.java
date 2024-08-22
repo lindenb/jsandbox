@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import sandbox.tools.java2xml.JavaToXml;
+import sandbox.tools.svgshow.SVGShow;
 import sandbox.tools.swingfactory.SwingFactory;
 import sandbox.tools.swingwatcher.SwingWatcher;
 import sandbox.util.Pair;
@@ -44,6 +45,8 @@ public class SandboxCentral {
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
 		register(JavaToXml.class);
+		register(sandbox.tools.drawinggrid.DrawingGrid.class);
+		register(SVGShow.class);
 		Collections.sort(programs,(A,B)->A.getValue().getName().compareTo(B.getValue().getName()));
 		if(args.isEmpty()) {
 			usage(System.err);

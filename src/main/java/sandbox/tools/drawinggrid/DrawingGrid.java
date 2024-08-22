@@ -37,6 +37,7 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 
 import sandbox.ImageUtils;
+import sandbox.tools.central.ProgramDescriptor;
 
 @SuppressWarnings("serial")
 public class DrawingGrid extends JFrame {
@@ -334,6 +335,15 @@ public class DrawingGrid extends JFrame {
 		} catch(final Throwable err) {
 			err.printStackTrace();
 		}
+	}
+
+public static ProgramDescriptor getProgramDescriptor() {
+	return new ProgramDescriptor() {
+		@Override
+		public String getName() {
+			return "drawinggrid";
+			}
+		};
 	}
 
 }

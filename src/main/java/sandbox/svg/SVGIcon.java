@@ -3,12 +3,19 @@ package sandbox.svg;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import javax.swing.Icon;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+
+import sandbox.io.RuntimeIOException;
 
 public class SVGIcon implements Icon
 	{
@@ -27,13 +34,43 @@ public class SVGIcon implements Icon
 		int w=0,h=0;
 		final Element root= dom.getDocumentElement();
 		if(root!=null) {
-			Attr att = root.getAttributeNode("width");
-			if(att!=null) w=(int)Double.parseDouble(att.getValue());
-			att = root.getAttributeNode("height");
-			if(att!=null) h=(int)Double.parseDouble(att.getValue());
+			Attr att1 = root.getAttributeNode("width");
+			Attr att2 = root.getAttributeNode("height");
+			if(att1!=null && att2!=null) {
+				w=(int)SVGUtils.castUnit(att1.getValue()).orElse(w);
+				h=(int)SVGUtils.castUnit(att2.getValue()).orElse(h);
+				}
+			else
+				{
+				Attr att = root.getAttributeNode("viewBox");
+				String[] tokens=att.getValue().trim().split("[ \t]+");
+				if(tokens.length>=4) {
+					 w=(int)SVGUtils.castUnit(tokens[2]).orElse(w);
+					 h=(int)SVGUtils.castUnit(tokens[3]).orElse(h);
+					}
+				}
 			}
 		this.width=w;
 		this.height=h;
+		System.err.println(""+getIconWidth()+" "+getIconHeight());
+		}
+	
+	private static Document loadSVGDoc(Path p) {
+		try {
+		DocumentBuilderFactory dbf=DocumentBuilderFactory.newDefaultInstance();	
+		dbf.setNamespaceAware(true);
+		DocumentBuilder db=dbf.newDocumentBuilder();
+		try(InputStream in=Files.newInputStream(p)) {
+			return db.parse(in);
+		}
+		} catch(Throwable err) {
+			throw new RuntimeIOException(err);
+		}
+		
+	}
+	
+	public SVGIcon(final Path p) {
+		this(loadSVGDoc(p));
 		}
 	
 	@Override

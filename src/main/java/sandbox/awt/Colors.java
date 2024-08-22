@@ -172,6 +172,9 @@ public class Colors {
 		s=s.trim();
 		if(s==null || s.equals("null") || s.equals("none")) return Optional.empty();
 		if(s.startsWith("#")) {
+			if(s.length()==4) {/* short hand notation */
+				s="#"+s.charAt(1)+s.charAt(1)+s.charAt(2)+s.charAt(2)+s.charAt(3)+s.charAt(3);
+				}
 			return Optional.of(new Color(Integer.valueOf(s.substring(1),16) ));
 			}
 		else if(s.toLowerCase().startsWith("rgb(") && s.endsWith(")")) {

@@ -1,354 +1,304 @@
 package sandbox.svg;
 
-import java.awt.Graphics;
+import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Shape;
 import java.awt.geom.AffineTransform;
-import java.awt.geom.Dimension2D;
-import java.awt.geom.GeneralPath;
-import java.awt.geom.PathIterator;
-import java.io.StringReader;
-import java.io.StringWriter;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.Line2D;
+import java.awt.geom.Rectangle2D;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
-import java.util.Scanner;
 
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import sandbox.StringUtils;
+import sandbox.awt.Colors;
 
 public class SVGGraphics2DRenderer
 	{
 	private class Context {
 		Context parent = null;
+		Element root;
 		Graphics2D g;
 		AffineTransform tr;
-		Context() {
-			}
-		Context(Context parent) {
+		String font_family="Courier";
+		int font_style= Font.PLAIN;
+		double font_size=10;
+		Color stroke = Color.BLACK;
+		Color fill = null;
+		double fill_opacity=1.0;
+		double stroke_opacity=1.0;
+		double stroke_width=1.0;
+		int stroke_cap=BasicStroke.CAP_ROUND;
+		int stroke_join=BasicStroke.JOIN_MITER;
+		
+		Map<String,String> style = new HashMap<>();
+		Context(Context parent,Element root) {
 			this.parent = parent;
+			if(parent!=null) {
+				this.g=parent.g;
+				this.font_family=parent.font_family;
+				this.font_size=parent.font_size;
+				this.stroke = parent.stroke;
+				this.fill = parent.fill;
+				this.stroke_opacity = parent.stroke_opacity;
+				this.fill_opacity = parent.fill_opacity;
+				this.stroke_width = parent.stroke_width;
+				this.stroke_cap = parent.stroke_cap;
+				this.stroke_join = parent.stroke_join;
+				this.style.putAll(parent.style);
+				this.tr=parent.tr;
+
+				}
+			this.root = root;
+			if(root.hasAttribute("style")) {
+				for(String token:  root.getAttribute("style").split("[;]")) {
+					this.style.put(
+							StringUtils.subStringBefore(token,":"),
+							StringUtils.subStringAfter(token,":")
+							);
+					}
+				}
+
+			
+			
+			Optional<String> att= getAttr("stroke");
+			if(att.isPresent()) {
+				stroke = att.get().equals("none")?null:Colors.getInstance().parse(att.get()).orElse(stroke);
+				}
+			
+			if((att=getAttr("fill")).isPresent()) {
+				fill = att.get().equals("none")?null:Colors.getInstance().parse(att.get()).orElse(fill);
+				}
+
+			
+			
+			att= getAttr("stroke-linejoin");
+			if(att.isPresent()) {
+				this.stroke_join = SVGUtils.toBasicStrokeJoin(att.get()).orElse(this.stroke_join);
+				}
+			att= getAttr("stroke-linecap");
+			if(att.isPresent()) {
+				this.stroke_cap = SVGUtils.toBasicStrokeJoin(att.get()).orElse(this.stroke_cap);
+				}
+			
+			if((att=getAttr("font-family")).isPresent()) {
+				this.font_family = att.get();
+				}
+			if((att=getAttr("font-weight")).isPresent()) {
+				if(att.get().equals("normal")) this.font_size=Font.PLAIN;
+				else if(att.get().equals("bold")) this.font_size=Font.BOLD;
+				}
+			if((att=getAttr("font-style")).isPresent()) {
+				if(att.get().equals("normal")) this.font_size=Font.PLAIN;
+				else if(att.get().equals("bold")) this.font_size=Font.BOLD;
+				else if(att.get().equals("italic")) this.font_size=Font.ITALIC;
+				}
+			
+			
+			
+			this.font_size = getAttrAsDouble("font-size").orElse(this.font_size);
+			
+			this.stroke_width = getAttrAsDouble("stroke-width").orElse(this.stroke_width);
+
+			
+			if((att=getAttr("transform")).isPresent()) {
+				AffineTransform atr = parent==null?new AffineTransform():new AffineTransform(parent.tr);
+				atr.concatenate(SVGUtils.svgToaffineTransform(att.get()));
+				this.tr=atr;
+				}
+			
+			this.fill_opacity= getAttrAsDouble("fill-opacity").orElse( getAttrAsDouble("opacity").orElse(this.fill_opacity));
+			this.stroke_opacity= getAttrAsDouble("stroke-opacity").orElse( getAttrAsDouble("opacity").orElse(this.stroke_opacity));
+			}
+		
+		
+		private Optional<String> getAttr(String key) {
+			final Attr att= this.root.getAttributeNode(key);
+			if(att!=null) return Optional.of(att.getValue());
+			if(this.style.containsKey(key)) return Optional.of(this.style.get(key));
+			return Optional.empty();
+			}
+		
+		
+		OptionalDouble getAttrAsDouble(String name) {
+			if(root.hasAttribute(name)) return OptionalDouble.empty();
+			try {
+				return OptionalDouble.of(Double.parseDouble(root.getAttribute(name)));
+				}
+			catch(Throwable err) {
+				return OptionalDouble.empty();
+				}
+			}
+		
+		OptionalDouble getAttrAsUnit(String name) {
+			if(root.hasAttribute(name)) return OptionalDouble.empty();
+			try {
+				return SVGUtils.castUnit(root.getAttribute(name));
+				}
+			catch(Throwable err) {
+				return OptionalDouble.empty();
+				}
+			}
+		
+		private void recurse() {
+			final String name=root.getLocalName();
+			if(name.equals("rect")) {
+				OptionalDouble x = getAttrAsUnit("x");
+				OptionalDouble y = getAttrAsUnit("y");
+				OptionalDouble w = getAttrAsUnit("width");
+				OptionalDouble h = getAttrAsUnit("height");
+				if(x.isPresent() && y.isPresent() &&
+					w.isPresent() && h.isPresent()) {
+					paint(new Rectangle2D.Double(x.getAsDouble(), y.getAsDouble(), w.getAsDouble(), h.getAsDouble()));
+					}
+				}
+			else if(name.equals("line")) {
+				OptionalDouble x1 = getAttrAsUnit("x1");
+				OptionalDouble x2 = getAttrAsUnit("x2");
+				OptionalDouble y1 = getAttrAsUnit("y1");
+				OptionalDouble y2 = getAttrAsUnit("y2");
+				if(x1.isPresent() && x2.isPresent() &&
+					y1.isPresent() && y2.isPresent()) {
+					paint(new Line2D.Double(
+							x1.getAsDouble(),
+							y1.getAsDouble(),
+							x2.getAsDouble(),
+							y2.getAsDouble())
+							);
+					}
+				}
+			else if(name.equals("circle")) {
+				OptionalDouble x = getAttrAsUnit("cx");
+				OptionalDouble y = getAttrAsUnit("cy");
+				OptionalDouble r = getAttrAsUnit("r");
+				if(x.isPresent() && y.isPresent() && r.isPresent()) {
+					double rr= r.getAsDouble();
+					paint(new Ellipse2D.Double(
+							x.getAsDouble() -rr ,
+							y.getAsDouble() -rr,
+							rr*2,
+							rr*2
+							));
+					}
+				}
+			else if(name.equals("ellipse")) {
+				OptionalDouble x = getAttrAsUnit("cx");
+				OptionalDouble y = getAttrAsUnit("cy");
+				OptionalDouble rx = getAttrAsUnit("rx");
+				OptionalDouble ry = getAttrAsUnit("ry");
+				if(x.isPresent() && y.isPresent() && rx.isPresent() && ry.isPresent()) {
+					double rrx= rx.getAsDouble();
+					double rry= ry.getAsDouble();
+					paint(new Ellipse2D.Double(
+							x.getAsDouble() -rrx ,
+							y.getAsDouble() -rry,
+							rrx*2,
+							rry*2
+							));
+					}
+				}
+			else if(name.equals("text")) {
+				OptionalDouble x = getAttrAsUnit("x");
+				OptionalDouble y = getAttrAsUnit("y");
+				String s=root.getTextContent();
+				if(x.isPresent() && y.isPresent() &&
+					!StringUtils.isBlank(s)) {
+					drawString(x.getAsDouble(),y.getAsDouble(),s);
+					}
+				}
+			else if(name.equals("polyline")) {
+				Attr points = root.getAttributeNode("points");
+				if(points!=null) {
+					paint(SVGUtils.polylineToShape(points.getValue()));
+					}
+				}
+			else if(name.equals("polygon")) {
+				Attr points = root.getAttributeNode("points");
+				if(points!=null) {
+					paint(SVGUtils.polygonToShape(points.getValue()));
+					}
+				}
+			else if(name.equals("path")) {
+				Attr d = root.getAttributeNode("d");
+				if(d!=null) {
+					paint(SVGUtils.pathToShape(d.getValue()));
+					}
+				}
+			else {
+				recurse_children();
+				}
+			}
+		private void recurse_children() {
+			for(Node c=root.getFirstChild();c!=null;c=c.getNextSibling()) {
+				if(c.getNodeType()!=Node.ELEMENT_NODE) continue;
+				Context ctx = new Context(this, Element.class.cast(c));
+				ctx.recurse();
+				}
+			}
+		
+		protected boolean beforeFill() {
+			if(this.fill==null || this.fill_opacity<=0) return false;
+			this.g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,(float)this.fill_opacity));
+			this.g.setColor(this.fill);
+			return true;
+			}
+		
+		protected boolean beforeStroke() {
+			if(this.stroke==null || this.stroke_opacity<=0) return false;
+			this.g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,(float)this.stroke_opacity));
+			this.g.setStroke(new BasicStroke((float) stroke_width, stroke_cap, stroke_join));
+			this.g.setColor(this.stroke);
+			return true;
+			}
+		
+		private void paint(Shape shape) {
+			AffineTransform tr=g.getTransform();
+			g.setTransform(this.tr);
+			if(beforeFill()) {
+				this.g.fill(shape);
+				}
+			if(beforeStroke()) {
+				this.g.draw(shape);	
+				}
+			g.setTransform(tr);
+			}
+		
+		private void drawString(double x,double y,String s) {
+			this.g.setFont(new Font(this.font_family,this.font_style,(int)this.font_size));
+			if(beforeFill()) {
+				this.g.drawString(s, (float)x, (float)y);
+				}
+			if(beforeStroke()) {
+				this.g.drawString(s, (float)x, (float)y);
+				}
 			}
 		}
+	
+	
+	
 	public void paint(Graphics2D g,final Document dom) {
 		if(dom==null) return;
-		Element root = dom.getDocumentElement();
+		final Element root = dom.getDocumentElement();
 		if(root==null) return;
-		Context ctx= new Context();
+		final Context ctx= new Context(null,root);
 		ctx.g = g;
 		ctx.tr = ctx.g.getTransform();
-		recurse(ctx,root);
+		ctx.recurse();
 		g.setTransform(ctx.tr);
 		}
-	private void recurse(Context ctx,Node node) {
-		if(node==null) return;
-		if(node.getNodeType()!=Node.ELEMENT_NODE) return;
-		final Element root= Element.class.cast(node);
-		final String name=root.getLocalName();
-		if(name.equals("rect")) {
-			
-			}
-		}
-	
-	
-	public OptionalDouble castUnit(String s)
-		{
-		double factor=1;
-		s=s.trim();
-		if(s.endsWith("px") || s.endsWith("pt") || s.endsWith("cm"))
-			{
-			s=s.substring(0,s.length()-2).trim();
-			}
-		if(s.endsWith("in"))
-			{
-			s=s.substring(0,s.length()-2).trim();
-			factor=75.0;
-			}
-		try {
-			double d= factor * Double.parseDouble(s);
-			return OptionalDouble.of(d);
-			}
-		catch(NumberFormatException err) {
-			return OptionalDouble.empty();
-			}
-		}
-
-/** return the dimension of a SVG document */
-public Optional<Dimension2D> getSize(final Element svgRoot)throws InvalidXMLException
-	{
-	try
-		{
-		Dimension2D.Double srcSize=new Dimension2D.Double(0,0);
-		AttrImpl width= svgRoot.getAttributeNode("width");
-		AttrImpl height= svgRoot.getAttributeNode("height");
-		
-		if(width==null) throw new InvalidXMLException(svgRoot,"@width missing");
-		srcSize.width= castUnit(width.getValue());
-		
-		if(height==null) throw new InvalidXMLException(svgRoot,"@height missing");
-		srcSize.height= castUnit(height.getValue());
-		return srcSize;
-		}
-	catch(NumberFormatException err)
-		{
-		Optional.empty();
-		}
-	}
-
-static public AffineTransform svgToaffineTransform(String transform)
-	{
-	if(StringUtils.isBlank(transform)) return null;
-	String s=transform.trim();
-	
-	if(s.startsWith("matrix("))
-		{
-		int i=s.indexOf(")");
-		if(i==-1) throw new IllegalArgumentException(s);
-		if(!StringUtils.isBlank(s.substring(i+1))) throw new IllegalArgumentException(s);
-		String tokens[]=s.substring(7, i).split("[,]");
-		if(tokens.length!=6) throw new IllegalArgumentException(s);
-		return new AffineTransform(new double[]{
-			Double.parseDouble(tokens[0]),
-			Double.parseDouble(tokens[1]),
-			Double.parseDouble(tokens[2]),
-			Double.parseDouble(tokens[3]),
-			Double.parseDouble(tokens[4]),
-			Double.parseDouble(tokens[5])
-			});
-		}
-	AffineTransform tr= new AffineTransform();
-	while(s.length()!=0)
-		{
-	
-		
-		if(s.startsWith("scale("))
-			{
-			int i=s.indexOf(")");
-			if(i==-1) throw new IllegalArgumentException(s);
-			
-			String s2= s.substring(6,i).trim();
-			s= s.substring(i+1).trim();
-			i= s2.indexOf(',');
-			if(i==-1)
-				{
-				double scale= Double.parseDouble(s2.trim());
-				
-				AffineTransform tr2= AffineTransform.getScaleInstance(
-						scale,scale
-					);
-				tr2.concatenate(tr);
-				tr=tr2;
-				}
-			else
-				{
-				double scalex= Double.parseDouble(s2.substring(0,i).trim());
-				double scaley= Double.parseDouble(s2.substring(i+1).trim());
-				
-				AffineTransform tr2= AffineTransform.getScaleInstance(
-						scalex,scaley
-					);
-				tr2.concatenate(tr);
-				tr=tr2;
-				}
-			}
-		else if(s.startsWith("translate("))
-			{
-			int i=s.indexOf(")");
-			if(i==-1) throw new IllegalArgumentException(s);
-			String s2= s.substring(10,i).trim();
-			s= s.substring(i+1).trim();
-			i= s2.indexOf(',');
-			if(i==-1)
-				{
-				double translate= Double.parseDouble(s2.trim());
-				
-				AffineTransform tr2= AffineTransform.getTranslateInstance(
-						translate,0
-					);
-				tr2.concatenate(tr);
-				tr=tr2;
-				}
-			else
-				{
-				double translatex= Double.parseDouble(s2.substring(0,i).trim());
-				double translatey= Double.parseDouble(s2.substring(i+1).trim());
-				
-				AffineTransform tr2= AffineTransform.getTranslateInstance(
-						translatex,translatey
-					);
-				tr2.concatenate(tr);
-				tr=tr2;
-				}
-			}
-		else if(s.startsWith("rotate("))
-			{
-			int i=s.indexOf(")");
-			if(i==-1) throw new IllegalArgumentException(s);
-			String s2= s.substring(7,i).trim();
-			s= s.substring(i+1).trim();
-			i= s2.indexOf(',');
-			if(i==-1)
-				{
-				double angle= Double.parseDouble(s2.trim());
-				
-				AffineTransform tr2= AffineTransform.getRotateInstance((angle/180.0)*Math.PI);
-				tr2.concatenate(tr);
-				tr=tr2;
-				}
-			else
-				{
-				double angle= Double.parseDouble(s2.substring(0,i).trim());
-				s2=s2.substring(i+1);
-				i= s2.indexOf(',');
-				if(i==-1) throw new IllegalArgumentException("bad rotation "+s);
-				
-				double cx= Double.parseDouble(s2.substring(0,i).trim());
-				double cy= Double.parseDouble(s2.substring(i+1).trim());
-				
-				AffineTransform tr2= AffineTransform.getRotateInstance(
-						angle,cx,cy
-					);
-				tr2.concatenate(tr);
-				tr=tr2;
-				}
-			}
-		else if(s.startsWith("skewX("))
-			{
-			int i=s.indexOf(")");
-			if(i==-1) throw new IllegalArgumentException(s);
-			String s2= s.substring(6,i).trim();
-			s= s.substring(i+1).trim();
-			
-			double shx= Double.parseDouble(s2.trim());
-			
-			AffineTransform tr2= AffineTransform.getShearInstance(shx, 1f);
-			tr2.concatenate(tr);
-			tr=tr2;
-			}
-		else if(s.startsWith("skewY("))
-			{
-			int i=s.indexOf(")");
-			if(i==-1) throw new IllegalArgumentException(s);
-			String s2= s.substring(6,i).trim();
-			s= s.substring(i+1).trim();
-			
-			double shy= Double.parseDouble(s2.trim());
-			
-			AffineTransform tr2= AffineTransform.getShearInstance(1f,shy);
-			tr2.concatenate(tr);
-			tr=tr2;
-			}
-		
-		}
-	return tr;
-	}
-
-/**
- * transform a shape into a SVG path as String
- * @param shape the shape
- * @return the SVG points for &lt;path&gt;
- */
-static public String shapeToPath(Shape shape)
-	{
-	final StringBuilder out= new StringBuilder();
-	shapeToPath(out,shape);
-	return out.toString();
-	}
-
-
-/**
- * transform a shape into a SVG path
- * @param shape
- * @return
- */
-static public void shapeToPath(Appendable path,Shape shape)
-{
-	
-	double tab[] = new double[6];
-	PathIterator pathiterator = shape.getPathIterator(null);
-
-	while(!pathiterator.isDone())
-	{
-		int currSegmentType= pathiterator.currentSegment(tab);
-		switch(currSegmentType) {
-		case PathIterator.SEG_MOVETO: {
-			path.append( "M " + (tab[0]) + " " + (tab[1]) + " ");
-			break;
-		}
-		case PathIterator.SEG_LINETO: {
-			path.append( "L " + (tab[0]) + " " + (tab[1]) + " ");
-			break;
-		}
-		case PathIterator.SEG_CLOSE: {
-			path.append( "Z ");
-			break;
-		}
-		case PathIterator.SEG_QUADTO: {
-			path.append( "Q " + (tab[0]) + " " + (tab[1]));
-			path.append( " "  + (tab[2]) + " " + (tab[3]));
-			path.append( " ");
-			break;
-		}
-		case PathIterator.SEG_CUBICTO: {
-			path.append( "C " + (tab[0]) + " " + (tab[1]));
-			path.append( " "  + (tab[2]) + " " + (tab[3]));
-			path.append( " "  + (tab[4]) + " " + (tab[5]));
-			path.append( " ");
-			break;
-		}
-		default:
-		{
-			throw new IllegalStateException("Cannot handled "+currSegmentType);
-			break;
-		}
-		}
-		pathiterator.next();
-	}
-}
-
-
-public static GeneralPath polygonToShape(String lineString )
-	{
-	GeneralPath p = polylineToShape(lineString);
-	p.closePath();
-	return p;
-	}
-
-public static GeneralPath polylineToShape(String lineString ) {
-	GeneralPath p = new GeneralPath(GeneralPath.WIND_EVEN_ODD);
-	try(Scanner scanner= new Scanner(new StringReader(lineString))) {
-	scanner.useDelimiter("[ \n,\t]+");
-	
-	boolean found=false;
-	Double prev=null;
-	while(scanner.hasNext())
-		{
-		String s=scanner.next();
-		if(s.length()==0) continue;
-		double v= Double.parseDouble(s);
-		if(prev==null)
-			{
-			prev=v;
-			}
-		else
-			{
-			if(!found)
-				{
-				p.moveTo(prev, v);
-				found=true;
-				}
-			else
-				{
-				p.lineTo(prev, v);
-				}
-			prev=null;
-			}
-		}
-	if(prev!=null) throw new IllegalArgumentException("bad polyline "+lineString);
-	}
-	return p;
-	}
 
 	
+	
+
+
 	}
