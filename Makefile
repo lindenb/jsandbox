@@ -144,11 +144,14 @@ jersey-server.jars  =  \
 	$(lib.dir)/org/javassist/javassist/3.20.0-GA/javassist-3.20.0-GA.jar \
 	$(lib.dir)/org/jmockit/jmockit/1.27/jmockit-1.27.jar
 
+# 	$(lib.dir)/commons-lang/commons-lang/2.4/commons-lang-2.4.jar 
+# 	$(lib.dir)/org/apache/velocity/velocity/1.7/velocity-1.7.jar
+# 	$(lib.dir)/commons-collections/commons-collections/3.2.1/commons-collections-3.2.1.jar \
 
 velocity.jars  =  \
-	$(lib.dir)/commons-collections/commons-collections/3.2.1/commons-collections-3.2.1.jar \
-	$(lib.dir)/commons-lang/commons-lang/2.4/commons-lang-2.4.jar \
-	$(lib.dir)/org/apache/velocity/velocity/1.7/velocity-1.7.jar
+	$(lib.dir)/org/slf4j/slf4j-api/1.7.30/slf4j-api-1.7.30.jar \
+	$(lib.dir)/org/apache/commons/commons-lang3/3.16.0/commons-lang3-3.16.0.jar \
+	$(lib.dir)/org/apache/velocity/velocity-engine-core/2.3/velocity-engine-core-2.3.jar
 
 jgit.jars  =  \
 	$(lib.dir)/com/googlecode/javaewah/JavaEWAH/1.1.6/JavaEWAH-1.1.6.jar \
@@ -296,7 +299,7 @@ $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommand
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/main/java/sandbox/tools/pojogenerator/parser/PojoParser.java))
 $(eval $(call compile,theses2gexf,sandbox.tools.thesesfr.ThesesfrToGraph, ${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander.jar} ${jaxb.jar}))
-$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}))
+$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

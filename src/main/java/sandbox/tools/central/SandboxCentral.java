@@ -15,6 +15,7 @@ import sandbox.tools.java2xml.JavaToXml;
 import sandbox.tools.svgshow.SVGShow;
 import sandbox.tools.swingfactory.SwingFactory;
 import sandbox.tools.swingwatcher.SwingWatcher;
+import sandbox.tools.velocityjson.VelocityJson;
 import sandbox.util.Pair;
 
 public class SandboxCentral {
@@ -51,6 +52,7 @@ public class SandboxCentral {
 		register(SVGShow.class);
 		register(FindDuplicateFiles.class);
 		register(HtmlInXml.class);
+		register(VelocityJson.class);
 		
 		Collections.sort(programs,(A,B)->A.getValue().getName().compareTo(B.getValue().getName()));
 		if(args.isEmpty()) {

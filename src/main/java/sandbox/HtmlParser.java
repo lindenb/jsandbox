@@ -23,6 +23,8 @@ import org.w3c.dom.Text;
 import org.w3c.tidy.Tidy;
 
 import sandbox.io.NullWriter;
+import sandbox.lang.Result;
+import sandbox.xml.DOMIterator;
 
 public class HtmlParser {
 private static final Logger LOG = Logger.builder(HtmlParser.class).build();
@@ -57,14 +59,13 @@ public boolean isNamespaceAware() {
 	return namespaceAware;
 	}
 
-public Document parseDom(final String htmlStr)  {
-	final StringReader r=new StringReader(htmlStr);
-	final Document dom = parseDom(r);
-	r.close();
-	return dom;
+public Result<Document> parseDom(final String htmlStr)  {
+	try(final StringReader r=new StringReader(htmlStr)) {
+		return parseDom(r);
+		}
 	}
 
-public Document parseDom(final Reader r)  {
+public Result<Document> parseDom(final Reader r)  {
 	try {
 		final Document tidyDom = this.tidy.parseDOM(r,null);
 		final Document dom = this.db.newDocument();
@@ -73,15 +74,11 @@ public Document parseDom(final Reader r)  {
 			{					
 			dom.appendChild(newChild);
 			}
-		return dom;
+		return Result.success(dom);
 		}
 	catch(final Exception err) {
 		LOG.error(err);
-		return null;
-		}
-	finally
-		{
-		
+		return Result.fail(err);
 		}
 	}
 
@@ -119,8 +116,7 @@ private Node clone(final Document owner,final Node n)
 				r.setAttribute(att.getNodeName(),att.getValue());
 				}
 			
-			for(Node c=e.getFirstChild();c!=null;c=c.getNextSibling())
-				{
+			for(Node c:DOMIterator.nodes(e)) {
 				final Node x = clone(owner,c); 
 				if(x==null ) continue;
 				r.appendChild(x);
@@ -142,11 +138,11 @@ public static void main(final String[] args) {
 
 		
 		for(final String filename:args) {
-			final Reader r = new FileReader(filename);
-			final Document dom= parser.parseDom(r);
-			r.close();
-			if(dom==null) continue;
-			tr.transform(new DOMSource(dom), new StreamResult(System.out));
+			try(final Reader r = new FileReader(filename)) {
+				final Result<Document> dom= parser.parseDom(r);
+				if(dom.isError()) continue;
+				tr.transform(new DOMSource(dom.get()), new StreamResult(System.out));
+				}
 			}
 			
 		}

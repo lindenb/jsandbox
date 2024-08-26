@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.geom.Rectangle2D;
 import java.io.OutputStream;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +36,7 @@ import sandbox.net.DataCacheFactory;
 import sandbox.net.HttpURLInputStreamProvider;
 import sandbox.net.URLInputStreamProvider;
 import sandbox.net.cache.DataCache;
+import sandbox.net.cache.DirectoryDataCache;
 import sandbox.treemap.TreePack;
 import sandbox.treemap.TreePacker;
 
@@ -58,7 +60,7 @@ public class TreeMapMaker extends Launcher
 	private boolean show_scores_with_label =false;
 
 
-    private DataCache dataCache = null;
+    private DirectoryDataCache dataCache = null;
     private int ID_GENERATOR=0;
     
     private String format(double f) {
@@ -325,7 +327,7 @@ public class TreeMapMaker extends Launcher
 			   String imgPath=null;
 			    try {
 			    	if(!StringUtils.isBlank(getImage())) {
-				    	imgPath=dataCache.getUrl(getImage());
+				    	imgPath=dataCache.getPath(new URL(getImage())).toString();
 				    	}
 			    	}
 			    catch(final Throwable err) {
@@ -417,10 +419,7 @@ public class TreeMapMaker extends Launcher
 				}
 			client = builder.build();
 			final URLInputStreamProvider urlInputStreamProvider = new HttpURLInputStreamProvider(client);
-			this.dataCache = new DataCacheFactory().
-					setDirectory(this.cacheDirectory).
-					setUrlInputStreamProvider(urlInputStreamProvider).
-					make();
+			this.dataCache = new DirectoryDataCache(this.cacheDirectory);
 			DocumentBuilderFactory dbf= DocumentBuilderFactory.newInstance();
 			DocumentBuilder db= dbf.newDocumentBuilder();
 			
