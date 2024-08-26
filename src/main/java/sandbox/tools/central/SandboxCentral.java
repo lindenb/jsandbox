@@ -9,6 +9,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import sandbox.tools.fdup.FindDuplicateFiles;
+import sandbox.tools.htmlinxml.HtmlInXml;
 import sandbox.tools.java2xml.JavaToXml;
 import sandbox.tools.svgshow.SVGShow;
 import sandbox.tools.swingfactory.SwingFactory;
@@ -47,6 +49,9 @@ public class SandboxCentral {
 		register(JavaToXml.class);
 		register(sandbox.tools.drawinggrid.DrawingGrid.class);
 		register(SVGShow.class);
+		register(FindDuplicateFiles.class);
+		register(HtmlInXml.class);
+		
 		Collections.sort(programs,(A,B)->A.getValue().getName().compareTo(B.getValue().getName()));
 		if(args.isEmpty()) {
 			usage(System.err);

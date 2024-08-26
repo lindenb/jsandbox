@@ -1,0 +1,34 @@
+<JFrame title="Hello">
+	<JMenuBar>
+		<JMenuBar>
+			<add>
+				<JMenu text="File">
+					<add>
+						<JMenuItem>Save As...</JMenuItem>
+					</add>
+				</JMenu>
+			</add>
+		</JMenuBar>
+	</JMenuBar>
+	
+	<contentPane>
+		<JSplitPane orientation="VERTICAL_SPLIT">
+			<JPanel>
+			<add>
+				<JButton>Hello world</JButton>
+			</add>
+			</JPanel>
+			<JScrollPane>
+			<JTextArea text="Hello2">
+				<selectedTextColor>
+					<Color>green</Color>
+				</selectedTextColor>
+				<font>
+					<Font size="40"/>
+				</font>
+			</JTextArea>
+			</JScrollPane>
+		</JSplitPane>
+	</contentPane>
+	
+</JFrame>

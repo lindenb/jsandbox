@@ -8,13 +8,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
-import java.util.Spliterator;
-import java.util.Spliterators;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
@@ -25,11 +21,12 @@ import javax.xml.stream.events.StartElement;
 import org.w3c.dom.NamedNodeMap;
 
 import sandbox.StringUtils;
-import sandbox.iterator.AbstractIterator;
+import sandbox.util.IterableHasStream;
+import sandbox.xml.DOMIterator;
 
 
 
-public class Element extends  Node implements Iterable<Node> {
+public class Element extends  Node implements IterableHasStream<Node> {
 protected Node firstChild=null;
 protected Node lastChild=null;
 protected final Map<QName,String> attributes = new HashMap<>();
@@ -131,30 +128,21 @@ public boolean hasPrefix() {
 
 @Override
 public Iterator<Node> iterator() {
-	return new AbstractIterator<Node>() {
-		Node n=getFirstChild();
-		@Override
-		protected Node advance() {
-			final Node x = n;
-			if(n!=null) n=n.getNextSibling();
-			return x;
-			}
-		};
+	return nodes().iterator();
 	}
 
 @Override
-public void find(final Consumer<Node> consumer) {
+public void findDeep(final Consumer<Node> consumer) {
 	consumer.accept(this);
-	for(Node c=getFirstChild();c!=null;c=c.getNextSibling()) {
-		c.find(consumer);
+	for(Node c:nodes()) {
+		c.findDeep(consumer);
 		}
 	}
 
 public Optional<Element> findFirstChildElement(final Predicate<Element> predicate) {
-	for(Node c=getFirstChild();c!=null;c=c.getNextSibling()) {
-		if(!c.isElement()) continue;
-		if(!predicate.test(c.asElement())) continue;
-		return Optional.of(c.asElement());
+	for(Element c:elements()) {
+		if(!predicate.test(c)) continue;
+		return Optional.of(c);
 		}
 	return Optional.empty();
 	}
@@ -171,40 +159,34 @@ public Element getRoot() {
 
 public List<Node> getAllNodes() {
 	final List<Node> all = new ArrayList<>();
-	find(N->all.add(N));
+	findDeep(N->all.add(N));
 	return all;
 	}
 
+@Override
 public Stream<Node> stream() {
-	return StreamSupport.stream(
-            Spliterators.spliteratorUnknownSize(iterator(), 
-            Spliterator.ORDERED),
-            false
-            );
+	return nodes().stream();
 	}
 
 /** returns all child Elements */
-public Stream<Element> elements() {
-	return stream().filter(N->N.isElement()).map(E->E.asElement());
+public IterableHasStream<Node> nodes() {
+	return MiniDomIterator.nodes(this);
 	}
 
-/** return all child Element as List */
-public List<Element> getChildElements() {
-	return elements().collect(Collectors.toList());
+/** returns all child Elements */
+public IterableHasStream<Element> elements() {
+	return MiniDomIterator.elements(this);
 	}
 
 /** count child Element  */
 public int countChildElements() {
-	return (int)elements().count();
+	return (int)elements().stream().count();
 	}
 
 
 /** return true if there is one Element as child */
 public boolean hasChildElement() {
-	for(Node n1=getFirstChild();n1!=null;n1=n1.getNextSibling()) {
-		if(n1.isElement()) return true;
-		}
-	return false;
+	return elements().iterator().hasNext();
 	}
 
 
@@ -298,7 +280,7 @@ public void insertBefore(final Node newNode, final Node referenceNode) {
 		}
 	if(newNode.isSameNode(referenceNode)) throw new IllegalArgumentException();
 	assertNotAncestor(referenceNode);
-	for(Node c=getFirstChild();c!=null;c=c.getNextSibling()) {
+	for(Node c:nodes()) {
 		if(c.isSameNode(referenceNode)) {
 			newNode.unlink();
 			if(referenceNode.prevSibling!=null) 
@@ -391,7 +373,7 @@ public void setTextContent(Object o) {
 public String getTextContent() {
 	if(!hasChildNodes()) return "";
 	final StringBuilder sb = new StringBuilder();
-	for(Node n1=getFirstChild();n1!=null;n1=n1.getNextSibling()) {
+	for(Node n1:nodes()) {
 		sb.append(n1.getTextContent());
 		}
 	return sb.toString();
@@ -441,7 +423,7 @@ public void write(final XMLStreamWriter w) throws XMLStreamException {
 	
 	if(hasChildNodes())
 		{
-		for(Node c= getFirstChild(); c!=null; c=c.getNextSibling()) {
+		for(Node c:nodes()) {
 			c.write(w);
 			}
 		w.writeEndElement();
@@ -452,8 +434,10 @@ public void write(final XMLStreamWriter w) throws XMLStreamException {
 public Node clone(boolean deep) {
 	final Element cp = new Element(this.getQName());
 	cp.attributes.putAll(this.attributes);
-	for(Node c= getFirstChild(); c!=null && deep; c=c.getNextSibling()) {
-		cp.appendChild(c.clone(deep));
+	if(deep) {
+		for(Node c:nodes()) {
+			cp.appendChild(c.clone(deep));
+			}
 		}
 	return cp;
 	}
@@ -463,9 +447,8 @@ public String getPath() {
 	String s=getQualifiedName();
 	if(hasParentNode()) {
 		int i=0;
-		for(Node c=getParentNode().getFirstChild();c!=null;c=c.getNextSibling()) {
-			if(!c.isElement()) continue;
-			if(c.asElement().getQName().equals(this.getQName())) {
+		for(Element c:getParentNode().elements()) {
+			if(c.getQName().equals(this.getQName())) {
 				i++;
 				if(c==this) {
 					s+="["+i+"]";
@@ -501,7 +484,7 @@ public org.w3c.dom.Element toDOM(org.w3c.dom.Document owner) {
 			E.setAttributeNS(key.getNamespaceURI(), (StringUtils.isBlank(key.getPrefix())?"":key.getPrefix()+":")+key.getLocalPart(), value);
 			}
 		}
-	for(Node c= getFirstChild();c!=null;c=c.getNextSibling()) {
+	for(Node c:nodes()) {
 		E.appendChild(c.toDOM(owner));
 		}
 
@@ -510,8 +493,8 @@ public org.w3c.dom.Element toDOM(org.w3c.dom.Document owner) {
 @Override
 public int hashCode() {
 	int i= this.attributes.hashCode();
-	for(Node c= getFirstChild();c!=null;c=c.getNextSibling()) {
-		i=i%31 + c.hashCode();
+	for(Node c:nodes()) {
+		i=i%31 * c.hashCode();
 		}
 	return i;
 	}
@@ -543,7 +526,7 @@ public boolean isEqualNode(final Node other) {
 public final boolean isDataNode() {
 	boolean has_element=false;
 	boolean has_non_ws = false;
-	for(Node n1=this.getFirstChild();n1!=null;n1=n1.getNextSibling()) {
+	for(Node n1:nodes()) {
 		if(n1.isText()&& n1.asText().isBlank()) has_non_ws=true;
 		if(n1.isElement()) has_element=true;
 		if(has_non_ws && has_element) return false;
@@ -557,7 +540,7 @@ public final boolean isDataNode() {
  */
 public boolean isElementWithTextOnly() {
 	boolean has_text=false;
-	for(Node n1=this.getFirstChild();n1!=null;n1=n1.getNextSibling()) {
+	for(Node n1:nodes()) {
 		if(n1.isText()) has_text=true;
 		if(n1.isElement()) return false;
 		}
@@ -567,7 +550,7 @@ public boolean isElementWithTextOnly() {
 public static Element importDOM(org.w3c.dom.Element e,boolean deep) {
 	final Element root=new Element(e);
 	if(deep) {
-		for(org.w3c.dom.Node c1=e.getFirstChild();c1!=null;c1=c1.getNextSibling()) {
+		for(org.w3c.dom.Node c1:DOMIterator.nodes(e)) {
 			switch(c1.getNodeType()) {
 				case org.w3c.dom.Node.TEXT_NODE:
 				case org.w3c.dom.Node.CDATA_SECTION_NODE:

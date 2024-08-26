@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 import sandbox.Logger;
 
-public class MergingIterator<T> extends AbstractIterator<T>{
+public class MergingIterator<T> extends AbstractIterator<T> implements CloseableIterator<T> {
 	@SuppressWarnings("unused")
 	private static final Logger LOG = Logger.builder(MergingIterator.class).build();
 

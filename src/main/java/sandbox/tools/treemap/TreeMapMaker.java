@@ -31,10 +31,10 @@ import sandbox.http.CookieStoreUtils;
 import sandbox.io.IOUtils;
 import sandbox.jcommander.DimensionConverter;
 import sandbox.jcommander.NoSplitter;
-import sandbox.net.DataCache;
 import sandbox.net.DataCacheFactory;
 import sandbox.net.HttpURLInputStreamProvider;
 import sandbox.net.URLInputStreamProvider;
+import sandbox.net.cache.DataCache;
 import sandbox.treemap.TreePack;
 import sandbox.treemap.TreePacker;
 

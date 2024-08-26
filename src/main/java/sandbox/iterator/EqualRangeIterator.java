@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 
 import sandbox.Logger;
 
-public class EqualRangeIterator<C extends Collection<T>,T> extends AbstractIterator<C>{
+public class EqualRangeIterator<C extends Collection<T>,T> extends AbstractIterator<C> implements CloseableIterator<C> {
 
 private @SuppressWarnings("unused")
 static final Logger LOG = Logger.builder(EqualRangeIterator.class).build();

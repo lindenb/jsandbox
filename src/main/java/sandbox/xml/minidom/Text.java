@@ -77,7 +77,7 @@ public class Text extends Node implements CharSequence {
 		}
 	
 	@Override
-	public void find(final Consumer<Node> consumer) {
+	public void findDeep(final Consumer<Node> consumer) {
 		consumer.accept(this);
 		}
 	@Override

@@ -6,8 +6,12 @@ import java.io.Writer;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
@@ -31,6 +35,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import sandbox.StringUtils;
+import sandbox.iterator.AbstractIterator;
+import sandbox.lang.reflect.Primitive;
 
 
 public class XmlUtils {
@@ -89,6 +95,41 @@ public static boolean isA(final Node n, final String nodeName) {
 	return true;
 	}
 
+public static Optional<String> getAttribute(Element root,String name) {
+	final Attr att= root.getAttributeNode(name);
+	return att==null?Optional.empty():Optional.of(att.getValue());
+	}
+
+public static OptionalLong getLongAttribute(Element root,String name) {
+	final Optional<String> os = getAttribute(root, name);
+	try {
+		return OptionalLong.of(Long.parseLong(os.get()));
+		}
+	catch(NumberFormatException err) {
+		return OptionalLong.empty();
+		}
+	}
+
+public static OptionalDouble getDoubleAttribute(Element root,String name) {
+	final Optional<String> os = getAttribute(root, name);
+	try {
+		return OptionalDouble.of(Double.parseDouble(os.get()));
+		}
+	catch(NumberFormatException err) {
+		return OptionalDouble.empty();
+		}
+	}
+
+public static OptionalInt getIntAttribute(Element root,String name) {
+	final Optional<String> os = getAttribute(root, name);
+	try {
+		return OptionalInt.of(Integer.parseInt(os.get()));
+		}
+	catch(NumberFormatException err) {
+		return OptionalInt.empty();
+		}
+	}
+
 
 public static Stream<Node> stream(final Node root) {
 return children(root).stream();
@@ -108,20 +149,17 @@ public static List<Node> ancestorsOrSelf(final Node the_node) {
 
 
 public static List<Node> children(final Node root) {
-	final ArrayList<Node> L = new ArrayList<>();
-	if( root == null) return L;
-	for(Node n = root.getFirstChild();n!=null;n=n.getNextSibling()) {
-		L.add(n);
-	}
-	return L;
+	if( root == null) return Collections.emptyList();
+	return new DOMIterator<Node>(root,T->Node.class.cast(T)).
+			stream().
+			collect(Collectors.toList());
 	}
 
 public static List<Element> elements(final Node root) {
-	return children(root).stream().
-			filter(isElement).
-			map(toElement).
-			collect(Collectors.toList())
-			;
+	if( root == null) return Collections.emptyList();
+	return new DOMIterator<Element>(root,T->(T.getNodeType()==Node.ELEMENT_NODE?Element.class.cast(T):null)).
+			stream().
+			collect(Collectors.toList());
 	}
 
 
@@ -255,6 +293,34 @@ public static void writeAttribute(XMLStreamWriter w, final Attr att) throws XMLS
 		{
 		w.writeAttribute(att.getPrefix(), att.getNamespaceURI(), att.getLocalName(), att.getValue());
 		}
+	}
+/** test if element as (element child + blank text) OR (no child) OR (only text content) */
+public static boolean isDataElement(Element root) {
+	if(!root.hasChildNodes()) return true;
+	boolean hasElement=false;
+	boolean hasNonWsText=false;
+	for(Node c:DOMIterator.nodes(root)) {
+		switch(c.getNodeType()) {
+			case Node.ELEMENT_NODE:hasElement=true;break;
+			case Node.COMMENT_NODE:break;
+			case Node.TEXT_NODE:
+			case Node.CDATA_SECTION_NODE: 
+				{
+				if(StringUtils.isBlank(CharacterData.class.cast(c).getData())) {
+					hasNonWsText=true;
+					if(hasElement) return false;
+					}
+				break;
+				}
+			default:break;
+			}
+		}
+	if(hasElement) return hasNonWsText==false;
+	return true;//text only
+	}
+/** assert element as (element child + blank text) OR (no child) OR (only text content) */
+public static void assertIsDataElement(Element root) {
+	if(!isDataElement(root)) throw new IllegalArgumentException("Not a data element "+getNodePath(root));
 	}
 
 }

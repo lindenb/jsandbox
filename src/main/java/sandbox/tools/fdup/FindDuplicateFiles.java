@@ -31,6 +31,7 @@ import sandbox.bigsort.ExternalSortFactory.ExternalSort;
 import sandbox.iterator.EqualRangeIterator;
 import sandbox.jcommander.FileSizeConverter;
 import sandbox.jcommander.NoSplitter;
+import sandbox.tools.central.ProgramDescriptor;
 
 public class FindDuplicateFiles extends Launcher{
 	private static final Logger LOG = Logger.builder(FindDuplicateFiles.class).build();
@@ -270,7 +271,18 @@ public int doWork(final List<String> args) {
 		}
 	}
 
+
+public static ProgramDescriptor getProgramDescriptor() {
+	return new ProgramDescriptor() {
+		@Override
+		public String getName() {
+			return "finddupfiles";
+			}
+		};
+	}
+
+
 public static void main(String[] args) {
 	new FindDuplicateFiles().instanceMainWithExit(args);
-}
+	}
 }

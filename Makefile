@@ -197,7 +197,7 @@ all_maven_jars = $(sort $(apache.poi.jar) ${jcommander.jar} ${jgit.jars} ${veloc
 all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
 	xml2xsd weatherarchive gribouille java2graph githistory nashornserver \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
-	htmlinxml packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
+	packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
 	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom fileserver xmlpath imagemap \
 	pcaviewer swap2bits
@@ -222,7 +222,6 @@ $(eval $(call compile,html2tty,sandbox.HtmlToTTY,${jcommander.jar}))
 $(eval $(call compile,xslserver,sandbox.XslHandler,${google.gson.jars} ${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars} ${spring-beans.jars}))
 $(eval $(call compile,divandb,sandbox.DivanDB,${google.gson.jars} ${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars}  ${jtidy.jars}))
 $(eval $(call compile,packageeclipsejars,sandbox.PackageEclipseJars,${apache.commons.cli}))
-$(eval $(call compile,htmlinxml,sandbox.HtmlInXml,${jcommander.jar}  ${jtidy.jars}))
 $(eval $(call compile,pubmedtrending,sandbox.PubmedTrending,${apache.commons.cli} ${slf4j.jars} ))
 $(eval $(call compile,atommerger,sandbox.tools.feed.AtomMerger, ${jcommander.jar}))
 $(eval $(call compile,cookiestorefile,sandbox.CookieStoreUtils,${apache.httpclient.jars}))
@@ -272,7 +271,6 @@ $(eval $(call compile,randomdots01,sandbox.drawing.RandomDots01,${jcommander.jar
 $(eval $(call compile,swij2guile,sandbox.swij.SwijToGuile,${jcommander.jar} ./src/main/java/sandbox/swij/SwijParser.java))
 $(eval $(call compile,htmltidy,sandbox.html.HtmlTidy,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,xmlstream,sandbox.xml.tools.xmlstream.XmlStream,${jcommander.jar}))
-$(eval $(call compile,finddupfiles,sandbox.tools.fdup.FindDuplicateFiles,${jcommander.jar}))
 $(eval $(call compile,rdoc,sandbox.tools.rdoc.RDocGenerator,${jcommander.jar}))
 $(eval $(call compile,ig2table,sandbox.tools.ig.IgToTable,${jcommander.jar} ${google.gson.jars} ${apache.httpclient.jars}))
 $(eval $(call compile,makegrid,sandbox.tools.kirby.MakeGrid,${jcommander.jar}))
@@ -298,7 +296,7 @@ $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommand
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/main/java/sandbox/tools/pojogenerator/parser/PojoParser.java))
 $(eval $(call compile,theses2gexf,sandbox.tools.thesesfr.ThesesfrToGraph, ${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander.jar} ${jaxb.jar}))
-$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar}))
+$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

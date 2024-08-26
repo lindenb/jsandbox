@@ -86,7 +86,7 @@ public ExternalSort<T> make() {
 
 private class BigSorterImpl implements ExternalSort<T>
 	{
-	private class StoredFileIterator extends AbstractIterator<T> {
+	private class StoredFileIterator extends AbstractIterator<T> implements CloseableIterator<T> {
 		Path path;
 		int total = 0;
 		DataInputStream dis= null;

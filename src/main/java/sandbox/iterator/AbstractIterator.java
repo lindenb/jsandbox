@@ -1,9 +1,15 @@
 package sandbox.iterator;
 
 import java.util.NoSuchElementException;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
+import sandbox.util.stream.HasStream;
 
 
-public abstract class AbstractIterator<T> implements PeekIterator<T> , CloseableIterator<T>{
+public abstract class AbstractIterator<T> implements PeekIterator<T>,HasStream<T> /* non, pas closable  please */ {
 	private T _next=null;
 	protected abstract T advance();
 	@Override
@@ -29,6 +35,9 @@ public abstract class AbstractIterator<T> implements PeekIterator<T> , Closeable
 		}
 	
 	@Override
-	public void close() {
+	public Stream<T> stream() {
+		return StreamSupport.stream(         
+			Spliterators.spliteratorUnknownSize(this, Spliterator.ORDERED),
+			false);
 		}
 	}

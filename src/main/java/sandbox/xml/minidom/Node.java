@@ -78,7 +78,7 @@ protected static QName toQName(org.w3c.dom.Node root) {
 	}
 
 
-public abstract void find(final Consumer<Node> consumer);
+public abstract void findDeep(final Consumer<Node> consumer);
 public abstract Node clone(boolean deep);
 public abstract boolean isText() ;
 public abstract boolean isElement();

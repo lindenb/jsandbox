@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.tools.htmlinxml;
 
 import java.io.StringReader;
 import java.util.List;
@@ -15,6 +15,10 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.tidy.Tidy;
+
+import sandbox.Launcher;
+import sandbox.Logger;
+import sandbox.tools.central.ProgramDescriptor;
 
 public class HtmlInXml extends Launcher {
 	private static final Logger LOG = Logger.builder(HtmlInXml.class).build();
@@ -71,20 +75,14 @@ public class HtmlInXml extends Launcher {
 			dbf.setNamespaceAware(true);
 			DocumentBuilder db = dbf.newDocumentBuilder();
 			Document dom=null;
-			if(args.isEmpty())
+			String input = oneAndOnlyOneFile(args);
+			if(input==null)
 				{
-				LOG.info("read stdin");
 				dom = db.parse(System.in);
 				}
-			else if(args.size()==1)
+			else 
 				{
-				LOG.info("read "+args.get(0));
-				dom = db.parse(args.get(0));
-				}
-			else
-				{
-				LOG.warning("Illegal number of args");
-				return -1;
+				dom = db.parse(input);
 				}
 			
 			this.expand(dom,dom.getDocumentElement());
@@ -104,6 +102,16 @@ public class HtmlInXml extends Launcher {
 		return -1;
 		}
 	}
+	
+	  public static ProgramDescriptor getProgramDescriptor() {
+			return new ProgramDescriptor() {
+				@Override
+				public String getName() {
+					return "htmlinxml";
+					}
+				};
+			}
+	
 	public static void main(final String[] args) {
 		new HtmlInXml().instanceMainWithExit(args);
 	}
