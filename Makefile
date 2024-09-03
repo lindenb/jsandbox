@@ -310,9 +310,12 @@ $(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommande
 ./src/main/java/sandbox/expr1/parser/Expr1Parser.java: ./src/main/java/sandbox/expr1/parser/Parser.jj
 	${javacc.exe} -OUTPUT_DIRECTORY=$(dir $@) $<
 
-dist/annotproc.jar: src/main/java/sandbox/annotation/processing/MyProcessor.java 
-	rm -rf tmp mkdir -p tmp $(dir $@) javac -d tmp -sourcepath src/main/java
-	$< jar cvf $@ -C tmp . rm -rf tmp
+dist/annotproc.jar: src/main/java/sandbox/annotation/processing/MyProcessor.java
+	rm -rf tmp
+	mkdir -p tmp $(dir $@)
+	javac -d tmp -sourcepath src/main/java $< 
+	jar cvf $@ -C tmp .
+	rm -rf tmp
 
 
 $(bin.dir)/avdl2xml.jar: ./src/main/java/sandbox/Avdl2Xml.jj
