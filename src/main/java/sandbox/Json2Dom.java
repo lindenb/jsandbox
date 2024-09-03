@@ -50,8 +50,10 @@ import com.google.gson.JsonPrimitive;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 
+import sandbox.jsonx.JSONX;
+
 public final class Json2Dom {
-	private static final String NS = "http://www.ibm.com/xmlns/prod/2009/jsonx";
+	private static final String NS = JSONX.NS;
 	public static Logger LOG = Logger.getLogger("json2dom");
 
 	public Json2Dom() {

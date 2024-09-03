@@ -16,6 +16,7 @@ import sandbox.tools.svgshow.SVGShow;
 import sandbox.tools.swingfactory.SwingFactory;
 import sandbox.tools.swingwatcher.SwingWatcher;
 import sandbox.tools.velocityjson.VelocityJson;
+import sandbox.tools.yaml2xml.YamlToXml;
 import sandbox.util.Pair;
 
 public class SandboxCentral {
@@ -53,6 +54,7 @@ public class SandboxCentral {
 		register(FindDuplicateFiles.class);
 		register(HtmlInXml.class);
 		register(VelocityJson.class);
+		register(YamlToXml.class);
 		
 		Collections.sort(programs,(A,B)->A.getValue().getName().compareTo(B.getValue().getName()));
 		if(args.isEmpty()) {

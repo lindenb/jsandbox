@@ -80,12 +80,13 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 
 import sandbox.io.IOUtils;
+import sandbox.jsonx.JSONX;
 
 
 
 public class XslHandler extends AbstractHandler
 	{
-	private static final String JSON_NS="http://www.ibm.com/xmlns/prod/2009/jsonx";
+	private static final String JSON_NS=JSONX.NS;
 
 	private static final Logger LOG = LoggerFactory.getLogger("jsandbox");
 	private String URL_PARAM="url";

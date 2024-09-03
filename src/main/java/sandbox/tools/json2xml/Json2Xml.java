@@ -37,10 +37,11 @@ import com.google.gson.stream.JsonToken;
 import sandbox.Launcher;
 import sandbox.annotation.IncludeUrl;
 import sandbox.io.IOUtils;
+import sandbox.jsonx.JSONX;
 
 @IncludeUrl(url="http://en.wikipedia.org http://fr.wikipedia.org",directory="XXX")
 public final class Json2Xml extends Launcher {
-	private static final String NS="http://www.ibm.com/xmlns/prod/2009/jsonx";
+	private static final String NS= JSONX.NS;
 	public static Logger LOG=Logger.getLogger("json2xml");
 	
 	private Json2Xml() {}
