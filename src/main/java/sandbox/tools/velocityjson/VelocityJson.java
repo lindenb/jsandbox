@@ -20,6 +20,7 @@ import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.context.Context;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.resource.loader.StringResourceLoader;
+import org.yaml.snakeyaml.Yaml;
 
 import com.beust.jcommander.Parameter;
 import com.google.gson.JsonArray;
@@ -147,6 +148,13 @@ public class VelocityJson extends Launcher {
 							}
 						else if(type.equals("double")) {
 							o = Double.parseDouble(value);
+							}
+						else if(type.equals("yaml")) {
+							final Path f = Paths.get(value);
+							final Yaml yaml = new Yaml();
+							try(Reader r = Files.newBufferedReader(f)) {
+								o = yaml.load(r);
+				  				}
 							}
 						else if(type.equals("json")) {
 							final Path f = ((value.trim().startsWith("[") || value.trim().startsWith("{"))?null:Paths.get(value));
