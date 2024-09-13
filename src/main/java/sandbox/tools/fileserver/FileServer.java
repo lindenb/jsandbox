@@ -13,6 +13,7 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
+import sandbox.tools.central.ProgramDescriptor;
 
 public class FileServer extends Launcher
 	{
@@ -27,7 +28,7 @@ public class FileServer extends Launcher
 		try {
 			if(this.baseDir==null)
 				{
-				LOG.warning("using ucrren tdirecotry");
+				LOG.warning("using current tdirecotry");
 				this.baseDir = new File(System.getProperty("user.dir","."));
 				}
 		
@@ -53,7 +54,17 @@ public class FileServer extends Launcher
 			{
 			
 			}
-	}
+		}
+	
+	
+	public static ProgramDescriptor getProgramDescriptor() {
+		return new ProgramDescriptor() {
+			@Override
+			public String getName() {
+				return "fileserver";
+				}
+			};
+		}
 	
 	public static void main(final String[] args) {
 		new FileServer().instanceMainWithExit(args);

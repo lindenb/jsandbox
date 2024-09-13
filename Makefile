@@ -204,7 +204,7 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
 	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
-	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom fileserver xmlpath imagemap \
+	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom  xmlpath imagemap \
 	pcaviewer swap2bits
 
 
@@ -255,7 +255,6 @@ $(eval $(call compile,atom500px,sandbox.Atom500px,${jcommander.jar}))
 $(eval $(call compile,insta2atom,sandbox.ig.InstagramToAtom,${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,insta2json,sandbox.ig.InstagramToJson,${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,insta2gexf,sandbox.ig.InstagramGraph,${jcommander.jar} ${apache.httpclient.jars} ${jtidy.jars}))
-$(eval $(call compile,fileserver,sandbox.tools.fileserver.FileServer,${jcommander.jar} ${jetty.jars}))
 $(eval $(call compile,atomxhtml,sandbox.AtomXhtmlContent,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,xmlpath,sandbox.XmlPath,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,imagemap,sandbox.ImageMap,${jcommander.jar}))
@@ -301,7 +300,7 @@ $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommand
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/main/java/sandbox/tools/pojogenerator/parser/PojoParser.java))
 $(eval $(call compile,theses2gexf,sandbox.tools.thesesfr.ThesesfrToGraph, ${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander.jar} ${jaxb.jar}))
-$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}))
+$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}  ${jetty.jars}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

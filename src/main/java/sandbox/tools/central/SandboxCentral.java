@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import sandbox.tools.fdup.FindDuplicateFiles;
+import sandbox.tools.fileserver.FileServer;
 import sandbox.tools.htmlinxml.HtmlInXml;
 import sandbox.tools.java2xml.JavaToXml;
 import sandbox.tools.svgshow.SVGShow;
@@ -49,6 +50,7 @@ public class SandboxCentral {
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
 		register(JavaToXml.class);
+		register(FileServer.class);
 		register(sandbox.tools.drawinggrid.DrawingGrid.class);
 		register(SVGShow.class);
 		register(FindDuplicateFiles.class);
