@@ -35,20 +35,17 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 
 import sandbox.Launcher;
-import sandbox.annotation.IncludeUrl;
 import sandbox.io.IOUtils;
 import sandbox.jsonx.JSONX;
+import sandbox.tools.central.ProgramDescriptor;
 
-@IncludeUrl(url="http://en.wikipedia.org http://fr.wikipedia.org",directory="XXX")
 public final class Json2Xml extends Launcher {
 	private static final String NS= JSONX.NS;
 	public static Logger LOG=Logger.getLogger("json2xml");
 	
-	private Json2Xml() {}
 	
 	private void parseObject(final XMLStreamWriter w,final String label,final JsonReader r) throws Exception
 		{
-		
 		w.writeStartElement(NS, "object");
 		if(label!=null) w.writeAttribute("name", label);
 		for(;;)
@@ -158,33 +155,21 @@ public final class Json2Xml extends Launcher {
 	public int doWork(List<String> args)
 		{
 		try {
-			Reader r = null;
-			JsonReader jr=null;
 			final String input = super.oneFileOrNull(args);
-			if(input==null)
-				{
-				r = new InputStreamReader(System.in);
+			try(Reader r=input==null?new InputStreamReader(System.in):IOUtils.openBufferedReader(input)) {
+			try(JsonReader jr = new JsonReader(r)) {
+				jr.setLenient(true);
+				XMLOutputFactory xof = XMLOutputFactory.newFactory();
+				xof.setProperty(XMLOutputFactory.IS_REPAIRING_NAMESPACES, Boolean.TRUE);
+				XMLStreamWriter w = xof.createXMLStreamWriter(System.out,"UTF-8");
+				w.setDefaultNamespace(NS);
+				w.writeStartDocument("UTF-8", "1.0");
+				this.parse(w,null,jr);
+				w.writeEndDocument();
+				w.flush();
+				w.close();
 				}
-			else
-				{
-				r  = IOUtils.openBufferedReader(input);
-				}		
-			
-			
-			
-			jr = new JsonReader(r);
-			jr.setLenient(true);
-			XMLOutputFactory xof = XMLOutputFactory.newFactory();
-			xof.setProperty(XMLOutputFactory.IS_REPAIRING_NAMESPACES, Boolean.TRUE);
-			XMLStreamWriter w = xof.createXMLStreamWriter(System.out,"UTF-8");
-			w.setDefaultNamespace(NS);
-			w.writeStartDocument("UTF-8", "1.0");
-			
-			this.parse(w,null,jr);
-			w.writeEndDocument();
-			w.flush();
-			w.close();
-			IOUtils.close(jr);
+			}
 			return 0;
 		} catch (Throwable err) {
 			err.printStackTrace();
@@ -192,6 +177,16 @@ public final class Json2Xml extends Launcher {
 		}
 
 	}
+	
+	public static ProgramDescriptor getProgramDescriptor() {
+		return new ProgramDescriptor() {
+			@Override
+			public String getName() {
+				return "json2xml";
+				}
+			};
+		}
+	
 	public static void main(String[] args)
 		{
 		new Json2Xml().instanceMainWithExit(args);

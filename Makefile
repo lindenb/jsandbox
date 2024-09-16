@@ -203,7 +203,7 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
 	xml2xsd weatherarchive gribouille java2graph githistory nashornserver \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
-	geneticpainting json2dom json2xml twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
+	geneticpainting json2dom  twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
 	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom  xmlpath imagemap \
 	pcaviewer swap2bits
 
@@ -215,7 +215,6 @@ $(eval $(call compile,twitter01,sandbox.Twitter01, ${twitter.hbc.jars}))
 $(eval $(call compile,twitterfollow,sandbox.TwitterFollow, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,twitteruserlookup,sandbox.TwitterUserLookup, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,twittergraph,sandbox.TwitterGraph, ${sqlite3.jdbc.jar} ${jcommander.jar} ${org.scribe.jars} ${google.gson.jars}))
-$(eval $(call compile,json2xml,sandbox.tools.json2xml.Json2Xml,${google.gson.jars} ${jcommander.jar}))
 $(eval $(call compile,json2dom,sandbox.Json2Dom,${google.gson.jars}))
 $(eval $(call compile,timelinemaker,sandbox.TimeLineMaker,${google.gson.jars} ${jcommander.jar}))
 $(eval $(call compile,geneticpainting,sandbox.tools.geneticpaint.GeneticPainting,${jcommander.jar}))
