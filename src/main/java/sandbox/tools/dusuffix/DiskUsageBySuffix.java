@@ -76,11 +76,11 @@ public class DiskUsageBySuffix extends Launcher{
 						if(max_length!=-1L && length> max_length) return FileVisitResult.CONTINUE;
 						String suffix = getSuffix(F.getFileName().toString());
 						if(StringUtils.isBlank(suffix)) {
-							suffixes.increment("(no suffix)");
+							suffixes.increment("(no suffix)",length);
 							}
 						else
 							{
-							suffixes.increment(suffix);
+							suffixes.increment(suffix,length);
 							}
 						}
 					catch(final IOException err) {
