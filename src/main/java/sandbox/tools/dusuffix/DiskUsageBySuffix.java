@@ -40,6 +40,8 @@ public class DiskUsageBySuffix extends Launcher{
 
 	
 	private String getSuffix(String fname) {
+		if(fname.matches(".*\\.sh\\.o[0-9]+")) return "(sge-o)";
+		if(fname.matches(".*\\.sh\\.e[0-9]+")) return "(sge-e)";
 		if(fname.endsWith(".gz")) {
 			return getSuffix(fname.substring(0, fname.length()-3))+".gz";
 			}
@@ -51,7 +53,8 @@ public class DiskUsageBySuffix extends Launcher{
 			}
 		int idx = fname.lastIndexOf('.');
 		if(idx<0) return "";
-		return fname.substring(idx);
+		String suffix= fname.substring(idx);
+		return suffix;
 		}
 
 	private void scanDirectory(XMLStreamWriter w,Path directory) throws XMLStreamException,IOException {
