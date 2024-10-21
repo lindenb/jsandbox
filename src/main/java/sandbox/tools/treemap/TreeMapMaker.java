@@ -38,6 +38,7 @@ import sandbox.net.cache.DirectoryDataCache;
 import sandbox.tools.central.ProgramDescriptor;
 import sandbox.treemap.TreePack;
 import sandbox.treemap.TreePacker;
+import sandbox.xml.XmlUtils;
 
 public class TreeMapMaker extends Launcher
 	{
@@ -100,6 +101,11 @@ public class TreeMapMaker extends Launcher
 				{
 				return this.children.stream().mapToDouble(X->X.getWeight()).sum();
 				}
+			}
+		
+		@Override
+		public String toString() {
+			return XmlUtils.getNodePath(this.domNode);
 			}
 		
 		public boolean isLeaf()

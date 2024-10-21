@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -38,10 +39,12 @@ public class DiskUsageBySuffix extends Launcher{
 	@Parameter(names= {"-o","--output"},description=OUTPUT_OR_STANDOUT)
 	private Path outputPath = null;
 
-	
+	private static final Pattern slurm_out_regex = Pattern.compile(".*\\.sh\\.o[0-9]+");
+	private static final Pattern slurm_err_regex = Pattern.compile(".*\\.sh\\.e[0-9]+");
+
 	private String getSuffix(String fname) {
-		if(fname.matches(".*\\.sh\\.o[0-9]+")) return "(sge-o)";
-		if(fname.matches(".*\\.sh\\.e[0-9]+")) return "(sge-e)";
+		if(slurm_out_regex.matcher(fname).matches()) return "(sge-o)";
+		if(slurm_err_regex.matcher(fname).matches()) return "(sge-e)";
 		if(fname.endsWith(".gz")) {
 			return getSuffix(fname.substring(0, fname.length()-3))+".gz";
 			}
@@ -61,7 +64,6 @@ public class DiskUsageBySuffix extends Launcher{
 		if(!Files.exists(directory)) return;
 		if(Files.isHidden(directory) && ignore_hidden) return; 
 		final Counter<String> suffixes= new Counter<>();
-		
 		Files.walkFileTree(directory,new SimpleFileVisitor<Path>() {
 			 	@Override
 			 	public FileVisitResult visitFile(Path F, BasicFileAttributes attrs) throws IOException {
