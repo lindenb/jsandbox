@@ -35,6 +35,7 @@ import sandbox.jcommander.NoSplitter;
 import sandbox.net.HttpURLInputStreamProvider;
 import sandbox.net.URLInputStreamProvider;
 import sandbox.net.cache.DirectoryDataCache;
+import sandbox.tools.central.ProgramDescriptor;
 import sandbox.treemap.TreePack;
 import sandbox.treemap.TreePacker;
 
@@ -477,5 +478,16 @@ public class TreeMapMaker extends Launcher
 	public static void main(final String[] args) {
 		new TreeMapMaker().instanceMainWithExit(args);
 		}
-		
+	
+	
+	public static ProgramDescriptor getProgramDescriptor() {
+		return new ProgramDescriptor() {
+			@Override
+			public String getName() {
+				return "treemapmaker";
+				}
+			};
+		}
+
+	
 	}

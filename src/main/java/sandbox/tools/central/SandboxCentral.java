@@ -18,6 +18,7 @@ import sandbox.tools.json2xml.Json2Xml;
 import sandbox.tools.svgshow.SVGShow;
 import sandbox.tools.swingfactory.SwingFactory;
 import sandbox.tools.swingwatcher.SwingWatcher;
+import sandbox.tools.treemap.TreeMapMaker;
 import sandbox.tools.velocityjson.VelocityJson;
 import sandbox.tools.yaml2xml.YamlToXml;
 import sandbox.util.Pair;
@@ -61,6 +62,7 @@ public class SandboxCentral {
 		register(HtmlInXml.class);
 		register(VelocityJson.class);
 		register(YamlToXml.class);
+		register(TreeMapMaker.class);
 		
 		Collections.sort(programs,(A,B)->A.getValue().getName().compareTo(B.getValue().getName()));
 		if(args.isEmpty()) {
