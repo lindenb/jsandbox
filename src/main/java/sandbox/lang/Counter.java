@@ -30,6 +30,10 @@ public Set<T> keySet() {
 	return Collections.unmodifiableSet(this.hash.keySet());
 	}
 
+public Set<Map.Entry<T, Long>> entrySet() {
+	return Collections.unmodifiableSet(this.hash.entrySet());
+	}
+
 @Override
 public final long applyAsLong(T key) {
 	return count(key);

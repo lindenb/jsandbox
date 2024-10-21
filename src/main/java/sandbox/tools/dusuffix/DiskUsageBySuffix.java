@@ -39,8 +39,8 @@ public class DiskUsageBySuffix extends Launcher{
 	@Parameter(names= {"-o","--output"},description=OUTPUT_OR_STANDOUT)
 	private Path outputPath = null;
 
-	private static final Pattern slurm_out_regex = Pattern.compile(".*\\.sh\\.o[0-9]+");
-	private static final Pattern slurm_err_regex = Pattern.compile(".*\\.sh\\.e[0-9]+");
+	private static final Pattern slurm_out_regex = Pattern.compile(".*\\.o[0-9]+");
+	private static final Pattern slurm_err_regex = Pattern.compile(".*\\.e[0-9]+");
 
 	private String getSuffix(String fname) {
 		if(slurm_out_regex.matcher(fname).matches()) return "(sge-o)";
@@ -100,10 +100,11 @@ public class DiskUsageBySuffix extends Launcher{
 			});
 	
 		if(suffixes.isEmpty()) return;
-		
+		if(suffixes.entrySet().stream().noneMatch(KV->KV.getValue()>0L)) return;
 		w.writeStartElement(TreeMapMaker.NODE_NAME);
 		w.writeAttribute(TreeMapMaker.LABEL_ATTRIBUTE,directory.toString());
 		for(final String suffix: suffixes.keySet()) {
+			if(suffixes.count(suffix)==0L) continue;
 			w.writeEmptyElement(TreeMapMaker.NODE_NAME);
 			w.writeAttribute(TreeMapMaker.LABEL_ATTRIBUTE, suffix);
 			w.writeAttribute(TreeMapMaker.WEIGHT_ATTRIBUTE, String.valueOf(suffixes.count(suffix)));
