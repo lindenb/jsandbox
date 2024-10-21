@@ -82,16 +82,16 @@ public abstract class Launcher
 		return os;
 		}
 	
-	protected PrintWriter openPathAsPrintWriter(final Path path) throws IOException {
-		if( path==null) {
+	protected PrintWriter openPathAsPrintWriter(final Path pathOrNull) throws IOException {
+		if( pathOrNull==null) {
 			return new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out)));
 			}
-		else if(path.getFileName().toString().toLowerCase().endsWith(".gz")) {
-			return new PrintWriter(new BufferedWriter((new OutputStreamWriter(new GZIPOutputStream(Files.newOutputStream(path))))));
+		else if(pathOrNull.getFileName().toString().toLowerCase().endsWith(".gz")) {
+			return new PrintWriter(new BufferedWriter((new OutputStreamWriter(new GZIPOutputStream(Files.newOutputStream(pathOrNull))))));
 			}
 		else
 			{
-			return new PrintWriter(Files.newBufferedWriter(path));
+			return new PrintWriter(Files.newBufferedWriter(pathOrNull));
 			}
 		}
 

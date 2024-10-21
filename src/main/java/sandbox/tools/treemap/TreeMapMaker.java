@@ -32,16 +32,17 @@ import sandbox.http.CookieStoreUtils;
 import sandbox.io.IOUtils;
 import sandbox.jcommander.DimensionConverter;
 import sandbox.jcommander.NoSplitter;
-import sandbox.net.DataCacheFactory;
 import sandbox.net.HttpURLInputStreamProvider;
 import sandbox.net.URLInputStreamProvider;
-import sandbox.net.cache.DataCache;
 import sandbox.net.cache.DirectoryDataCache;
 import sandbox.treemap.TreePack;
 import sandbox.treemap.TreePacker;
 
 public class TreeMapMaker extends Launcher
 	{
+	public static final String NODE_NAME="node";
+	public static final String WEIGHT_ATTRIBUTE="weight";
+	public static final String LABEL_ATTRIBUTE="label";
 	protected static final Logger LOG=Logger.builder(TreeMapMaker.class).build();
 	private static final  String SVG=  sandbox.svg.SVG.NS;
     private static int MARGIN=10;
@@ -87,7 +88,7 @@ public class TreeMapMaker extends Launcher
 		public double getWeight()
 			{
 			if(isLeaf()) {
-				String s = getAttribute("weight", null);
+				String s = getAttribute(WEIGHT_ATTRIBUTE, null);
 				if(StringUtils.isBlank(s)) s = getAttribute("score", null);
 				if(StringUtils.isBlank(s)) return 1.0;
 				double score = Double.parseDouble(s);
@@ -145,7 +146,7 @@ public class TreeMapMaker extends Launcher
 		
 		public String getLabel()
 			{
-			return getAttribute("label",null);
+			return getAttribute(LABEL_ATTRIBUTE,null);
 			}
 		
 		public String getLabelAndWeight()
@@ -399,7 +400,7 @@ public class TreeMapMaker extends Launcher
 		for(Node c=root.getFirstChild();c!=null;c=c.getNextSibling()) {
 			if(c.getNodeType()!=Node.ELEMENT_NODE) continue;
 			final Element E =Element.class.cast(c);
-			if(c.getNodeName().equals("node")) {
+			if(c.getNodeName().equals(NODE_NAME)) {
 				f.children.add(build(f,E));
 				}
 			}

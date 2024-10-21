@@ -299,7 +299,7 @@ $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommand
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/main/java/sandbox/tools/pojogenerator/parser/PojoParser.java))
 $(eval $(call compile,theses2gexf,sandbox.tools.thesesfr.ThesesfrToGraph, ${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander.jar} ${jaxb.jar}))
-$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}  ${jetty.jars}))
+$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}  ${jetty.jars} ${apache.httpclient.jars}))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

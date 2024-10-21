@@ -1,7 +1,9 @@
 package sandbox.lang;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.ToLongFunction;
 
@@ -19,6 +21,13 @@ public long increment(final T t,long n) {
 	}
 public long count(final T key) {
 	return this.hash.getOrDefault(key, 0L);
+	}
+public boolean isEmpty() {
+	return this.hash.isEmpty();
+	}
+
+public Set<T> keySet() {
+	return Collections.unmodifiableSet(this.hash.keySet());
 	}
 
 @Override
