@@ -62,6 +62,7 @@ public class DiskUsageBySuffix extends Launcher{
 
 	private void scanDirectory(XMLStreamWriter w,Path directory) throws XMLStreamException,IOException {
 		if(!Files.exists(directory)) return;
+		if(!Files.isDirectory(directory)) return;
 		if(Files.isHidden(directory) && ignore_hidden) return; 
 		final Counter<String> suffixes= new Counter<>();
 		Files.walkFileTree(directory,new SimpleFileVisitor<Path>() {

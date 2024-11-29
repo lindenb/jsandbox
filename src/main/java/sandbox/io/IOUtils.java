@@ -1,6 +1,7 @@
 package sandbox.io;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -23,6 +24,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 
@@ -152,6 +154,13 @@ public static String slurp(final File file) throws IOException {
 	}
 
 
+public static byte[] slurp(final InputStream is) throws IOException {
+	try(ByteArrayOutputStream out=new ByteArrayOutputStream()) {
+		copyTo(is,out);
+		return out.toByteArray();
+		}
+	}
+
 public static String slurp(final String fileOrUrl) throws IOException {
 	Reader r=null;
 	try { r = openReader(fileOrUrl); return readReaderContent(r);} 
@@ -178,6 +187,7 @@ public static String readReaderContent(final Reader r) throws IOException {
 
 
 public static Reader openReader(final String path) throws IOException {
+	Objects.requireNonNull(path, "path is null");
 	return new InputStreamReader(openStream(path));
 	}
 
@@ -195,6 +205,7 @@ public static Reader openPathAsReader(final Path path) throws IOException {
 
 
 public static InputStream openStream(final String path) throws IOException {
+	Objects.requireNonNull(path, "path is null");
 	if(isURL(path)) {
 		final InputStream in = new java.net.URL(path).openStream();
 		return mayGzipInputStream(in);

@@ -7,7 +7,8 @@ import java.awt.geom.Arc2D;
 import java.awt.geom.Point2D;
 
 /** Token Manager. */
-@SuppressWarnings("unused")public class SVGPathParserTokenManager implements SVGPathParserConstants {
+@SuppressWarnings ("unused")
+public class SVGPathParserTokenManager implements SVGPathParserConstants {
 
   /** Debug output. */
   public  java.io.PrintStream debugStream = System.out;
@@ -309,9 +310,6 @@ private int jjMoveNfa_0(int startState, int curPos)
       catch(java.io.IOException e) { return curPos; }
    }
 }
-static final int[] jjnextStates = {
-   17, 18, 0, 19, 20, 18, 0, 19, 20, 3, 4, 21, 22, 
-};
 
 /** Token literal values. */
 public static final String[] jjstrLiteralImages = {
@@ -340,6 +338,9 @@ protected Token jjFillToken()
 
    return t;
 }
+static final int[] jjnextStates = {
+   17, 18, 0, 19, 20, 18, 0, 19, 20, 3, 4, 21, 22, 
+};
 
 int curLexState = 0;
 int defaultLexState = 0;
@@ -361,7 +362,7 @@ public Token getNextToken()
    {
       curChar = input_stream.BeginToken();
    }
-   catch(java.io.IOException e)
+   catch(Exception e)
    {
       jjmatchedKind = 0;
       jjmatchedPos = -1;
@@ -414,6 +415,31 @@ public Token getNextToken()
   }
 }
 
+void SkipLexicalActions(Token matchedToken)
+{
+   switch(jjmatchedKind)
+   {
+      default :
+         break;
+   }
+}
+void MoreLexicalActions()
+{
+   jjimageLen += (lengthOfMatch = jjmatchedPos + 1);
+   switch(jjmatchedKind)
+   {
+      default :
+         break;
+   }
+}
+void TokenLexicalActions(Token matchedToken)
+{
+   switch(jjmatchedKind)
+   {
+      default :
+         break;
+   }
+}
 private void jjCheckNAdd(int state)
 {
    if (jjrounds[state] != jjround)
@@ -457,9 +483,14 @@ private void jjCheckNAddStates(int start, int end)
   }
 
   /** Reinitialise parser. */
+  
   public void ReInit(SimpleCharStream stream)
   {
-    jjmatchedPos = jjnewStateCnt = 0;
+
+
+    jjmatchedPos =
+    jjnewStateCnt =
+    0;
     curLexState = defaultLexState;
     input_stream = stream;
     ReInitRounds();
@@ -475,6 +506,7 @@ private void jjCheckNAddStates(int start, int end)
 
   /** Reinitialise parser. */
   public void ReInit(SimpleCharStream stream, int lexState)
+  
   {
     ReInit(stream);
     SwitchTo(lexState);
@@ -489,9 +521,15 @@ private void jjCheckNAddStates(int start, int end)
       curLexState = lexState;
   }
 
+
 /** Lexer state names. */
 public static final String[] lexStateNames = {
    "DEFAULT",
+};
+
+/** Lex State array. */
+public static final int[] jjnewLexState = {
+   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
 };
 static final long[] jjtoToken = {
    0xfff6fL, 
@@ -499,11 +537,19 @@ static final long[] jjtoToken = {
 static final long[] jjtoSkip = {
    0x1f00000L, 
 };
+static final long[] jjtoSpecial = {
+   0x0L, 
+};
+static final long[] jjtoMore = {
+   0x0L, 
+};
     protected SimpleCharStream  input_stream;
 
     private final int[] jjrounds = new int[25];
     private final int[] jjstateSet = new int[2 * 25];
-
-    
-    protected char curChar;
+    private final StringBuilder jjimage = new StringBuilder();
+    private StringBuilder image = jjimage;
+    private int jjimageLen;
+    private int lengthOfMatch;
+    protected int curChar;
 }

@@ -3,7 +3,6 @@
 package sandbox.svg.transform;
 
 /** Token Manager Error. */
-@SuppressWarnings("all") 
 public class TokenMgrError extends Error
 {
 
@@ -107,7 +106,7 @@ public class TokenMgrError extends Error
     return("Lexical error at line " + //
           errorLine + ", column " + //
           errorColumn + ".  Encountered: " + //
-          (EOFSeen ? "<EOF>" : ("'" + addEscapes(String.valueOf((char) curChar)) + "' (" + curChar + "),")) + //
+          (EOFSeen ? "<EOF>" : ("'" + addEscapes(String.valueOf(curChar)) + "' (" + curChar + "),")) + //
           (errorAfter == null || errorAfter.length() == 0 ? "" : " after prefix \"" + addEscapes(errorAfter) + "\"")) + //
           (lexState == 0 ? "" : " (in lexical state " + lexState + ")");
   }
@@ -145,4 +144,4 @@ public class TokenMgrError extends Error
     this(LexicalErr(EOFSeen, lexState, errorLine, errorColumn, errorAfter, curChar), reason);
   }
 }
-/* JavaCC - OriginalChecksum=86612f1351d7f038a2a4dd23482d7b28 (do not edit this line) */
+/* JavaCC - OriginalChecksum=1a14527217ba29e755deb2f86f27907d (do not edit this line) */

@@ -37,6 +37,9 @@ $(1)  : $(addsuffix .java,$(addprefix src/main/java/,$(subst .,/,$(2)))) $(3) di
 
 endef
 
+jakarta.mail.jar = \
+	$(lib.dir)/jakarta/mail/jakarta.mail-api/2.1.3/jakarta.mail-api-2.1.3.jar
+
 twitter.hbc.jars  = \
 	$(lib.dir)/org/apache/httpcomponents/httpcore/4.4.3/httpcore-4.4.3.jar \
 	$(lib.dir)/commons-codec/commons-codec/1.10/commons-codec-1.10.jar \
@@ -196,8 +199,12 @@ jaxb.jar=\
 
 snakeyaml.jar=$(lib.dir)/org/yaml/snakeyaml/2.3/snakeyaml-2.3.jar
 
-all_maven_jars = $(sort $(apache.poi.jar) ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar} ${freemarker.jar} ${jaxb.jar} ${snakeyaml.jar}    )
+mime4j.jars=\
+	$(lib.dir)/org/apache/james/apache-mime4j-core/0.8.11/apache-mime4j-core-0.8.11.jar \
+	$(lib.dir)/commons-io/commons-io/2.18.0/commons-io-2.18.0.jar
 
+all_maven_jars = $(sort $(apache.poi.jar) ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} \
+	$(jakarta.mail.jar) ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar} ${freemarker.jar} ${jaxb.jar} ${snakeyaml.jar} $(mime4j.jars) )
 
 all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
 	xml2xsd weatherarchive gribouille java2graph githistory nashornserver \
@@ -299,7 +306,7 @@ $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommand
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/main/java/sandbox/tools/pojogenerator/parser/PojoParser.java))
 $(eval $(call compile,theses2gexf,sandbox.tools.thesesfr.ThesesfrToGraph, ${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander.jar} ${jaxb.jar}))
-$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}  ${jetty.jars} ${apache.httpclient.jars}))
+$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}  ${jetty.jars} ${apache.httpclient.jars} $(mime4j.jars)) )
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

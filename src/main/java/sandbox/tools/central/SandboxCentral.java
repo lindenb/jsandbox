@@ -15,6 +15,7 @@ import sandbox.tools.fileserver.FileServer;
 import sandbox.tools.htmlinxml.HtmlInXml;
 import sandbox.tools.java2xml.JavaToXml;
 import sandbox.tools.json2xml.Json2Xml;
+import sandbox.tools.mail2xml.Mail2Xml;
 import sandbox.tools.svgshow.SVGShow;
 import sandbox.tools.swingfactory.SwingFactory;
 import sandbox.tools.swingwatcher.SwingWatcher;
@@ -60,6 +61,7 @@ public class SandboxCentral {
 		register(FindDuplicateFiles.class);
 		register(DiskUsageBySuffix.class);
 		register(HtmlInXml.class);
+		register(Mail2Xml.class);
 		register(VelocityJson.class);
 		register(YamlToXml.class);
 		register(TreeMapMaker.class);

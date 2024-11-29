@@ -88,7 +88,7 @@ public class VelocityJson extends Launcher {
 		else if(e.isJsonObject()) {
 			final JsonObject x = e.getAsJsonObject();
 			final Map<String,Object> w = new HashMap<>();
-			w.entrySet().stream().forEach(KV->{
+			x.entrySet().stream().forEach(KV->{
 				w.put(KV.getKey(),flatten(x.get(KV.getKey())));
 				});
 			return w;
@@ -136,6 +136,9 @@ public class VelocityJson extends Launcher {
 						final Object o;
 						if(type.equals("string")) {
 							o=value;
+							}
+						else if(type.equals("bool") || type.equals("boolean")) {
+							o = Boolean.parseBoolean(value);
 							}
 						else if(type.equals("int") || type.equals("integer")) {
 							o = Integer.parseInt(value);
