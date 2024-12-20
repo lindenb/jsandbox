@@ -2,6 +2,7 @@ package sandbox.tools.mail2xml;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -26,8 +27,17 @@ public class Mail2Xml extends Launcher {
 	
 	private class MyHandler extends AbstractContentHandler {
 		final XmlStreamWriter w;
+		
 		MyHandler( XmlStreamWriter w ) {
 			this.w=w;
+			}
+		@Override
+		public void preamble(InputStream is) throws MimeException, IOException {
+			IOUtils.copyTo(is, System.err);
+			}
+		@Override
+		public void epilogue(InputStream is) throws MimeException, IOException {
+			IOUtils.copyTo(is, System.err);
 			}
 		@Override
 		public void startMessage() throws MimeException {
@@ -55,6 +65,7 @@ public class Mail2Xml extends Launcher {
 		@Override
 		public void body(BodyDescriptor bd, InputStream is) throws MimeException, IOException {
 			w.writeStartElement("body");
+			System.err.println(bd);
 			w.writeAttribute("charset", bd.getCharset());
 			if(bd.getContentLength()>=0) w.writeAttribute("content-length",bd.getContentLength());
 			w.writeAttribute("media-type",bd.getMediaType());
@@ -62,14 +73,20 @@ public class Mail2Xml extends Launcher {
 			w.writeAttribute("sub-type",bd.getSubType());
 			w.writeAttribute("transfert-encoding",bd.getTransferEncoding());
 			if(bd.getBoundary()!=null) w.writeAttribute("boundary",bd.getBoundary());
-			try{
-				byte[] array=IOUtils.slurp(is);
-				w.writeCharacters(new String(array));
+			if(bd.getMediaType().equals("text/plain")) {
+				try(InputStreamReader isr=new InputStreamReader(is, bd.getCharset())) {
+					char[] buf=new char[2024];
+					for(;;) {
+						int n=isr.read(buf);
+						if(n==-1) break;
+						w.writeCharacters(buf, 0, n);
+						}
+					}
 				}
-			catch(Throwable err) {
-				w.writeComment(err.getMessage());
+			else
+				{
+				IOUtils.consume(is);
 				}
-			
 			}
 		@Override
 		public void endBodyPart() throws MimeException {

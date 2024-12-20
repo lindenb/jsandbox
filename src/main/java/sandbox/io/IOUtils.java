@@ -154,6 +154,14 @@ public static String slurp(final File file) throws IOException {
 	}
 
 
+public static long consume(final InputStream is) throws IOException {
+	try(NullOutputStream out=new NullOutputStream()) {
+		copyTo(is,out);
+		return out.length();
+		}
+	}
+
+
 public static byte[] slurp(final InputStream is) throws IOException {
 	try(ByteArrayOutputStream out=new ByteArrayOutputStream()) {
 		copyTo(is,out);
