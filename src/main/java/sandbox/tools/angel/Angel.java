@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.io.Console;
 import java.math.BigInteger;
 import java.security.MessageDigest;
-import java.util.Base64;
 import java.util.List;
 
 import javax.swing.JLabel;
