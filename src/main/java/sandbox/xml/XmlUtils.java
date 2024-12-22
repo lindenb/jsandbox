@@ -34,8 +34,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import sandbox.StringUtils;
 import sandbox.iterator.AbstractIterator;
+import sandbox.lang.StringUtils;
 import sandbox.lang.reflect.Primitive;
 
 

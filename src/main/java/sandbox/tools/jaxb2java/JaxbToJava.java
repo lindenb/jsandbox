@@ -19,8 +19,8 @@ import javax.xml.datatype.XMLGregorianCalendar;
 import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
-import sandbox.StringUtils;
 import sandbox.io.IndentWriter;
+import sandbox.lang.StringUtils;
 
 public class JaxbToJava extends Launcher{
 	@Parameter(names={"-o"},description=OUTPUT_OR_STANDOUT)

@@ -35,9 +35,9 @@ import javax.xml.stream.events.XMLEvent;
 import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
-import sandbox.StringUtils;
 import sandbox.cipher.CipherCodec;
 import sandbox.cipher.CipherCodecFactory;
+import sandbox.lang.StringUtils;
 
 //
 public class XmlCipher extends Launcher {

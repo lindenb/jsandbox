@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 
 import com.beust.jcommander.IStringConverter;
 
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 
 public class RandomParamSupplier implements IStringConverter<Supplier<Random>>{
 	

@@ -37,8 +37,8 @@ import org.w3c.dom.Node;
 
 
 import sandbox.Launcher;
-import sandbox.StringUtils;
 import sandbox.awt.Dimension2D;
+import sandbox.lang.StringUtils;
 import sandbox.svg.SVG;
 import sandbox.xml.XMLException;
 

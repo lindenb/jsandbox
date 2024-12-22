@@ -1,6 +1,6 @@
 package sandbox.test;
 
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 
 public class Assert {
 

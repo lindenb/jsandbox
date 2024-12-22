@@ -23,7 +23,7 @@ import org.w3c.dom.UserDataHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 
 public abstract class AbstractNode implements org.w3c.dom.Node {
 	private /*final no, node can be 'adopted' */ DocumentImpl ownerDoc;

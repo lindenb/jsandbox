@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.lang;
 
 import java.io.IOException;
 import java.io.StringReader;

@@ -6,7 +6,7 @@ import java.util.function.DoubleSupplier;
 
 import com.beust.jcommander.IStringConverter;
 
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 
 public class DoubleParamSupplier implements IStringConverter<DoubleSupplier>{
 	public static final String OPT_DESC="";

@@ -29,11 +29,10 @@ import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
-
-import sandbox.StringUtils;
 import sandbox.awt.Colors;
 import sandbox.hershey.Hershey;
 import sandbox.io.IOUtils;
+import sandbox.lang.StringUtils;
 import sandbox.svg.SVG;
 import sandbox.util.function.FunctionalMap;
 

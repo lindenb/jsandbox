@@ -19,7 +19,7 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 
 public class ElementImpl extends AbstractNamedNode implements org.w3c.dom.Element {
 	protected NamedNodeMapImpl namedNodeMap = null;

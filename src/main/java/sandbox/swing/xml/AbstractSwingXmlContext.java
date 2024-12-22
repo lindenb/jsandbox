@@ -21,7 +21,7 @@ import org.w3c.dom.Node;
 
 
 import sandbox.Logger;
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 import sandbox.util.Pair;
 import sandbox.xml.XmlUtils;
 

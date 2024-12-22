@@ -15,9 +15,9 @@ import java.util.Scanner;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Element;
 
-import sandbox.StringUtils;
 import sandbox.awt.Dimension2D;
 import sandbox.io.RuntimeIOException;
+import sandbox.lang.StringUtils;
 import sandbox.svg.path.SVGPathParser;
 
 public class SVGUtils  extends SVG {

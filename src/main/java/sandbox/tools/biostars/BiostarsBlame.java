@@ -20,9 +20,9 @@ import org.w3c.dom.Element;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.html.TidyToDom;
 import sandbox.io.IOUtils;
+import sandbox.lang.StringUtils;
 import sandbox.xml.XmlUtils;
 
 public class BiostarsBlame extends Launcher {

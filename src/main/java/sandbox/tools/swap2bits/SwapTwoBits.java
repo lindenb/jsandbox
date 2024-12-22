@@ -7,7 +7,7 @@ import java.util.List;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 
 public class SwapTwoBits extends Launcher {
 	protected static final Logger LOG=Logger.builder(SwapTwoBits.class).build();

@@ -20,8 +20,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import sandbox.StringUtils;
 import sandbox.awt.Colors;
+import sandbox.lang.StringUtils;
 
 public class SVGGraphics2DRenderer
 	{

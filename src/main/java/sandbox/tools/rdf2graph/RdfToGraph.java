@@ -30,9 +30,9 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.gexf.Gexf;
 import sandbox.io.IOUtils;
+import sandbox.lang.StringUtils;
 import sandbox.xml.stream.XmlStreamWriter;
 
 public class RdfToGraph extends Launcher

@@ -24,6 +24,7 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 
 import sandbox.io.IOUtils;
+import sandbox.lang.StringUtils;
 
 public class ImageUtils
 	{

@@ -20,10 +20,10 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.jcommander.FileSizeConverter;
 import sandbox.jcommander.NoSplitter;
 import sandbox.lang.Counter;
+import sandbox.lang.StringUtils;
 import sandbox.tools.central.ProgramDescriptor;
 import sandbox.tools.treemap.TreeMapMaker;
 

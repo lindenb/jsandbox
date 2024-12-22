@@ -16,11 +16,11 @@ import java.util.function.Function;
 import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
-import sandbox.StringUtils;
 import sandbox.date.DateParser;
 import sandbox.io.IOUtils;
 import sandbox.jcommander.DurationConverter;
 import sandbox.jcommander.NoSplitter;
+import sandbox.lang.StringUtils;
 
 public class IgDigest extends Launcher {
 	private static final sandbox.Logger LOG = sandbox.Logger.builder(IgDigest.class).build();

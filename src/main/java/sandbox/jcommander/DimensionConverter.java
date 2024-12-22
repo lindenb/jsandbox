@@ -17,7 +17,7 @@ import javax.imageio.stream.ImageInputStream;
 import com.beust.jcommander.IStringConverter;
 
 import sandbox.Logger;
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 
 public class DimensionConverter
 	implements Function<String,Dimension>

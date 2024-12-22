@@ -28,12 +28,12 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.colors.Color;
 import sandbox.colors.parser.ColorParser;
 import sandbox.http.CookieStoreUtils;
 import sandbox.io.ArchiveFactory;
 import sandbox.io.IOUtils;
+import sandbox.lang.StringUtils;
 
 public class MosaicOfPictures extends Launcher
 	{

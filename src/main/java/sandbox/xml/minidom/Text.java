@@ -5,7 +5,7 @@ import java.util.function.Consumer;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 
 public class Text extends Node implements CharSequence {
 	protected String content;

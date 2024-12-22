@@ -17,9 +17,9 @@ import java.util.function.Supplier;
 import com.beust.jcommander.Parameter;
 
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.jcommander.DoubleParamSupplier;
 import sandbox.jcommander.NoSplitter;
+import sandbox.lang.StringUtils;
 
 public class Hatching01 extends AbstractDrawingProgram {
 	

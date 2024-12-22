@@ -17,6 +17,7 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import sandbox.io.IOUtils;
+import sandbox.lang.StringUtils;
 
 
 public class XmlPath extends Launcher {

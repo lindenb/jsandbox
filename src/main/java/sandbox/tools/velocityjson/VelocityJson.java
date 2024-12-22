@@ -31,9 +31,9 @@ import com.google.gson.JsonPrimitive;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.io.FileHeader;
 import sandbox.io.IOUtils;
+import sandbox.lang.StringUtils;
 import sandbox.tools.central.ProgramDescriptor;
 
 public class VelocityJson extends Launcher {

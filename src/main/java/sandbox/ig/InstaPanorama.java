@@ -12,11 +12,11 @@ import com.beust.jcommander.Parameter;
 import sandbox.ImageUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.colors.Color;
 import sandbox.colors.NamedColors;
 import sandbox.colors.parser.ColorParser;
 import sandbox.jcommander.NoSplitter;
+import sandbox.lang.StringUtils;
 
 public class InstaPanorama extends Launcher {
 	private static final String TOKEN="__TOKEN__";

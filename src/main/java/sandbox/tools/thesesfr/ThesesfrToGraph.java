@@ -31,8 +31,8 @@ import com.google.gson.JsonParser;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.gexf.Gexf;
+import sandbox.lang.StringUtils;
 
 public class ThesesfrToGraph extends Launcher {
 	

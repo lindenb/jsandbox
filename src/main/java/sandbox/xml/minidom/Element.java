@@ -20,7 +20,7 @@ import javax.xml.stream.events.StartElement;
 
 import org.w3c.dom.NamedNodeMap;
 
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 import sandbox.util.IterableHasStream;
 import sandbox.xml.DOMIterator;
 

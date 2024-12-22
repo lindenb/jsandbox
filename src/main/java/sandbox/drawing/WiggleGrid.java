@@ -25,12 +25,12 @@ import com.beust.jcommander.Parameter;
 import sandbox.ImageUtils;
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.colors.NamedColors;
 import sandbox.colors.parser.ColorParser;
 import sandbox.jcommander.DimensionConverter;
 import sandbox.jcommander.DoubleParamSupplier;
 import sandbox.jcommander.NoSplitter;
+import sandbox.lang.StringUtils;
 
 public class WiggleGrid extends Launcher {
 	private static final Logger LOG = Logger.builder(WiggleGrid.class).build();

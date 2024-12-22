@@ -31,13 +31,13 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.date.DateParser;
 import sandbox.feed.RssToAtom;
 import sandbox.http.CookieStoreUtils;
 import sandbox.io.IOUtils;
 import sandbox.jcommander.DurationConverter;
 import sandbox.jcommander.NoSplitter;
+import sandbox.lang.StringUtils;
 import sandbox.xml.XMLSerializer;
 
 public class AtomToHtml extends Launcher {

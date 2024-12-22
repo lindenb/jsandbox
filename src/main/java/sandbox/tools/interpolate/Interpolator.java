@@ -17,8 +17,8 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.io.IOUtils;
+import sandbox.lang.StringUtils;
 
 public class Interpolator extends Launcher {
 	private static final Logger LOG = Logger.builder(Interpolator.class).build();

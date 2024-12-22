@@ -18,7 +18,7 @@ import org.w3c.dom.Text;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 
 public class JavascriptTemplate  extends Launcher {
 	private static final Logger LOG = Logger.builder(JavascriptTemplate.class).build();

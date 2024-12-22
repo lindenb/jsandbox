@@ -16,8 +16,8 @@ import java.util.stream.Collectors;
 import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
-import sandbox.StringUtils;
 import sandbox.io.IndentWriter;
+import sandbox.lang.StringUtils;
 import sandbox.tools.central.ProgramDescriptor;
 
 public class SwingFactory extends Launcher {

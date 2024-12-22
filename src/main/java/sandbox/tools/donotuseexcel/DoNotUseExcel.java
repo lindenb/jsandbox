@@ -30,8 +30,8 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.io.IOUtils;
+import sandbox.lang.StringUtils;
 
 /*
  *  gunzip -c ~/data/GRCh37.gtf.gz  | cut -f 9 | tr ";" "\n" | grep -w gene_name | cut -d '"' -f 2 | uniq | sort | uniq > genes.txt

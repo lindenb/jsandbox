@@ -13,9 +13,9 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.html.TidyToDom;
 import sandbox.io.IOUtils;
+import sandbox.lang.StringUtils;
 
 
 public class RssToAtom  implements Function<Document,Document> {

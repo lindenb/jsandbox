@@ -25,12 +25,12 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.bigsort.ExternalSortFactory;
 import sandbox.bigsort.ExternalSortFactory.ExternalSort;
 import sandbox.iterator.EqualRangeIterator;
 import sandbox.jcommander.FileSizeConverter;
 import sandbox.jcommander.NoSplitter;
+import sandbox.lang.StringUtils;
 import sandbox.tools.central.ProgramDescriptor;
 
 public class FindDuplicateFiles extends Launcher{

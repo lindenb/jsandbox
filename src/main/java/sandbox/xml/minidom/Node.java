@@ -8,8 +8,7 @@ import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
-
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 
 public abstract class Node {
 private static long ID_GENERATOR=0L;

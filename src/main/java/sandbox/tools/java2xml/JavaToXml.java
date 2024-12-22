@@ -19,7 +19,7 @@ import javax.xml.stream.XMLStreamWriter;
 import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 import sandbox.lang.reflect.Primitive;
 import sandbox.tools.central.ProgramDescriptor;
 

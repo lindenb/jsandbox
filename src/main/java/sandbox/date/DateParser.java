@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 
 public class DateParser implements Function<String, Optional<Date>> {
 	private final List< Function<String,Date>> delegates = new ArrayList<>();

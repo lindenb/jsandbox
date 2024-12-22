@@ -37,7 +37,7 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
+import sandbox.lang.StringUtils;
 import sandbox.xml.XmlUtils;
 
 public class XmlToPPT extends Launcher {

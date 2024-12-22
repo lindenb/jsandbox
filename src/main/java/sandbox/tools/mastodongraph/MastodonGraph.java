@@ -42,9 +42,9 @@ import com.google.gson.JsonParser;
 
 import sandbox.Launcher;
 import sandbox.Logger;
-import sandbox.StringUtils;
 import sandbox.gexf.Gexf;
 import sandbox.io.IOUtils;
+import sandbox.lang.StringUtils;
 
 public class MastodonGraph extends Launcher {
 	private static final Logger LOG= Logger.builder(MastodonGraph.class).build();
