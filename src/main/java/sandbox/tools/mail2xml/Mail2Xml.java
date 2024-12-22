@@ -122,7 +122,10 @@ public int doWork(final List<String> args) {
 			{
 			for(Path p:files) {
 				try(InputStream in=IOUtils.openPathAsInputStream(p)) {
+					w.writeStartElement("mailbox");
+					w.writeAttribute("name", p.toString());
 					this.parse(w,in);
+					w.writeEndElement();
 					}
 				}
 			}

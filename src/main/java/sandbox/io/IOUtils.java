@@ -240,7 +240,7 @@ public static OutputStream openFileAsOutputStream(final File pathOrNull) throws 
 	}
 
 public static OutputStream openPathAsOutputStream(final Path pathOrNull) throws IOException {
-	if(pathOrNull==null) return System.out;
+	if(pathOrNull==null || pathOrNull.toString().equals("-")) return System.out;
 	OutputStream os = Files.newOutputStream(pathOrNull);
 	if(pathOrNull.getFileName().toString().endsWith(".gz")) {
 		return new GZIPOutputStream(os) {

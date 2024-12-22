@@ -5,16 +5,17 @@ import java.awt.Color;
 import java.io.Console;
 import java.math.BigInteger;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 
-import org.apache.commons.lang3.StringUtils;
 
 import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
+import sandbox.lang.StringUtils;
 import sandbox.tools.central.ProgramDescriptor;
 
 public class Angel extends Launcher {
@@ -175,6 +176,67 @@ public class Angel extends Launcher {
 
    		}
    */
+   
+   private class XCode extends Transcoder {
+	       private final String B64PAD = "";
+	       private final int CHRSZ = 8;  // 8 bits per character
+
+	       // Convert string to binary form (like str2binb in JS, but for Java)
+	       private byte[] str2binb(String str) {
+	           byte[] bin = new byte[(str.length() * CHRSZ + 7) / 8];
+	           for (int i = 0; i < str.length(); i++) {
+	               int ch = str.charAt(i);
+	               int bytePos = i * CHRSZ / 8;
+	               bin[bytePos] |= (ch & 0xFF) << (24 - (i * CHRSZ) % 32);
+	           	   }
+	           return bin;
+	       	   }
+
+	       // Simplified SHA-1 core function
+	       private byte[] coreSha1(byte[] x, int len)  {
+			try {
+				MessageDigest md = MessageDigest.getInstance("SHA-1");
+				md.update(x);
+		        return md.digest();
+			} catch (NoSuchAlgorithmException e) {
+				throw new RuntimeException(e);
+				}
+	       }
+
+	       // Convert binary to Base64 (simplified, not including padding)
+	       private String binb2b64(byte[] binarray) {
+	           StringBuilder str = new StringBuilder();
+	           for (int i = 0; i < binarray.length; i += 3) {
+	               int combined = 0;
+	               for (int j = 0; j < 3 && i + j < binarray.length; j++) {
+	                   combined |= ((binarray[i + j] & 0xFF) << (16 - j * 8));
+	               }
+	               for (int j = 0; j < 4; j++) {
+	                   if (i * 8 + j * 6 > binarray.length * 8) {
+	                       str.append(B64PAD);
+	                   } else {
+	                       int charIndex = (combined >>> (6 * (3 - j))) & 0x3F;
+	                       // Here you would typically use a Base64 charset but for brevity:
+	                       str.append(Integer.toHexString(charIndex));
+	                   }
+	               }
+	           }
+	           return str.toString();
+	       }
+
+	       // SHA-1 hash function
+	       private String b64_sha1(String s) {
+	           byte[] binb = str2binb(s);
+	           byte[] sha1 = coreSha1(binb, s.length() * CHRSZ);
+	           return binb2b64(sha1).substring(0, 8) + "1a";
+	       }
+
+		   	@Override
+		    String make(String host, String p) {
+		   		return  b64_sha1(p + ":" + host);
+		   		}
+	   
+   			}
     
     public static void main(String[] args) {
 		new Angel().instanceMainWithExit(args);

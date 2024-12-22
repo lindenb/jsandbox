@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import sandbox.tools.angel.Angel;
+import sandbox.tools.crypt.Crypt;
 import sandbox.tools.dusuffix.DiskUsageBySuffix;
 import sandbox.tools.fdup.FindDuplicateFiles;
 import sandbox.tools.fileserver.FileServer;
@@ -53,6 +54,7 @@ public class SandboxCentral {
 		}
 	
 	private void instanceMain(List<String> args) {
+		register(Crypt.class);
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
 		register(JavaToXml.class);
