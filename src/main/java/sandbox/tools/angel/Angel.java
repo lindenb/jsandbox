@@ -19,7 +19,7 @@ import sandbox.lang.StringUtils;
 import sandbox.tools.central.ProgramDescriptor;
 
 public class Angel extends Launcher {
-	@Parameter(names= { "--pasword","-P"},description="password")
+	@Parameter(names= { "--password","-P"},description="password")
     private String cliPassword=null;
 
 	@Parameter(names= { "--plain"},description="no gui")
@@ -49,7 +49,7 @@ public class Angel extends Launcher {
         if (masterPassword != null && !masterPassword.isEmpty()) {
 	        String domain = extractDomain(host);
 	        final Transcoder tr;
-	        tr = new DefaultTranscoder();
+	        tr = new XCode();
             String password = tr.make(domain, masterPassword);
 	        if(plain) {
 	            JLabel jlabel = new JLabel(password);
@@ -177,64 +177,114 @@ public class Angel extends Launcher {
    		}
    */
    
-   private class XCode extends Transcoder {
-	       private final String B64PAD = "";
-	       private final int CHRSZ = 8;  // 8 bits per character
+   		private class XCode extends Transcoder {
+	           private static final int CHARSZ = 8;
+	           private static final String BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-	       // Convert string to binary form (like str2binb in JS, but for Java)
-	       private byte[] str2binb(String str) {
-	           byte[] bin = new byte[(str.length() * CHRSZ + 7) / 8];
-	           for (int i = 0; i < str.length(); i++) {
-	               int ch = str.charAt(i);
-	               int bytePos = i * CHRSZ / 8;
-	               bin[bytePos] |= (ch & 0xFF) << (24 - (i * CHRSZ) % 32);
-	           	   }
-	           return bin;
-	       	   }
 
-	       // Simplified SHA-1 core function
-	       private byte[] coreSha1(byte[] x, int len)  {
-			try {
-				MessageDigest md = MessageDigest.getInstance("SHA-1");
-				md.update(x);
-		        return md.digest();
-			} catch (NoSuchAlgorithmException e) {
-				throw new RuntimeException(e);
-				}
-	       }
+	           private int[] core_sha1(int[] x, int len) {
+	               x[len >> 5] |= 0x80 << (24 - len % 32);
+	               x[((len + 64 >> 9) << 4) + 15] = len;
 
-	       // Convert binary to Base64 (simplified, not including padding)
-	       private String binb2b64(byte[] binarray) {
-	           StringBuilder str = new StringBuilder();
-	           for (int i = 0; i < binarray.length; i += 3) {
-	               int combined = 0;
-	               for (int j = 0; j < 3 && i + j < binarray.length; j++) {
-	                   combined |= ((binarray[i + j] & 0xFF) << (16 - j * 8));
+	               int[] w = new int[80];
+	               int a = 0x67452301;
+	               int b = 0xEFCDAB89;
+	               int c = 0x98BADCFE;
+	               int d = 0x10325476;
+	               int e = 0xC3D2E1F0;
+
+	               for (int i = 0; i < x.length; i += 16) {
+	                   int olda = a;
+	                   int oldb = b;
+	                   int oldc = c;
+	                   int oldd = d;
+	                   int olde = e;
+
+	                   for (int j = 0; j < 80; j++) {
+	                       if (j < 16) {
+	                           w[j] = x[i + j];
+	                       } else {
+	                           w[j] = rol(w[j - 3] ^ w[j - 8] ^ w[j - 14] ^ w[j - 16], 1);
+	                       }
+	                       int t = safe_add(safe_add(rol(a, 5), sha1_ft(j, b, c, d)),
+	                               safe_add(safe_add(e, w[j]), sha1_kt(j)));
+	                       e = d;
+	                       d = c;
+	                       c = rol(b, 30);
+	                       b = a;
+	                       a = t;
+	                   }
+
+	                   a = safe_add(a, olda);
+	                   b = safe_add(b, oldb);
+	                   c = safe_add(c, oldc);
+	                   d = safe_add(d, oldd);
+	                   e = safe_add(e, olde);
 	               }
-	               for (int j = 0; j < 4; j++) {
-	                   if (i * 8 + j * 6 > binarray.length * 8) {
-	                       str.append(B64PAD);
-	                   } else {
-	                       int charIndex = (combined >>> (6 * (3 - j))) & 0x3F;
-	                       // Here you would typically use a Base64 charset but for brevity:
-	                       str.append(Integer.toHexString(charIndex));
+
+	               return new int[]{a, b, c, d, e};
+	           }
+
+	           private int sha1_ft(int t, int b, int c, int d) {
+	               if (t < 20) return (b & c) | (~b & d);
+	               if (t < 40) return b ^ c ^ d;
+	               if (t < 60) return (b & c) | (b & d) | (c & d);
+	               return b ^ c ^ d;
+	           }
+
+	           private int sha1_kt(int t) {
+	               if (t < 20) return 0x5A827999;
+	               if (t < 40) return 0x6ED9EBA1;
+	               if (t < 60) return 0x8F1BBCDC;
+	               return 0xCA62C1D6;
+	           }
+
+	           private int safe_add(int x, int y) {
+	               int lsw = (x & 0xFFFF) + (y & 0xFFFF);
+	               int msw = (x >> 16) + (y >> 16) + (lsw >> 16);
+	               return (msw << 16) | (lsw & 0xFFFF);
+	           }
+
+	           private  int rol(int num, int cnt) {
+	               return (num << cnt) | (num >>> (32 - cnt));
+	           }
+
+	           private int[] str2binb(String str) {
+	               int[] bin = new int[(str.length() * CHARSZ + 31) >> 5];
+	               int mask = (1 << CHARSZ) - 1;
+	               for (int i = 0; i < str.length() * CHARSZ; i += CHARSZ) {
+	                   bin[i >> 5] |= (str.charAt(i / CHARSZ) & mask) << (24 - i % 32);
+	               }
+	               return bin;
+	           }
+
+	           private String binb2b64(int[] binarray) {
+	               StringBuilder str = new StringBuilder();
+	               int triplet, length = binarray.length * 4;
+
+	               for (int i = 0; i < length; i += 3) {
+	                   triplet = (((binarray[i >> 2] >> 8 * (3 - i % 4)) & 0xFF) << 16)
+	                           | (((i + 1 < length ? binarray[(i + 1) >> 2] >> 8 * (3 - (i + 1) % 4) : 0) & 0xFF) << 8)
+	                           | ((i + 2 < length ? binarray[(i + 2) >> 2] >> 8 * (3 - (i + 2) % 4) : 0) & 0xFF);
+
+	                   for (int j = 0; j < 4; j++) {
+	                       if (i * 8 + j * 6 > binarray.length * 32) {
+	                           str.append("=");
+	                       } else {
+	                           str.append(BASE64_CHARS.charAt((triplet >> 6 * (3 - j)) & 0x3F));
+	                       }
 	                   }
 	               }
+	               return str.toString();
 	           }
-	           return str.toString();
-	       }
-
-	       // SHA-1 hash function
-	       private String b64_sha1(String s) {
-	           byte[] binb = str2binb(s);
-	           byte[] sha1 = coreSha1(binb, s.length() * CHRSZ);
-	           return binb2b64(sha1).substring(0, 8) + "1a";
-	       }
+	       
 
 		   	@Override
-		    String make(String host, String p) {
-		   		return  b64_sha1(p + ":" + host);
-		   		}
+		    String make(String host, String p) {		
+	               String input = p + ":" + host;
+	               int[] hash = core_sha1(str2binb(input), input.length() * CHARSZ);
+	               return binb2b64(hash).substring(0, 8) + "1a";
+	           	}
 	   
    			}
     

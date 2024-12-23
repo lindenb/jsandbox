@@ -1,4 +1,5 @@
 package sandbox.io;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -10,7 +11,7 @@ import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-public abstract class ArchiveFactory implements AutoCloseable {
+public abstract class ArchiveFactory implements Closeable {
 	public static final String OPT_DESC = "Existing directory or zip file";
 	public abstract OutputStream openOuputStream(final String filename) throws IOException;
 	

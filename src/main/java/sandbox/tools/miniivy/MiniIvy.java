@@ -31,6 +31,7 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
+import sandbox.tools.central.ProgramDescriptor;
 import sandbox.xml.DefaultNamespaceContext;
 
 public class MiniIvy extends Launcher
@@ -443,4 +444,14 @@ public class MiniIvy extends Launcher
 		{
 		new MiniIvy().instanceMainWithExit(args);
 		}
+	
+    public static ProgramDescriptor getProgramDescriptor() {
+    	return new ProgramDescriptor() {
+    		@Override
+    		public String getName() {
+    			return "miniivy";
+    			}
+    		};
+    	}	
+
 	}

@@ -1,9 +1,10 @@
-package sandbox;
+package sandbox.tools.nashornserver;
 
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.util.logging.Logger;
+import java.io.Reader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
@@ -12,9 +13,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
+
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -23,69 +22,65 @@ import org.eclipse.jetty.server.session.HashSessionIdManager;
 import org.eclipse.jetty.server.session.HashSessionManager;
 import org.eclipse.jetty.server.session.SessionHandler;
 
-import sandbox.io.IOUtils;
+import com.beust.jcommander.Parameter;
 
-public class NashornServer extends AbstractApplication {
-	private static Logger LOG=Logger.getLogger("nashornserver");
+import sandbox.Logger;
+import sandbox.Launcher;
+import sandbox.io.IOUtils;
+import sandbox.tools.central.ProgramDescriptor;
+
+public class NashornServer extends Launcher {
+	private static final Logger LOG=Logger.builder(NashornServer.class).build();
 	
+    @Parameter(names={"-f","--script"},description="javascript file",required = true)
+	private Path javascriptFile=null;
+    @Parameter(names={"-P","--port"},description="server port")
+	private int serverPort = 8080;
+    @Parameter(names={"-d","--path"},description="servlet path")
+	private String servletPath="/";
 	
 	private static class Handler  extends AbstractHandler {
-		final File javascriptFile;
-		Handler(File javascriptFile) {
+		final Path javascriptFile;
+		Handler(Path javascriptFile) {
 			this.javascriptFile=javascriptFile;
-		}
+			}
+		
+		 
 		@Override
 		public void handle(String target, Request baseRequest, final HttpServletRequest httpReq, final HttpServletResponse httpResp)
 				throws IOException, ServletException {
+			final ScriptEngine scriptEngine;
+			try {
 				final ScriptEngineManager mgr=new  ScriptEngineManager();
-				final ScriptEngine scriptEngine= mgr.getEngineByExtension("js");
+				scriptEngine= mgr.getEngineByExtension("js");
 				if(scriptEngine==null)
 		     		{
+					LOG.error("Cannot get JS engine");
 					throw new ServletException("Cannot get a javascript engine");
 		     		}	
-				
-			FileReader scriptReader= null;
-			try {
-				 scriptReader = new FileReader(this.javascriptFile);
+			
+			try (Reader scriptReader = Files.newBufferedReader(this.javascriptFile)) {
 				 scriptEngine.eval(scriptReader);
-				 scriptReader.close();
 				 Invocable.class.cast(scriptEngine).invokeFunction("handle",target,baseRequest,httpReq,httpResp);
-			} catch(java.lang.NoSuchMethodException err) {
-				throw new ServletException("file \""+this.javascriptFile+"\" is missing a method handle(target,baseRequest,req,resp)",err);
-			}
+				}
+			} catch(java.lang.NoSuchMethodException e) {
+				throw new ServletException("file \""+this.javascriptFile+"\" is missing a method handle(target,baseRequest,req,resp)",e);
+				}
 				catch (final IOException e) {
 				throw e;
-			}  catch (final Exception e) {
+			}  catch (final Throwable e) {
 				throw new ServletException(e);
-			} finally {
-				IOUtils.close(scriptReader);
 			}
 		}
 		
 	}
-	
 	@Override
-	protected void fillOptions(Options options) {
-		options.addOption(Option.builder("f").longOpt("script").hasArg(true).desc("javascript file.").build());
-		options.addOption(Option.builder("P").longOpt("port").hasArg(true).desc("port. Default:8080").build());
-		options.addOption(Option.builder("p").longOpt("path").hasArg(true).desc("servlet path . default: \"/\"").build());
-		super.fillOptions(options);
-	}
-
-	@Override
-	protected int execute(final CommandLine cmd) {
-		if(!cmd.hasOption("f")) {
-		LOG.severe("option -f missing");
-		return -1;
-		}
+	public int doWork(List<String> args) {
+		IOUtils.assertFileExists(this.javascriptFile);
 		
-		final File javascriptFile = new File(cmd.getOptionValue("f"));
-		if(!javascriptFile.exists()) {
-			LOG.severe("Cannot open "+javascriptFile);
-			return -1;
-			}
-		 final Server server = new Server(Integer.parseInt(cmd.getOptionValue("P","8080")));
+		 final Server server = new Server(this.serverPort);
 		 try { 
+			 
 		     final HashSessionIdManager idmanager = new HashSessionIdManager();
 		     server.setSessionIdManager(idmanager);
 			 
@@ -95,11 +90,11 @@ public class NashornServer extends AbstractApplication {
 		     
 	        
 			 final Handler handler=new Handler(javascriptFile);
-			 sessions.setHandler(handler);
-			
+			 sessions.setHandler(handler);			
 			 final ContextHandler context = new ContextHandler();
-			 context.setContextPath(cmd.getOptionValue("p", "/"));
+			 context.setContextPath(this.servletPath);
 			 context.setHandler(sessions);
+			
 			server.setHandler(context);
 			server.start();
 	        server.dumpStdErr();
@@ -114,4 +109,13 @@ public class NashornServer extends AbstractApplication {
 		new NashornServer().instanceMainWithExit(args);
 	}
 
+    public static ProgramDescriptor getProgramDescriptor() {
+    	return new ProgramDescriptor() {
+    		@Override
+    		public String getName() {
+    			return "nashornserver";
+    			}
+    		};
+    	}	
+	
 }

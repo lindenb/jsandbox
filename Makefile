@@ -203,19 +203,28 @@ mime4j.jars=\
 	$(lib.dir)/org/apache/james/apache-mime4j-core/0.8.11/apache-mime4j-core-0.8.11.jar \
 	$(lib.dir)/commons-io/commons-io/2.18.0/commons-io-2.18.0.jar
 
+nashorn.jars=\
+	$(lib.dir)/org/openjdk/nashorn/nashorn-core/15.4/nashorn-core-15.4.jar \
+	$(lib.dir)/org/ow2/asm/asm-analysis/7.3.1/asm-analysis-7.3.1.jar \
+	$(lib.dir)/org/ow2/asm/asm-commons/7.3.1/asm-commons-7.3.1.jar \
+	$(lib.dir)/org/ow2/asm/asm-tree/7.3.1/asm-tree-7.3.1.jar \
+	$(lib.dir)/org/ow2/asm/asm-util/7.3.1/asm-util-7.3.1.jar \
+	$(lib.dir)/org/ow2/asm/asm/7.3.1/asm-7.3.1.jar
+
 all_maven_jars = $(sort $(apache.poi.jar) ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} \
-	$(jakarta.mail.jar) ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar} ${freemarker.jar} ${jaxb.jar} ${snakeyaml.jar} $(mime4j.jars) )
+	$(jakarta.mail.jar) ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar} ${freemarker.jar} ${jaxb.jar} ${snakeyaml.jar} $(mime4j.jars) $(nashorn.jars) )
+
+top: jsandbox
 
 all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
-	xml2xsd weatherarchive gribouille java2graph githistory nashornserver \
+	xml2xsd weatherarchive gribouille java2graph githistory  \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
-	packageeclipsejars xslserver java2xml mosaicofpictures flickrrss \
-	geneticpainting json2dom  twittergraph twitterfollow miniivy twitter01 aksum images2base64 \
+	packageeclipsejars xslserver java2xml flickrrss \
+	geneticpainting json2dom  twittergraph twitterfollow  twitter01 aksum images2base64 \
 	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom  xmlpath imagemap \
 	pcaviewer swap2bits
 
 
-$(eval $(call compile,miniivy,sandbox.tools.miniivy.MiniIvy,${jcommander.jar}))
 $(eval $(call compile,mywordle,sandbox.MyWordle,${jcommander.jar}))
 $(eval $(call compile,jfxwatcher,sandbox.JFXWatcher,))
 $(eval $(call compile,twitter01,sandbox.Twitter01, ${twitter.hbc.jars}))
@@ -226,7 +235,6 @@ $(eval $(call compile,json2dom,sandbox.Json2Dom,${google.gson.jars}))
 $(eval $(call compile,timelinemaker,sandbox.TimeLineMaker,${google.gson.jars} ${jcommander.jar}))
 $(eval $(call compile,geneticpainting,sandbox.tools.geneticpaint.GeneticPainting,${jcommander.jar}))
 $(eval $(call compile,flickrrss,sandbox.FlickrRss,${apache.commons.cli} ${slf4j.jars} ${org.scribe.jars}))
-$(eval $(call compile,mosaicofpictures,sandbox.tools.mosaic.MosaicOfPictures,${jcommander.jar} ${apache.httpclient.jars} ))
 $(eval $(call compile,montagegif,sandbox.tools.montagegif.MontageGif,${jcommander.jar}))
 $(eval $(call compile,java2xml,sandbox.Java2Xml,${jcommander.jar}))
 $(eval $(call compile,html2tty,sandbox.HtmlToTTY,${jcommander.jar}))
@@ -306,7 +314,7 @@ $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommand
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/main/java/sandbox/tools/pojogenerator/parser/PojoParser.java))
 $(eval $(call compile,theses2gexf,sandbox.tools.thesesfr.ThesesfrToGraph, ${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander.jar} ${jaxb.jar}))
-$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}  ${jetty.jars} ${apache.httpclient.jars} $(mime4j.jars)) )
+$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}  ${jetty.jars} ${apache.httpclient.jars} $(mime4j.jars) $(nashorn.jars)) )
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

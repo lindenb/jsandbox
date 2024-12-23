@@ -34,6 +34,7 @@ import sandbox.http.CookieStoreUtils;
 import sandbox.io.ArchiveFactory;
 import sandbox.io.IOUtils;
 import sandbox.lang.StringUtils;
+import sandbox.tools.central.ProgramDescriptor;
 
 public class MosaicOfPictures extends Launcher
 	{
@@ -292,6 +293,16 @@ public class MosaicOfPictures extends Launcher
 			return -1;
 			}
 		}
+	
+	public static ProgramDescriptor getProgramDescriptor() {
+		return new ProgramDescriptor() {
+			@Override
+			public String getName() {
+				return "mosaicofpictures";
+				}
+			};
+		}
+	
 	public static void main(final String[] args) throws Exception
 		{
 		new MosaicOfPictures().instanceMainWithExit(args);
