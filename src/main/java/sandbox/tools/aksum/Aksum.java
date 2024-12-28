@@ -7,10 +7,14 @@ import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.List;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+
+import sandbox.Launcher;
+import sandbox.tools.central.ProgramDescriptor;
 
 
 class AngleDeg
@@ -180,7 +184,7 @@ class Face
 
 
 @SuppressWarnings("serial")
-public class Aksum extends JFrame  implements Runnable
+class AksumFrame extends JFrame  implements Runnable
 {
 	JPanel			drawingArea;
 	Image			buffer;
@@ -199,7 +203,7 @@ public class Aksum extends JFrame  implements Runnable
 	
 	double[] lesCos=new double [360],lesSin=new double[360];
 	
-	public Aksum()
+	AksumFrame()
 		{
 		super("Aksum");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -390,12 +394,13 @@ public class Aksum extends JFrame  implements Runnable
 		please_stop=true;
 		}
 	
+}
 
-
-	// Main entry point when running standalone
-	public static void main(String[] args) throws Exception
-	{
-		Aksum app=new Aksum();
+public class Aksum extends Launcher {
+	@Override
+	public int doWork(List<String> args) {
+		try {
+		final AksumFrame app=new AksumFrame();
 		SwingUtilities.invokeAndWait(()->{
 		final Dimension d = Toolkit.getDefaultToolkit().getScreenSize();
 		app.setBounds(
@@ -405,5 +410,26 @@ public class Aksum extends JFrame  implements Runnable
 			);
 		app.setVisible( true );
 		});
+		return 0;
+		}
+	catch(Throwable err ) {
+		getLogger().equals(err);
+		return -1;
+		}
+	}
+
+
+	public static ProgramDescriptor getProgramDescriptor() {
+    	return new ProgramDescriptor() {
+    		@Override
+    		public String getName() {
+    			return "aksum";
+    			}
+    		};
+    	}
+	
+public static void main(String[] args)
+	{
+	new Aksum().instanceMain(args);
 	}
 }

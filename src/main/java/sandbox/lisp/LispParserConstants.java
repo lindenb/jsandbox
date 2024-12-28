@@ -31,21 +31,25 @@ public interface LispParserConstants {
   /** RegularExpression Id. */
   int SIGN = 15;
   /** RegularExpression Id. */
-  int EXPONENT = 16;
+  int DOT = 16;
   /** RegularExpression Id. */
-  int FLOATING_NUMBER = 17;
+  int QUOTE = 17;
   /** RegularExpression Id. */
-  int INT_NUMBER = 18;
+  int EXPONENT = 18;
   /** RegularExpression Id. */
-  int IDENTIFIER = 19;
+  int FLOATING_NUMBER = 19;
   /** RegularExpression Id. */
-  int ESCAPE_CHAR = 20;
+  int INT_NUMBER = 20;
   /** RegularExpression Id. */
-  int SIMPLE_QUOTE_LITERAL = 21;
+  int IDENTIFIER = 21;
   /** RegularExpression Id. */
-  int DOUBLE_QUOTE_LITERAL = 22;
+  int ESCAPE_CHAR = 22;
   /** RegularExpression Id. */
-  int OTHER = 23;
+  int SIMPLE_QUOTE_LITERAL = 23;
+  /** RegularExpression Id. */
+  int DOUBLE_QUOTE_LITERAL = 24;
+  /** RegularExpression Id. */
+  int OTHER = 25;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -68,6 +72,8 @@ public interface LispParserConstants {
     "<LETTER>",
     "<DIGIT>",
     "<SIGN>",
+    "\".\"",
+    "\"\\\'\"",
     "<EXPONENT>",
     "<FLOATING_NUMBER>",
     "<INT_NUMBER>",

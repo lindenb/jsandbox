@@ -1,5 +1,7 @@
 options {
 STATIC=false;
+KEEP_LINE_COLUMN = true;
+LOOKAHEAD = 3; // (JavaCC - default 1)
 }
 
 // https://github.com/bkiers/Curta/blob/master/src/main/jjtree/CurtaParser.jjt
@@ -15,6 +17,10 @@ import sandbox.lang.StringUtils;
     
 @SuppressWarnings("unchecked")
 public class LispParser {
+
+private String toLocation(final Token t) {
+	return "line "+t.beginLine+" column "+t.beginColumn+(t.beginColumn==t.endColumn?"":"-"+t.endColumn);
+	}
 
 }
 
@@ -41,6 +47,8 @@ TOKEN : /* LITERALS */
 | <#LETTER: ["_","a"-"z","A"-"Z"] >
 | <#DIGIT: ["0"-"9"] >
 | <#SIGN: ["-","+"]>
+| < DOT : "." >
+| < QUOTE : "'" >
 | <#EXPONENT: ("E"|"e") (<SIGN>)? (<DIGIT>)+ >
 | <FLOATING_NUMBER: (<DIGIT>)* "." (<DIGIT>)* (<EXPONENT>)?
 | (<DIGIT>)+ (<EXPONENT>) >
@@ -58,17 +66,32 @@ LispNode any(): {LispNode n=null;} {
 	  n = listNode()
 	| n =  arrayNode()
 	| n= atomNode()
+	| n= quote()
 	| < EOF > { return null; }	) {
 	return n;
 	}
 	}
+private LispNode quote(): { LispNode n;} {
+	< QUOTE > n=any() {
+		LispList l=new LispList();
+		l.add(LispSymbol.of("quote"));
+		l.add(n);
+		return l;
+		}
+	}
 
 
 
-private LispList listNode(): {LispList L=new LispList();LispNode n=null;} {
-	< OPAR > (n=any() {L.add(n);} )* <CPAR > {
+private LispList listNode(): {LispList L=new LispList();LispNode n1=null;LispNode n2=null;} {
+	(	  < OPAR > (n1=any() {L.add(n1);} )* <CPAR > {
 		return L;
 		}
+	| 	< OPAR > n1=any() < DOT > n2=any() < CPAR > {
+			L.add(n1); 
+			L.add(n2);
+			return L;
+			}
+	) 
 	}
 
 
@@ -80,13 +103,13 @@ private LispArray arrayNode(): {List<Object> L=new ArrayList<Object>();LispAtom<
 
 private LispAtom<?> atomNode(): { Token t;}
 	{
-	(<LEX_TRUE>{
+	( t=<LEX_TRUE>{
 		return LispJavaObject.TRUE;
 		}
-	|<LEX_FALSE> {
+	| t=<LEX_FALSE> {
 		return LispJavaObject.FALSE;
 		}
-	| <LEX_NIL>{
+	| t=<LEX_NIL>{
 		return LispJavaObject.NIL;
 		}
 	| t = <INT_NUMBER> {

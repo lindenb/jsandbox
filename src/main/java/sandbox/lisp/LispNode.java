@@ -3,6 +3,7 @@ package sandbox.lisp;
 public interface LispNode {
 	public Object getValue();
     public boolean asBoolean();
+    public default <T> T getValue(Class<T> clazz) { return clazz.cast(getValue());}
     public default LispList asList() { return LispList.class.cast(this);}
     public default LispFunction asFunction() { return LispFunction.class.cast(this);}
     public default boolean isList() { return false;}

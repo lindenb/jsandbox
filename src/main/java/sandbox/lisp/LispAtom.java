@@ -5,7 +5,7 @@ import java.util.Objects;
 
 abstract class LispAtom<T> implements LispNode {
 	protected final T value;
-	LispAtom(T value) {
+	protected LispAtom(T value) {
     	this.value = value;
     	}
 	@Override

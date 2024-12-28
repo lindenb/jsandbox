@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import sandbox.tools.aksum.Aksum;
 import sandbox.tools.angel.Angel;
 import sandbox.tools.crypt.Crypt;
 import sandbox.tools.dusuffix.DiskUsageBySuffix;
@@ -17,6 +18,7 @@ import sandbox.tools.fileserver.FileServer;
 import sandbox.tools.htmlinxml.HtmlInXml;
 import sandbox.tools.java2xml.JavaToXml;
 import sandbox.tools.json2xml.Json2Xml;
+import sandbox.tools.lisp.LispApp;
 import sandbox.tools.mail2xml.Mail2Xml;
 import sandbox.tools.miniivy.MiniIvy;
 import sandbox.tools.mosaic.MosaicOfPictures;
@@ -57,6 +59,7 @@ public class SandboxCentral {
 		}
 	
 	private void instanceMain(List<String> args) {
+		register(Aksum.class);
 		register(Crypt.class);
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
@@ -72,6 +75,7 @@ public class SandboxCentral {
 		register(MosaicOfPictures.class);
 		register(Mail2Xml.class);
 		register(Angel.class);
+		register(LispApp.class);
 		register(UrlEncoder.class);
 		register(VelocityJson.class);
 		register(YamlToXml.class);

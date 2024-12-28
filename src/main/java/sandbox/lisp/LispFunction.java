@@ -6,13 +6,16 @@ import java.util.function.Function;
 
 
 abstract class LispFunction implements LispNode, Function<LispList,LispNode> {
-	 
+	String location = "";
 	protected LispFunction() {
 		
 		}
 	
+	public String getLocation() {
+		return location;
+		}
+	
 	public abstract LispNode invoke(LispList args) throws Exception;
-      
 	 
 	 @Override
 	 public final boolean isFunction() {
