@@ -156,9 +156,19 @@ public static  String unescapeUnicode(final String s) {
 		return s;
 		}
 	}
+
+/** remove simple or double quote and then call unescape */
+public static String unquote(String s) {
+int n=s.length();
+if(n<2) throw new IllegalArgumentException();
+if(s.charAt(0)!=s.charAt(n-1)) throw new IllegalArgumentException();
+if(!(s.charAt(0)=='\'' || s.charAt(0)=='"'))  throw new IllegalArgumentException();
+return unescape(s.substring(1,n-1));
+}
+
 public static String unescape(String s) {
 	s=unescapeUnicode(s);
-	StringBuilder sb=new StringBuilder(s.length());
+	final StringBuilder sb=new StringBuilder(s.length());
 	int i=0;
 	while(i<s.length()) {
 		if(s.charAt(i)=='\\' && i+1 < s.length()) {

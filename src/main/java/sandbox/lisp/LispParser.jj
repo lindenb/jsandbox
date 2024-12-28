@@ -1,0 +1,110 @@
+options {
+STATIC=false;
+}
+
+// https://github.com/bkiers/Curta/blob/master/src/main/jjtree/CurtaParser.jjt
+PARSER_BEGIN(LispParser)
+
+package sandbox.lisp;
+import java.util.List;
+import java.util.ArrayList;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import sandbox.lang.StringUtils;
+
+    
+@SuppressWarnings("unchecked")
+public class LispParser {
+
+}
+
+PARSER_END(LispParser)
+
+SKIP :
+{
+" "
+| "\t"
+| "\n"
+| "\r"
+| <";" (~["\n"])* "\n">
+}
+
+TOKEN : /* LITERALS */
+{
+  <OPAR:"(">
+| <CPAR:")">
+| <OARRAY:"[">
+| <CARRAY:"]">
+| <LEX_TRUE: "#t">
+| <LEX_FALSE: "#f">
+| <LEX_NIL: "null">
+| <#LETTER: ["_","a"-"z","A"-"Z"] >
+| <#DIGIT: ["0"-"9"] >
+| <#SIGN: ["-","+"]>
+| <#EXPONENT: ("E"|"e") (<SIGN>)? (<DIGIT>)+ >
+| <FLOATING_NUMBER: (<DIGIT>)* "." (<DIGIT>)* (<EXPONENT>)?
+| (<DIGIT>)+ (<EXPONENT>) >
+| <INT_NUMBER: (<DIGIT>)+ >
+| <IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
+| <#ESCAPE_CHAR: "\\" ["n","t","b","r","f","\\","'","\""] >
+| <SIMPLE_QUOTE_LITERAL: "\'" ( (~["\'","\\","\n","\r"]) | <ESCAPE_CHAR> )* "\'" >
+| <DOUBLE_QUOTE_LITERAL: "\"" ( (~["\"","\\","\n","\r"]) | <ESCAPE_CHAR> )*"\"" >
+| <OTHER: ~["(",")","[","]"," ","\n","\r"] >
+}
+
+
+LispNode any(): {LispNode n=null;} {
+	(
+	  n = listNode()
+	| n =  arrayNode()
+	| n= atomNode()
+	| < EOF > { return null; }	) {
+	return n;
+	}
+	}
+
+
+
+private LispList listNode(): {LispList L=new LispList();LispNode n=null;} {
+	< OPAR > (n=any() {L.add(n);} )* <CPAR > {
+		return L;
+		}
+	}
+
+
+private LispArray arrayNode(): {List<Object> L=new ArrayList<Object>();LispAtom<?> n=null;} {
+	< OARRAY > (n=atomNode() {L.add(n.getValue());} )* <CARRAY > {
+		return LispArray.from(L);
+		}
+	}
+
+private LispAtom<?> atomNode(): { Token t;}
+	{
+	(<LEX_TRUE>{
+		return LispJavaObject.TRUE;
+		}
+	|<LEX_FALSE> {
+		return LispJavaObject.FALSE;
+		}
+	| <LEX_NIL>{
+		return LispJavaObject.NIL;
+		}
+	| t = <INT_NUMBER> {
+		final BigInteger bi = new BigInteger(t.image);
+		return LispJavaObject.of(bi);
+		}
+	| t= <FLOATING_NUMBER> {
+		final BigDecimal bd = new BigDecimal(t.image);
+		return LispJavaObject.of(bd);
+		}
+	| t= <SIMPLE_QUOTE_LITERAL> {
+		return LispJavaObject.of(StringUtils.unquote(t.image));
+		}
+	| t= <DOUBLE_QUOTE_LITERAL> {
+		return LispJavaObject.of(StringUtils.unquote(t.image));
+		}
+	| t= <OTHER> {
+		return LispSymbol.of(t.image);
+		}
+	)
+	}
