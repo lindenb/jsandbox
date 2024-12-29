@@ -88,17 +88,18 @@ private LispNode quotedListNode(): {List<LispNode > L=new ArrayList<LispNode>();
 	  < QOPAR > (n1=any() {L.add(n1);} )* <CPAR > {
 		return quote(LispPair.of(L));
 		}
-	}
-
-private LispPair listNode(): {List<LispNode > L=new ArrayList<LispNode >();LispNode n1=null;LispNode n2=null;} {
-	(	  < OPAR > (n1=any() {L.add(n1);} )* <CPAR > {
+	| 	< OPAR > n1=any() < DOT > n2=any() < CPAR > {
+		L.add(n1); 
+		L.add(n2);
 		return LispPair.of(L);
 		}
-	| 	< OPAR > n1=any() < DOT > n2=any() < CPAR > {
-			L.add(n1); 
-			L.add(n2);
-			return LispPair.of(L);
-			}
+	}
+
+private LispList listNode(): {List<LispNode > L=new ArrayList<LispNode >();LispNode n1=null;LispNode n2=null;} {
+	(	  < OPAR > (n1=any() {L.add(n1);} )* <CPAR > {
+	    return LispList.of(L);
+		}
+	
 	) 
 	}
 

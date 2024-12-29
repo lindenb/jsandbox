@@ -13,6 +13,8 @@ public interface LispNode {
     public default boolean isSymbol(final String name) {
     	return isSymbol() && asSymbol().getValue().equals(name);
     	}
+    public default boolean isList() { return false;}
+    public default LispList asList() { return LispList.class.cast(this);}
     public default boolean isPair() { return false;}
     public default LispPair asPair() { return LispPair.class.cast(this);}
 	}

@@ -16,7 +16,7 @@ class LispJavaFunction extends LispFunction {
     	}
     
     @Override
-    public LispNode apply(List<LispNode>  args) {
+    public LispNode apply(LispList  args,LispContext ctx) {
         try {
 			return LispEngine.expressionOf(method.invoke(this.object, args.stream().map(T->T.getValue()).toArray()));
 		} catch (Exception e) {

@@ -45,50 +45,50 @@ private LispNode quote(LispNode n) {
 }
 
   final private LispNode quotedListNode() throws ParseException {List<LispNode > L=new ArrayList<LispNode>();LispNode n1=null;LispNode n2=null;
-    jj_consume_token(QOPAR);
-    label_1:
-    while (true) {
-      if (jj_2_8(3)) {
-        ;
-      } else {
-        break label_1;
-      }
-      n1 = any();
-L.add(n1);
-    }
-    jj_consume_token(CPAR);
-{if ("" != null) return quote(LispPair.of(L));}
-    throw new Error("Missing return statement in function");
-}
-
-  final private LispPair listNode() throws ParseException {List<LispNode > L=new ArrayList<LispNode >();LispNode n1=null;LispNode n2=null;
-    if (jj_2_10(3)) {
-      jj_consume_token(OPAR);
-      label_2:
+    if (jj_2_9(3)) {
+      jj_consume_token(QOPAR);
+      label_1:
       while (true) {
-        if (jj_2_9(3)) {
+        if (jj_2_8(3)) {
           ;
         } else {
-          break label_2;
+          break label_1;
         }
         n1 = any();
 L.add(n1);
       }
       jj_consume_token(CPAR);
-{if ("" != null) return LispPair.of(L);}
-    } else if (jj_2_11(3)) {
+{if ("" != null) return quote(LispPair.of(L));}
+    } else if (jj_2_10(3)) {
       jj_consume_token(OPAR);
       n1 = any();
       jj_consume_token(DOT);
       n2 = any();
       jj_consume_token(CPAR);
 L.add(n1);
-                        L.add(n2);
-                        {if ("" != null) return LispPair.of(L);}
+                L.add(n2);
+                {if ("" != null) return LispPair.of(L);}
     } else {
       jj_consume_token(-1);
       throw new ParseException();
     }
+    throw new Error("Missing return statement in function");
+}
+
+  final private LispList listNode() throws ParseException {List<LispNode > L=new ArrayList<LispNode >();LispNode n1=null;LispNode n2=null;
+    jj_consume_token(OPAR);
+    label_2:
+    while (true) {
+      if (jj_2_11(3)) {
+        ;
+      } else {
+        break label_2;
+      }
+      n1 = any();
+L.add(n1);
+    }
+    jj_consume_token(CPAR);
+{if ("" != null) return LispList.of(L);}
     throw new Error("Missing return statement in function");
 }
 
@@ -298,12 +298,6 @@ final BigDecimal bd = new BigDecimal(t.image);
     return false;
   }
 
-  private boolean jj_3_17()
- {
-    if (jj_scan_token(FLOATING_NUMBER)) return true;
-    return false;
-  }
-
   private boolean jj_3_6()
  {
     if (jj_scan_token(SYMBOL)) return true;
@@ -322,45 +316,51 @@ final BigDecimal bd = new BigDecimal(t.image);
     return false;
   }
 
-  private boolean jj_3_4()
- {
-    if (jj_3R_quotedListNode_89_11_7()) return true;
-    return false;
-  }
-
   private boolean jj_3_15()
  {
     if (jj_scan_token(LEX_NIL)) return true;
     return false;
   }
 
+  private boolean jj_3_4()
+ {
+    if (jj_3R_quotedListNode_89_11_7()) return true;
+    return false;
+  }
+
   private boolean jj_3_3()
  {
-    if (jj_3R_atomNode_116_9_6()) return true;
+    if (jj_3R_atomNode_117_9_6()) return true;
     return false;
   }
 
   private boolean jj_3_2()
  {
-    if (jj_3R_arrayNode_109_9_5()) return true;
-    return false;
-  }
-
-  private boolean jj_3_1()
- {
-    if (jj_3R_listNode_95_9_4()) return true;
+    if (jj_3R_arrayNode_110_9_5()) return true;
     return false;
   }
 
   private boolean jj_3_12()
  {
-    if (jj_3R_atomNode_116_9_6()) return true;
+    if (jj_3R_atomNode_117_9_6()) return true;
     return false;
   }
 
   private boolean jj_3_14()
  {
     if (jj_scan_token(LEX_FALSE)) return true;
+    return false;
+  }
+
+  private boolean jj_3_1()
+ {
+    if (jj_3R_listNode_100_9_4()) return true;
+    return false;
+  }
+
+  private boolean jj_3_13()
+ {
+    if (jj_scan_token(LEX_TRUE)) return true;
     return false;
   }
 
@@ -390,13 +390,7 @@ final BigDecimal bd = new BigDecimal(t.image);
     return false;
   }
 
-  private boolean jj_3_13()
- {
-    if (jj_scan_token(LEX_TRUE)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_atomNode_116_9_6()
+  private boolean jj_3R_atomNode_117_9_6()
  {
     Token xsp;
     xsp = jj_scanpos;
@@ -422,7 +416,13 @@ final BigDecimal bd = new BigDecimal(t.image);
     return false;
   }
 
-  private boolean jj_3R_arrayNode_109_9_5()
+  private boolean jj_3_11()
+ {
+    if (jj_3R_any_71_9_8()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_arrayNode_110_9_5()
  {
     if (jj_scan_token(OARRAY)) return true;
     Token xsp;
@@ -434,13 +434,25 @@ final BigDecimal bd = new BigDecimal(t.image);
     return false;
   }
 
-  private boolean jj_3_9()
+  private boolean jj_3_8()
  {
     if (jj_3R_any_71_9_8()) return true;
     return false;
   }
 
-  private boolean jj_3_11()
+  private boolean jj_3R_listNode_100_9_4()
+ {
+    if (jj_scan_token(OPAR)) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3_11()) { jj_scanpos = xsp; break; }
+    }
+    if (jj_scan_token(CPAR)) return true;
+    return false;
+  }
+
+  private boolean jj_3_10()
  {
     if (jj_scan_token(OPAR)) return true;
     if (jj_3R_any_71_9_8()) return true;
@@ -448,36 +460,24 @@ final BigDecimal bd = new BigDecimal(t.image);
     return false;
   }
 
-  private boolean jj_3_8()
+  private boolean jj_3_19()
  {
-    if (jj_3R_any_71_9_8()) return true;
-    return false;
-  }
-
-  private boolean jj_3_10()
- {
-    if (jj_scan_token(OPAR)) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3_9()) { jj_scanpos = xsp; break; }
-    }
-    if (jj_scan_token(CPAR)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_listNode_95_9_4()
- {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3_10()) {
-    jj_scanpos = xsp;
-    if (jj_3_11()) return true;
-    }
+    if (jj_scan_token(DOUBLE_QUOTE_LITERAL)) return true;
     return false;
   }
 
   private boolean jj_3R_quotedListNode_89_11_7()
+ {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3_9()) {
+    jj_scanpos = xsp;
+    if (jj_3_10()) return true;
+    }
+    return false;
+  }
+
+  private boolean jj_3_9()
  {
     if (jj_scan_token(QOPAR)) return true;
     Token xsp;
@@ -489,15 +489,15 @@ final BigDecimal bd = new BigDecimal(t.image);
     return false;
   }
 
-  private boolean jj_3_19()
- {
-    if (jj_scan_token(DOUBLE_QUOTE_LITERAL)) return true;
-    return false;
-  }
-
   private boolean jj_3_18()
  {
     if (jj_scan_token(SIMPLE_QUOTE_LITERAL)) return true;
+    return false;
+  }
+
+  private boolean jj_3_17()
+ {
+    if (jj_scan_token(FLOATING_NUMBER)) return true;
     return false;
   }
 

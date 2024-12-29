@@ -2,10 +2,11 @@ package sandbox.lisp;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 
-abstract class LispFunction implements LispNode, Function<List<LispNode>,LispNode> {
+abstract class LispFunction implements LispNode, BiFunction<LispList,LispContext,LispNode> {
 	String location = "";
 	protected LispFunction() {
 		
@@ -39,12 +40,13 @@ abstract class LispFunction implements LispNode, Function<List<LispNode>,LispNod
           return LispEngine.listToString("LispFunction(", getParameterHelpNames(), ",", ")");
       }
       
-      static LispFunction of(final Function<List<LispNode>,LispNode> fun) {
+      static LispFunction of(final BiFunction<LispList,LispContext,LispNode> fun) {
     	  return new LispFunction() {
 			@Override
-			public LispNode apply(List<LispNode> args) {
-				return fun.apply(args);
+			public LispNode apply(LispList args,LispContext ctx) {
+				return fun.apply(args,ctx);
 			}
 		};
       }
+      
 }

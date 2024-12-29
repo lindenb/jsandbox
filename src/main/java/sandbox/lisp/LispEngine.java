@@ -219,13 +219,21 @@ import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import sandbox.Logger;
 import sandbox.lang.StringUtils;
 
 @SuppressWarnings("serial")
 public class LispEngine extends LispContext {
+	private static final Logger LOG = Logger.builder(LispEngine.class).build();
+	
+	private boolean enableTracing=false;
 
-
-	 static LispAtom<?> expressionOf(final Object value) {
+	public void setEnableTracing(boolean enableTracing) {
+		this.enableTracing = enableTracing;
+		}	
+	
+	
+	 public static LispAtom<?> expressionOf(final Object value) {
         if (value!=null && value.getClass().isArray()) {
             return new LispArray(value);
         } else {
@@ -235,7 +243,7 @@ public class LispEngine extends LispContext {
 
 
     public LispEngine() {
-        this.define("+", args-> {
+        this.define("+",(args,env)-> {
                 BigDecimal result = BigDecimal.ZERO;
                 for (LispNode arg : args) {
                     final Number value = arg.getValue(Number.class);
@@ -244,16 +252,16 @@ public class LispEngine extends LispContext {
                 return expressionOf(reduceBigDecimal(result));
         	});
         
-        this.define("-", args-> {
+        this.define("-",(args,env)-> {
                 BigDecimal result = toBigDecimal(args.get(0).getValue(Number.class));
-                for (LispNode arg : args.subList(1, args.size())) {
+                for (LispNode arg : args.subList(1)) {
                     final Number value = arg.getValue(Number.class);
                     result = result.subtract(toBigDecimal(value));
                 	}
                 return expressionOf(reduceBigDecimal(result));
             });
         
-        this.define("*", args-> {
+        this.define("*",(args,env)-> {
                 BigDecimal result = BigDecimal.ONE;
                 for (LispNode arg : args) {
                     final Number value = arg.getValue(Number.class);
@@ -262,18 +270,18 @@ public class LispEngine extends LispContext {
                 return expressionOf(reduceBigDecimal(result));
             });
         
-        this.define("/",args->{
+        this.define("/",(args,env)->{
                 BigDecimal result = toBigDecimal(args.get(0).getValue(Number.class));
-                for (LispNode arg : args.subList(1, args.size())) {
+                for (LispNode arg : args.subList(1)) {
                     final Number value = (Number) arg.getValue();
                     result = result.divide(toBigDecimal(value), 16, RoundingMode.UP);
                 	}
                 return expressionOf(reduceBigDecimal(result));
             	});
         
-        this.define("<",args->{
+        this.define("<",(args,env)->{
                 double first = args.get(0).getValue(Number.class).doubleValue();
-                for (LispNode arg : args.subList(1, args.size())) {
+                for (LispNode arg : args.subList(1)) {
                     if (first >= arg.getValue(Number.class).doubleValue()) {
                         return expressionOf(false);
 	                    }
@@ -281,9 +289,9 @@ public class LispEngine extends LispContext {
                 return expressionOf(true);
             	});
         
-        this.define(">", args->{
+        this.define(">",(args,env)->{
                 double first = args.get(0).getValue(Number.class).doubleValue();
-                for (LispNode arg : args.subList(1, args.size())) {
+                for (LispNode arg : args.subList(1)) {
                     if (first <= arg.getValue(Number.class).doubleValue()) {
                         return expressionOf(false);
                     }
@@ -291,9 +299,9 @@ public class LispEngine extends LispContext {
                 return expressionOf(true);
             	});
         
-        this.define("<=",  args -> {
+        this.define("<=",  (args,env)-> {
                 double first = args.get(0).getValue(Number.class).doubleValue();
-                for (LispNode arg : args.subList(1, args.size())) {
+                for (LispNode arg : args.subList(1)) {
                     if (first > arg.getValue(Number.class).doubleValue()) {
                         return expressionOf(false);
                     }
@@ -301,9 +309,9 @@ public class LispEngine extends LispContext {
                 return expressionOf(true);
             });
         
-        this.define(">=", args->{
+        this.define(">=",(args,env)->{
                 double first = args.get(0).getValue(Number.class).doubleValue();
-                for (LispNode arg : args.subList(1, args.size())) {
+                for (LispNode arg : args.subList(1)) {
                     if (first < arg.getValue(Number.class).doubleValue()) {
                         return expressionOf(false);
                     }
@@ -311,13 +319,13 @@ public class LispEngine extends LispContext {
                 return expressionOf(true);
             });
         
-        this.define("is", args-> {
+        this.define("is",(args,env)-> {
                 final Object arg1 = args.get(0).getValue();
                 final Object arg2 = args.get(1).getValue();
                 return expressionOf(arg1 == arg2);
             });
         
-        this.define("eq", args-> {
+        this.define("eq",(args,env)-> {
                 final Object arg1 = args.get(0).getValue();
                 final Object arg2 = args.get(1).getValue();
                 return expressionOf(Objects.equals(arg1, arg2));
@@ -325,51 +333,54 @@ public class LispEngine extends LispContext {
         
         this.alias("eq","=");
         
-        this.define("car", args-> {
+        this.define("car",(args,env)-> {
              return args.get(0);
             });
         
-        this.define("cdr",  args-> {
-            return LispPair.of(args.subList(1, args.size()));
+        this.define("cdr", (args,env)-> {
+            return LispPair.of(args.subList(1));
             });
         
-        this.define("cons",args-> {
+        this.define("cons",(args,env)-> {
                 return LispPair.cons(args.get(0), args.get(1));
             });
         
-        this.define("length",args -> {
-                LispNode listOrArray = args.get(0);
-                if (listOrArray instanceof LispArray) {
-                    return expressionOf(((LispArray) listOrArray).length());
+        this.define("length",(args,env)-> {
+        		if(this.enableTracing) LOG.info("evaluate length for "+args);
+                if (args instanceof LispArray) {
+                    return expressionOf(((LispArray) args).length());
                 } else {
-                    return expressionOf(listOrArray.asPair().size());
+                	if(this.enableTracing) LOG.info("## try evaluate length for args are "+args);
+                	LispNode x=evaluate(args,env);
+                	if(this.enableTracing) LOG.info("now x= "+x);
+                    return expressionOf(x.asPair().size());
                 }
             });
-        this.define("list", args->LispPair.of(args));
+        this.define("list",(args,env)->LispPair.of(args));
         
-        this.define("map",  args-> {
+        this.define("map", (args,env)-> {
                 List<LispNode> result = new ArrayList<>();
                 LispFunction function = args.get(0).asFunction();
                 LispPair list = args.get(1).asPair();
-                for (LispNode arg : list.toList()) {
-                    result.add(function.apply(Collections.singletonList(arg)));
+                for (LispNode arg : list.asList()) {
+                    result.add(function.apply(LispPair.of(Collections.singletonList(arg)),env));
                 	}
                 return LispPair.of(result);
             });
         
-        this.define("filter",  args-> {
+        this.define("filter", (args,env)-> {
             List<LispNode> result = new ArrayList<LispNode>();
             LispFunction function = args.get(0).asFunction();
-            List<LispNode> list = args.get(1).asPair().toList();
+            List<LispNode> list = args.get(1).asPair().asList();
             for (LispNode arg : list) {
-            	if(function.apply(Collections.singletonList(arg)).asBoolean()) {
+            	if(function.apply(args,env).asBoolean()) {
             		result.add(arg);
             	}
             }
             return LispPair.of(result);
         });
         
-        this.define("nth", args-> {
+        this.define("nth",(args,env)-> {
                 int n = args.get(0).getValue(Integer.class);
                 LispNode listOrArray = args.get(1);
                 if (listOrArray instanceof LispArray) {
@@ -379,7 +390,7 @@ public class LispEngine extends LispContext {
                 }
             });
         
-        this.define("eval",  args-> {
+        this.define("eval", (args,env)-> {
             try {
             	return evaluate(args.get(0), this);
             	}
@@ -387,7 +398,7 @@ public class LispEngine extends LispContext {
             	throw new RuntimeException(err);
             	}
         	});
-        this.define("parse", args-> {
+        this.define("parse",(args,env)-> {
 	        	try {
 	                return execute(args.get(0).getValue(String.class));
 			        }
@@ -395,17 +406,17 @@ public class LispEngine extends LispContext {
 		        	throw new RuntimeException(err);
 		        	}
         		});
-        this.define("apply", args-> {
-                List<LispNode> applyArgs = args.subList(1, args.size());
+        this.define("apply",(args,env)-> {
+                LispList applyArgs = args.subList(1);
                 LispNode last = applyArgs.get(applyArgs.size() - 1);
                 if (last.isPair()) {
                     applyArgs.remove(applyArgs.size() - 1);
-                    applyArgs.addAll(last.asPair().toList());
+                    applyArgs.addAll(last.asPair().asList());
                 	}
-	            return args.get(0).asFunction().apply(applyArgs);
+	            return args.get(0).asFunction().apply(LispPair.of(applyArgs),env);
             });
         
-        this.define("exec", args-> {
+        this.define("exec",(args,env)-> {
             try {
             	return execute(args.get(0).getValue(String.class), this);
             	}
@@ -414,7 +425,7 @@ public class LispEngine extends LispContext {
             	}
         	});
         
-        this.define("format", args-> {
+        this.define("format",(args,env)-> {
                 String fmt =  args.get(0).getValue(String.class);
                 Object[] fmtArgs = new Object[args.size() - 1];
                 for (int i = 1; i < args.size(); i++) {
@@ -422,38 +433,91 @@ public class LispEngine extends LispContext {
                 }
                 return LispEngine.expressionOf(String.format(fmt, fmtArgs));
         	});
-        this.define("class", args-> {
+        this.define("class",(args,env)-> {
             Object o =  args.get(0).getValue();
             if(o==null) throw new IllegalArgumentException("cannot get class of null");
             return LispEngine.expressionOf(o.getClass());
     		});
         
-        this.define("string-concat", args-> {
+        this.define("string-concat",(args,env)-> {
         	final String s = args.stream().map(P->P.getValue(CharSequence.class).toString()).collect(Collectors.joining());
             return LispEngine.expressionOf(s);
     		});
-        this.define("parseInt", args-> {
+        this.define("parseInt",(args,env)-> {
             return LispEngine.expressionOf(new BigInteger(args.get(0).getValue(String.class)));
     		});
-        this.define("parseDouble", args-> {
+        this.define("parseDouble",(args,env)-> {
             return LispEngine.expressionOf(new BigDecimal(args.get(0).getValue(String.class)));
     		});
-        this.define("is-number?", args-> {
+        this.define("is-number?",(args,env)-> {
             return LispEngine.expressionOf( args.get(0) instanceof Number);
     		});
-        this.define("reverse", args-> {
+        this.define("reverse",(args,env)-> {
         	final List<LispNode> copy= new ArrayList<>(args);
         	Collections.reverse(copy);
             return LispPair.of(copy);
     		});
         
-        this.define("not", args-> {
+        this.define("not",(args,env)-> {
         	return LispEngine.expressionOf(!args.get(0).asBoolean());
     		});
+        
+        this.define("quote",(args,env)-> {
+        	return args.get(1);
+    		});
+        this.define("def", (args,env)->{
+        	args.arity(2);
+        	final LispSymbol name =  args.get(0).asSymbol();
+	        final LispNode value = args.get(1);
+	        final LispNode eValue = evaluate(value, env);
+	        env.put(name, eValue);
+	        return eValue;
+	        });
+        
+        this.define("lambda",(args,env)->{
+        	args.arity(2);
+            List<LispNode> params = args.get(0).asPair().asList();
+            List<LispNode> body = new ArrayList<>();
+            body.add(LispSymbol.of("progn"));
+            body.addAll(args.subList(1));
+            return new LispLambda(LispPair.of(params), LispPair.of(body), this);
+        	});
+        
+        this.define("if",(args,env)->{
+            LispNode condition = args.get(0);
+            LispNode then = args.get(1);
+            List<LispNode> els = new ArrayList<>();
+            els.add(LispSymbol.of("progn"));
+            els.addAll(args.subList(2, args.size()));
+            boolean result = evaluate(condition, env).asBoolean();
+            return evaluate(result ? then : LispPair.of(els), env);
+        	});
+        
+        this.define("progn",(args,env)->{
+            LispNode result = expressionOf(null);
+            for (LispNode exp : args.subList(1)) {
+                result = evaluate(exp, env);
+            	}
+            return result;
+        	});
+        this.define("let*",(args,env)->{
+            List<LispNode> defs = args.get(0).asList();
+            List<LispNode> body = new ArrayList<>();
+            body.add(LispSymbol.of("progn"));
+            body.addAll(args.subList(1));
+           
+            LispContext localEnvironment = new LispContext(env);
+            for (LispNode exp : defs) {
+                List<LispNode> def = exp.asPair().asList();
+                LispSymbol symbol = def.get(0).asSymbol();
+                localEnvironment.put(symbol, evaluate(def.get(1), localEnvironment));
+            	}
+            return evaluate(LispPair.of(body), localEnvironment);
+        	});
     	}
 
-
-    public LispNode evaluate(LispNode object, LispContext environment)  {
+    LispNode evaluate(final LispNode object, final LispContext environment)  {
+    	if(this.enableTracing) LOG.info("evaluate "+object +" "+object.getClass());
         if (object.isSymbol()) {
            final LispSymbol symbol = object.asSymbol();
            LispNode result = environment.get(symbol);
@@ -461,54 +525,25 @@ public class LispEngine extends LispContext {
         	   	throw new RuntimeException("Symbol undefined: '" + symbol+"' available are "+String.join(" ",environment.keySet()));
             	}
             return result;
-        } else if (object.isAtom()) {
+        	} 
+        else if (object.isAtom()) {
             return object.asAtom();
-        } else if (object.isPair()) {
-            final List<LispNode> expression = object.asPair().toList();
+        	}
+        else if (object.isList()) {
+            final LispList expression = object.asList();
+            if(this.enableTracing) LOG.info("expression is pair and now expression is "+expression);
             if (expression.isEmpty()) {
                 return object;
             	}
+            if(expression.size()==1 && expression.get(0).isList()) {
+            	return expression.get(0);
+            	}
             // The first item in a list must be a symbol
             final LispNode first = expression.get(0);
-            if (first.isSymbol("def")) {
-                LispSymbol name =  expression.get(1).asSymbol();
-                LispNode value = expression.get(2);
-                LispNode eValue = evaluate(value, environment);
-                environment.put(name, eValue);
-                return eValue;
-            } else if (first.isSymbol("lambda")) {
-                List<LispNode> params = expression.get(1).asPair().toList();
-                List<LispNode> body = expression.subList(2, expression.size());
-                body.add(0, LispSymbol.of("progn"));
-                return new LispLambda(params, body, environment, this);
-            } else if (first.isSymbol("if")) {
-                LispNode condition = expression.get(1);
-                LispNode then = expression.get(2);
-                List<LispNode> els =expression.subList(3, expression.size());
-                els.add(0, LispSymbol.of("progn"));
-                boolean result = evaluate(condition, environment).asBoolean();
-                return evaluate(result ? then : LispPair.of(els), environment);
-            } else if (first.isSymbol("quote")) {
-                return expression.get(1);
-            } else if (first.isSymbol("progn")) {
-                LispNode result = expressionOf(null);
-                for (LispNode exp : expression.subList(1, expression.size())) {
-                    result = evaluate(exp, environment);
-                }
-                return result;
-            } else if (first.isSymbol("let*")) {
-                List<LispNode> defs = expression.get(1).asPair().toList();
-                List<LispNode> body = expression.subList(2, expression.size());
-                body.add(0, LispSymbol.of("progn"));
-                LispContext localEnvironment = new LispContext(environment);
-                for (LispNode exp : defs) {
-                    List<LispNode> def = exp.asPair().toList();
-                    LispSymbol symbol = def.get(0).asSymbol();
-                    localEnvironment.put(symbol, evaluate(def.get(1), localEnvironment));
-                }
-                return evaluate(LispPair.of(body), localEnvironment);
-            } 
-            else if(first.isSymbol() && expression.size()==2 && !environment.containsKey(first) && expression.get(1).getValue()!=null) {
+            
+            if(first.isSymbol() && expression.size()==2 && !environment.containsKey(first) && expression.get(1).getValue()!=null) {
+            	if(this.enableTracing) LOG.info("using java method for "+expression);
+
             	String methodName = first.asSymbol().getValue(); 
             	Object obj = expression.get(1).getValue();
             	Class<?> clazz=obj.getClass();
@@ -541,12 +576,14 @@ public class LispEngine extends LispContext {
             	throw new IllegalArgumentException("cannot find method "+first+" for class "+clazz);
             	}
             else {
+            	if(this.enableTracing) LOG.info("failsafe eval to function for "+expression);
+
                 // First item wasn't a special form so it must evaluate to a function
                 final LispFunction function =  evaluate(first, environment).asFunction();
-                final List<LispNode> args =  expression.subList(1, expression.size());
+                final LispList args =expression.subList(1);
           
                 try {
-                    return function.apply(args);
+                    return function.apply(args,environment);
                 } catch (IllegalArgumentException | IndexOutOfBoundsException ex) {
                     throw new IllegalArgumentException(first + ": " + function + "\n" + ex, ex);
                 }
@@ -558,7 +595,7 @@ public class LispEngine extends LispContext {
 
 
 
-    private LispNode execute(String s, LispContext ctx) throws Exception {
+    private LispNode execute(final String s, final LispContext ctx) throws Exception {
         try(Reader r=new StringReader(s)) {
         	return execute(r,ctx);
         	}
@@ -567,6 +604,14 @@ public class LispEngine extends LispContext {
 
     private LispNode execute(Reader r, LispContext ctx) throws Exception {
       final LispParser lex=new LispParser(r);
+      if(this.enableTracing)
+    	  {
+    	  lex.enable_tracing();
+    	  }
+      else
+      	{
+    	lex.disable_tracing();
+      	}
       LispNode last=null,n=null;
       while((n=lex.any())!=null) {
     	 last = evaluate(n,ctx);  

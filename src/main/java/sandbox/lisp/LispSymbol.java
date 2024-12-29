@@ -1,7 +1,7 @@
 package sandbox.lisp;
 
 
-class LispSymbol extends LispAtom<String> implements CharSequence {
+public class LispSymbol extends LispAtom<String> implements CharSequence {
 	 LispSymbol(final String value) {
      	super(value);
      	}

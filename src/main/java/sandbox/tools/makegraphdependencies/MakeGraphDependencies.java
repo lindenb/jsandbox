@@ -117,12 +117,6 @@ public class MakeGraphDependencies extends Launcher
         throw new IllegalStateException(target.name);
         }
 
-    private void usage()
-    	{
-		System.err.println("Options:");
-		System.err.println(" -h help; This screen.");
-		System.err.println(" -G gexf output.");
-    	}
     
     @Override
 	    public int doWork(List<String> args) {
