@@ -11,7 +11,14 @@ import sandbox.lang.StringUtils;
 @SuppressWarnings("unchecked")
 public class LispParser implements LispParserConstants {
 
-  final public LispNode any() throws ParseException {LispNode n=null;
+private String toLocation(final Token t) {
+        return "line "+t.beginLine+" column "+t.beginColumn+(t.beginColumn==t.endColumn?"":"-"+t.endColumn);
+        }
+private LispNode quote(LispNode n) {
+        return LispPair.cons(LispSymbol.of("quote"),n);
+        }
+
+  final public LispNode any() throws ParseException {LispNode n=null;Token t=null;
     if (jj_2_1(3)) {
       n = listNode();
     } else if (jj_2_2(3)) {
@@ -19,8 +26,14 @@ public class LispParser implements LispParserConstants {
     } else if (jj_2_3(3)) {
       n = atomNode();
     } else if (jj_2_4(3)) {
-      n = quote();
+      n = quotedListNode();
     } else if (jj_2_5(3)) {
+      t = jj_consume_token(QSYMBOL);
+{if ("" != null) return quote(LispSymbol.of(t.image.substring(1)));}
+    } else if (jj_2_6(3)) {
+      t = jj_consume_token(SYMBOL);
+{if ("" != null) return LispSymbol.of(t.image);}
+    } else if (jj_2_7(3)) {
       jj_consume_token(0);
 {if ("" != null) return null;}
     } else {
@@ -31,33 +44,39 @@ public class LispParser implements LispParserConstants {
     throw new Error("Missing return statement in function");
 }
 
-  final private LispNode quote() throws ParseException {LispNode n;
-    jj_consume_token(QUOTE);
-    n = any();
-LispList l=new LispList();
-                l.add(LispSymbol.of("quote"));
-                l.add(n);
-                {if ("" != null) return l;}
-                
+  final private LispNode quotedListNode() throws ParseException {List<LispNode > L=new ArrayList<LispNode>();LispNode n1=null;LispNode n2=null;
+    jj_consume_token(QOPAR);
+    label_1:
+    while (true) {
+      if (jj_2_8(3)) {
+        ;
+      } else {
+        break label_1;
+      }
+      n1 = any();
+L.add(n1);
+    }
+    jj_consume_token(CPAR);
+{if ("" != null) return quote(LispPair.of(L));}
     throw new Error("Missing return statement in function");
 }
 
-  final private LispList listNode() throws ParseException {LispList L=new LispList();LispNode n1=null;LispNode n2=null;
-    if (jj_2_7(3)) {
+  final private LispPair listNode() throws ParseException {List<LispNode > L=new ArrayList<LispNode >();LispNode n1=null;LispNode n2=null;
+    if (jj_2_10(3)) {
       jj_consume_token(OPAR);
-      label_1:
+      label_2:
       while (true) {
-        if (jj_2_6(3)) {
+        if (jj_2_9(3)) {
           ;
         } else {
-          break label_1;
+          break label_2;
         }
         n1 = any();
 L.add(n1);
       }
       jj_consume_token(CPAR);
-{if ("" != null) return L;}
-    } else if (jj_2_8(3)) {
+{if ("" != null) return LispPair.of(L);}
+    } else if (jj_2_11(3)) {
       jj_consume_token(OPAR);
       n1 = any();
       jj_consume_token(DOT);
@@ -65,7 +84,7 @@ L.add(n1);
       jj_consume_token(CPAR);
 L.add(n1);
                         L.add(n2);
-                        {if ("" != null) return L;}
+                        {if ("" != null) return LispPair.of(L);}
     } else {
       jj_consume_token(-1);
       throw new ParseException();
@@ -75,12 +94,12 @@ L.add(n1);
 
   final private LispArray arrayNode() throws ParseException {List<Object> L=new ArrayList<Object>();LispAtom<?> n=null;
     jj_consume_token(OARRAY);
-    label_2:
+    label_3:
     while (true) {
-      if (jj_2_9(3)) {
+      if (jj_2_12(3)) {
         ;
       } else {
-        break label_2;
+        break label_3;
       }
       n = atomNode();
 L.add(n.getValue());
@@ -91,32 +110,29 @@ L.add(n.getValue());
 }
 
   final private LispAtom<?> atomNode() throws ParseException {Token t;
-    if (jj_2_10(3)) {
-      jj_consume_token(LEX_TRUE);
+    if (jj_2_13(3)) {
+      t = jj_consume_token(LEX_TRUE);
 {if ("" != null) return LispJavaObject.TRUE;}
-    } else if (jj_2_11(3)) {
-      jj_consume_token(LEX_FALSE);
+    } else if (jj_2_14(3)) {
+      t = jj_consume_token(LEX_FALSE);
 {if ("" != null) return LispJavaObject.FALSE;}
-    } else if (jj_2_12(3)) {
-      jj_consume_token(LEX_NIL);
+    } else if (jj_2_15(3)) {
+      t = jj_consume_token(LEX_NIL);
 {if ("" != null) return LispJavaObject.NIL;}
-    } else if (jj_2_13(3)) {
+    } else if (jj_2_16(3)) {
       t = jj_consume_token(INT_NUMBER);
 final BigInteger bi = new BigInteger(t.image);
                 {if ("" != null) return LispJavaObject.of(bi);}
-    } else if (jj_2_14(3)) {
+    } else if (jj_2_17(3)) {
       t = jj_consume_token(FLOATING_NUMBER);
 final BigDecimal bd = new BigDecimal(t.image);
                 {if ("" != null) return LispJavaObject.of(bd);}
-    } else if (jj_2_15(3)) {
+    } else if (jj_2_18(3)) {
       t = jj_consume_token(SIMPLE_QUOTE_LITERAL);
 {if ("" != null) return LispJavaObject.of(StringUtils.unquote(t.image));}
-    } else if (jj_2_16(3)) {
+    } else if (jj_2_19(3)) {
       t = jj_consume_token(DOUBLE_QUOTE_LITERAL);
 {if ("" != null) return LispJavaObject.of(StringUtils.unquote(t.image));}
-    } else if (jj_2_17(3)) {
-      t = jj_consume_token(OTHER);
-{if ("" != null) return LispSymbol.of(t.image);}
     } else {
       jj_consume_token(-1);
       throw new ParseException();
@@ -260,97 +276,95 @@ final BigDecimal bd = new BigDecimal(t.image);
     finally { jj_save(16, xla); }
   }
 
-  private boolean jj_3R_listNode_83_9_3()
+  private boolean jj_2_18(int xla)
  {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3_7()) {
-    jj_scanpos = xsp;
-    if (jj_3_8()) return true;
-    }
-    return false;
+    jj_la = xla; jj_lastpos = jj_scanpos = token;
+    try { return (!jj_3_18()); }
+    catch(LookaheadSuccess ls) { return true; }
+    finally { jj_save(17, xla); }
   }
 
-  private boolean jj_3_17()
+  private boolean jj_2_19(int xla)
  {
-    if (jj_scan_token(OTHER)) return true;
-    return false;
+    jj_la = xla; jj_lastpos = jj_scanpos = token;
+    try { return (!jj_3_19()); }
+    catch(LookaheadSuccess ls) { return true; }
+    finally { jj_save(18, xla); }
   }
 
-  private boolean jj_3_16()
- {
-    if (jj_scan_token(DOUBLE_QUOTE_LITERAL)) return true;
-    return false;
-  }
-
-  private boolean jj_3_15()
- {
-    if (jj_scan_token(SIMPLE_QUOTE_LITERAL)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_quote_72_9_6()
- {
-    if (jj_scan_token(QUOTE)) return true;
-    if (jj_3R_any_61_9_7()) return true;
-    return false;
-  }
-
-  private boolean jj_3_14()
- {
-    if (jj_scan_token(FLOATING_NUMBER)) return true;
-    return false;
-  }
-
-  private boolean jj_3_5()
+  private boolean jj_3_7()
  {
     if (jj_scan_token(0)) return true;
     return false;
   }
 
-  private boolean jj_3_13()
+  private boolean jj_3_17()
+ {
+    if (jj_scan_token(FLOATING_NUMBER)) return true;
+    return false;
+  }
+
+  private boolean jj_3_6()
+ {
+    if (jj_scan_token(SYMBOL)) return true;
+    return false;
+  }
+
+  private boolean jj_3_16()
  {
     if (jj_scan_token(INT_NUMBER)) return true;
     return false;
   }
 
+  private boolean jj_3_5()
+ {
+    if (jj_scan_token(QSYMBOL)) return true;
+    return false;
+  }
+
   private boolean jj_3_4()
  {
-    if (jj_3R_quote_72_9_6()) return true;
+    if (jj_3R_quotedListNode_89_11_7()) return true;
     return false;
   }
 
-  private boolean jj_3_3()
- {
-    if (jj_3R_atomNode_104_9_5()) return true;
-    return false;
-  }
-
-  private boolean jj_3_2()
- {
-    if (jj_3R_arrayNode_97_9_4()) return true;
-    return false;
-  }
-
-  private boolean jj_3_12()
+  private boolean jj_3_15()
  {
     if (jj_scan_token(LEX_NIL)) return true;
     return false;
   }
 
+  private boolean jj_3_3()
+ {
+    if (jj_3R_atomNode_116_9_6()) return true;
+    return false;
+  }
+
+  private boolean jj_3_2()
+ {
+    if (jj_3R_arrayNode_109_9_5()) return true;
+    return false;
+  }
+
   private boolean jj_3_1()
  {
-    if (jj_3R_listNode_83_9_3()) return true;
+    if (jj_3R_listNode_95_9_4()) return true;
     return false;
   }
 
-  private boolean jj_3_9()
+  private boolean jj_3_12()
  {
-    if (jj_3R_atomNode_104_9_5()) return true;
+    if (jj_3R_atomNode_116_9_6()) return true;
     return false;
   }
 
-  private boolean jj_3R_any_61_9_7()
+  private boolean jj_3_14()
+ {
+    if (jj_scan_token(LEX_FALSE)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_any_71_9_8()
  {
     Token xsp;
     xsp = jj_scanpos;
@@ -362,7 +376,13 @@ final BigDecimal bd = new BigDecimal(t.image);
     jj_scanpos = xsp;
     if (jj_3_4()) {
     jj_scanpos = xsp;
-    if (jj_3_5()) return true;
+    if (jj_3_5()) {
+    jj_scanpos = xsp;
+    if (jj_3_6()) {
+    jj_scanpos = xsp;
+    if (jj_3_7()) return true;
+    }
+    }
     }
     }
     }
@@ -370,28 +390,16 @@ final BigDecimal bd = new BigDecimal(t.image);
     return false;
   }
 
-  private boolean jj_3_11()
- {
-    if (jj_scan_token(LEX_FALSE)) return true;
-    return false;
-  }
-
-  private boolean jj_3_10()
+  private boolean jj_3_13()
  {
     if (jj_scan_token(LEX_TRUE)) return true;
     return false;
   }
 
-  private boolean jj_3R_atomNode_104_9_5()
+  private boolean jj_3R_atomNode_116_9_6()
  {
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3_10()) {
-    jj_scanpos = xsp;
-    if (jj_3_11()) {
-    jj_scanpos = xsp;
-    if (jj_3_12()) {
-    jj_scanpos = xsp;
     if (jj_3_13()) {
     jj_scanpos = xsp;
     if (jj_3_14()) {
@@ -400,8 +408,11 @@ final BigDecimal bd = new BigDecimal(t.image);
     jj_scanpos = xsp;
     if (jj_3_16()) {
     jj_scanpos = xsp;
-    if (jj_3_17()) return true;
-    }
+    if (jj_3_17()) {
+    jj_scanpos = xsp;
+    if (jj_3_18()) {
+    jj_scanpos = xsp;
+    if (jj_3_19()) return true;
     }
     }
     }
@@ -411,41 +422,82 @@ final BigDecimal bd = new BigDecimal(t.image);
     return false;
   }
 
-  private boolean jj_3R_arrayNode_97_9_4()
+  private boolean jj_3R_arrayNode_109_9_5()
  {
     if (jj_scan_token(OARRAY)) return true;
     Token xsp;
     while (true) {
       xsp = jj_scanpos;
-      if (jj_3_9()) { jj_scanpos = xsp; break; }
+      if (jj_3_12()) { jj_scanpos = xsp; break; }
     }
     if (jj_scan_token(CARRAY)) return true;
     return false;
   }
 
-  private boolean jj_3_6()
+  private boolean jj_3_9()
  {
-    if (jj_3R_any_61_9_7()) return true;
+    if (jj_3R_any_71_9_8()) return true;
+    return false;
+  }
+
+  private boolean jj_3_11()
+ {
+    if (jj_scan_token(OPAR)) return true;
+    if (jj_3R_any_71_9_8()) return true;
+    if (jj_scan_token(DOT)) return true;
     return false;
   }
 
   private boolean jj_3_8()
  {
-    if (jj_scan_token(OPAR)) return true;
-    if (jj_3R_any_61_9_7()) return true;
-    if (jj_scan_token(DOT)) return true;
+    if (jj_3R_any_71_9_8()) return true;
     return false;
   }
 
-  private boolean jj_3_7()
+  private boolean jj_3_10()
  {
     if (jj_scan_token(OPAR)) return true;
     Token xsp;
     while (true) {
       xsp = jj_scanpos;
-      if (jj_3_6()) { jj_scanpos = xsp; break; }
+      if (jj_3_9()) { jj_scanpos = xsp; break; }
     }
     if (jj_scan_token(CPAR)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_listNode_95_9_4()
+ {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3_10()) {
+    jj_scanpos = xsp;
+    if (jj_3_11()) return true;
+    }
+    return false;
+  }
+
+  private boolean jj_3R_quotedListNode_89_11_7()
+ {
+    if (jj_scan_token(QOPAR)) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3_8()) { jj_scanpos = xsp; break; }
+    }
+    if (jj_scan_token(CPAR)) return true;
+    return false;
+  }
+
+  private boolean jj_3_19()
+ {
+    if (jj_scan_token(DOUBLE_QUOTE_LITERAL)) return true;
+    return false;
+  }
+
+  private boolean jj_3_18()
+ {
+    if (jj_scan_token(SIMPLE_QUOTE_LITERAL)) return true;
     return false;
   }
 
@@ -468,7 +520,7 @@ final BigDecimal bd = new BigDecimal(t.image);
 	private static void jj_la1_init_0() {
 	   jj_la1_0 = new int[] {};
 	}
-  final private JJCalls[] jj_2_rtns = new JJCalls[17];
+  final private JJCalls[] jj_2_rtns = new JJCalls[19];
   private boolean jj_rescan = false;
   private int jj_gc = 0;
 
@@ -674,7 +726,7 @@ final BigDecimal bd = new BigDecimal(t.image);
   /** Generate ParseException. */
   public ParseException generateParseException() {
 	 jj_expentries.clear();
-	 boolean[] la1tokens = new boolean[26];
+	 boolean[] la1tokens = new boolean[28];
 	 if (jj_kind >= 0) {
 	   la1tokens[jj_kind] = true;
 	   jj_kind = -1;
@@ -688,7 +740,7 @@ final BigDecimal bd = new BigDecimal(t.image);
 		 }
 	   }
 	 }
-	 for (int i = 0; i < 26; i++) {
+	 for (int i = 0; i < 28; i++) {
 	   if (la1tokens[i]) {
 		 jj_expentry = new int[1];
 		 jj_expentry[0] = i;
@@ -722,7 +774,7 @@ final BigDecimal bd = new BigDecimal(t.image);
 
   private void jj_rescan_token() {
 	 jj_rescan = true;
-	 for (int i = 0; i < 17; i++) {
+	 for (int i = 0; i < 19; i++) {
 	   try {
 		 JJCalls p = jj_2_rtns[i];
 
@@ -747,6 +799,8 @@ final BigDecimal bd = new BigDecimal(t.image);
 			   case 14: jj_3_15(); break;
 			   case 15: jj_3_16(); break;
 			   case 16: jj_3_17(); break;
+			   case 17: jj_3_18(); break;
+			   case 18: jj_3_19(); break;
 			 }
 		   }
 		   p = p.next;

@@ -11,29 +11,29 @@ public interface LispParserConstants {
   /** End of File. */
   int EOF = 0;
   /** RegularExpression Id. */
-  int OPAR = 6;
+  int QOPAR = 6;
   /** RegularExpression Id. */
-  int CPAR = 7;
+  int OPAR = 7;
   /** RegularExpression Id. */
-  int OARRAY = 8;
+  int CPAR = 8;
   /** RegularExpression Id. */
-  int CARRAY = 9;
+  int OARRAY = 9;
   /** RegularExpression Id. */
-  int LEX_TRUE = 10;
+  int CARRAY = 10;
   /** RegularExpression Id. */
-  int LEX_FALSE = 11;
+  int LEX_TRUE = 11;
   /** RegularExpression Id. */
-  int LEX_NIL = 12;
+  int LEX_FALSE = 12;
   /** RegularExpression Id. */
-  int LETTER = 13;
+  int LEX_NIL = 13;
   /** RegularExpression Id. */
-  int DIGIT = 14;
+  int LETTER = 14;
   /** RegularExpression Id. */
-  int SIGN = 15;
+  int DIGIT = 15;
   /** RegularExpression Id. */
-  int DOT = 16;
+  int SIGN = 16;
   /** RegularExpression Id. */
-  int QUOTE = 17;
+  int DOT = 17;
   /** RegularExpression Id. */
   int EXPONENT = 18;
   /** RegularExpression Id. */
@@ -41,15 +41,19 @@ public interface LispParserConstants {
   /** RegularExpression Id. */
   int INT_NUMBER = 20;
   /** RegularExpression Id. */
-  int IDENTIFIER = 21;
+  int ESCAPE_CHAR = 21;
   /** RegularExpression Id. */
-  int ESCAPE_CHAR = 22;
+  int SIMPLE_QUOTE_LITERAL = 22;
   /** RegularExpression Id. */
-  int SIMPLE_QUOTE_LITERAL = 23;
+  int DOUBLE_QUOTE_LITERAL = 23;
   /** RegularExpression Id. */
-  int DOUBLE_QUOTE_LITERAL = 24;
+  int OTHER = 24;
   /** RegularExpression Id. */
-  int OTHER = 25;
+  int OTHERS = 25;
+  /** RegularExpression Id. */
+  int QSYMBOL = 26;
+  /** RegularExpression Id. */
+  int SYMBOL = 27;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -62,6 +66,7 @@ public interface LispParserConstants {
     "\"\\n\"",
     "\"\\r\"",
     "<token of kind 5>",
+    "\"\\\'(\"",
     "\"(\"",
     "\")\"",
     "\"[\"",
@@ -73,15 +78,16 @@ public interface LispParserConstants {
     "<DIGIT>",
     "<SIGN>",
     "\".\"",
-    "\"\\\'\"",
     "<EXPONENT>",
     "<FLOATING_NUMBER>",
     "<INT_NUMBER>",
-    "<IDENTIFIER>",
     "<ESCAPE_CHAR>",
     "<SIMPLE_QUOTE_LITERAL>",
     "<DOUBLE_QUOTE_LITERAL>",
     "<OTHER>",
+    "<OTHERS>",
+    "<QSYMBOL>",
+    "<SYMBOL>",
   };
 
 }

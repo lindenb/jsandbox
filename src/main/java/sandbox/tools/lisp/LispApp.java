@@ -8,6 +8,7 @@ import java.util.List;
 
 import sandbox.Launcher;
 import sandbox.lisp.LispEngine;
+import sandbox.lisp.LispNode;
 import sandbox.tools.central.ProgramDescriptor;
 
 public class LispApp extends Launcher {
@@ -16,7 +17,7 @@ public int doWork(List<String> args) {
 	try {
 		final LispEngine engine = new LispEngine();
 		String input=oneFileOrNull(args);
-		Object rez;
+		LispNode rez=null;
 		try(Reader r=(input==null?new InputStreamReader(System.in):Files.newBufferedReader(Paths.get(input)))) {
 				rez=engine.execute(r);
 				}

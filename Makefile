@@ -220,7 +220,7 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
 	xml2xsd weatherarchive gribouille java2graph githistory  \
         saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
 	packageeclipsejars xslserver java2xml flickrrss \
-	geneticpainting json2dom  twittergraph twitterfollow  twitter01 aksum images2base64 \
+	geneticpainting json2dom  twittergraph twitterfollow  twitter01   \
 	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom  xmlpath imagemap \
 	pcaviewer swap2bits
 
@@ -262,8 +262,6 @@ $(eval $(call compile,treemapmaker,sandbox.tools.treemap.TreeMapMaker,${jcommand
 $(eval $(call compile,comicstrip,sandbox.ComicsStrip, ))
 $(eval $(call compile,genisansbouillir,sandbox.GeniSansBouillir,${jcommander.jar} ${apache.httpclient.jars}  ${jtidy.jars}))
 $(eval $(call compile,bouletmaton,sandbox.BouletMaton,${jcommander.jar}))
-$(eval $(call compile,aksum,sandbox.tools.aksum.Aksum,))
-$(eval $(call compile,images2base64,sandbox.tools.img2base64.ImagesToBase64,${jcommander.jar}))
 $(eval $(call compile,rss2atom,sandbox.tools.feed.RssToAtomApp,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,atom500px,sandbox.Atom500px,${jcommander.jar}))
 $(eval $(call compile,insta2atom,sandbox.ig.InstagramToAtom,${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))

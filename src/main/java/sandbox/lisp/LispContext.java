@@ -1,6 +1,7 @@
 package sandbox.lisp;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -20,7 +21,7 @@ public class LispContext extends HashMap<LispSymbol,LispNode> {
         return alias(LispSymbol.of(from),LispSymbol.of(to));
     	}
     
-    public void define(String name, Function<LispList,LispNode> fun) {
+    public void define(String name, Function<List<LispNode>,LispNode> fun) {
     	put(LispSymbol.of(name), LispFunction.of(fun));
     }
 }

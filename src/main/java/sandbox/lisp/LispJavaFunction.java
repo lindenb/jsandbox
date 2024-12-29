@@ -16,8 +16,12 @@ class LispJavaFunction extends LispFunction {
     	}
     
     @Override
-    public LispNode invoke(LispList args) throws Exception {
-        return LispEngine.expressionOf(method.invoke(this.object, args.stream().map(T->T.getValue()).toArray()));
+    public LispNode apply(List<LispNode>  args) {
+        try {
+			return LispEngine.expressionOf(method.invoke(this.object, args.stream().map(T->T.getValue()).toArray()));
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+			}
     	}
     @Override protected List<?> getParameterHelpNames() {
     	return Arrays.stream(this.method.getParameterTypes()).

@@ -35,6 +35,7 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.Logger;
+import sandbox.tools.central.ProgramDescriptor;
 
 
 /**
@@ -137,6 +138,17 @@ public class ImagesToBase64 extends Launcher
 			return -1;
 			}		
 		}
+	
+	
+	public static ProgramDescriptor getProgramDescriptor() {
+		return new ProgramDescriptor() {
+			@Override
+			public String getName() {
+				return "img2base64";
+				}
+			};
+		}
+	
 	public static void main(final String[] args) {
 		new ImagesToBase64().instanceMainWithExit(args);
 	}

@@ -2,6 +2,8 @@ options {
 STATIC=false;
 KEEP_LINE_COLUMN = true;
 LOOKAHEAD = 3; // (JavaCC - default 1)
+DEBUG_PARSER = false; // (JavaCC - default false)
+DEBUG_TOKEN_MANAGER = false; // (JavaCC - default false)
 }
 
 // https://github.com/bkiers/Curta/blob/master/src/main/jjtree/CurtaParser.jjt
@@ -21,7 +23,9 @@ public class LispParser {
 private String toLocation(final Token t) {
 	return "line "+t.beginLine+" column "+t.beginColumn+(t.beginColumn==t.endColumn?"":"-"+t.endColumn);
 	}
-
+private LispNode quote(LispNode n) {
+	return LispPair.cons(LispSymbol.of("quote"),n);
+	}
 }
 
 PARSER_END(LispParser)
@@ -37,7 +41,8 @@ SKIP :
 
 TOKEN : /* LITERALS */
 {
-  <OPAR:"(">
+  <QOPAR:"'(">
+| <OPAR:"(">
 | <CPAR:")">
 | <OARRAY:"[">
 | <CARRAY:"]">
@@ -48,48 +53,51 @@ TOKEN : /* LITERALS */
 | <#DIGIT: ["0"-"9"] >
 | <#SIGN: ["-","+"]>
 | < DOT : "." >
-| < QUOTE : "'" >
 | <#EXPONENT: ("E"|"e") (<SIGN>)? (<DIGIT>)+ >
 | <FLOATING_NUMBER: (<DIGIT>)* "." (<DIGIT>)* (<EXPONENT>)?
 | (<DIGIT>)+ (<EXPONENT>) >
 | <INT_NUMBER: (<DIGIT>)+ >
-| <IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
 | <#ESCAPE_CHAR: "\\" ["n","t","b","r","f","\\","'","\""] >
 | <SIMPLE_QUOTE_LITERAL: "\'" ( (~["\'","\\","\n","\r"]) | <ESCAPE_CHAR> )* "\'" >
 | <DOUBLE_QUOTE_LITERAL: "\"" ( (~["\"","\\","\n","\r"]) | <ESCAPE_CHAR> )*"\"" >
-| <OTHER: ~["(",")","[","]"," ","\n","\r"] >
+| <#OTHER: ~["'","(",")","[","]"," ","\n","\r"] >
+| <#OTHERS: < OTHER > (< OTHER >)* >
+| <QSYMBOL: "'" < OTHERS > >
+| <SYMBOL: <OTHERS > > 
 }
 
 
-LispNode any(): {LispNode n=null;} {
+LispNode any(): {LispNode n=null;Token t=null;} {
 	(
 	  n = listNode()
 	| n =  arrayNode()
 	| n= atomNode()
-	| n= quote()
+	| n= quotedListNode()
+	| t=<QSYMBOL > {
+	  	return quote(LispSymbol.of(t.image.substring(1)));
+	  	}
+	| t=<SYMBOL > {
+	  return LispSymbol.of(t.image);
+	  }
 	| < EOF > { return null; }	) {
 	return n;
 	}
 	}
-private LispNode quote(): { LispNode n;} {
-	< QUOTE > n=any() {
-		LispList l=new LispList();
-		l.add(LispSymbol.of("quote"));
-		l.add(n);
-		return l;
+
+private LispNode quotedListNode(): {List<LispNode > L=new ArrayList<LispNode>();LispNode n1=null;LispNode n2=null;} {
+	  < QOPAR > (n1=any() {L.add(n1);} )* <CPAR > {
+		return quote(LispPair.of(L));
 		}
 	}
 
-
-
-private LispList listNode(): {LispList L=new LispList();LispNode n1=null;LispNode n2=null;} {
+private LispPair listNode(): {List<LispNode > L=new ArrayList<LispNode >();LispNode n1=null;LispNode n2=null;} {
 	(	  < OPAR > (n1=any() {L.add(n1);} )* <CPAR > {
-		return L;
+		return LispPair.of(L);
 		}
 	| 	< OPAR > n1=any() < DOT > n2=any() < CPAR > {
 			L.add(n1); 
 			L.add(n2);
-			return L;
+			return LispPair.of(L);
 			}
 	) 
 	}
@@ -126,8 +134,6 @@ private LispAtom<?> atomNode(): { Token t;}
 	| t= <DOUBLE_QUOTE_LITERAL> {
 		return LispJavaObject.of(StringUtils.unquote(t.image));
 		}
-	| t= <OTHER> {
-		return LispSymbol.of(t.image);
-		}
+	
 	)
 	}

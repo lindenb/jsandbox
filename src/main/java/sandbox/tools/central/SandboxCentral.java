@@ -16,10 +16,12 @@ import sandbox.tools.dusuffix.DiskUsageBySuffix;
 import sandbox.tools.fdup.FindDuplicateFiles;
 import sandbox.tools.fileserver.FileServer;
 import sandbox.tools.htmlinxml.HtmlInXml;
+import sandbox.tools.img2base64.ImagesToBase64;
 import sandbox.tools.java2xml.JavaToXml;
 import sandbox.tools.json2xml.Json2Xml;
 import sandbox.tools.lisp.LispApp;
 import sandbox.tools.mail2xml.Mail2Xml;
+import sandbox.tools.makegraphdependencies.MakeGraphDependencies;
 import sandbox.tools.miniivy.MiniIvy;
 import sandbox.tools.mosaic.MosaicOfPictures;
 import sandbox.tools.nashornserver.NashornServer;
@@ -51,7 +53,7 @@ public class SandboxCentral {
 	
 	private void usage(PrintStream out) {
 		out.println("# JSANDBOX");
-		out.println("## Program availables");
+		out.println("## Programs available");
 		for(Pair<Class<?>,ProgramDescriptor> p:programs) {
 			if(p.getValue().isHidden()) continue;
 			out.println(" * "+p.getValue().getName()+" : "+p.getValue().getDescription());
@@ -63,6 +65,7 @@ public class SandboxCentral {
 		register(Crypt.class);
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
+		register(ImagesToBase64.class);
 		register(JavaToXml.class);
 		register(Json2Xml.class);
 		register(FileServer.class);
@@ -73,6 +76,7 @@ public class SandboxCentral {
 		register(DiskUsageBySuffix.class);
 		register(HtmlInXml.class);
 		register(MosaicOfPictures.class);
+		register(MakeGraphDependencies.class);
 		register(Mail2Xml.class);
 		register(Angel.class);
 		register(LispApp.class);
