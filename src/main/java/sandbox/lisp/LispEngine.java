@@ -449,9 +449,23 @@ public class LispEngine extends LispContext {
         this.define("parseDouble",(args,env)-> {
             return LispEngine.expressionOf(new BigDecimal(args.get(0).getValue(String.class)));
     		});
-        this.define("is-number?",(args,env)-> {
-            return LispEngine.expressionOf( args.get(0) instanceof Number);
+        this.define("number?",(args,env)-> {
+            return LispEngine.expressionOf( args.get(0).getValue() instanceof Number);
     		});
+        
+        this.define("integer?",(args,env)-> {
+            return LispEngine.expressionOf( args.arity(1).get(0).getValue() instanceof BigInteger);
+    		});
+        this.define("string?",(args,env)-> {
+            return LispEngine.expressionOf( args.arity(1).get(0).getValue() instanceof String);
+    		});
+        this.define("boolean?",(args,env)-> {
+            return LispEngine.expressionOf( args.arity(1).get(0).getValue() instanceof Boolean);
+    		});
+        this.define("symbol?",(args,env)-> {
+            return LispEngine.expressionOf( args.arity(1).get(0).isSymbol());
+    		});
+        
         this.define("reverse",(args,env)-> {
         	final List<LispNode> copy= new ArrayList<>(args);
         	Collections.reverse(copy);
@@ -508,11 +522,11 @@ public class LispEngine extends LispContext {
            
             LispContext localEnvironment = new LispContext(env);
             for (LispNode exp : defs) {
-                List<LispNode> def = exp.asPair().asList();
+                LispList def = exp.asList().arity(2);
                 LispSymbol symbol = def.get(0).asSymbol();
                 localEnvironment.put(symbol, evaluate(def.get(1), localEnvironment));
             	}
-            return evaluate(LispPair.of(body), localEnvironment);
+            return evaluate(LispList.of(body), localEnvironment);
         	});
     	}
 
