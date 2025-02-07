@@ -1,7 +1,7 @@
 options {
 STATIC=false;
 KEEP_LINE_COLUMN = true;
-LOOKAHEAD = 3; // (JavaCC - default 1)
+//LOOKAHEAD = 3; // (JavaCC - default 1)
 DEBUG_PARSER = false; // (JavaCC - default false)
 DEBUG_TOKEN_MANAGER = false; // (JavaCC - default false)
 }
@@ -11,6 +11,7 @@ PARSER_BEGIN(LispParser)
 
 package sandbox.lisp;
 import java.util.List;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -20,12 +21,66 @@ import sandbox.lang.StringUtils;
 @SuppressWarnings("unchecked")
 public class LispParser {
 
+public static class Atom  implements CharSequence {
+	private final String s;
+	public Atom(String s) {
+		this.s= s;
+		}
+	@Override
+	public CharSequence subSequence(int start, int end) {
+		return s.subSequence(start, end);
+		}
+	@Override
+	public int length() {
+		return s.length();
+		}
+	@Override
+	public char charAt(int index) {
+		return s.charAt(index);
+		}
+	@Override
+	public boolean equals(Object o) {
+		if(o==this) return true;
+		if(o==null || !(o instanceof Atom)) return false;
+		return Atom.class.cast(o).s.equals(this.s);
+		}
+	@Override
+	public int hashCode() {
+		return s.hashCode();
+		}
+	@Override
+	public String toString() {
+		return s;
+		}
+	}
+
+public static class LispNodeImpl extends AbstractList<Object> implements LispNode {
+	private final String name;
+	private final List<Object> delegate;
+	
+	LispNodeImpl(final String name) {
+		this.name= name;
+		this.delegate =  new ArrayList<Object>();
+		}
+	LispNodeImpl(final String name,final List<Object> L) {
+		this.name= name;
+		this.delegate =  new ArrayList<Object>(L);
+		}
+	
+	@Override
+	public String getName() {
+		return name;
+		}
+	@Override public int size() { return delegate.size();}
+	@Override public Object get(int i) { return delegate.get(i);}
+	}
+
+
+
 private String toLocation(final Token t) {
 	return "line "+t.beginLine+" column "+t.beginColumn+(t.beginColumn==t.endColumn?"":"-"+t.endColumn);
 	}
-private LispNode quote(LispNode n) {
-	return LispPair.cons(LispSymbol.of("quote"),n);
-	}
+
 }
 
 PARSER_END(LispParser)
@@ -70,71 +125,56 @@ TOKEN : /* LITERALS */
 LispNode any(): {LispNode n=null;Token t=null;} {
 	(
 	  n = listNode()
-	| n =  arrayNode()
-	| n= atomNode()
 	| n= quotedListNode()
-	| t=<QSYMBOL > {
-	  	return quote(LispSymbol.of(t.image.substring(1)));
-	  	}
-	| t=<SYMBOL > {
-	  return LispSymbol.of(t.image);
-	  }
 	| < EOF > { return null; }	) {
 	return n;
 	}
 	}
 
-private LispNode quotedListNode(): {List<LispNode > L=new ArrayList<LispNode>();LispNode n1=null;LispNode n2=null;} {
-	  < QOPAR > (n1=any() {L.add(n1);} )* <CPAR > {
-		return quote(LispPair.of(L));
-		}
-	| 	< OPAR > n1=any() < DOT > n2=any() < CPAR > {
-		L.add(n1); 
-		L.add(n2);
-		return LispPair.of(L);
+private LispNode quotedListNode(): {LispNodeImpl L= new LispNodeImpl("list");Object n1;} {
+	  < QOPAR > (n1=any() {L.delegate.add(n1);} )* <CPAR > {
+		return L;
 		}
 	}
 
-private LispList listNode(): {List<LispNode > L=new ArrayList<LispNode >();LispNode n1=null;LispNode n2=null;} {
-	(	  < OPAR > (n1=any() {L.add(n1);} )* <CPAR > {
-	    return LispList.of(L);
-		}
-	
-	) 
-	}
-
-
-private LispArray arrayNode(): {List<Object> L=new ArrayList<Object>();LispAtom<?> n=null;} {
-	< OARRAY > (n=atomNode() {L.add(n.getValue());} )* <CARRAY > {
-		return LispArray.from(L);
+private LispNode listNode(): {LispNodeImpl L=null;Atom name;LispNode n1=null;LispNode n2=null;} {	  < OPAR > name=symbol() {L=new LispNodeImpl(name.toString());}  (n1=any() {L.delegate.add(n1);} )* <CPAR > {
+	    return L;
 		}
 	}
 
-private LispAtom<?> atomNode(): { Token t;}
+
+private Object atomNode(): { Token t;Atom s;}
 	{
 	( t=<LEX_TRUE>{
-		return LispJavaObject.TRUE;
+		return Boolean.TRUE;
 		}
 	| t=<LEX_FALSE> {
-		return LispJavaObject.FALSE;
+		return Boolean.FALSE;
 		}
 	| t=<LEX_NIL>{
-		return LispJavaObject.NIL;
+		return null;
 		}
 	| t = <INT_NUMBER> {
-		final BigInteger bi = new BigInteger(t.image);
-		return LispJavaObject.of(bi);
+		return new BigInteger(t.image);
 		}
 	| t= <FLOATING_NUMBER> {
-		final BigDecimal bd = new BigDecimal(t.image);
-		return LispJavaObject.of(bd);
+		return new BigDecimal(t.image);
 		}
 	| t= <SIMPLE_QUOTE_LITERAL> {
-		return LispJavaObject.of(StringUtils.unquote(t.image));
+		return StringUtils.unquote(t.image);
 		}
 	| t= <DOUBLE_QUOTE_LITERAL> {
-		return LispJavaObject.of(StringUtils.unquote(t.image));
+		return StringUtils.unquote(t.image);
 		}
-	
+	| s=symbol() {
+		return s;
+		}
 	)
 	}
+	
+private Atom symbol() : {Token t;}
+	{
+	t = <SYMBOL> {return new Atom(t.image);}
+	}
+
+
