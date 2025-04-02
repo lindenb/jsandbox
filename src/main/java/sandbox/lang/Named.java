@@ -1,7 +1,9 @@
-package sandbox;
+package sandbox.lang;
 
 public interface Named {
+	/** get Name for this object */
 	public String getName();
+	/** get Nice name for this object */
 	public default String getLabel() { 
 		final StringBuilder sb=new StringBuilder(getName().replace('_', ' '));
 		int i=0;
@@ -18,7 +20,7 @@ public interface Named {
 			}
 		return sb.toString();
 		}
-	
+	/** get Descrition for this project , default is getName() */
 	public default String getDescription() {
 		return getLabel();
 	}

@@ -185,9 +185,15 @@ if(fg==-1f) c=create(f2i(fr),f2i(fr),f2i(fr)); else c= create(f2i(fr),f2i(fg),f2
   final private Color namedcolor() throws ParseException {Token t;
     t = jj_consume_token(NAMED);
 final String s = t.image;
-           return NamedColors.getInstance().findByName(s).orElse(null);
-            }
-
+            final java.util.function.Supplier<Throwable> ex = new java.util.function.Supplier<Throwable>() {
+                @Override
+                public Throwable get() {
+                    {if ("" != null) return new RuntimeException("cannot convert '"+s+"' to color");}
+                    }
+                };
+            {if ("" != null) return NamedColors.getInstance().findByName(s).orElseThrow(ex);}
+    throw new Error("Missing return statement in function");
+}
 
   /** Generated Token Manager. */
   public ColorParserTokenManager token_source;

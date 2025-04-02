@@ -1,5 +1,7 @@
 package sandbox;
 
+import sandbox.lang.Named;
+
 public class DefaultNamed implements Named {
 	private final String name;
 	private String label = null ;

@@ -1,0 +1,252 @@
+options {
+STATIC=false;
+LOOKAHEAD=2;
+}
+
+// https://github.com/bkiers/Curta/blob/master/src/main/jjtree/CurtaParser.jjt
+PARSER_BEGIN(MiniLang1Parser)
+
+package sandbox.minilang1;
+import java.util.*;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
+
+    
+@SuppressWarnings("unchecked")
+public abstract class MiniLang1Parser {
+	private MiniLang1Context context;
+	public MiniLang1Parser(MiniLang1Context ctx,java.io.InputStream stream, String encoding) {
+	    this(stream,encoding);
+		this.context = ctx;
+		}
+	public MiniLang1Parser(MiniLang1Context ctx,java.io.InputStream stream) {
+	    this(stream);
+		this.context = ctx;
+		}
+	public MiniLang1Parser(MiniLang1Context ctx,java.io.Reader reader) {
+	    this(reader);
+		this.context = ctx;
+		}
+}
+
+
+PARSER_END(MiniLang1Parser)
+
+SKIP :
+{
+" "
+| "\t"
+| "\n"
+| "\r"
+| <"//" (~["\n"])* "\n">
+| <"/*">: INSIDE_COMMENT
+}
+
+<INSIDE_COMMENT>
+SKIP:
+{
+        <"*/">: DEFAULT
+|       <~[]>
+}
+
+
+TOKEN : /* LITERALS */
+{
+  <OPAR:"(">
+| <CPAR:")">
+|  < O_BRACKET:"[" >
+|  < C_BRACKET:"]" >
+| <SEMICOLON: ";">
+| <COLON: ":">
+| <QUESTION: "?">
+| <DOT: ".">
+| <COMMA: ",">
+| <EQ: "==">
+| <NE: "!=">
+| <LE: "<=">
+| <GE: ">=">
+| <LT: "<">
+| <GT: ">">
+| <PLUSPLUS: "++">
+| <PLUS: "+">
+| <MINUS: "-">
+| <MUL: "*">
+| <DIV: "/">
+| <MODULUS: "%">
+| <ASSIGN: "=">
+| <LEX_TRUE: "true">
+| <LEX_FALSE: "false">
+| <LEX_NIL: "nil">
+| <#LETTER: ["_","a"-"z","A"-"Z"] >
+| <#DIGIT: ["0"-"9"] >
+| <#SIGN: ["-","+"]>
+| <#EXPONENT: ("E"|"e") (<SIGN>)? (<DIGIT>)+ >
+| <FLOATING_NUMBER: (<DIGIT>)* "." (<DIGIT>)* (<EXPONENT>)?
+| (<DIGIT>)+ (<EXPONENT>) >
+| <INT_NUMBER: (<DIGIT>)+ >
+| <IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
+| <#ESCAPE_CHAR: "\\" ["n","t","b","r","f","\\","'","\""] >
+| <SIMPLE_QUOTE_LITERAL: "\'" ( (~["\'","\\","\n","\r"]) | <ESCAPE_CHAR> )* "\'" >
+| <DOUBLE_QUOTE_LITERAL: "\"" ( (~["\"","\\","\n","\r"]) | <ESCAPE_CHAR> )*"\"" >
+}
+
+public void input(): { }
+	{
+	(expr() < SEMICOLON > )* < EOF >
+	}
+
+private Object assign_statement() : {Token t;Object o;} { 
+	t=< IDENTIFIER >
+		(
+		  <ASSIGN > o=expr()
+			{
+			return context.put(t.image,o);
+			}
+		| < PLUSPLUS > {
+		  	return context.put(t.image,context.multiply(context.get(t.image),1));
+			}
+		)
+}
+
+private List<Object > array()  : { List<Object > list=Collections.emptyList();Object o;}
+	{
+	<O_BRACKET>(list=array_items())? <C_BRACKET>
+		{
+		return list;
+		}
+	}
+
+private List<Object > array_items()  : { List<Object > list=new ArrayList< >();Object o;}
+	{
+	o=expr() {list.add(o);} (<COMMA > o=expr() {list.add(o);})*
+	{
+	return list;
+	}
+	}
+
+
+private Map<String,Object > map() :{Map<String,Object> hash;}
+	{
+	<O_BRACKET> <COLON> <C_BRACKET> {
+		return Collections.emptyMap();
+		}
+	|  <O_BRACKET> hash=map_items() {  return hash; } <C_BRACKET> {
+	 	}
+	}
+
+private Map<String,Object > map_items() :{Map<String,Object> hash = new LinkedHashMap<String,Object>();  Map.Entry<String,Object> kv;}
+	{
+	 kv=pair() {hash.put(kv.getKey(),kv.getValue());}
+	  (< COMMA > kv=pair(){hash.put(kv.getKey(),kv.getValue());})*  {
+	    return hash;
+	 	}
+	}
+
+
+private Map.Entry<String,Object> pair() : {Token t;String key; Object value;}
+	{
+	(	  t=< IDENTIFIER > {key=t.image;} |key=string()) <COLON> value=expr()  {
+		return new AbstractMap.SimpleEntry<String,Object>(key,value);
+		}
+	} 
+
+
+
+private Object expr():
+{
+    Object a;
+    Object b;
+}
+{
+    a=term()
+    (
+         < PLUS > b=expr()    { a= context.plus(a,b);  }
+    |    < MINUS > b=expr()    { a= context.minus(a,b); }
+    )*
+                        { return a; }
+}
+
+private Object term():
+{
+    Object a;
+    Object b;
+}
+{
+    a=unary()
+    (
+        "*" b=term()    {a= context.multiply(a,b); }
+    |   "/" b=term()    {a= context.divide(a,b);}
+    )*
+                        { return a; }
+}
+private Object unary():
+{
+    Object a;
+}
+{
+   < MINUS > a=any()     { return context.negate(a); }
+|   a=any()         { return a; }
+}
+
+
+private Object any(): { Object o=null;Token t; } {
+   	(
+	  o= functionCall()
+	  | t=< IDENTIFIER > {o=t.image;}
+	  | o= array()
+	  | o= map()
+	  | o=floating()
+	  | o = bool()
+	  | o = nil()
+	  | o= assign_statement()
+	  | < OPAR > o=term() <CPAR >
+	  )
+	  {
+	    return o;
+	  }
+	}
+private Object functionCall() : { Token t;Object o=null;List<Object > list_params=Collections.emptyList(); Map<String,Object> hash_params=Collections.emptyMap();} {
+	t=< IDENTIFIER > <OPAR >
+		(
+		list_params = array_items() (< COMMA > hash_params=map_items())? 
+		| hash_params = map_items()
+		)?
+	  	<CPAR >
+		{
+		return context.call(t.image,list_params,hash_params);
+		}
+	}
+
+private Number floating() : {Token t;} {
+	t= <FLOATING_NUMBER> {
+		final BigDecimal bd = new BigDecimal(t.image);
+		return bd;
+		}
+	}
+private Number intNumber() : {Token t;} {
+	t= <INT_NUMBER> {
+		final BigInteger bi = new BigInteger(t.image);
+		return bi;
+		}
+	}
+private String string() : {Token t;} {
+	t= <DOUBLE_QUOTE_LITERAL> {
+		return t.image;
+		}
+	}
+
+private Boolean bool() : {} {
+	(<LEX_TRUE>{
+		return Boolean.TRUE;
+		}
+	|<LEX_FALSE> {
+		return Boolean.FALSE;
+		}
+	)
+	}
+private Object nil() : {} {
+	<LEX_NIL>{
+		return null;
+		}
+	}
