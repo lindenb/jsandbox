@@ -10,6 +10,7 @@ package sandbox.minilang1;
 import java.util.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import sandbox.lang.StringUtils;
 
 
     
@@ -70,6 +71,7 @@ TOKEN : /* LITERALS */
 | <GT: ">">
 | <PLUSPLUS: "++">
 | <PLUS: "+">
+| <MINUSMINUS: "--">
 | <MINUS: "-">
 | <MUL: "*">
 | <DIV: "/">
@@ -96,28 +98,35 @@ public void input(): { }
 	(expr() < SEMICOLON > )* < EOF >
 	}
 
-private Object assign_statement() : {Token t;Object o;} { 
-	t=< IDENTIFIER >
+private MiniLang1Context.ASTNode assign_statement() : {MiniLang1Context.ASTNode varname;MiniLang1Context.ASTNode o;} { 
+	varname= variable()
 		(
 		  <ASSIGN > o=expr()
 			{
-			return context.put(t.image,o);
+			return context.create(varname,MiniLang1Context.OP_VARIABLE_ASSIGN,o);
 			}
 		| < PLUSPLUS > {
-		  	return context.put(t.image,context.multiply(context.get(t.image),1));
+		  	return  context.create(varname,MiniLang1Context.OP_VARIABLE_ASSIGN,
+						context.create(varname,MiniLang1Context.OP_PLUS,context.wrapValue(1))
+					);
+			}
+		| < MINUSMINUS > {
+		  	return  context.create(varname,MiniLang1Context.OP_VARIABLE_ASSIGN,
+						context.create(varname,MiniLang1Context.OP_MINUS,context.wrapValue(1))
+					);
 			}
 		)
 }
 
-private List<Object > array()  : { List<Object > list=Collections.emptyList();Object o;}
+private MiniLang1Context.ASTNode array()  : { List<MiniLang1Context.ASTNode > list=Collections.emptyList();}
 	{
 	<O_BRACKET>(list=array_items())? <C_BRACKET>
 		{
-		return list;
+		return context.wrapValue(list);
 		}
 	}
 
-private List<Object > array_items()  : { List<Object > list=new ArrayList< >();Object o;}
+private List<MiniLang1Context.ASTNode > array_items()  : { List<MiniLang1Context.ASTNode> list=new ArrayList< >();MiniLang1Context.ASTNode o;}
 	{
 	o=expr() {list.add(o);} (<COMMA > o=expr() {list.add(o);})*
 	{
@@ -126,16 +135,16 @@ private List<Object > array_items()  : { List<Object > list=new ArrayList< >();O
 	}
 
 
-private Map<String,Object > map() :{Map<String,Object> hash;}
+private MiniLang1Context.ASTNode map() :{Map<String,MiniLang1Context.ASTNode> hash;}
 	{
 	<O_BRACKET> <COLON> <C_BRACKET> {
-		return Collections.emptyMap();
+		return context.wrapValue(Collections.emptyMap());
 		}
-	|  <O_BRACKET> hash=map_items() {  return hash; } <C_BRACKET> {
+	|  <O_BRACKET> hash=map_items() {  return context.wrapValue(hash); } <C_BRACKET> {
 	 	}
 	}
 
-private Map<String,Object > map_items() :{Map<String,Object> hash = new LinkedHashMap<String,Object>();  Map.Entry<String,Object> kv;}
+private Map<String,MiniLang1Context.ASTNode > map_items() :{Map<String,MiniLang1Context.ASTNode> hash = new LinkedHashMap<String,MiniLang1Context.ASTNode>();  Map.Entry<String,MiniLang1Context.ASTNode> kv;}
 	{
 	 kv=pair() {hash.put(kv.getKey(),kv.getValue());}
 	  (< COMMA > kv=pair(){hash.put(kv.getKey(),kv.getValue());})*  {
@@ -144,56 +153,56 @@ private Map<String,Object > map_items() :{Map<String,Object> hash = new LinkedHa
 	}
 
 
-private Map.Entry<String,Object> pair() : {Token t;String key; Object value;}
+private Map.Entry<String,MiniLang1Context.ASTNode> pair() : {Token t;String key; MiniLang1Context.ASTNode value;}
 	{
-	(	  t=< IDENTIFIER > {key=t.image;} |key=string()) <COLON> value=expr()  {
-		return new AbstractMap.SimpleEntry<String,Object>(key,value);
+	(	  t=< IDENTIFIER > {key=t.image;} |key=base_string()) <COLON> value=expr()  {
+		return new AbstractMap.SimpleEntry<String,MiniLang1Context.ASTNode>(key,value);
 		}
 	} 
 
 
 
-private Object expr():
+private MiniLang1Context.ASTNode expr():
 {
-    Object a;
-    Object b;
+    MiniLang1Context.ASTNode a;
+    MiniLang1Context.ASTNode b;
 }
 {
     a=term()
     (
-         < PLUS > b=expr()    { a= context.plus(a,b);  }
-    |    < MINUS > b=expr()    { a= context.minus(a,b); }
+         < PLUS > b=expr()    {a= context.create(a, MiniLang1Context.OP_PLUS ,b); }
+    |    < MINUS > b=expr()    { a= context.create(a, MiniLang1Context.OP_MINUS ,b);  }
     )*
-                        { return a; }
+    { return a; }
 }
 
-private Object term():
+private MiniLang1Context.ASTNode term():
 {
-    Object a;
-    Object b;
+    MiniLang1Context.ASTNode a;
+    MiniLang1Context.ASTNode b;
 }
 {
     a=unary()
     (
-        "*" b=term()    {a= context.multiply(a,b); }
-    |   "/" b=term()    {a= context.divide(a,b);}
+        "*" b=term()    {a= context.create(a, MiniLang1Context.OP_MULTIPLY ,b); }
+    |   "/" b=term()    {a= context.create(a, MiniLang1Context.OP_DIVIDE ,b);}
     )*
-                        { return a; }
+    { return a; }
 }
-private Object unary():
+private MiniLang1Context.ASTNode unary():
 {
-    Object a;
+    MiniLang1Context.ASTNode a;
 }
 {
-   < MINUS > a=any()     { return context.negate(a); }
+   < MINUS > a=any()     { return context.create(MiniLang1Context.OP_NEGATE ,a); }
 |   a=any()         { return a; }
 }
 
 
-private Object any(): { Object o=null;Token t; } {
+private MiniLang1Context.ASTNode any(): { MiniLang1Context.ASTNode o=null;Token t; List<MiniLang1Context.ASTNode > a; Map<String,MiniLang1Context.ASTNode > h;} {
    	(
 	  o= functionCall()
-	  | t=< IDENTIFIER > {o=t.image;}
+	  | o= variable()
 	  | o= array()
 	  | o= map()
 	  | o=floating()
@@ -206,7 +215,7 @@ private Object any(): { Object o=null;Token t; } {
 	    return o;
 	  }
 	}
-private Object functionCall() : { Token t;Object o=null;List<Object > list_params=Collections.emptyList(); Map<String,Object> hash_params=Collections.emptyMap();} {
+private MiniLang1Context.ASTNode functionCall() : { Token t;List<MiniLang1Context.ASTNode > list_params=Collections.emptyList(); Map<String,MiniLang1Context.ASTNode> hash_params=Collections.emptyMap();} {
 	t=< IDENTIFIER > <OPAR >
 		(
 		list_params = array_items() (< COMMA > hash_params=map_items())? 
@@ -218,35 +227,46 @@ private Object functionCall() : { Token t;Object o=null;List<Object > list_param
 		}
 	}
 
-private Number floating() : {Token t;} {
+private MiniLang1Context.ASTNode floating() : {Token t;} {
 	t= <FLOATING_NUMBER> {
-		final BigDecimal bd = new BigDecimal(t.image);
-		return bd;
+		return context.wrapValue( new BigDecimal(t.image));
 		}
 	}
-private Number intNumber() : {Token t;} {
+private MiniLang1Context.ASTNode intNumber() : {Token t;} {
 	t= <INT_NUMBER> {
-		final BigInteger bi = new BigInteger(t.image);
-		return bi;
+		return context.wrapValue( new BigInteger(t.image));
 		}
 	}
-private String string() : {Token t;} {
-	t= <DOUBLE_QUOTE_LITERAL> {
-		return t.image;
+private MiniLang1Context.ASTNode string() : {String s;} {
+	s= base_string() {
+		return context.wrapValue(s);
 		}
 	}
 
-private Boolean bool() : {} {
+private String base_string()  : {Token t;} {
+	t= <DOUBLE_QUOTE_LITERAL> {
+		return StringUtils.unquote(t.image);
+		}
+	}
+
+private MiniLang1Context.ASTNode bool() : {} {
 	(<LEX_TRUE>{
-		return Boolean.TRUE;
+		return context.wrapValue(Boolean.TRUE);
 		}
 	|<LEX_FALSE> {
-		return Boolean.FALSE;
+		return context.wrapValue(Boolean.FALSE);
 		}
 	)
 	}
-private Object nil() : {} {
+private MiniLang1Context.ASTNode nil() : {} {
 	<LEX_NIL>{
-		return null;
+		return context.wrapValue(null);
 		}
+	}
+
+private MiniLang1Context.ASTNode variable(): { Token t; }
+	{
+	t= < IDENTIFIER > {
+		return context.createVariable(t.image);
+	 	}
 	}
