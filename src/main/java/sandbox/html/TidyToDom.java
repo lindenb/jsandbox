@@ -1,6 +1,8 @@
 package sandbox.html;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringReader;
@@ -90,6 +92,11 @@ public class TidyToDom {
 		return this.tidy.parseDOM(r, null);
 		}
 
+	public Document read(final InputStream in) throws IOException {
+		try(Reader r=new InputStreamReader(in)){
+			return read(r);
+			}
+		}
 	
 	private Node importNode(final Node n,final Document owner)
 		{

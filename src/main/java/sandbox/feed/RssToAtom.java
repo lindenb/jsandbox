@@ -19,6 +19,7 @@ import sandbox.lang.StringUtils;
 
 
 public class RssToAtom  implements Function<Document,Document> {
+	@SuppressWarnings("unused")
 	private static final Logger LOG =Logger.builder(RssToAtom.class).build();
 
 	private Document atomDoc = null;

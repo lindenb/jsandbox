@@ -14,13 +14,18 @@ public class StringWrapper implements CharSequence {
 	@Override
 	public boolean equals(Object obj) {
 		if(obj==this) return true;
-		if(obj==null || !(obj instanceof StringWrapper)) return false;
-		return this.delegate.equals(StringWrapper.class.cast(obj).delegate);
+		if(obj==null || !(this.getClass().equals(obj.getClass()))) return false;
+		return this.getString().equals(StringWrapper.class.cast(obj).getString());
 		}
+	
+	public String getString() {
+		return this.delegate;
+		}
+	
 	
 	@Override
 	public String toString() {
-		return delegate;
+		return getString();
 		}
 
 	@Override
@@ -30,11 +35,11 @@ public class StringWrapper implements CharSequence {
 
 	@Override
 	public char charAt(int index) {
-		return delegate.charAt(index);
+		return getString().charAt(index);
 	}
 
 	@Override
 	public CharSequence subSequence(int start, int end) {
-		return delegate.subSequence(start, end);
+		return getString().subSequence(start, end);
 	}
 	}

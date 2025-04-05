@@ -18,7 +18,7 @@
  * Usage:
  *        jar gimpclient.jar -P {port} -H {host} (-e {script} ) (file|stdin)
  */
-package sandbox;
+package sandbox.tools.gimp;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;

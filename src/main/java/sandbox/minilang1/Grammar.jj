@@ -54,7 +54,11 @@ SKIP:
 
 TOKEN : /* LITERALS */
 {
-  <OPAR:"(">
+  <#LETTER: ["_","a"-"z","A"-"Z"] >
+| <#DIGIT: ["0"-"9"] >
+| <#SIGN: ["-","+"]>
+| <#EXPONENT: ("E"|"e") (<SIGN>)? (<DIGIT>)+ >
+|  <OPAR:"(">
 | <CPAR:")">
 |  < O_BRACKET:"[" >
 |  < C_BRACKET:"]" >
@@ -80,10 +84,7 @@ TOKEN : /* LITERALS */
 | <LEX_TRUE: "true">
 | <LEX_FALSE: "false">
 | <LEX_NIL: "nil">
-| <#LETTER: ["_","a"-"z","A"-"Z"] >
-| <#DIGIT: ["0"-"9"] >
-| <#SIGN: ["-","+"]>
-| <#EXPONENT: ("E"|"e") (<SIGN>)? (<DIGIT>)+ >
+
 | <FLOATING_NUMBER: (<DIGIT>)* "." (<DIGIT>)* (<EXPONENT>)?
 | (<DIGIT>)+ (<EXPONENT>) >
 | <INT_NUMBER: (<DIGIT>)+ >

@@ -8,10 +8,13 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -24,8 +27,10 @@ import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.protocol.HttpContext;
 import org.w3c.dom.Document;
+import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import com.beust.jcommander.Parameter;
 
@@ -33,11 +38,14 @@ import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.date.DateParser;
 import sandbox.feed.RssToAtom;
+import sandbox.html.TidyToDom;
 import sandbox.http.CookieStoreUtils;
 import sandbox.io.IOUtils;
 import sandbox.jcommander.DurationConverter;
 import sandbox.jcommander.NoSplitter;
 import sandbox.lang.StringUtils;
+import sandbox.lang.StringWrapper;
+import sandbox.tools.central.ProgramDescriptor;
 import sandbox.xml.XMLSerializer;
 
 public class AtomToHtml extends Launcher {
@@ -58,6 +66,12 @@ public class AtomToHtml extends Launcher {
 	@Parameter(names={"--no-gif"},description="remove images with .gif suffix")
 	private boolean no_gif = false;
 
+	private static class FeedSource extends StringWrapper {
+		FeedSource(String url) {
+			super(url);
+			}
+		}
+	
 	
 	private DocumentBuilder documentBuilder;
 	private Document document = null;
@@ -80,6 +94,32 @@ public class AtomToHtml extends Launcher {
 			}
 		return null;
 		}
+	
+	private boolean isDateOk(String date) {
+		if(this.since==null || StringUtils.isBlank(date)) return true;
+		final Optional<Date> optDate = this.dateParser.apply(date);
+		if(optDate.isPresent())  {
+			final Date today = new Date();
+			final long diff = today.getTime() - optDate.get().getTime();
+			if( diff > since.toMillis() ) {
+				return false;
+				}
+			}
+		else
+			{
+			LOG.debug("cannot parse date: "+date);
+			}
+		return true;
+		}
+	
+	private boolean isImageUrlOk(String img) {
+		if(StringUtils.isBlank(img)) return false;
+		if(no_gif && (img.endsWith(".gif") || img.contains(".gif?"))) {
+			return false;
+		}
+		return true;
+		}	
+	
 	
 	private Node parseEntry(Node root,final CloseableHttpClient client) {
 		String title = null;
@@ -165,22 +205,12 @@ public class AtomToHtml extends Launcher {
 			return null;
 			}
 		
-		if(!StringUtils.isBlank(updated) && this.since!=null) {
-			final Optional<Date> optDate = this.dateParser.apply(updated);
-			if(optDate.isPresent())  {
-				final Date today = new Date();
-				final long diff = today.getTime() - optDate.get().getTime();
-				if( diff > since.toMillis() ) {
-					return null;
-					}
-				}
+		if(!isDateOk(updated)) {
+			return null;
 			}
 		
 		if(StringUtils.isBlank(url)) return null;
-		if(StringUtils.isBlank(img)) return null;
-		if(no_gif && (img.endsWith(".gif") || img.contains(".gif?"))) {
-			return null;
-		}
+		if(!isImageUrlOk(img)) return null;
 		if(!StringUtils.isBlank(title) && !StringUtils.isBlank(license)) {
 			title = title+" "+license;
 		}
@@ -230,83 +260,217 @@ public class AtomToHtml extends Launcher {
 	}
 		
 	
-	private Document parseUrl(CloseableHttpClient client,final String url) throws Exception {
+	private Optional<Document> parseUrl(CloseableHttpClient client,final FeedSource feedSrc) throws Exception {
+		final String url = feedSrc.toString();
 		if(IOUtils.isURL(url)) {
 			try(CloseableHttpResponse resp=client.execute(new HttpGet(url))) {
 				if(resp.getStatusLine().getStatusCode()!=200) {
 					LOG.error("cannot fetch "+url+" "+resp.getStatusLine());
-					return null;
+					return Optional.empty();
 					}
 				try(InputStream in = resp.getEntity().getContent()) {
-					return this.documentBuilder.parse(in);
+					return Optional.of(this.documentBuilder.parse(in));
 					}
 				catch(final Throwable err) {
 					LOG.error(err);
-					return null;
+					return Optional.empty();
 					}
 				}
 			}
 		else
 			{
 			try {
-				return this.documentBuilder.parse(new File(url));
+				return Optional.of(this.documentBuilder.parse(new File(url)));
 				}
 			catch(final Throwable err) {
 				LOG.error(err);
-				return null;
+				return Optional.empty();
 				}
 			}
 		}
 	
-	private Node parseFeed(CloseableHttpClient client,final String url) throws Exception {
-		final RssToAtom rss2atom = new RssToAtom();
-		final Document rss;
-		try {
-			rss=parseUrl(client, url);
+	private boolean getOggForHtml(final CloseableHttpClient client,final Node dt , final Node root,final String url) {
+		if(root==null) {
+			return false;
+		}
+		System.err.println(url+" "+root+" B");
+		if(root.getNodeType()==Node.DOCUMENT_NODE) {
+			return getOggForHtml(client,dt,Document.class.cast(root).getDocumentElement(),url);
 			}
-		catch(Throwable err) {
-			LOG.error(err);
-			return null;
-			}
-		if(rss==null) return null;
-		final Document atom = rss2atom.apply(rss);
-		if(atom==null) return null;
-		
-		Element feed= atom.getDocumentElement();
-		if(feed==null) return null;
-		String title = null;
-		List<Node> entries= new ArrayList<>();
-		for(Node c1=feed==null?null:feed.getFirstChild();c1!=null;c1=c1.getNextSibling()) {
-			if(c1.getNodeType()!=Node.ELEMENT_NODE) continue;
-			final Element e1= Element.class.cast(c1);
-			if(e1.getLocalName().equals("title")) {
-				title = e1.getTextContent();
+		final Element E1 = Element.class.cast(root);
+		if(E1.getNodeName().equalsIgnoreCase("body") || E1.getNodeName().equalsIgnoreCase("html"))
+			{
+			boolean ok=false;
+			for(Node c=E1.getFirstChild();c!=null;c=c.getNextSibling()) {
+				if(c.getNodeType()!=Node.ELEMENT_NODE) continue;
+				if(getOggForHtml(client,dt,c,url)) {
+					ok=true;
+					}
 				}
-			else if(e1.getLocalName().equals("entry")) {
-				final Node entryE = parseEntry(e1,client);
-				if(entryE!=null) {
-					entries.add(entryE);
+			return ok;
+			}
+		else if(E1.getNodeName().equalsIgnoreCase("head")) {
+			final Map<String,String> hash = new HashMap<>();
+			for(Node c=E1.getFirstChild();c!=null;c=c.getNextSibling()) {
+				if(c.getNodeType()!=Node.ELEMENT_NODE) continue;
+				final Element E2 = Element.class.cast(c);
+				if(!E2.getNodeName().equals("meta")) continue;
+				if( E2.getAttribute("property").startsWith("og:")) {
+					hash.put(
+						E2.getAttribute("property"),
+						E2.getAttribute("content")
+						);
+					}
+				}
+			final String img= hash.getOrDefault("og:image", "");
+			if(!isImageUrlOk(img)) return false;
+			final String title= hash.getOrDefault("og:title", url);
+			final Element retE = this.document.createElement("span");
+			dt.appendChild(retE);
+			final Element a  = this.document.createElement("a");
+			retE.appendChild(a);
+			a.setAttribute("href",url);
+			a.setAttribute("target","_blank");
+			final Element imgE = this.document.createElement("img");
+			if(width>0) imgE.setAttribute("width", String.valueOf(width));
+			a.appendChild(imgE);
+			if(!StringUtils.isBlank(title)) {
+				imgE.setAttribute("alt", title);
+				a.setAttribute("title", title);
+				}
+			imgE.setAttribute("src", img);
+			saveImage(img,client);
+			return true;
+			}
+		else
+			{
+			System.err.println(url+" "+root+" BUOM"+root.getNodeName());
+			}
+		return false;
+		}
+	
+	private boolean getOggForHtml(final CloseableHttpClient client,final Element dt ,String url) {
+		if(!IOUtils.isURL(url)) return false;
+		TidyToDom toDom = new TidyToDom();
+		
+		try(CloseableHttpResponse resp=client.execute(new HttpGet(url))) {
+			if(resp.getStatusLine().getStatusCode()!=200) {
+				LOG.error("cannot fetch "+url+" "+resp.getStatusLine());
+				}
+			try(InputStream in = resp.getEntity().getContent()) {
+				final Document dom= toDom.read(in);
+				return getOggForHtml(client,dt,dom,url);
+				}
+			catch(final Throwable err) {
+				LOG.error(err);
+				return false;
+				}
+			}
+		catch(IOException err) {
+			LOG.error(err);
+			return false;
+			}
+		}
+		
+	
+	private  Optional<Node> rssByHtmlPage(final CloseableHttpClient client,Document rss,String url) {
+		LOG.info("parsing bsy "+url);
+		final DocumentFragment docFragment = this.document.createDocumentFragment();
+		final Element dt = this.document.createElement("dt");
+		docFragment.appendChild(dt);
+		if(!StringUtils.isBlank(url)) dt.appendChild(document.createTextNode(url));
+		
+		boolean ok=false;
+		NodeList nl=rss.getElementsByTagName("item");
+		for(int i=0;i< nl.getLength();i++) {
+			Node item = nl.item(i);
+			
+			String pubDate = null;
+			String link = null;
+			for(Node c=item.getFirstChild();c!=null;c=c.getNextSibling()) {
+				if(c.getNodeType()!=Node.ELEMENT_NODE) continue;
+				Element e1=Element.class.cast(c);
+				if(e1.getNodeName().equals("pubDate")) {
+					pubDate  = e1.getTextContent();
+					}
+				else if(e1.getNodeName().equals("link")) {
+					link = e1.getTextContent();
+					}
+				}
+			LOG.info("item "+link+" "+pubDate+" "+isDateOk(pubDate));
+			
+			if(IOUtils.isURL(link)) {
+				if(!isDateOk(pubDate))  continue;
+
+				if(getOggForHtml(client,dt,link) ) {
+					ok=true;
 					}
 				}
 			}
-		if(entries.isEmpty()) return null;
-		Node retE = this.document.createDocumentFragment();
-		Element dt = this.document.createElement("dt");
-		retE.appendChild(dt);
-		if(!StringUtils.isBlank(title)) dt.appendChild(document.createTextNode(title));
-		Element dd= this.document.createElement("dd");
-		retE.appendChild(dd);
-		for(Node entry:entries) {
-			dd.appendChild(entry);
+		if(!ok) return Optional.empty();
+		return Optional.of(docFragment);
+		}
+	
+	private Optional<Node> parseFeed(CloseableHttpClient client,final FeedSource feedSrc) throws Exception {
+		final RssToAtom rss2atom = new RssToAtom();
+		final Optional<Document> rss;
+		try {
+			rss = parseUrl(client, feedSrc);
 			}
-		return retE;
+		catch(Throwable err) {
+			LOG.error(err);
+			return Optional.empty();
+			}
+		if(!rss.isPresent()) return  Optional.empty();
 		
+		if(feedSrc.getString().startsWith("https://bsky.app/")) {
+			return rssByHtmlPage(client, rss.get(),feedSrc.getString());
+			}
+		else
+			{
+			final Document atom = rss2atom.apply(rss.get());
+			if(atom==null) return  Optional.empty();
 			
+			final Element feed= atom.getDocumentElement();
+			if(feed==null) return Optional.empty();
+			String title = null;
+			final List<Node> entries= new ArrayList<>();
+			for(Node c1=feed==null?null:feed.getFirstChild();c1!=null;c1=c1.getNextSibling()) {
+				if(c1.getNodeType()!=Node.ELEMENT_NODE) continue;
+				final Element e1= Element.class.cast(c1);
+				if(e1.getLocalName().equals("title")) {
+					title = e1.getTextContent();
+					}
+				else if(e1.getLocalName().equals("entry")) {
+					final Node entryE = parseEntry(e1,client);
+					if(entryE!=null) {
+						entries.add(entryE);
+						}
+					}
+				}
+			if(entries.isEmpty()) return Optional.empty();;
+			final Node retE = this.document.createDocumentFragment();
+			final Element dt = this.document.createElement("dt");
+			retE.appendChild(dt);
+			if(!StringUtils.isBlank(title)) dt.appendChild(document.createTextNode(title));
+			final Element dd= this.document.createElement("dd");
+			retE.appendChild(dd);
+			for(Node entry:entries) {
+				dd.appendChild(entry);
+				}
+			return Optional.of(retE);
+			}
 		}
 	
 	@Override
 	public int doWork(final List<String> args) {
 		try {
+			final List<FeedSource> feedSources =  IOUtils.unroll(args).stream().
+					map(S->S.trim()).
+					filter(S->!StringUtils.isBlank(S)).
+					map(S->new FeedSource(S)).
+					collect(Collectors.toList());
+			
 			if(this.xUserPath!=null) {
 				Files.lines(this.xUserPath).
 					map(S->S.trim()).
@@ -340,12 +504,12 @@ public class AtomToHtml extends Launcher {
 			try(CloseableHttpClient client = builder.build()) {
 			
 				
-				for(final String url:args) {
-					Node n = parseFeed(client, url);
-					if(n!=null) dl.appendChild(n);
+				for(final FeedSource feedSrc :feedSources) {
+					Optional<Node> n = parseFeed(client, feedSrc);
+					if(n.isPresent()) dl.appendChild(n.get());
 				}
 				
-			XMLSerializer write =new XMLSerializer();
+			final XMLSerializer write =new XMLSerializer();
 			write.serialize(this.document,this.output);
 			}
 		} catch (final Throwable err) {
@@ -355,6 +519,16 @@ public class AtomToHtml extends Launcher {
 		return 0;
 		}
 	
+	
+    public static ProgramDescriptor getProgramDescriptor() {
+    	return new ProgramDescriptor() {
+    		@Override
+    		public String getName() {
+    			return "atom2html";
+    			}
+    		};
+    	}
+    
 	public static void main(final String[] args) {
 		new AtomToHtml().instanceMainWithExit(args);
 
