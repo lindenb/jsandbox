@@ -72,9 +72,21 @@ public class AtomToHtml extends Launcher {
 			}
 		}
 	
+	private class Feed {
+		String url;
+		String title;
+		List<FeedItem> items = new ArrayList<>();
+	}
+	
+	private class FeedItem{
+		String url;
+		String date;
+		String title;
+		Set<String> userNames=new HashSet<>();
+		String imgUrl;
+	}
 	
 	private DocumentBuilder documentBuilder;
-	private Document document = null;
 	private final DateParser dateParser = new DateParser();
 	private final Set<String> imgSrcSet = new HashSet<>();
 	private final Set<String> excludeUsers = new HashSet<>();
@@ -121,7 +133,7 @@ public class AtomToHtml extends Launcher {
 		}	
 	
 	
-	private Node parseEntry(Node root,final CloseableHttpClient client) {
+	private FeedItem parseAtomEntry(Node root) {
 		String title = null;
 		String updated = null;
 		String url = null;
@@ -217,18 +229,12 @@ public class AtomToHtml extends Launcher {
 		
 		if(this.imgSrcSet.contains(img)) return null;
 		this.imgSrcSet.add(img);
-		final Element retE = this.document.createElement("span");
-		final Element a  = this.document.createElement("a");
-		retE.appendChild(a);
-		a.setAttribute("href",url);
-		a.setAttribute("target","_blank");
-		final Element imgE = this.document.createElement("img");
-		if(width>0) imgE.setAttribute("width", String.valueOf(width));
-		a.appendChild(imgE);
-		if(!StringUtils.isBlank(title)) imgE.setAttribute("alt", title);
-		if(!StringUtils.isBlank(title)) a.setAttribute("title", title + (userNames.isEmpty()?"":" \""+userNames.iterator().next()+"\"")+(StringUtils.isBlank(updated)?"":" "+updated));
-		imgE.setAttribute("src", img);
-		saveImage(img,client);
+		final FeedItem retE = new FeedItem();
+		retE.userNames.addAll(userNames);
+		retE.url = url;
+		retE.title = title;
+		retE.imgUrl = img;
+		retE.date = updated;
 		return retE;
 		}
 	
@@ -289,25 +295,22 @@ public class AtomToHtml extends Launcher {
 			}
 		}
 	
-	private boolean getOggForHtml(final CloseableHttpClient client,final Node dt , final Node root,final String url) {
+	private void getOggForHtml(final CloseableHttpClient client,final Feed feed , final Node root) {
 		if(root==null) {
-			return false;
-		}
-		System.err.println(url+" "+root+" B");
+			return;
+			}
 		if(root.getNodeType()==Node.DOCUMENT_NODE) {
-			return getOggForHtml(client,dt,Document.class.cast(root).getDocumentElement(),url);
+			getOggForHtml(client,feed,Document.class.cast(root).getDocumentElement());
+			return;
 			}
 		final Element E1 = Element.class.cast(root);
-		if(E1.getNodeName().equalsIgnoreCase("body") || E1.getNodeName().equalsIgnoreCase("html"))
+		if(E1.getNodeName().equalsIgnoreCase("html"))
 			{
-			boolean ok=false;
 			for(Node c=E1.getFirstChild();c!=null;c=c.getNextSibling()) {
 				if(c.getNodeType()!=Node.ELEMENT_NODE) continue;
-				if(getOggForHtml(client,dt,c,url)) {
-					ok=true;
-					}
+				getOggForHtml(client,feed,c);
 				}
-			return ok;
+			return;
 			}
 		else if(E1.getNodeName().equalsIgnoreCase("head")) {
 			final Map<String,String> hash = new HashMap<>();
@@ -322,65 +325,49 @@ public class AtomToHtml extends Launcher {
 						);
 					}
 				}
-			final String img= hash.getOrDefault("og:image", "");
-			if(!isImageUrlOk(img)) return false;
-			final String title= hash.getOrDefault("og:title", url);
-			final Element retE = this.document.createElement("span");
-			dt.appendChild(retE);
-			final Element a  = this.document.createElement("a");
-			retE.appendChild(a);
-			a.setAttribute("href",url);
-			a.setAttribute("target","_blank");
-			final Element imgE = this.document.createElement("img");
-			if(width>0) imgE.setAttribute("width", String.valueOf(width));
-			a.appendChild(imgE);
-			if(!StringUtils.isBlank(title)) {
-				imgE.setAttribute("alt", title);
-				a.setAttribute("title", title);
-				}
-			imgE.setAttribute("src", img);
-			saveImage(img,client);
-			return true;
+			final FeedItem retE = new FeedItem();
+			retE.imgUrl= hash.getOrDefault("og:image", "");
+			if(!isImageUrlOk(retE.imgUrl)) return;
+			retE.title= hash.getOrDefault("og:title", "");
+			feed.items.add(retE);
 			}
 		else
 			{
-			System.err.println(url+" "+root+" BUOM"+root.getNodeName());
 			}
-		return false;
 		}
 	
-	private boolean getOggForHtml(final CloseableHttpClient client,final Element dt ,String url) {
-		if(!IOUtils.isURL(url)) return false;
-		TidyToDom toDom = new TidyToDom();
+	private Optional<Feed> getOggForHtml(final CloseableHttpClient client,final Feed feed,final String itemSrc) {
+		if(!IOUtils.isURL(itemSrc)) return Optional.empty();
+		final TidyToDom toDom = new TidyToDom();
 		
-		try(CloseableHttpResponse resp=client.execute(new HttpGet(url))) {
+		try(CloseableHttpResponse resp=client.execute(new HttpGet(itemSrc))) {
 			if(resp.getStatusLine().getStatusCode()!=200) {
-				LOG.error("cannot fetch "+url+" "+resp.getStatusLine());
+				LOG.error("cannot fetch "+feed.url+" != "+itemSrc+" "+resp.getStatusLine());
 				}
 			try(InputStream in = resp.getEntity().getContent()) {
 				final Document dom= toDom.read(in);
-				return getOggForHtml(client,dt,dom,url);
+				getOggForHtml(client,feed,dom);
+				if(feed.items.isEmpty()) return  Optional.empty();
+				return  Optional.of(feed);
 				}
 			catch(final Throwable err) {
 				LOG.error(err);
-				return false;
+				return Optional.empty();
 				}
 			}
 		catch(IOException err) {
 			LOG.error(err);
-			return false;
+			return Optional.empty();
 			}
 		}
 		
 	
-	private  Optional<Node> rssByHtmlPage(final CloseableHttpClient client,Document rss,String url) {
-		LOG.info("parsing bsy "+url);
-		final DocumentFragment docFragment = this.document.createDocumentFragment();
-		final Element dt = this.document.createElement("dt");
-		docFragment.appendChild(dt);
-		if(!StringUtils.isBlank(url)) dt.appendChild(document.createTextNode(url));
-		
-		boolean ok=false;
+	private  Optional<Feed> rssByHtmlPage(final CloseableHttpClient client,Document rss,String url) {
+		if(!IOUtils.isURL(url)) return Optional.empty();
+		final Feed feed = new Feed();
+		feed.url = url;
+		feed.title = url;
+
 		NodeList nl=rss.getElementsByTagName("item");
 		for(int i=0;i< nl.getLength();i++) {
 			Node item = nl.item(i);
@@ -401,17 +388,41 @@ public class AtomToHtml extends Launcher {
 			
 			if(IOUtils.isURL(link)) {
 				if(!isDateOk(pubDate))  continue;
-
-				if(getOggForHtml(client,dt,link) ) {
-					ok=true;
-					}
+				getOggForHtml(client,feed,link );
 				}
 			}
-		if(!ok) return Optional.empty();
-		return Optional.of(docFragment);
+		if(feed.items.isEmpty()) return Optional.empty();
+		return Optional.of(feed);
 		}
 	
-	private Optional<Node> parseFeed(CloseableHttpClient client,final FeedSource feedSrc) throws Exception {
+	private Node feedItemToHtml(final Document document,final FeedItem feed) {
+		final Element a  = document.createElement("a");
+		a.setAttribute("href",feed.url);
+		a.setAttribute("target","_blank");
+		final Element imgE = document.createElement("img");
+		if(width>0) imgE.setAttribute("width", String.valueOf(width));
+		a.appendChild(imgE);
+		if(!StringUtils.isBlank(feed.title)) imgE.setAttribute("alt", feed.title);
+		if(!StringUtils.isBlank(feed.title)) a.setAttribute("title", feed.title + (feed.userNames.isEmpty()?"":" \""+feed.userNames.iterator().next()+"\"")+(StringUtils.isBlank(feed.date)?"":" "+feed.date));
+		imgE.setAttribute("src", feed.imgUrl);
+		return a;
+		}
+	
+	private DocumentFragment feedToHtml(final Document document,final Feed feed) {
+		final DocumentFragment fragment = document.createDocumentFragment();
+		if(feed==null || feed.items.isEmpty()) return fragment;
+		final Element dt =document.createElement("dt");
+		fragment.appendChild(dt);
+		if(!StringUtils.isBlank(feed.title)) dt.appendChild(document.createTextNode(feed.title));
+		final Element dd= document.createElement("dd");
+		fragment.appendChild(dd);
+		for(FeedItem entry:feed.items) {
+			dd.appendChild(feedItemToHtml(document,entry));
+			}
+		return fragment;
+		}
+	
+	private Optional<Feed> parseFeed(CloseableHttpClient client,final FeedSource feedSrc) throws Exception {
 		final RssToAtom rss2atom = new RssToAtom();
 		final Optional<Document> rss;
 		try {
@@ -433,32 +444,25 @@ public class AtomToHtml extends Launcher {
 			
 			final Element feed= atom.getDocumentElement();
 			if(feed==null) return Optional.empty();
-			String title = null;
-			final List<Node> entries= new ArrayList<>();
+			final Feed feeds  = new Feed();
+			feeds.url= feedSrc.getString();
+			feeds.title = feeds.url;
+			
 			for(Node c1=feed==null?null:feed.getFirstChild();c1!=null;c1=c1.getNextSibling()) {
 				if(c1.getNodeType()!=Node.ELEMENT_NODE) continue;
 				final Element e1= Element.class.cast(c1);
 				if(e1.getLocalName().equals("title")) {
-					title = e1.getTextContent();
+					feeds.title = e1.getTextContent();
 					}
 				else if(e1.getLocalName().equals("entry")) {
-					final Node entryE = parseEntry(e1,client);
+					final FeedItem entryE = parseAtomEntry(e1);
 					if(entryE!=null) {
-						entries.add(entryE);
+						feeds.items.add(entryE);
 						}
 					}
-				}
-			if(entries.isEmpty()) return Optional.empty();;
-			final Node retE = this.document.createDocumentFragment();
-			final Element dt = this.document.createElement("dt");
-			retE.appendChild(dt);
-			if(!StringUtils.isBlank(title)) dt.appendChild(document.createTextNode(title));
-			final Element dd= this.document.createElement("dd");
-			retE.appendChild(dd);
-			for(Node entry:entries) {
-				dd.appendChild(entry);
-				}
-			return Optional.of(retE);
+				}			
+			if(feeds.items.isEmpty()) return Optional.empty();
+			return Optional.of(feeds);
 			}
 		}
 	
@@ -491,26 +495,37 @@ public class AtomToHtml extends Launcher {
 				final BasicCookieStore cookies = CookieStoreUtils.readTsv(this.cookieStoreFile);
 				builder.setDefaultCookieStore(cookies);
 				}
-			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+			
+			
+			final List<Feed> all_feeds=  new ArrayList<>();
+			final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 			dbf.setNamespaceAware(true);
 			this.documentBuilder = dbf.newDocumentBuilder();
-			this.document = this.documentBuilder.newDocument();
-			Element html = this.document.createElement("html");
-			this.document.appendChild(html);
-			Element body = this.document.createElement("body");
-			html.appendChild(body);
-			Element dl = this.document.createElement("dl");
-			body.appendChild(dl);
+
 			try(CloseableHttpClient client = builder.build()) {
-			
-				
 				for(final FeedSource feedSrc :feedSources) {
-					Optional<Node> n = parseFeed(client, feedSrc);
-					if(n.isPresent()) dl.appendChild(n.get());
+					Optional<Feed> n = parseFeed(client, feedSrc);
+					if(n.isPresent()) all_feeds.add(n.get());
 				}
-				
+			
+			final Document document = this.documentBuilder.newDocument();
+			Element html = document.createElement("html");
+			document.appendChild(html);
+			Element body = document.createElement("body");
+			html.appendChild(body);
+			Element dl = document.createElement("dl");
+			body.appendChild(dl);
+			for(Feed feed: all_feeds) {
+				dl.appendChild(feedToHtml(document,feed));
+				}
+			
+			for(Feed feed: all_feeds) {
+				for(FeedItem item : feed.items) {
+					saveImage(item.imgUrl, client);
+					}
+				}			
 			final XMLSerializer write =new XMLSerializer();
-			write.serialize(this.document,this.output);
+			write.serialize(document,this.output);
 			}
 		} catch (final Throwable err) {
 			LOG.error(err);
