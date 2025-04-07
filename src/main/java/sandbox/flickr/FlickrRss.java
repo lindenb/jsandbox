@@ -89,7 +89,7 @@ public class FlickrRss extends AbstractApplication
 	private boolean sort_on_views=false;
 	private Properties flickrProperties=new Properties();
 	private OAuthService service;
-	private org.scribe.model.Token accessToken;
+	private org.sandbox.minilang.minilang2.Token accessToken;
 	private boolean use_priority=true;
 	
 	public class Photo implements Comparable<Photo>
@@ -594,7 +594,7 @@ public class FlickrRss extends AbstractApplication
 		        .apiSecret(this.flickrProperties.getProperty("api_secret",""))
 		        .build();
 	    
-		    org.scribe.model.Token requestToken = service.getRequestToken();
+		    sandbox.minilang.minilang2.scribe.model.Token requestToken = service.getRequestToken();
 		    LOG.info("got request token");
 		    
 		    this.accessToken=null;
@@ -609,7 +609,7 @@ public class FlickrRss extends AbstractApplication
 		    	in.close();
 		    	if(token!=null && secret!=null)
 		    		{
-		    		this.accessToken=new org.scribe.model.Token(token,secret,raw);
+		    		this.accessToken=new sandbox.minilang.minilang2.scribe.model.Token(token,secret,raw);
 		    		}
 		    	update_token_file=false;
 		    	}

@@ -28,7 +28,7 @@ public abstract class AbstractOAuthApplication
 	{
 	private static final Logger LOG=Logger.builder(AbstractOAuthApplication.class).build();
 	private OAuthService service;
-	private org.scribe.model.Token accessToken;
+	private org.sandbox.minilang.minilang2.Token accessToken;
 	private Preferences preferences;
 	private boolean force_manual_access=false;
 	private boolean force_ignore_prefs=false;
@@ -49,7 +49,7 @@ public abstract class AbstractOAuthApplication
 		return service;
 		}
 	
-	protected org.scribe.model.Token getAccessToken()
+	protected org.sandbox.minilang.minilang2.Token getAccessToken()
 		{
 		return accessToken;
 		}
@@ -186,7 +186,7 @@ public abstract class AbstractOAuthApplication
 	        .build();
 	        
 	        
-	     org.scribe.model.Token requestToken=null;
+	     sandbox.minilang.minilang2.scribe.model.Token requestToken=null;
 	     LOG.info("getRequestToken....");
 		requestToken  =  this.service.getRequestToken();
 		LOG.info("got request token");
@@ -199,7 +199,7 @@ public abstract class AbstractOAuthApplication
 			 String access_raw=getPreferences().get(prefAccessRaw(), null);
 	    	 if(access_token!=null && access_secret!=null)
 	    		{
-	    		this.accessToken=new org.scribe.model.Token(
+	    		this.accessToken=new sandbox.minilang.minilang2.scribe.model.Token(
 	    				access_token,
 	    				access_secret,
 	    				access_raw

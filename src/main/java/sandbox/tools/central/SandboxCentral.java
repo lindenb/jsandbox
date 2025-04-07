@@ -20,7 +20,7 @@ import sandbox.tools.htmlinxml.HtmlInXml;
 import sandbox.tools.img2base64.ImagesToBase64;
 import sandbox.tools.java2xml.JavaToXml;
 import sandbox.tools.json2xml.Json2Xml;
-import sandbox.tools.lisp.LispApp;
+//import sandbox.tools.lisp.LispApp;
 import sandbox.tools.mail2xml.Mail2Xml;
 import sandbox.tools.makegraphdependencies.MakeGraphDependencies;
 import sandbox.tools.miniivy.MiniIvy;
@@ -81,7 +81,7 @@ public class SandboxCentral {
 		register(MakeGraphDependencies.class);
 		register(Mail2Xml.class);
 		register(Angel.class);
-		register(LispApp.class);
+		//register(LispApp.class);
 		register(UrlEncoder.class);
 		register(VelocityJson.class);
 		register(YamlToXml.class);

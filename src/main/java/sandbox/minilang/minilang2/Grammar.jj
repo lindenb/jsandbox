@@ -6,22 +6,23 @@ LOOKAHEAD=2;
 // https://github.com/bkiers/Curta/blob/master/src/main/jjtree/CurtaParser.jjt
 PARSER_BEGIN(MiniLang2Parser)
 
-package sandbox.minilang2;
+package sandbox.minilang.minilang2;
 import java.util.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import sandbox.lang.StringUtils;
+import java.util.function.Supplier;
 
 
     
 @SuppressWarnings("unchecked")
 public abstract class MiniLang2Parser {
 	private MiniLang2Context context;
-	public MiniLang2Parser(MiniLang2Context ctx,java.io.InputStream stream, String encoding) {
+	public MiniLang2Parser(final MiniLang2Context ctx,java.io.InputStream stream, String encoding) {
 	    this(stream,encoding);
 		this.context = ctx;
 		}
-	public MiniLang2Parser(MiniLang2Context ctx,java.io.InputStream stream) {
+	public MiniLang2Parser(final MiniLang2Context ctx,java.io.InputStream stream) {
 	    this(stream);
 		this.context = ctx;
 		}
@@ -99,7 +100,7 @@ public void input(): { }
 	(expr() < SEMICOLON > )* < EOF >
 	}
 
-private Object assign_statement() : {MiniLang2Context.Variable varname;Object o;} { 
+private Supplier<Object> assign_statement() : {MiniLang2Context.Variable varname;Supplier<Object> o;} { 
 	varname = variable()
 		(
 		  <ASSIGN > o=expr()
@@ -107,23 +108,23 @@ private Object assign_statement() : {MiniLang2Context.Variable varname;Object o;
 			return context.put(varname,o);
 			}
 		| < PLUSPLUS > {
-		  	return  context.put(varname,context.apply(varname,'+',1));
+		  	return  context.put(varname,context.apply(context.get(varname),'+',context.wrap(1)));
 			}
 		| < MINUSMINUS > {
-		  	return  context.put(varname,context.apply(varname,'-',1));
+		  	return  context.put(varname,context.apply(context.get(varname),'-',context.wrap(1)));
 			}
 		)
 }
 
-private Object array()  : { List<Object > list=Collections.emptyList();}
+private Supplier<Object> array()  : { List<Supplier<Object> > list=Collections.emptyList();}
 	{
 	<O_BRACKET>(list=array_items())? <C_BRACKET>
 		{
-		return list;
+		return context.wrap(list);
 		}
 	}
 
-private List<Object > array_items()  : { List<Object> list=new ArrayList< >();Object o;}
+private List<Supplier<Object> > array_items()  : { List<Supplier<Object>> list=new ArrayList< >();Supplier<Object> o;}
 	{
 	o=expr() {list.add(o);} (<COMMA > o=expr() {list.add(o);})*
 	{
@@ -132,16 +133,16 @@ private List<Object > array_items()  : { List<Object> list=new ArrayList< >();Ob
 	}
 
 
-private Object map() :{Map<String,Object> hash;}
+private Supplier<Object> map() :{Map<String,Supplier<Object>> hash;}
 	{
 	<O_BRACKET> <COLON> <C_BRACKET> {
-		return Collections.emptyMap();
+		return context.wrap(Collections.emptyMap());
 		}
-	|  <O_BRACKET> hash=map_items() {  return hash; } <C_BRACKET> {
+	|  <O_BRACKET> hash=map_items() { return  context.wrap(hash); } <C_BRACKET> {
 	 	}
 	}
 
-private Map<String,Object > map_items() : { Map<String,Object> hash = new LinkedHashMap<String,Object>();  Map.Entry<String,Object> kv;}
+private Map<String,Supplier<Object> > map_items() : { Map<String,Supplier<Object>> hash = new LinkedHashMap<String,Supplier<Object>>();  Map.Entry<String,Supplier<Object>> kv;}
 	{
 	 kv=pair() {hash.put(kv.getKey(),kv.getValue());}
 	  (< COMMA > kv=pair(){hash.put(kv.getKey(),kv.getValue());})*  {
@@ -150,16 +151,16 @@ private Map<String,Object > map_items() : { Map<String,Object> hash = new Linked
 	}
 
 
-private Map.Entry<String,Object> pair() : {Token t;String key; Object value;}
+private Map.Entry<String,Supplier<Object>> pair() : {Token t;String key; Supplier<Object> value;}
 	{
 	(	  t=< IDENTIFIER > {key=t.image;} |key=base_string()) <COLON> value=expr()  {
-		return new AbstractMap.SimpleEntry<String,Object>(key,value);
+		return new AbstractMap.SimpleEntry<String,Supplier<Object>>(key,value);
 		}
 	} 
 
 
 
-private Object expr(): {  Object a;  Object b; }
+private Supplier<Object> expr(): {  Supplier<Object> a;  Supplier<Object> b; }
 {
     a=term()
     (
@@ -169,7 +170,7 @@ private Object expr(): {  Object a;  Object b; }
     { return a; }
 }
 
-private Object term() : {  Object a;  Object b; }
+private Supplier<Object> term() : {  Supplier<Object> a;  Supplier<Object> b; }
 {
     a=unary()
     (
@@ -178,9 +179,9 @@ private Object term() : {  Object a;  Object b; }
     )*
     { return a; }
 }
-private Object unary():
+private Supplier<Object> unary():
 {
-    Object a;
+    Supplier<Object> a;
 }
 {
    < MINUS > a=any()     { return context.apply('-',a); }
@@ -189,10 +190,10 @@ private Object unary():
 }
 
 
-private Object any(): { Object o=null;} {
+private Supplier<Object> any(): { Supplier<Object> o=null; MiniLang2Context.Variable v=null;} {
    	(
 	  o= functionCall()
-	  | o= variable()
+	  | v= variable() {  return context.wrap(v); }
 	  | o= array()
 	  | o= map()
 	  | o=floating()
@@ -205,7 +206,7 @@ private Object any(): { Object o=null;} {
 	    return o;
 	  }
 	}
-private Object functionCall() : { Token t;List<Object > list_params=Collections.emptyList(); Map<String,Object> hash_params=Collections.emptyMap();} {
+private Supplier<Object> functionCall() : { Token t;List< Supplier<Object> > list_params=Collections.emptyList(); Map<String,Supplier<Object>> hash_params=Collections.emptyMap();} {
 	t=< IDENTIFIER > <OPAR >
 		(
 		list_params = array_items() (< COMMA > hash_params=map_items())? 
@@ -217,19 +218,19 @@ private Object functionCall() : { Token t;List<Object > list_params=Collections.
 		}
 	}
 
-private Object floating() : {Token t;} {
+private Supplier<Object> floating() : {Token t;} {
 	t= <FLOATING_NUMBER> {
-		return context.parseFloat(t.image);
+		return context.wrap(context.parseFloat(t.image));
 		}
 	}
-private Object intNumber() : {Token t;} {
+private Supplier<Object> intNumber() : {Token t;} {
 	t= <INT_NUMBER> {
-		return context.parseInt(t.image);
+		return context.wrap(context.parseInt(t.image));
 		}
 	}
-private Object string() : {String s;} {
+private Supplier<Object> string() : {String s;} {
 	s= base_string() {
-		return s;
+		return context.wrap(s);
 		}
 	}
 
@@ -239,18 +240,18 @@ private String base_string()  : {Token t;} {
 		}
 	}
 
-private Object bool() : {} {
+private Supplier<Object> bool() : {} {
 	(<LEX_TRUE>{
-		return Boolean.TRUE;
+		return context.wrap(Boolean.TRUE);
 		}
 	|<LEX_FALSE> {
-		return Boolean.FALSE;
+		return context.wrap(Boolean.FALSE);
 		}
 	)
 	}
-private Object nil() : {} {
+private Supplier<Object> nil() : {} {
 	<LEX_NIL>{
-		return null;
+		return context.wrap(null);
 		}
 	}
 

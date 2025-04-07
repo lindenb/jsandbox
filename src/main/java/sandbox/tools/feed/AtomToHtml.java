@@ -328,7 +328,7 @@ public class AtomToHtml extends Launcher {
 			final FeedItem retE = new FeedItem();
 			retE.imgUrl= hash.getOrDefault("og:image", "");
 			if(!isImageUrlOk(retE.imgUrl)) return;
-			retE.title= hash.getOrDefault("og:title", "");
+			retE.title= hash.getOrDefault("og:description", "");
 			feed.items.add(retE);
 			}
 		else
@@ -383,12 +383,13 @@ public class AtomToHtml extends Launcher {
 				else if(e1.getNodeName().equals("link")) {
 					link = e1.getTextContent();
 					}
-				}
-			LOG.info("item "+link+" "+pubDate+" "+isDateOk(pubDate));
-			
+				}			
 			if(IOUtils.isURL(link)) {
 				if(!isDateOk(pubDate))  continue;
-				getOggForHtml(client,feed,link );
+				getOggForHtml(client,feed,link);
+				for(FeedItem fi:feed.items) {
+					if(fi.date==null) fi.date=pubDate;
+					}
 				}
 			}
 		if(feed.items.isEmpty()) return Optional.empty();
@@ -509,13 +510,17 @@ public class AtomToHtml extends Launcher {
 				}
 			
 			final Document document = this.documentBuilder.newDocument();
-			Element html = document.createElement("html");
+			final 	Element html = document.createElement("html");
 			document.appendChild(html);
-			Element body = document.createElement("body");
+			final Element body = document.createElement("body");
 			html.appendChild(body);
-			Element dl = document.createElement("dl");
+			final Element dl = document.createElement("dl");
 			body.appendChild(dl);
+			final Set<String> seen=new HashSet<>();
 			for(Feed feed: all_feeds) {
+				feed.items.removeIf(F->seen.contains(F.imgUrl));
+				if(feed.items.isEmpty()) continue;
+				seen.addAll(feed.items.stream().map(F->F.imgUrl).collect(Collectors.toSet()));
 				dl.appendChild(feedToHtml(document,feed));
 				}
 			

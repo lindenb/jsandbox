@@ -138,13 +138,7 @@ private Color namedcolor():{Token t;}
     t = <NAMED> 
             {
             final String s = t.image;
-            final java.util.function.Supplier<Throwable> ex = new java.util.function.Supplier<Throwable>() {
-                @Override                
-                public Throwable get() {
-                    return new RuntimeException("cannot convert '"+s+"' to color");
-                    }
-                };
-            return NamedColors.getInstance().findByName(s).orElseThrow(ex);
+            return NamedColors.getInstance().findByName(s).get();	
             }
 	}
 
