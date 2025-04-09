@@ -6,9 +6,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -107,7 +107,7 @@ public class AtomToHtml extends Launcher {
 		return null;
 		}
 	
-	private boolean isDateOk(String date) {
+	private boolean isDateOk(final String date) {
 		if(this.since==null || StringUtils.isBlank(date)) return true;
 		final Optional<Date> optDate = this.dateParser.apply(date);
 		if(optDate.isPresent())  {
@@ -124,7 +124,7 @@ public class AtomToHtml extends Launcher {
 		return true;
 		}
 	
-	private boolean isImageUrlOk(String img) {
+	private boolean isImageUrlOk(final String img) {
 		if(StringUtils.isBlank(img)) return false;
 		if(no_gif && (img.endsWith(".gif") || img.contains(".gif?"))) {
 			return false;
@@ -313,23 +313,29 @@ public class AtomToHtml extends Launcher {
 			return;
 			}
 		else if(E1.getNodeName().equalsIgnoreCase("head")) {
-			final Map<String,String> hash = new HashMap<>();
+			final List<Map.Entry<String,String> > properties = new ArrayList<>();
 			for(Node c=E1.getFirstChild();c!=null;c=c.getNextSibling()) {
 				if(c.getNodeType()!=Node.ELEMENT_NODE) continue;
 				final Element E2 = Element.class.cast(c);
 				if(!E2.getNodeName().equals("meta")) continue;
 				if( E2.getAttribute("property").startsWith("og:")) {
-					hash.put(
+					properties.add(new AbstractMap.SimpleEntry<String,String>(
 						E2.getAttribute("property"),
 						E2.getAttribute("content")
-						);
+						));
 					}
 				}
-			final FeedItem retE = new FeedItem();
-			retE.imgUrl= hash.getOrDefault("og:image", "");
-			if(!isImageUrlOk(retE.imgUrl)) return;
-			retE.title= hash.getOrDefault("og:description", "");
-			feed.items.add(retE);
+			for(Map.Entry<String, String> kv1 : properties) {
+				if(!kv1.getKey().equals("og:image")) continue;
+				final FeedItem retE = new FeedItem();
+				retE.imgUrl= kv1.getValue();
+				if(!isImageUrlOk(retE.imgUrl)) continue;
+				retE.title= properties.stream().
+						filter(KV->KV.getKey().equals("og:description")).
+						map(KV->KV.getValue()).findFirst().
+						orElse("");
+				feed.items.add(retE);
+				}
 			}
 		else
 			{
@@ -362,13 +368,22 @@ public class AtomToHtml extends Launcher {
 		}
 		
 	
-	private  Optional<Feed> rssByHtmlPage(final CloseableHttpClient client,Document rss,String url) {
+	private  Optional<Feed> rssByHtmlPage(final CloseableHttpClient client,final Document rss,String url) {
 		if(!IOUtils.isURL(url)) return Optional.empty();
 		final Feed feed = new Feed();
 		feed.url = url;
 		feed.title = url;
-
-		NodeList nl=rss.getElementsByTagName("item");
+		NodeList nl=rss.getElementsByTagName("title");
+		for(int i=0;i< nl.getLength();i++) {
+			Node item = nl.item(i);
+			if(item.getNodeType()!=Node.ELEMENT_NODE) continue;
+			if(item.getParentNode()==null ||item.getParentNode().getNodeType()!=Node.ELEMENT_NODE ) continue;
+			if(!item.getParentNode().getNodeName().equals("channel")) continue;
+			feed.title= item.getTextContent();
+			break;
+			}
+		
+		nl=rss.getElementsByTagName("item");
 		for(int i=0;i< nl.getLength();i++) {
 			Node item = nl.item(i);
 			
@@ -389,6 +404,7 @@ public class AtomToHtml extends Launcher {
 				getOggForHtml(client,feed,link);
 				for(FeedItem fi:feed.items) {
 					if(fi.date==null) fi.date=pubDate;
+					if(fi.url==null) fi.url=link;
 					}
 				}
 			}

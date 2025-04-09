@@ -37,11 +37,17 @@ public class MiniLang2Context extends AbstractMiniLangContext {
 			}
 		};
 	
-	static class Variable extends StringWrapper {
+	class Variable extends StringWrapper implements java.util.function.Supplier<Object> {
 		Variable(final String s) {
 			super(s);
 			}
+		@Override
+		public Object get() {
+				return MiniLang2Context.this.id2variable.get(this);
+				};
 		}
+		
+		
 	
 	abstract class Function implements java.util.function.Supplier<Object>
 		{
@@ -143,14 +149,11 @@ public class MiniLang2Context extends AbstractMiniLangContext {
 		return value;
 		}
 	
-	Supplier<Object> get(final Variable key) {
-		return wrap(this.id2variable.get(key));
-		}
+
 
 	Supplier<Object> wrap(final Object o) {
 		if(o!=null && (o instanceof Variable)) {
-			final Variable v =  Variable.class.cast(o);
-			return ()->get(v);
+			return Variable.class.cast(o);
 			}
 		return new ObjectWrapper<>(o);
 		}
