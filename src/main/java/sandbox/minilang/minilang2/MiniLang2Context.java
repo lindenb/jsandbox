@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 import sandbox.lang.StringWrapper;
-import sandbox.minilang.AbstractMiniLangContext;
+import sandbox.scalar.Scalar;
 
-public class MiniLang2Context extends AbstractMiniLangContext {
+public class MiniLang2Context {
 	static final int OP_DIVIDE   = 100;
 	static final int OP_MULTIPLY = 101;
 	static final int OP_PLUS = 102;
@@ -21,97 +21,72 @@ public class MiniLang2Context extends AbstractMiniLangContext {
 	static final int OP_FUN_CALL = 400;
 	
 	
-	private static class ObjectWrapper<Y> implements java.util.function.Supplier<Y>
-		{
-		private final Y object;
-		ObjectWrapper(final Y object) {
-			this.object = object;
-			}
-		@Override
-		public Y get() {
-			return object;
-			}
-		@Override
-		public String toString() {
-			return String.valueOf(get());
-			}
-		};
-	
-	class Variable extends StringWrapper implements java.util.function.Supplier<Object> {
+	class Variable extends StringWrapper implements Scalar{
 		Variable(final String s) {
 			super(s);
 			}
 		@Override
 		public Object get() {
-				return MiniLang2Context.this.id2variable.get(this);
-				};
+			return MiniLang2Context.this.id2variable.get(this);
+			};
 		}
 		
 		
 	
-	abstract class Function implements java.util.function.Supplier<Object>
+	abstract class Function
 		{
-		final String funName;
-		List<Supplier<Object>> list;
-		Map<String, Supplier<Object>> map;
-		Function(final String funName) {
-			this.funName = funName;
-			}
-		List<Supplier<Object>> arity(int n) {return list.subList(0, n);}
-		Supplier<Object> arity1() {return arity(1).get(0); }
-		public abstract Supplier<Object> get();
+		List<Scalar> list;
+		Map<String, Scalar> map;
+		List<Scalar> arity(int n) {return list.subList(0, n);}
+		Scalar arity1() {return arity(1).get(0); }
+		public abstract Scalar get();
 		}
-	private final Map<Variable,Object> id2variable = new HashMap<>();
+	private final Map<Variable,Scalar> id2variable = new HashMap<>();
 	private final Map<String,Function> functions = new HashMap<>();
 		
 	
 	
 	
 	public MiniLang2Context() {
-		Function fun = new Function("sqrt") {
+		registerFunction("sqrt",  new Function() {
 			@Override
-			public Supplier<Object> get() {
+			public Scalar get() {
 				arity(1);
-				Supplier<Object> o=  this.list.get(0);
-				BigInteger bi=(BigInteger)o.get();
+				Scalar o=  this.list.get(0);
+				BigInteger bi= o.toBigInteger();
 				return wrap(bi.sqrt());
 				}
-			};
-		this.functions.put(fun.funName, fun);
+			});
 		
-		fun = new Function("parseInt") {
+		registerFunction("parseInt", new Function() {
 			@Override
-			public Supplier<Object> get() {
-				Supplier<Object> o=arity1();
-				BigInteger bi=(BigInteger)o.get();
-				return wrap(bi);
+			public Scalar get() {
+				Scalar o=arity1();
+				return wrap(o.toBigInteger());
 				}
-			};
-		this.functions.put(fun.funName, fun);
+			});
 		
-		fun = new Function("parseDouble") {
+		registerFunction("parseDouble",  new Function() {
 			@Override
-			public Supplier<Object> get() {
-				Supplier<Object> o=arity1();
-				BigInteger bi=(BigInteger)o.get();
-				return wrap(bi);
+			public Scalar get() {
+				Scalar o=arity1();
+				return wrap(o.toBigDecimal());
 				}
-			};
-		this.functions.put(fun.funName, fun);
+			});
 		}
 	
+	public void registerFunction(final String fn, Function fun) {
+		this.functions.put(fn, fun);
+	}
 	
-	
-	Supplier<Object> apply(Supplier<Object> opt_left,char op,Supplier<Object> opt_right) {
+	Scalar apply(Scalar left,char op,Scalar right) {
 		return ()->{
-			final Object left = opt_left.get();
-			final Object right= opt_right.get();
 			switch(op) {
 				case '+': case '-' : case '*' : case '/':
-					if(isNumber(left) && isNumber(right)) {
-						if(isInteger(left) && isInteger(right)) {
-							BigInteger a = toBigInteger(left);
-							BigInteger b = toBigInteger(right);
+					if(left.isNumber() && right.isNumber()) {
+						if(left.isInteger() && right.isInteger()) {
+							BigInteger a = left.toBigInteger();
+							BigInteger b =right. toBigInteger();
 							switch(op) {
 								case '+': return a.add(b); 
 								case '-': return a.subtract(b); 
@@ -122,8 +97,8 @@ public class MiniLang2Context extends AbstractMiniLangContext {
 							}
 						else
 							{
-							BigDecimal a = toBigDecimal(left);
-							BigDecimal b = toBigDecimal(right);
+							BigDecimal a = left.toBigDecimal();
+							BigDecimal b = right.toBigDecimal();
 							switch(op) {
 								case '+': return a.add(b); 
 								case '-': return a.subtract(b); 
@@ -133,8 +108,8 @@ public class MiniLang2Context extends AbstractMiniLangContext {
 								}						
 							}
 						}
-					else if(isString(left) && op=='+') {
-						String s = toString(left);
+					else if(left.isString() && op=='+') {
+						String s = left.toString();
 						return wrap(s + String.valueOf(right));
 						}
 					break;
@@ -144,38 +119,35 @@ public class MiniLang2Context extends AbstractMiniLangContext {
 			};
 		}
 	
-	Supplier<Object> put(final Variable key,Supplier<Object> value) {
-		this.id2variable.put(key, value.get());
+	Scalar put(final Variable key,Scalar value) {
+		this.id2variable.put(key, value);
 		return value;
 		}
 	
 
 
-	Supplier<Object> wrap(final Object o) {
-		if(o!=null && (o instanceof Variable)) {
-			return Variable.class.cast(o);
-			}
-		return new ObjectWrapper<>(o);
+	Scalar wrap(final Object o) {
+		return Scalar.wrap(o);
 		}
 	
 	Variable createVariable(final String name) {
 		return  new Variable(name);
 		}
 	
-	Supplier<Object> call(String funName,List<Supplier<Object>> array,Map<String, Supplier<Object>> hash) {
+	Scalar call(String funName,List<Scalar> array,Map<String, Scalar> hash) {
 		Function fun = this.functions.get(funName);
 		if(fun==null) throw new IllegalArgumentException("Cannot fin "+funName);
 		fun.list = array;
 		fun.map= hash;
-		return fun;
+		return fun.get();
 		}
 	
-	Object eval(String funName,List<Object> array,final Map<String, Object> hash) {
+	Object eval(String funName,List<Scalar> array,final Map<String, Scalar> hash) {
 		throw new IllegalStateException(""+funName);
 		}
 	
 	
-	Supplier<Object> apply(char op,Supplier<Object> opt) {
+	Scalar apply(char op,Scalar opt) {
 		return ()->{
 			switch(op) {
 				case '-':  return apply(opt, '*',wrap(-1));	

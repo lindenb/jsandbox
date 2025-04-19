@@ -15,6 +15,7 @@ import sandbox.tools.crypt.Crypt;
 import sandbox.tools.dusuffix.DiskUsageBySuffix;
 import sandbox.tools.fdup.FindDuplicateFiles;
 import sandbox.tools.feed.AtomToHtml;
+import sandbox.tools.feedburner.FeedBurner;
 import sandbox.tools.fileserver.FileServer;
 import sandbox.tools.htmlinxml.HtmlInXml;
 import sandbox.tools.img2base64.ImagesToBase64;
@@ -65,6 +66,7 @@ public class SandboxCentral {
 		register(Aksum.class);
 		register(AtomToHtml.class);
 		register(Crypt.class);
+		register(FeedBurner.class);
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
 		register(ImagesToBase64.class);

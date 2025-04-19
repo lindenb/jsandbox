@@ -100,7 +100,7 @@ public void input(): { }
 	(expr() < SEMICOLON > )* < EOF >
 	}
 
-private Supplier<Object> assign_statement() : {MiniLang2Context.Variable varname;Supplier<Object> o;} { 
+private MiniLang2Context.Variable assign_statement() : {MiniLang2Context.Variable varname;Object o;} { 
 	varname = variable()
 		(
 		  <ASSIGN > o=expr()
@@ -116,7 +116,7 @@ private Supplier<Object> assign_statement() : {MiniLang2Context.Variable varname
 		)
 }
 
-private Supplier<Object> array()  : { List<Supplier<Object> > list=Collections.emptyList();}
+private Object array()  : { ListObject > list=Collections.emptyList();}
 	{
 	<O_BRACKET>(list=array_items())? <C_BRACKET>
 		{
@@ -124,7 +124,7 @@ private Supplier<Object> array()  : { List<Supplier<Object> > list=Collections.e
 		}
 	}
 
-private List<Supplier<Object> > array_items()  : { List<Supplier<Object>> list=new ArrayList< >();Supplier<Object> o;}
+private List<Object> array_items()  : { ListObject> list=new ArrayList< >();Object o;}
 	{
 	o=expr() {list.add(o);} (<COMMA > o=expr() {list.add(o);})*
 	{
@@ -133,7 +133,7 @@ private List<Supplier<Object> > array_items()  : { List<Supplier<Object>> list=n
 	}
 
 
-private Supplier<Object> map() :{Map<String,Supplier<Object>> hash;}
+private Object map() :{Map<String,Object> hash;}
 	{
 	<O_BRACKET> <COLON> <C_BRACKET> {
 		return context.wrap(Collections.emptyMap());
@@ -142,7 +142,7 @@ private Supplier<Object> map() :{Map<String,Supplier<Object>> hash;}
 	 	}
 	}
 
-private Map<String,Supplier<Object> > map_items() : { Map<String,Supplier<Object>> hash = new LinkedHashMap<String,Supplier<Object>>();  Map.Entry<String,Supplier<Object>> kv;}
+private Map<String,Object > map_items() : { Map<String,Object> hash = new LinkedHashMap<String,Object>();  Map.Entry<String,Object> kv;}
 	{
 	 kv=pair() {hash.put(kv.getKey(),kv.getValue());}
 	  (< COMMA > kv=pair(){hash.put(kv.getKey(),kv.getValue());})*  {
@@ -151,16 +151,17 @@ private Map<String,Supplier<Object> > map_items() : { Map<String,Supplier<Object
 	}
 
 
-private Map.Entry<String,Supplier<Object>> pair() : {Token t;String key; Supplier<Object> value;}
+private Map.Entry<String,Object> pair() : {Token t;String key; Object value;}
 	{
-	(	  t=< IDENTIFIER > {key=t.image;} |key=base_string()) <COLON> value=expr()  {
-		return new AbstractMap.SimpleEntry<String,Supplier<Object>>(key,value);
+	(
+	  t=< IDENTIFIER > {key=t.image;} |key=base_string()) <COLON> value=expr()  {
+		return new AbstractMap.SimpleEntry<String,Object>(key,value);
 		}
 	} 
 
 
 
-private Supplier<Object> expr(): {  Supplier<Object> a;  Supplier<Object> b; }
+private Object expr(): {  Object a;  Object b; }
 {
     a=term()
     (
@@ -170,7 +171,7 @@ private Supplier<Object> expr(): {  Supplier<Object> a;  Supplier<Object> b; }
     { return a; }
 }
 
-private Supplier<Object> term() : {  Supplier<Object> a;  Supplier<Object> b; }
+private Object term() : {  Object a;  Object b; }
 {
     a=unary()
     (
@@ -179,9 +180,9 @@ private Supplier<Object> term() : {  Supplier<Object> a;  Supplier<Object> b; }
     )*
     { return a; }
 }
-private Supplier<Object> unary():
+private Object unary():
 {
-    Supplier<Object> a;
+    Object a;
 }
 {
    < MINUS > a=any()     { return context.apply('-',a); }
@@ -190,7 +191,7 @@ private Supplier<Object> unary():
 }
 
 
-private Supplier<Object> any(): { Supplier<Object> o=null; MiniLang2Context.Variable v=null;} {
+private Object any(): { Object o=null; MiniLang2Context.Variable v=null;} {
    	(
 	  o= functionCall()
 	  | v= variable() {  return context.wrap(v); }
@@ -206,7 +207,7 @@ private Supplier<Object> any(): { Supplier<Object> o=null; MiniLang2Context.Vari
 	    return o;
 	  }
 	}
-private Supplier<Object> functionCall() : { Token t;List< Supplier<Object> > list_params=Collections.emptyList(); Map<String,Supplier<Object>> hash_params=Collections.emptyMap();} {
+private Object functionCall() : { Token t;List< Object > list_params=Collections.emptyList(); Map<String,Object> hash_params=Collections.emptyMap();} {
 	t=< IDENTIFIER > <OPAR >
 		(
 		list_params = array_items() (< COMMA > hash_params=map_items())? 
@@ -218,17 +219,17 @@ private Supplier<Object> functionCall() : { Token t;List< Supplier<Object> > lis
 		}
 	}
 
-private Supplier<Object> floating() : {Token t;} {
+private Object floating() : {Token t;} {
 	t= <FLOATING_NUMBER> {
 		return context.wrap(context.parseFloat(t.image));
 		}
 	}
-private Supplier<Object> intNumber() : {Token t;} {
+private Object intNumber() : {Token t;} {
 	t= <INT_NUMBER> {
 		return context.wrap(context.parseInt(t.image));
 		}
 	}
-private Supplier<Object> string() : {String s;} {
+private Object string() : {String s;} {
 	s= base_string() {
 		return context.wrap(s);
 		}
@@ -240,7 +241,7 @@ private String base_string()  : {Token t;} {
 		}
 	}
 
-private Supplier<Object> bool() : {} {
+private Object bool() : {} {
 	(<LEX_TRUE>{
 		return context.wrap(Boolean.TRUE);
 		}
@@ -249,7 +250,7 @@ private Supplier<Object> bool() : {} {
 		}
 	)
 	}
-private Supplier<Object> nil() : {} {
+private Object nil() : {} {
 	<LEX_NIL>{
 		return context.wrap(null);
 		}
