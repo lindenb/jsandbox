@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import sandbox.tools.aksum.Aksum;
 import sandbox.tools.angel.Angel;
+import sandbox.tools.comicsbuilder.v1.ComicsBuilderV1;
 import sandbox.tools.crypt.Crypt;
 import sandbox.tools.dusuffix.DiskUsageBySuffix;
 import sandbox.tools.fdup.FindDuplicateFiles;
@@ -30,6 +31,7 @@ import sandbox.tools.nashornserver.NashornServer;
 import sandbox.tools.svgshow.SVGShow;
 import sandbox.tools.swingfactory.SwingFactory;
 import sandbox.tools.swingwatcher.SwingWatcher;
+import sandbox.tools.thesesfr.ThesesfrToGraph;
 import sandbox.tools.treemap.TreeMapMaker;
 import sandbox.tools.urlencoder.UrlEncoder;
 import sandbox.tools.velocityjson.VelocityJson;
@@ -65,8 +67,10 @@ public class SandboxCentral {
 	private void instanceMain(List<String> args) {
 		register(Aksum.class);
 		register(AtomToHtml.class);
+		register(ComicsBuilderV1.class);
 		register(Crypt.class);
 		register(FeedBurner.class);
+		register(ThesesfrToGraph.class);
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
 		register(ImagesToBase64.class);

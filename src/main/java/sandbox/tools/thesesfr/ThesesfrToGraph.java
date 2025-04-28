@@ -33,6 +33,7 @@ import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.gexf.Gexf;
 import sandbox.lang.StringUtils;
+import sandbox.tools.central.ProgramDescriptor;
 
 public class ThesesfrToGraph extends Launcher {
 	
@@ -391,6 +392,16 @@ public class ThesesfrToGraph extends Launcher {
     		return -1;
     		}
     	}
+    
+    public static ProgramDescriptor getProgramDescriptor() {
+    	return new ProgramDescriptor() {
+    		@Override
+    		public String getName() {
+    			return "thesesfr2graph";
+    			}
+    		};
+    	}
+    
     
     public static void main(String[] args) {
 		new ThesesfrToGraph().instanceMainWithExit(args);

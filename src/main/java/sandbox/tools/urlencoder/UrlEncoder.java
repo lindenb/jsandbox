@@ -17,7 +17,7 @@ public class UrlEncoder extends Launcher {
 	@Parameter(names= { "--encoding","-E"},description="encoding")
     private String encodingStr = "UTF-8";	
 	@Override
-	public int doWork(List<String> args) {
+	public int doWork(final List<String> args) {
 		if(!args.isEmpty()) {
 			System.err.println("no argument is expected. Use stdin");
 			return -1;
