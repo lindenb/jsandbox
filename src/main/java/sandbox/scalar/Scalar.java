@@ -5,10 +5,17 @@ import java.math.BigInteger;
 import java.util.function.Supplier;
 
 public interface Scalar extends Supplier<Object> {
-	public static Scalar wrap(Object o) {
+	public static Scalar nil() {
+		return wrap(null);
+		}
+	public static Scalar wrap(final Object o) {
+		if(o==null) return ScalarImpl.NIL;
 		if(o instanceof Scalar) return Scalar.class.cast(o);
 		return new ScalarImpl(o);
 	}
+	
+	public default boolean isNil() { return isNull();}
+	public default boolean isNull() { return get()==null;}
 	
 	public default boolean isNumber() {
 		return isFloating() || isInteger();

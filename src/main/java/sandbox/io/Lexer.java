@@ -15,6 +15,23 @@ public class Lexer implements Closeable {
 		this.r=r;
 	}
 	
+	/** reads the remaining content until it finds a end of line or  EOF
+	 * 
+	 * @return the line or null on EOF
+	 * @throws IOException
+	 */
+	public String readLine() throws IOException {
+		StringBuilder sb = null;
+		int c;
+		while((c=peek())!= EOF) {
+			if(sb==null) sb=new StringBuilder();
+			consume(1);
+			if(c=='\n') break;
+			sb.append((char)c);
+			}
+		return sb==null?null:sb.toString();
+		}
+	
 	/** @return true if no more input is available */
 	public boolean isEof() throws IOException {
 		return this.peek() == EOF ;

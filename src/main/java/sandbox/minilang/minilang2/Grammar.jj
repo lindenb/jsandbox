@@ -95,16 +95,40 @@ TOKEN : /* LITERALS */
 | <DOUBLE_QUOTE_LITERAL: "\"" ( (~["\"","\\","\n","\r"]) | <ESCAPE_CHAR> )*"\"" >
 }
 
-public void input(): { }
+public ASTNode input(): { final List<ASTNode> nodes = new ArrayList<>(); ASTNode c=null;}
 	{
-	(expr() < SEMICOLON > )* < EOF >
+	(c=expr() {nodes.add(c);} < SEMICOLON > )* < EOF > {
+		return new ASTNodeImpl() {
+			@Override
+			public Scalar eval(final MiniLang2Context ctx) {
+				Scalar last= Scalar.nil();
+				for(ASTNode n: nodes) {
+					last = n.eval(ctx);
+					if(isReturn(last)) return last;
+					}
+				return last;
+				} 
+			};
+		}
 	}
 
-private MiniLang2Context.Variable assign_statement() : {MiniLang2Context.Variable varname;Object o;} { 
+private MiniLang2Context.Variable assign_statement() : {MiniLang2Context.Variable varname;ASTNode o;} { 
 	varname = variable()
 		(
 		  <ASSIGN > o=expr()
 			{
+			
+			return new ASTNodeImpl() {
+				@Override
+				public Scalar eval(final MiniLang2Context ctx) {
+					Scalar last= Scalar.nil();
+					for(ASTNode n: nodes) {
+						last = n.eval(ctx);
+						if(isReturn(last)) return last;
+						}
+					return last;
+					} 
+				};
 			return context.put(varname,o);
 			}
 		| < PLUSPLUS > {

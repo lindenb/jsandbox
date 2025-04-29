@@ -40,6 +40,15 @@ public static String ltrim(final String s) {
 		}
 	return x==0?s:s.substring(x);
 	}
+
+public static String rtrim(final String s) {
+	int x=0;
+	while(x<s.length() && Character.isSpaceChar(s.charAt(s.length()-(x+1)))) {
+		x++;
+		}
+	return x==0?s:s.substring(0,s.length()-x);
+	}
+
 private static String hash(final String s,final String method) {
 	 MessageDigest md;
 	 try {

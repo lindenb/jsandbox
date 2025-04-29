@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 
 import sandbox.tools.aksum.Aksum;
 import sandbox.tools.angel.Angel;
+import sandbox.tools.biostars.BiostarsBlame;
+import sandbox.tools.chalkboard.ChalkBoard;
 import sandbox.tools.comicsbuilder.v1.ComicsBuilderV1;
 import sandbox.tools.crypt.Crypt;
 import sandbox.tools.dusuffix.DiskUsageBySuffix;
@@ -28,7 +30,9 @@ import sandbox.tools.makegraphdependencies.MakeGraphDependencies;
 import sandbox.tools.miniivy.MiniIvy;
 import sandbox.tools.mosaic.MosaicOfPictures;
 import sandbox.tools.nashornserver.NashornServer;
+import sandbox.tools.saxscript.SAXScript;
 import sandbox.tools.svgshow.SVGShow;
+import sandbox.tools.swap2bits.SwapTwoBits;
 import sandbox.tools.swingfactory.SwingFactory;
 import sandbox.tools.swingwatcher.SwingWatcher;
 import sandbox.tools.thesesfr.ThesesfrToGraph;
@@ -67,10 +71,14 @@ public class SandboxCentral {
 	private void instanceMain(List<String> args) {
 		register(Aksum.class);
 		register(AtomToHtml.class);
+		register(BiostarsBlame.class);
+		register(ChalkBoard.class);
 		register(ComicsBuilderV1.class);
 		register(Crypt.class);
 		register(FeedBurner.class);
 		register(ThesesfrToGraph.class);
+		register(SAXScript.class);
+		register(SwapTwoBits.class);
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
 		register(ImagesToBase64.class);

@@ -218,7 +218,7 @@ top: jsandbox
 
 all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
 	xml2xsd weatherarchive gribouille java2graph githistory  \
-        saxscript atommerger pubmedtrending cookiestorefile softwarefitness \
+        atommerger pubmedtrending cookiestorefile softwarefitness \
 	packageeclipsejars xslserver java2xml flickrrss \
 	geneticpainting json2dom  twittergraph twitterfollow  twitter01   \
 	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom  xmlpath imagemap \
@@ -247,7 +247,6 @@ $(eval $(call compile,cookiestorefile,sandbox.CookieStoreUtils,${apache.httpclie
 $(eval $(call compile,softwarefitness,sandbox.SoftwareFitness,${apache.commons.cli} ${slf4j.jars}))
 $(eval $(call compile,bmcaltmetrics,sandbox.BmcAltmetrics,${apache.commons.cli} ${slf4j.jars}))
 $(eval $(call compile,rgddigest,sandbox.RGDDigest,${apache.commons.cli} ${slf4j.jars} ${jtidy.jars} ${apache.httpclient.jars} ))
-$(eval $(call compile,saxscript,sandbox.SAXScript,${apache.commons.cli} ${slf4j.jars} ${google.gson.jars} ))
 $(eval $(call compile,nashornserver,sandbox.NashornServer,${apache.commons.cli} ${slf4j.jars} ${jetty.jars} ))
 $(eval $(call compile,filesaveserver,sandbox.http.FileSaveServer,${jcommander.jar} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars} ${log4j.jars}))
 $(eval $(call compile,urlsurveyserver,sandbox.http.UrlSurveyServer,${jcommander.jar} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars} ${log4j.jars}))
@@ -297,11 +296,8 @@ $(eval $(call compile,atom2html,sandbox.tools.feed.AtomToHtml,${jcommander.jar} 
 $(eval $(call compile,igdigest,sandbox.tools.ig.IgDigest,${jcommander.jar}))
 $(eval $(call compile,interpolator,sandbox.tools.interpolate.Interpolator,${jcommander.jar} ${commons-math3.jar}))
 $(eval $(call compile,xmlcipher,sandbox.tools.xmlcipher.XmlCipher,${jcommander.jar}))
-$(eval $(call compile,chalkboard,sandbox.tools.chalkboard.ChalkBoard,${jcommander.jar}))
 $(eval $(call compile,donotuseexcel,sandbox.tools.donotuseexcel.DoNotUseExcel,${jcommander.jar} ${apache.poi.jar}))
 $(eval $(call compile,mastodongraph,sandbox.tools.mastodongraph.MastodonGraph,${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
-$(eval $(call compile,swap2bits,sandbox.tools.swap2bits.SwapTwoBits,${jcommander.jar}))
-$(eval $(call compile,biostarsblame,sandbox.tools.biostars.BiostarsBlame,${jcommander.jar} ${apache.httpclient.jars} ${jtidy.jars}))
 $(eval $(call compile,gimppatterns,sandbox.tools.gimppat.GimpPatterns,${jcommander.jar}))
 $(eval $(call compile,test,sandbox.tools.xml2ppt.XmlToPPT,${jcommander.jar} ${apache.poi.jar}))
 $(eval $(call compile,tonic,sandbox.tools.tonic.Tonic,${jcommander.jar}))

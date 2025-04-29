@@ -23,6 +23,7 @@ import sandbox.Logger;
 import sandbox.html.TidyToDom;
 import sandbox.io.IOUtils;
 import sandbox.lang.StringUtils;
+import sandbox.tools.central.ProgramDescriptor;
 import sandbox.xml.XmlUtils;
 
 public class BiostarsBlame extends Launcher {
@@ -142,10 +143,9 @@ public class BiostarsBlame extends Launcher {
 				page++;
 				}
 			for(Post post:this.posts) {
-				System.out.print("https://www.biostars.org/p/"+post.id);
-				System.out.print(" ");
+				System.out.print(" * https://www.biostars.org/p/"+post.id);
+				System.out.println();
 				}
-			System.out.println();
 			return 0;
 			}
 		catch(Throwable err) {
@@ -154,6 +154,14 @@ public class BiostarsBlame extends Launcher {
 			}
 		}
 	
+	public static ProgramDescriptor getProgramDescriptor() {
+    	return new ProgramDescriptor() {
+    		@Override
+    		public String getName() {
+    			return "biostarsblame";
+    			}
+    		};
+    	}
 	
 	public static void main(String[] args) {
 		new BiostarsBlame().instanceMainWithExit(args);

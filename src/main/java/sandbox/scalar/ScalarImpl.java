@@ -3,8 +3,9 @@ package sandbox.scalar;
 import java.util.Objects;
 
 public class ScalarImpl implements Scalar {
+	static final Scalar NIL= new ScalarImpl(null);
 	private final Object data;
-	ScalarImpl(final Object data) {
+	public ScalarImpl(final Object data) {
 		this.data = data;
 		}
 	

@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.tools.java2graph;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -8,6 +8,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -22,9 +23,12 @@ import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
+
+
+import sandbox.AbstractApplication;
+import sandbox.Launcher;
+import sandbox.Logger;
+import sandbox.io.IOUtils;
 
 
 /**
@@ -34,11 +38,57 @@ import org.apache.commons.cli.Options;
  * @author Pierre Lindenbaum
  *
  */
-public class Java2Graph extends AbstractApplication
+public class Java2Graph extends Launcher
 	{
+	protected static final Logger LOG=Logger.builder(Java2Graph.class).build();
+
 	/** unique id generator */
 	private static int ID_GENERATOR=0;
 	/** final printer */
+	@com.beust.jcommander.Parameter(
+			names= {"-j","--jar"},
+			description="one *.jar file or a *.list file with one jar per line."
+			)
+	private List<File> userJarFiles = null;
+
+	
+
+	/** all the files */
+	private ArrayList<File> files=new ArrayList<File>();
+	/** all the classes that may be observed */
+	private HashSet<ClassWrapper> classes= new HashSet<ClassWrapper>();
+	/** all the links between the classes */
+	private HashSet<Link> links= new HashSet<Link>();
+	/** ignore pattern */
+	private ArrayList<Pattern> ignorePattern= new ArrayList<Pattern>();
+	private Set<String> ignorePackagesStartingWith= new HashSet<String>();
+	
+	/** are we using any.any$any classes ? */ 
+	@com.beust.jcommander.Parameter(names= {"-d"}, description="ignore declared-classes (classes with $ in the name)")
+	private boolean usingDeclaredClasses=true;
+	/** are we using interfaces ? */
+	@com.beust.jcommander.Parameter(names= {"-i"}, description="ignore interfaces")
+	private boolean usingInterfaces=true;
+	/** use private inner classes */
+	@com.beust.jcommander.Parameter(names= {"-p"}, description="use *private* inner classes")
+	private boolean usePrivateDeclaredClasses=false;
+	@com.beust.jcommander.Parameter(names= {"-m"}, description="ignore classes iMplementing interfaces")
+	private boolean usingClassesImplementingInterfaces=false;
+	@com.beust.jcommander.Parameter(names= {"-x"}, description="(int) max distance to classe(s) defined by user. Default: unlimited")
+	/** distance max to class targeted by user -1= no restriction*/
+	private int limitDistance=-1;
+	@com.beust.jcommander.Parameter(names= {"-D"}, description="dot output")
+	private boolean dot_flag=false;
+	@com.beust.jcommander.Parameter(names= {"-G"}, description="GEXF output")
+	private boolean gexf=false;
+	@com.beust.jcommander.Parameter(names= {"-r"}, description="<regex> add a pattern of classes to be ignored.")
+	private List<String> regexstr=new ArrayList<>();
+	@com.beust.jcommander.Parameter(names= {"-r"}, description="<package name> ignore the package starting with this string. Can be used muliple times.")
+	private String packageName="";
+	@com.beust.jcommander.Parameter(names= {"-o"}, description="output file")
+	private Path outputFile=null;
+	
+	
 	private AbstractGraphPrinter graphPrinter=new DotGraphPrinter();
 	
 	private abstract class AbstractGraphPrinter
@@ -418,33 +468,7 @@ public class Java2Graph extends AbstractApplication
 		
 		}
 	
-	/** all the files */
-	private ArrayList<File> files=new ArrayList<File>();
-	/** all the classes that may be observed */
-	private HashSet<ClassWrapper> classes= new HashSet<ClassWrapper>();
-	/** all the links between the classes */
-	private HashSet<Link> links= new HashSet<Link>();
-	/** ignore pattern */
-	private ArrayList<Pattern> ignorePattern= new ArrayList<Pattern>();
-	private Set<String> ignorePackagesStartingWith= new HashSet<String>();
 	
-	/** are we using any.any$any classes ? */ 
-	private boolean usingDeclaredClasses=true;
-	/** are we using interfaces ? */
-	private boolean usingInterfaces=true;
-	/** are we looking for classes implementing interfaces */
-	private boolean usingClassesImplementingInterfaces=true;
-	/** use private inner classes */
-	private boolean usePrivateDeclaredClasses=false;
-	/** distance max to class targeted by user -1= no restriction*/
-	private int limitDistance=-1;
-	
-	
-	/** empty private cstor */
-	private Java2Graph()
-		{
-		
-		}
 	
 	/** add a file in the list of jar files */
 	private void addFile(File jarFile) throws IOException
@@ -772,92 +796,32 @@ public class Java2Graph extends AbstractApplication
 	
 	
 	@Override
-	protected void fillOptions(final Options options) {
-		options.addOption( Option.builder("jar").hasArg(true).desc(" <dir0:jar1:jar2:dir1:...> add a jar in the jar list. If directory, will add all the *ar files").build());
-		options.addOption( Option.builder("r").hasArgs().desc("<regex> add a pattern of classes to be ignored.").build());
-		options.addOption( Option.builder("R").hasArgs().desc("<package name> ignore the package starting with this string. Can be used muliple times.").build());
-		options.addOption( Option.builder("i").hasArg(false).desc("ignore interfaces").build());
-		options.addOption( Option.builder("p").hasArg(false).desc("use *private* inner classes").build());
-		options.addOption( Option.builder("m").hasArg(false).desc("ignore classes iMplementing interfaces").build());
-		options.addOption( Option.builder("d").hasArg(false).desc("ignore declared-classes (classes with $ in the name)").build());
-		options.addOption( Option.builder("o").hasArg(true).desc("output file").build());
-		options.addOption( Option.builder("G").hasArg(false).longOpt("gexf").desc("gephi/gexf output").build());
-		options.addOption( Option.builder("D").hasArg(false).longOpt("dot").desc("dot output").build());
-		options.addOption( Option.builder("x").hasArg(true).desc("(int) max distance to classe(s) defined by user. Default: unlimited").build());
-		super.fillOptions(options);
-	}
-	
-	
-
-	@Override
-	protected int execute(final CommandLine cmd) {
-		List<String> args = cmd.getArgList();
+	public int doWork(List<String> args) {
 		try {
 			File output=null;
 
-				if(cmd.hasOption("G"))
+				if(this.gexf)
 					{
 					this.graphPrinter=new GexfPrinter();
 					}
-				if(cmd.hasOption("p"))
-					{
-					this.usePrivateDeclaredClasses=true;
-					}
-				if(cmd.hasOption("D"))
+				
+				if(this.dot_flag)
 					{
 					this.graphPrinter=new DotGraphPrinter();
 					}
-				if(cmd.hasOption("jar"))
-					{
-					final String tokens[]=cmd.getOptionValues("jar");
-					for( String s:tokens)
-						{
-						s=s.trim();
-						if(s.isEmpty()) continue;
-						File file= new File(s);
-						this.addFile(file);	
-						}
-					}
-				if (cmd.hasOption("x"))
-					{
-					this.limitDistance=Integer.parseInt(cmd.getOptionValue("x"));
-					}
-				if (cmd.hasOption("r"))
-					{
-					final String tokens[]=cmd.getOptionValues("r");
-					for(final String s:tokens)
-						{
-						this.ignorePattern.add(Pattern.compile(s));
-						}
-					}
-				if (cmd.hasOption("R"))
-					{
-					final String tokens[]=cmd.getOptionValues("R");
-					for(final String s:tokens)
-						{
-						this.ignorePackagesStartingWith.add(s);
-						}
-					}
-				if (cmd.hasOption("o"))
-					{
-					output=new File(cmd.getOptionValue("o"));
-					}
-				if (cmd.hasOption("i"))
-					{
-					this.usingInterfaces=false;
-					}
-				if (cmd.hasOption("d"))
-					{
-					this.usingDeclaredClasses=false;
-					}
-				if (cmd.hasOption("m"))
-					{
-					this.usingClassesImplementingInterfaces=false;
-					}
 				
+					
+				
+				for(final String s:this.regexstr)
+					{
+					this.ignorePattern.add(Pattern.compile(s));
+					}
+					
+				
+			
 		    if(args.isEmpty())
 		    	{
-		    	LOG.severe("classes missing");
+		    	LOG.error("classes missing");
 		    	return -1;
 		    	}
 		    final HashSet<String> setOfClasses=new HashSet<String>();
@@ -878,14 +842,10 @@ public class Java2Graph extends AbstractApplication
 		  LOG.info("COUNT(LINKS) : "+this.links.size());
 
 			  
-		    PrintStream out= System.out;
-		    if(output!=null)
-		    	{
-		    	out= new PrintStream(output);
-		    	}
+		   try(PrintStream out = IOUtils.openPathAsPrintStream(this.outputFile)) {
 		    graphPrinter.print(out);
 		    out.flush();
-		    if(output!=null) out.close();
+			}
 		    return 0;
 		} catch (final Exception e) {
 			e.printStackTrace();

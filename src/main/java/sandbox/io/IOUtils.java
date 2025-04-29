@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringWriter;
@@ -64,6 +65,9 @@ public static List<String> unroll(final List<String> args) throws IOException {
 public static List<File> unrollFiles(final List<String> args) throws IOException {
 	return unroll(args).stream().map(G->new File(G)).collect(Collectors.toList());
 	}
+
+
+
 
 public static List<Path> unrollPaths(final List<String> args) throws IOException {
 	return unroll(args).stream().map(G->Paths.get(G)).collect(Collectors.toList());
@@ -261,6 +265,15 @@ public static Writer openPathAsWriter(final Path pathOrNull) throws IOException 
 		}
 	return Files.newBufferedWriter(pathOrNull);
 	}
+
+public static PrintStream openPathAsPrintStream(final Path pathOrNull) throws IOException {
+	if(pathOrNull==null) return System.out;
+	if(pathOrNull.getFileName().toString().endsWith(".gz")) {
+		 return new PrintStream(openPathAsOutputStream(pathOrNull));
+		}
+	return new PrintStream(Files.newOutputStream(pathOrNull));
+	}
+
 
 public static PrintWriter openPathAsPrintWriter(final Path pathOrNull) throws IOException {
 	if(pathOrNull==null) return new PrintWriter(System.out);

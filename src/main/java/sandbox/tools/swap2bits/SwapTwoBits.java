@@ -8,6 +8,7 @@ import java.util.List;
 import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.lang.StringUtils;
+import sandbox.tools.central.ProgramDescriptor;
 
 public class SwapTwoBits extends Launcher {
 	protected static final Logger LOG=Logger.builder(SwapTwoBits.class).build();
@@ -91,6 +92,18 @@ public class SwapTwoBits extends Launcher {
 			}
 		return 0;
 		}
+	
+	
+	public static ProgramDescriptor getProgramDescriptor() {
+    	return new ProgramDescriptor() {
+    		@Override
+    		public String getName() {
+    			return "swap2bits";
+    			}
+    		};
+    	}
+
+	
 	public static void main(String[] args) {
 		new SwapTwoBits().instanceMainWithExit(args);
 	}

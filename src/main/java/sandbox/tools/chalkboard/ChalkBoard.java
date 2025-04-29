@@ -45,6 +45,7 @@ import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
 import sandbox.svg.SVG;
+import sandbox.tools.central.ProgramDescriptor;
 
 @SuppressWarnings("serial")
 public class ChalkBoard extends Launcher  {
@@ -699,6 +700,15 @@ public class ChalkBoard extends Launcher  {
 			});
 		return 0;
 		}
+	
+	public static ProgramDescriptor getProgramDescriptor() {
+    	return new ProgramDescriptor() {
+    		@Override
+    		public String getName() {
+    			return "chalkboard";
+    			}
+    		};
+    	}
 	
 	public static void main(String[] args)
 		{
