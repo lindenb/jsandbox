@@ -52,7 +52,7 @@ public class VelocityJson extends Launcher {
 		}
 		public String readURL(final String path) throws IOException {
 			final Reader r = IOUtils.openReader(path);
-			final String s= IOUtils.readReaderContent(r);
+			final String s= IOUtils.slurp(r);
 			r.close();
 			return  s;
 		}
@@ -196,7 +196,7 @@ public class VelocityJson extends Launcher {
                     ve.setProperty(RuntimeConstants.RESOURCE_LOADER, "string");
                     ve.setProperty("string.resource.loader.class","org.apache.velocity.runtime.resource.loader.StringResourceLoader");
                     ve.init();
-                    final String templText = IOUtils.readStreamContent(System.in);
+                    final String templText = IOUtils.slurp(System.in);
                     StringResourceLoader.getRepository().putStringResource("t1", templText);
                     final Template template = ve.getTemplate("t1");
                     template.merge( context, w);

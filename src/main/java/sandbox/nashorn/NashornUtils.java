@@ -9,7 +9,7 @@ public class NashornUtils {
 public static final String NASHORN="nashorn";
 public static Optional<ScriptEngine> makeEngine() {
 	final ScriptEngineManager mgr=new  ScriptEngineManager();
-	final ScriptEngine scripEngine= mgr.getEngineByExtension(NASHORN);
+	final ScriptEngine scripEngine= mgr.getEngineByName(NASHORN);
 	return Optional.ofNullable(scripEngine);
 	}
 

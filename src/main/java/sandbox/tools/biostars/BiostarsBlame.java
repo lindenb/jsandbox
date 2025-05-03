@@ -58,7 +58,7 @@ public class BiostarsBlame extends Launcher {
 				}
 			in = resp.getEntity().getContent();
 			final TidyToDom tidyToDom = new TidyToDom();
-			final String html = IOUtils.readStreamContent(in);
+			final String html = IOUtils.slurp(in);
 			return tidyToDom.importString(html);
 			}
 		finally {

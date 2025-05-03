@@ -54,7 +54,7 @@ public class GrandComicsDatabaseScraper extends Launcher {
 				return null;
 			}
 			in = resp.getEntity().getContent();
-			return IOUtils.readStreamContent(in);
+			return IOUtils.slurp(in);
 			}
 		catch(final IOException err) {
 			LOG.error(err);

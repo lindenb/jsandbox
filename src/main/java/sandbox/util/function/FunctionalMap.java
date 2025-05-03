@@ -199,4 +199,30 @@ public class FunctionalMap<K,V> implements Iterable<FunctionalMap.Pair<K, V>> {
 	public String toString() {
 		return this.delegate.toString();
 		}
-}
+	
+	public static <X,Y> FunctionalMap<X,Y> empty() { return new FunctionalMap<X,Y>();}
+	public static <X,Y> FunctionalMap<X,Y> of(X k1,Y v1) {
+		return new FunctionalMap<>(k1,v1);
+		}
+	public static <X,Y> FunctionalMap<X,Y> of(X k1,Y v1,X k2,Y v2) {
+		return of(k1,v1).plus(k2,v2);
+		}
+	public static <X,Y> FunctionalMap<X,Y> of(X k1,Y v1,X k2,Y v2,X k3,Y v3) {
+		return of(k1,v1,k2,v2).plus(k3,v3);
+		}
+	public static <X,Y> FunctionalMap<X,Y> of(X k1,Y v1,X k2,Y v2,X k3,Y v3,X k4,Y v4) {
+		return of(k1,v1,k2,v2,k3,v3).plus(k4,v4);
+		}
+	public static <X,Y> FunctionalMap<X,Y> of(X k1,Y v1,X k2,Y v2,X k3,Y v3,X k4,Y v4,X k5,Y v5) {
+		return of(k1,v1,k2,v2,k3,v3,k4,v4).plus(k5,v5);
+		}
+	public static <X,Y> FunctionalMap<X,Y> of(X k1,Y v1,X k2,Y v2,X k3,Y v3,X k4,Y v4,X k5,Y v5,X k6,Y v6) {
+		return of(k1,v1,k2,v2,k3,v3,k4,v4,k5,v5).plus(k6,v6);
+		}
+	public static <X,Y> FunctionalMap<X,Y> of(X k1,Y v1,X k2,Y v2,X k3,Y v3,X k4,Y v4,X k5,Y v5,X k6,Y v6,X k7,Y v7) {
+		return of(k1,v1,k2,v2,k3,v3,k4,v4,k5,v5,k6,v6).plus(k7,v7);
+		}
+	public static <X,Y> FunctionalMap<X,Y> of(X k1,Y v1,X k2,Y v2,X k3,Y v3,X k4,Y v4,X k5,Y v5,X k6,Y v6,X k7,Y v7,X k8,Y v8) {
+		return of(k1,v1,k2,v2,k3,v3,k4,v4,k5,v5,k6,v6,k7,v7).plus(k8,v8);
+		}
+	}

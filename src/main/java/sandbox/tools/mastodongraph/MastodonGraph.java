@@ -223,7 +223,7 @@ public class MastodonGraph extends Launcher {
 								return response;
 								}
 							in = resp.getEntity().getContent();
-							response.content = IOUtils.readStreamContent(in);
+							response.content = IOUtils.slurp(in);
 							}
 						finally {
 							IOUtils.close(in);

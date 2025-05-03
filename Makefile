@@ -307,6 +307,7 @@ $(eval $(call compile,rdf2graph,sandbox.tools.rdf2graph.RdfToGraph,${jcommander.
 $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommander.jar} ./src/main/java/sandbox/tools/streamplot/parser/StreamPlotParser.java))
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/main/java/sandbox/tools/pojogenerator/parser/PojoParser.java))
 $(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander.jar} ${jaxb.jar}))
+$(eval $(call compile,jeter,sandbox.tools.comicsbuilder.v1.ComicsBuilderV1,${jcommander.jar} ${nashorn.jars}))
 $(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}  ${jetty.jars} ${apache.httpclient.jars} $(mime4j.jars) $(nashorn.jars)) )
 
 

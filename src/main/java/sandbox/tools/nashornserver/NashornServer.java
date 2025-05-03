@@ -23,26 +23,28 @@ import org.eclipse.jetty.server.session.HashSessionManager;
 import org.eclipse.jetty.server.session.SessionHandler;
 
 import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParametersDelegate;
 
 import sandbox.Logger;
 import sandbox.Launcher;
 import sandbox.io.IOUtils;
+import sandbox.nashorn.NashornParameters;
 import sandbox.tools.central.ProgramDescriptor;
 
 public class NashornServer extends Launcher {
 	private static final Logger LOG=Logger.builder(NashornServer.class).build();
 	
-    @Parameter(names={"-f","--script"},description="javascript file",required = true)
-	private Path javascriptFile=null;
+    @ParametersDelegate
+    private NashornParameters nashorParams =new   NashornParameters();
     @Parameter(names={"-P","--port"},description="server port")
 	private int serverPort = 8080;
     @Parameter(names={"-d","--path"},description="servlet path")
 	private String servletPath="/";
 	
 	private static class Handler  extends AbstractHandler {
-		final Path javascriptFile;
-		Handler(Path javascriptFile) {
-			this.javascriptFile=javascriptFile;
+		final NashornParameters nashorParams;
+		Handler(final NashornParameters nashorParams) {
+			this.nashorParams=nashorParams;
 			}
 		
 		 
@@ -59,12 +61,12 @@ public class NashornServer extends Launcher {
 					throw new ServletException("Cannot get a javascript engine");
 		     		}	
 			
-			try (Reader scriptReader = Files.newBufferedReader(this.javascriptFile)) {
+			try (Reader scriptReader = nashorParams.getReader()) {
 				 scriptEngine.eval(scriptReader);
 				 Invocable.class.cast(scriptEngine).invokeFunction("handle",target,baseRequest,httpReq,httpResp);
 				}
 			} catch(java.lang.NoSuchMethodException e) {
-				throw new ServletException("file \""+this.javascriptFile+"\" is missing a method handle(target,baseRequest,req,resp)",e);
+				throw new ServletException("file \""+this.nashorParams+"\" is missing a method handle(target,baseRequest,req,resp)",e);
 				}
 				catch (final IOException e) {
 				throw e;
@@ -76,7 +78,6 @@ public class NashornServer extends Launcher {
 	}
 	@Override
 	public int doWork(List<String> args) {
-		IOUtils.assertFileExists(this.javascriptFile);
 		
 		 final Server server = new Server(this.serverPort);
 		 try { 
@@ -89,7 +90,7 @@ public class NashornServer extends Launcher {
 	        final SessionHandler sessions = new SessionHandler(manager);
 		     
 	        
-			 final Handler handler=new Handler(javascriptFile);
+			 final Handler handler=new Handler(this.nashorParams);
 			 sessions.setHandler(handler);			
 			 final ContextHandler context = new ContextHandler();
 			 context.setContextPath(this.servletPath);

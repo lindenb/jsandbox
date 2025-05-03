@@ -153,7 +153,7 @@ public static BufferedReader openBufferedReaderFromPath(final Path path) throws 
 
 public static String slurp(final File file) throws IOException {
 	Reader r=null;
-	try { r = openReader(file); return readReaderContent(r);} 
+	try { r = openReader(file); return slurp(r);} 
 	finally {close(r);}
 	}
 
@@ -166,7 +166,7 @@ public static long consume(final InputStream is) throws IOException {
 	}
 
 
-public static byte[] slurp(final InputStream is) throws IOException {
+public static byte[] slurpBytes(final InputStream is) throws IOException {
 	try(ByteArrayOutputStream out=new ByteArrayOutputStream()) {
 		copyTo(is,out);
 		return out.toByteArray();
@@ -174,27 +174,28 @@ public static byte[] slurp(final InputStream is) throws IOException {
 	}
 
 public static String slurp(final String fileOrUrl) throws IOException {
-	Reader r=null;
-	try { r = openReader(fileOrUrl); return readReaderContent(r);} 
-	finally {close(r);}
+	try(Reader r= openReader(fileOrUrl)) {
+		return slurp(r);
+		}
 	}
 
 public static String readFileContent(final File path) throws IOException {
 	if(!path.exists()) throw new FileNotFoundException("not existing file "+path);
 	if(!path.canRead()) throw new IOException("canRead==false : file "+path);
-	Reader r=null;
-	try { r = openReader(path); return readReaderContent(r);} 
-	finally {close(r);}
+	try(Reader r= openReader(path)) {
+		return slurp(r);
+		}
 	}
 
-public static String readStreamContent(final InputStream in) throws IOException {
-	return readReaderContent(new InputStreamReader(in));
+public static String slurp(final InputStream in) throws IOException {
+	return slurp(new InputStreamReader(in));
 	}
 
-public static String readReaderContent(final Reader r) throws IOException {
-	final StringWriter sw= new StringWriter();
-	copyTo(r, sw);
-	return sw.toString();
+public static String slurp(final Reader r) throws IOException {
+	try(final StringWriter sw= new StringWriter()) {
+		copyTo(r, sw);
+		return sw.toString();
+		}
 	}
 
 
