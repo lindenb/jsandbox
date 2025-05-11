@@ -55,7 +55,9 @@ public class IndentWriter extends Writer {
 			at_start=(c=='\n');
 			}
 		}
-	
+	public void print(final char c) {
+		print(String.valueOf(c));
+		}
 	public void print(final String s) {
 		try {
 			write(s);
@@ -67,6 +69,9 @@ public class IndentWriter extends Writer {
 
 	public void println(final String s) {
 		print(s);
+		println();
+		}
+	public void println() {
 		print("\n");
 		}
 	

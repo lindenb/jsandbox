@@ -20,6 +20,7 @@ import sandbox.tools.fdup.FindDuplicateFiles;
 import sandbox.tools.feed.AtomToHtml;
 import sandbox.tools.feedburner.FeedBurner;
 import sandbox.tools.fileserver.FileServer;
+import sandbox.tools.hexdump.HexDump;
 import sandbox.tools.htmlinxml.HtmlInXml;
 import sandbox.tools.img2base64.ImagesToBase64;
 import sandbox.tools.java2xml.JavaToXml;
@@ -82,6 +83,7 @@ public class SandboxCentral {
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
 		register(ImagesToBase64.class);
+		register(HexDump.class);
 		register(JavaToXml.class);
 		register(Json2Xml.class);
 		register(FileServer.class);

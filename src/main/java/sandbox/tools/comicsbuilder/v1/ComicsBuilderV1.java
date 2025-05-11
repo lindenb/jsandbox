@@ -1,26 +1,28 @@
 package sandbox.tools.comicsbuilder.v1;
 
+import java.awt.BasicStroke;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Area;
 import java.awt.geom.Dimension2D;
+import java.awt.geom.GeneralPath;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.Reader;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
-import javax.imageio.stream.ImageInputStream;
-import javax.script.Bindings;
 import javax.script.ScriptEngine;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -33,25 +35,28 @@ import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.w3c.dom.Text;
 
+import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
 
 import sandbox.Launcher;
+import sandbox.awt.AffineTransformFactory;
+import sandbox.io.IOUtils;
 import sandbox.nashorn.NashornParameters;
 import sandbox.nashorn.NashornUtils;
 import sandbox.svg.SVG;
+import sandbox.svg.SVGUtils;
 import sandbox.tools.central.ProgramDescriptor;
 import sandbox.util.function.FunctionalMap;
+import sandbox.xml.DOMHelper;
 
 
 public class ComicsBuilderV1 extends Launcher {
-	private static final String NS2="https://ns2";
-	private static final String PREFIX2="ns2:";
-	private static final String USER_DATA_SHAPE="shape";
 	
     @ParametersDelegate
     private NashornParameters nashorParams =new   NashornParameters();
+    @Parameter(names="-o",description="output directory",required = true)
+    private File outputDirectory = null;
 
     private static long ID_GENERATOR=0L;
     
@@ -59,169 +64,114 @@ public class ComicsBuilderV1 extends Launcher {
     	return "n"+(++ID_GENERATOR);
     }
     
-    private interface DOMHelper {
-    	Document getDocument();
+    public abstract class Sprite {
+    	boolean saved_flag=false;
+    	long id = (++ID_GENERATOR);
+    	public abstract BufferedImage getImage();
+    	public abstract Shape getShape();
     	
-    	default String toString(Object o) {
-    		if(o==null) return "";
-    		return String.valueOf(o);
-    	}
-    	default String namespaceForPrefix(String pfx) {
-    		if(PREFIX2.endsWith(pfx)) return NS2;
-    		throw new IllegalArgumentException(""+pfx);
+
+    	
+    	public Sprite clip(Shape shape) {
+    		Area area=new Area(this.getShape());
+    		area.intersect(new Area(shape));
+    		shape = area;
+    		Rectangle rect = shape.getBounds();
+    		BufferedImage img=new BufferedImage(rect.width,rect.height, getImage().getType());
+    		AffineTransform tr = AffineTransformFactory.newInstance().translate(-rect.getX(),-rect.getY()).make();
+    		Shape shape2 = tr.createTransformedShape(shape);
+    		Graphics2D g= (Graphics2D)img.getGraphics();
+    		g.setClip(shape2);
+    		g.drawImage(getImage(), (int)-rect.getX(),(int) -rect.getY(), null);
+    		g.dispose();
+    		return new DefaultSprite(img,shape2);
     		}
-    	default Text text(Object o) {
-    		return (o==null?null:getDocument().createTextNode(toString(o)));
-			}
-    	default Element element(String s) {
-			return element(s,null,FunctionalMap.empty());
-			}
-    	default Element element(String s,Object content,FunctionalMap<String, Object> atts) {
-    		Element e = getDocument().createElementNS(SVG.NS,s);
-    		Text t=text(content);
-    		if(t!=null) e.appendChild(t); 
-    		if(atts!=null && !atts.isEmpty()) {
-    			for(String key:atts.keySet()) {
-    				String v= toString(atts.get(key));
-    				if(v==null) continue;
-    				int colon=key.indexOf(":");
-    				if(colon!=-1) {
-    					e.setAttributeNS(
-							namespaceForPrefix(key.substring(0,colon)),
-							key, v
-							);
-    					}
-    				else
-    					{
-    					e.setAttribute(key, v);
-    					}
-    				}
-    			}
-    		return e;
-			}
-    }
+    	public Sprite frame() {
+    		int x=20;
+    		BufferedImage img=new BufferedImage(getImage().getWidth()+x*2,getImage().getHeight()+x*2,getImage().getType());
+    		Graphics2D g= (Graphics2D)img.getGraphics();
+    		AffineTransform tr = AffineTransformFactory.newInstance().translate(x,x).make();
+    		Area shape2 = new Area(tr.createTransformedShape(getShape()));
+    		BasicStroke stroke=new BasicStroke(x);
+    		Area shape3 = new Area(stroke.createStrokedShape(shape2));
+    		g.fill(shape3);
+    		g.setClip(shape2);
+    		g.drawImage(getImage(),x,x,null);
+    		g.dispose();
+    		shape2.exclusiveOr(shape3);
+    		return new DefaultSprite(img,shape2);
+    	}
+    	
+    	public Sprite mirrorH() {
+    		BufferedImage img=new BufferedImage(getImage().getWidth(),getImage().getHeight(),getImage().getType());
+    		AffineTransform tr = AffineTransformFactory.newInstance().
+    				translate(getImage().getWidth(),0).
+    				scale(-1,1).
+    				make();
+    		Shape  shape2 = tr.createTransformedShape(getShape());
+    		Graphics2D g= (Graphics2D)img.getGraphics();
+    		g.setColor(Color.RED);
+    		g.fillRect(0, 0, getImage().getWidth(), getImage().getHeight());
+    		g.setClip(shape2);
+    		g.drawImage(getImage(),tr,null);
+    		g.dispose();
+    		return new DefaultSprite(img,shape2);
+    		}
+    	
+    	public File saveAs(File directory) throws IOException {
+    		File f = new File(directory,String.valueOf(this.id)+".png");
+    		if(!saved_flag) {
+	    		ImageIO.write(this.getImage(), "PNG", f);
+	    		saved_flag=true;
+	    		}
+    		return f;
+    		}
+    	}
     
-    public class Def implements DOMHelper {
-    	final Page page;
-    	final Element e;
-    	Def(Page page,Element e) {
-    		this.page=page;
-    		this.e=e;
+    private class DefaultSprite extends Sprite {
+    	protected final BufferedImage image;
+    	protected final Shape shape;
+    	DefaultSprite(BufferedImage image, Shape shape) {
+			this.image = image;
+    		this.shape=shape;
+        	}
+    	@Override
+    	public BufferedImage getImage() {
+    		return this.image;
     		}
     	@Override
-    	public Document getDocument() {
-    		return page.dom;
-    		}
-    	public String getId() {
-    		return e.getAttribute("id");
-    		}
-    	public String getAnchor() {
-    		return "#"+getId();
-    		}
-    	public String getUrl() {
-    		return "url("+getAnchor()+")";
-    		}
-    	public Def clip(Def shape) {
-    		final String id1= nextId();
-    		final Element clipPath= element("clipPath",null,
-    			FunctionalMap.of("id",id1)	
-    			);
-    		final Element use1 = element("use",null,
-    			FunctionalMap.of(
-    				"x",0, "y",0,
-    				"href", shape.getAnchor()
-    				)	
-    			);
-    		clipPath.appendChild(use1);
-    		
-    		page.svgDefs.appendChild(clipPath);
-    		
-    		Shape awtShape =Shape.class.cast(shape.e.getUserData(USER_DATA_SHAPE));
-    		Rectangle2D r=awtShape.getBounds2D();
-    		System.err.println(r);
-    		AffineTransform tr=AffineTransform.getTranslateInstance(-r.getX(),-r.getY());
-    		awtShape = tr.createTransformedShape(awtShape);
-    		
-    		String id2=nextId();
-    		Element g2 = element("g",null,
-    			FunctionalMap.of( "id",id2)
-    			);
-    		Element use2 = element("use",null,
-	    			FunctionalMap.of(
-	    				"x",0, "y",0,
-	    				"href", getAnchor(),
-	    				"clip-path","url(#"+id1+")"
-	    				)	
-	    			);
-	    	g2.appendChild(use2);
-	    	page.svgDefs.appendChild(g2);
-    		
-	    	
-
-    		Element g3 = element("g",null,
-    			FunctionalMap.of( "id",nextId())
-    			);
-    		Element use3 = element("use",null,
-	    			FunctionalMap.of(
-	    				"x",0, "y",0,
-	    				"href","#"+id2,
-	    				"transform","translate("+toString(-r.getX())+","+toString(-r.getY())+")"
-	    				)	
-	    			);
-	    	g3.appendChild(use3);
-	    	page.svgDefs.appendChild(g3);
-	    	
-	    	
-	    	g3.setUserData(USER_DATA_SHAPE, tr.createTransformedShape(awtShape),null);
-    		page.svgDefs.appendChild(g3);
-    		return new Def(this.page,g3);
+    	public Shape getShape() {
+    		return this.shape;
     		}
     	}
     
-    public class ShapeBuilder implements DOMHelper {
-    	Page page;
-    	List<Point2D.Double> points=new ArrayList<>();
+    
+    
+
+    public class ShapeBuilder {
+    	private List<Point2D.Double> points=new ArrayList<>();
     	public ShapeBuilder add(double x,double y) {
     		this.points.add(new Point2D.Double(x, y));
     		return this;
     		}
-    	@Override
-    	public Document getDocument() {
-    		return page.getDocument();
-    		}
-    	public Def makePolygon() {
-    		return makeShape("polygon");
-    		}
-    	private Def makeShape(String tag) {
-    		double minx =  this.points.stream().mapToDouble(P->P.getX()).min().orElse(0);
-    		double maxx =  this.points.stream().mapToDouble(P->P.getX()).max().orElse(0);
-    		double miny =  this.points.stream().mapToDouble(P->P.getY()).min().orElse(0);
-    		double maxy =  this.points.stream().mapToDouble(P->P.getY()).max().orElse(0);
-    		Element shape= element(tag,null,
-    				FunctionalMap.of(
-    					"id",nextId(),
-    					PREFIX2+":minx",minx,
-    					PREFIX2+":miny",miny,
-    					PREFIX2+":width",maxx-minx,
-    					PREFIX2+":height",maxy-miny,
-						"points", this.points.stream().
-	    					map(P->toString(P.getX())+","+toString(P.getY())).
-	    					collect(Collectors.joining(" "))
-    					)
-    				);
-    		shape.setUserData(
-    				USER_DATA_SHAPE,
-    				new Rectangle2D.Double(minx,miny,(maxx-minx),(maxy-miny)),
-    				null
-    				);
-    		page.svgDefs.appendChild(shape);
+    	
+    
+    	public Shape make() {
+    		if(this.points.isEmpty()) throw new IllegalArgumentException();
+    		GeneralPath gp=new GeneralPath();
+    		gp.moveTo(points.get(0).getX(),points.get(0).getY());
+    		for(int i=1;i< points.size();++i) {
+        		gp.lineTo(points.get(i).getX(),points.get(i).getY());
+    			}
+    		gp.closePath();
     		this.points.clear();
-    		return new Def(page,shape);
+    		return gp;
     		}
     	}
     
 	public class Page implements DOMHelper {
 		private final Document dom;
+		private final Set<Long> sprites=new HashSet<>();
 		Dimension dim;
 		Element svgRoot;
 		Element svgDefs;
@@ -243,86 +193,56 @@ public class ComicsBuilderV1 extends Launcher {
 			svgRoot.appendChild(svgBody);
 			}
 		@Override
+		public String getDefaultNamespace() {
+			return SVG.NS;
+			}
+		@Override
 		public Document getDocument() {
 			return dom;
 			}
-		public Element use(Def def, double x,double y) {
+		public Sprite use(Sprite sprite, double x,double y) throws IOException {
+			if(!this.sprites.contains(sprite.id)) {
+				this.sprites.add(sprite.id);
+				final String id1= nextId();
+				final Element clipPath = element("clipPath",null,FunctionalMap.of(
+	    				"id", id1
+						)) ;
+				
+				final Element svgPath = element("path",null,
+						FunctionalMap.of("d", SVGUtils.shapeToPath(sprite.getShape()))
+						);
+				clipPath.appendChild(svgPath);
+				this.svgDefs.appendChild(clipPath);
+				
+				File f=sprite.saveAs(ComicsBuilderV1.this.outputDirectory);
+				final Element img= element("image",
+						null,
+						FunctionalMap.of(
+								"id", "n"+sprite.id,
+								"href",f.toURI().toURL(),
+								"mask","url(#"+id1+")"
+								)
+						);
+				this.svgDefs.appendChild(img);
+				}
+			
 			Element u = element("use",
 					null,
-					FunctionalMap.of("id",nextId(),"x",x,"y",y,"href","#"+def.getId())
+					FunctionalMap.of("id",nextId(),"x",x,"y",y,"href","#n"+sprite.id)
 					);
 			svgBody.appendChild(u);
-			return u;
+			return sprite;
 			}
 		
 		
-		public Def createRectangle(double x,double y,double w,double h) {
-			Element shape= element("rect",null,
-    				FunctionalMap.of(
-    					"id",nextId(),
-    					"x",x,
-    					"y",y,
-    					"width",w,
-    					"height",h
-    					)
-    				);
-			this.svgDefs.appendChild(shape);
-			shape.setUserData(
-					USER_DATA_SHAPE,
-					new Rectangle2D.Double(x, y, w, h),
-					null
-					);
-    		return new Def(this,shape);
-			}
 		
-		public Def getImage(final String href) throws IOException {
-			final URL url=new URL(href);
-			try(InputStream input= url.openStream()) {
-				try(ImageInputStream in = ImageIO.createImageInputStream(Objects.requireNonNull(input,()->"Cannot create input image for "+url))){
-				    final Iterator<ImageReader> readers = ImageIO.getImageReaders(Objects.requireNonNull(in,()->"Cannot create inputstream  for "+url));
-				    if (readers.hasNext()) {
-				        ImageReader reader = Objects.requireNonNull(readers.next());
-				        try {
-				            reader.setInput(in);
-				            Dimension dim= new Dimension(reader.getWidth(0), reader.getHeight(0));
-				            final Element e = element("image",null,
-				            	FunctionalMap.of(
-				            		"id",nextId(),
-				            		"href", url,
-				            		"width", dim.getWidth(),
-				            		"height", dim.getHeight()
-				            		)	
-				            	);
-				        	e.setUserData(
-				        		USER_DATA_SHAPE,
-			    				new Rectangle2D.Double(0,0,dim.getWidth(), dim.getHeight()),
-			    				null
-			    				);
-				        	this.svgDefs.appendChild(e);
-				            return new Def(this,e);
-				        } finally {
-				            reader.dispose();
-				        }
-				    }
-				}
-				}
-			throw new IOException("Cannot find decoder for "+url);
-		}
 		
 		public void saveAs(String fname) {
 			exportXml(this.dom,new StreamResult(new File(fname)));
 		}
 		
 		
-		public Def clip(Def image,Def E) {
-    		Element g= element("g",null,FunctionalMap.of(
-    				"clip-path","url("+E.getId()+")",
-    				"id", nextId()));
-    		Element u= element("use",null,FunctionalMap.of("href","#"+nextId(),"x",0,"y",0));
-    		g.appendChild(u);
-    		this.svgDefs.appendChild(g);
-    		return new Def(this,g);
-    		}
+		
 		
 		public void view() {
 			try {
@@ -339,10 +259,7 @@ public class ComicsBuilderV1 extends Launcher {
 			}
 		}
 	
-	public class Case {
-		Case() {
-			}
-		}
+	
 	
 	public class Context  {
 		DocumentBuilder domBuilder;
@@ -358,6 +275,11 @@ public class ComicsBuilderV1 extends Launcher {
 		public Page createPage(final int w,final int h) {
 			return new Page(this.domBuilder.newDocument(),new Dimension(w,h));
 			}
+		
+		
+		public ShapeBuilder newShapeBuiilder() {
+			return new ShapeBuilder();
+		}
 		
 		public Dimension2D dimension(final double w,final double h) {
 			return new Dimension2D() {
@@ -379,9 +301,23 @@ public class ComicsBuilderV1 extends Launcher {
 					}
 				};
 		}
-		public Rectangle2D rect(double x, double y,double w,double h) {
+		public Rectangle2D createRectangle(double x, double y,double w,double h) {
 			return new Rectangle2D.Double(x,y,w,h);
 		}
+		
+		
+		public Sprite getImage(final String href) throws IOException {
+			BufferedImage image;
+			if(IOUtils.isURL(href)) {
+				image = ImageIO.read(new URL(href));
+				}
+			else
+				{
+				image = ImageIO.read(new File(href));
+				}	
+			return new DefaultSprite(image,new Rectangle(0,0,image.getWidth(),image.getHeight()));
+			}
+		
 	}
 	
 	private static void exportXml(Node root, StreamResult out) {
@@ -404,7 +340,6 @@ public class ComicsBuilderV1 extends Launcher {
 		try {
 			   // Here we are generating Nashorn JavaScript Engine 
 	        final ScriptEngine ee = NashornUtils.makeRequiredEngine();
-	        final Bindings ctx= ee.createBindings();
 			ee.put("context",new Context());
 			try(Reader r=	this.nashorParams.getReader()) {
 				ee.eval(r);
