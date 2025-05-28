@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +37,8 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -44,6 +47,8 @@ import javax.xml.stream.XMLStreamWriter;
 import com.beust.jcommander.Parameter;
 
 import sandbox.Launcher;
+import sandbox.hershey.Hershey;
+import sandbox.lang.StringUtils;
 import sandbox.svg.SVG;
 import sandbox.tools.central.ProgramDescriptor;
 
@@ -55,16 +60,16 @@ public class ChalkBoard extends Launcher  {
 	private String prefix = "slideshow.";
 
 
+	
+	
 	private static class MyStyle {
 		String className;
-		boolean for_text=false;
 		Color color = Color.BLACK;
 		int lineSize = 1;
 		@Override
 		public boolean equals(Object obj)
 			{
 			MyStyle other= MyStyle.class.cast(obj);
-			if(this.for_text!=other.for_text) return false;
 			if(this.lineSize!=other.lineSize) return false;
 			if(!this.color.equals(other.color)) return false;
 			return true;
@@ -72,18 +77,13 @@ public class ChalkBoard extends Launcher  {
 		@Override
 		public int hashCode()
 			{
-			return (color.hashCode()*31 +Integer.hashCode(lineSize))*31 + (for_text?0:1);
+			return (color.hashCode()*31 +Integer.hashCode(lineSize))*31;
 			}
 		void apply(final Graphics2D g) {
 			g.setColor(this.color);
-			if(this.for_text) {
-				g.setFont(new Font("courier",Font.BOLD,this.lineSize));
-				}
-			else
-				{
-				g.setStroke(new BasicStroke(lineSize,BasicStroke.CAP_ROUND,BasicStroke.JOIN_ROUND));
-				}
+			g.setStroke(new BasicStroke(lineSize,BasicStroke.CAP_ROUND,BasicStroke.JOIN_ROUND));
 			}
+		
 		void write(final XMLStreamWriter w) throws XMLStreamException {
 			final StringBuilder sb=new StringBuilder(".").
 					append(className).
@@ -94,13 +94,9 @@ public class ChalkBoard extends Launcher  {
 				append(color.getGreen()).
 				append(",").
 				append(color.getBlue()).
-				append(");");
-			if(for_text) {
-				sb.append("font-height:").append(this.lineSize).append(";");
-				}else
-				{
-				sb.append("stroke-width:").append(this.lineSize).append(";");
-				}
+				append(");").
+				append("stroke-width:").append(this.lineSize).append(";");
+				
 			
 			sb.append("}\n");
 			w.writeCharacters(sb.toString());
@@ -116,8 +112,12 @@ public class ChalkBoard extends Launcher  {
 		}
 	
 	private static class MyText extends MyShape {
-		Point point;
-		StringBuilder sb= new StringBuilder();
+		final Rectangle2D.Double bounds;
+		final String text;
+		MyText(String text,Rectangle2D.Double bounds) {
+			this.text = text;
+			this.bounds=bounds;
+			}
 		@Override
 		boolean isText() {
 			return true;
@@ -125,20 +125,26 @@ public class ChalkBoard extends Launcher  {
 		@Override
 		void paint(Graphics2D g) {
 			style.apply(g);
-			g.drawString(sb.toString(), point.x, point.y);
+			Hershey hershey=new Hershey();
+			hershey.paint(g, text, bounds);
 			}
-		@Override void write(final XMLStreamWriter w) throws XMLStreamException {
-			w.writeStartElement("x");
+		
+		
+		@Override
+		void write(final XMLStreamWriter w) throws XMLStreamException {
+			//w.writeComment(text);
+			w.writeEmptyElement("path");
 			w.writeAttribute("class", style.className);
-			w.writeAttribute("x", String.valueOf(point.getX()));
-			w.writeAttribute("y", String.valueOf(point.getY()));
-			w.writeCharacters(sb.toString());
-			w.writeEndElement();
+			Hershey hershey=new Hershey();
+			w.writeAttribute("d",
+					hershey.svgPath(text, bounds)
+					);
 			}
+		
 		@Override
 		void translate(int dx,int dy) {
-			point.x+=dx;
-			point.y+=dy;
+			bounds.x+=dx;
+			bounds.y+=dy;
 			}
 		}
 	
@@ -279,6 +285,80 @@ public class ChalkBoard extends Launcher  {
 		private final String prefix;
 		private File saveDir = null;
 		private Point lastClick = null;
+		
+		private  class MouseHandler extends MouseAdapter{
+			final List<Point> points =new ArrayList<>();
+			MyStyle style = null;
+			boolean shitfDown=false;
+			private final Stroke dashedStroke = new BasicStroke(3, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL,  0, new float[]{9}, 0);
+
+			@Override
+			public void mousePressed(MouseEvent e)
+				{
+				this.shitfDown = e.isShiftDown();
+				style = getCurrentStyle();
+				points.clear();
+				points.add(e.getPoint());
+				drawingArea.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+				}
+			@Override
+			public void mouseDragged(MouseEvent e)
+				{
+				if(points.size()>0) {
+					final Graphics2D g = (Graphics2D)drawingArea.getGraphics();
+					final Point p=points.get(points.size()-1);
+					if(this.shitfDown)
+						{
+						Stroke old=g.getStroke();
+						g.setStroke(this.dashedStroke);
+						g.drawLine(p.x, p.y,e.getX(),e.getY());
+						g.setStroke(old);
+						}
+					else
+						{
+						style.apply(g);
+						g.drawLine(p.x, p.y,e.getX(),e.getY());
+						}
+					points.add(e.getPoint());
+					}
+				}
+			@Override
+			public void mouseReleased(MouseEvent e)
+				{
+				drawingArea.setCursor(Cursor.getDefaultCursor());
+				if(points.size()<2) return;
+				final Slide slide = slideShow.slides.get(slide_index);
+				final MyPolyLine shape = new MyPolyLine();
+				shape.points.addAll(points);
+				if(this.shitfDown) {
+					Rectangle2D rec=shape.toShape().getBounds2D();
+					final JTextArea area=new JTextArea(25,80);
+					final JScrollPane scroll=new JScrollPane(area);
+					int ret=JOptionPane.showConfirmDialog(XFrame.this, scroll);
+					if(ret==JOptionPane.OK_OPTION) {
+						String content=area.getText();
+						if(!StringUtils.isBlank(content)) {
+							MyText myText=new MyText(content, new Rectangle2D.Double(rec.getX(),rec.getY(),rec.getWidth(),rec.getHeight()));
+							myText.style= slide.getSyle(this.style);
+							slide.shapes.add(myText);
+							}
+						}
+					}
+				else
+					{
+					shape.style = slide.getSyle(this.style);
+					slide.shapes.add(shape);
+					}
+				drawingArea.repaint();
+				style=null;
+				points.clear();
+				}
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				XFrame.this.lastClick = new Point(e.getX(),e.getY());
+				}
+			
+		}
 		
 		private abstract class AbstractSelectorPane extends JPanel {
 		AbstractSelectorPane() {
@@ -467,49 +547,7 @@ public class ChalkBoard extends Launcher  {
 			
 			
 			content.add(this.drawingArea, BorderLayout.CENTER);
-			final MouseAdapter mouse = new MouseAdapter()
-				{
-				final List<Point> points =new ArrayList<>();
-				MyStyle style = null;
-				@Override
-				public void mousePressed(MouseEvent e)
-					{
-					style = getCurrentStyle();
-					style.for_text = false;
-					points.clear();
-					points.add(e.getPoint());
-					drawingArea.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-					}
-				@Override
-				public void mouseDragged(MouseEvent e)
-					{
-					if(points.size()>0) {
-						final Graphics2D g = (Graphics2D)drawingArea.getGraphics();
-						final Point p=points.get(points.size()-1);
-						style.apply(g);
-						g.drawLine(p.x, p.y,e.getX(),e.getY());
-						points.add(e.getPoint());
-						}
-					}
-				@Override
-				public void mouseReleased(MouseEvent e)
-					{
-					drawingArea.setCursor(Cursor.getDefaultCursor());
-					if(points.size()<2) return;
-					final Slide slide = slideShow.slides.get(slide_index);
-					MyPolyLine shape = new MyPolyLine();
-					shape.style = slide.getSyle(this.style);
-					shape.points.addAll(points);
-					slide.shapes.add(shape);
-					drawingArea.repaint();
-					style=null;
-					points.clear();
-					}
-				@Override
-				public void mouseClicked(MouseEvent e) {
-					XFrame.this.lastClick = new Point(e.getX(),e.getY());
-					}
-				};
+			final MouseHandler mouse = new MouseHandler();
 			this.drawingArea.addMouseListener(mouse);
 			this.drawingArea.addMouseMotionListener(mouse);
 			
@@ -527,9 +565,7 @@ public class ChalkBoard extends Launcher  {
 						case KeyEvent.VK_RIGHT:
 						case KeyEvent.VK_KP_RIGHT: translate(1,0,e.isControlDown());return;
 						}
-					if(!Character.isISOControl(e.getKeyChar()) || e.getKeyChar()=='\n') {
-						appendCharOrCreateText(e.getKeyChar());
-					}
+					
 					
 					
 					if(e.isControlDown()) {
@@ -572,37 +608,6 @@ public class ChalkBoard extends Launcher  {
 			drawingArea.repaint();
 			}
 		
-		private void appendCharOrCreateText(char c) {
-			System.err.println("c="+c+" "+lastClick);
-			if(this.lastClick==null) return;
-			if(c=='\n') {
-				this.lastClick.y+= this.selectPenSize.getValue()+1;
-				return;
-				}
-		
-			final Slide slide =  this.slideShow.slides.get(this.slide_index);
-			MyText text = null;
-			
-			if(!slide.isEmpty()) {
-				final MyShape shape=slide.getLast();
-				if(shape.isText()) {
-					MyText atext = MyText.class.cast(shape);
-					if(atext.point.equals(this.lastClick)) {
-						text = atext;
-						}
-					}
-				}
-			if(text==null) {
-				final MyStyle style = getCurrentStyle();
-				style.for_text = true;
-				text = new MyText();
-				text.point = new Point(this.lastClick);
-				text.style = slide.getSyle(style);
-				slide.shapes.add(text);
-				}
-			text.sb.append(c);
-			drawingArea.repaint();
-			}
 		
 		private void paintDrawingArea(final Graphics2D g) {
 			g.setColor(Color.WHITE);
@@ -680,8 +685,7 @@ public class ChalkBoard extends Launcher  {
 			this.drawingArea.repaint();
 			}
 		private MyStyle getCurrentStyle() {
-			MyStyle st = new MyStyle();
-			st.for_text = false;
+			final MyStyle st = new MyStyle();
 			st.className = "x";
 			st.color = this.selectColorPane.getValue();
 			st.lineSize = this.selectPenSize.getValue();

@@ -35,6 +35,7 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
@@ -46,6 +47,8 @@ import java.util.Set;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+
+import sandbox.MyWordle.Word;
 
 
 
@@ -274,10 +277,36 @@ public class Hershey
 
 	public Shape toShape(String s,
 			double x, double y,
-			double width, double height) {
+			double width, double height
+			)
+		{
 		final GeneralPath p=new GeneralPath();
 		if(s.isEmpty() || width==0 || height==0) return p;
-		
+		String[] lines=s.split("\n");
+		double fonth= (height/lines.length)*(lines.length>1?0.9:1.0);
+		double max_len = Arrays.stream(lines).map(S->S.trim()).mapToInt(S->S.length()).max().orElse(0);
+		double fontw= width/Math.max(max_len,1);
+		double size= Math.min(fonth, fontw);
+		for(int y2=0;y2< lines.length;++y2) {
+			final String line=lines[y2].trim();
+			toShape2(p,
+					line,
+					x,y,
+					line.length()*size,
+					size
+					);
+			y+=size;
+			}
+		return p;
+		}
+
+	
+	private void toShape2(
+			GeneralPath p,
+			String s,
+			double x, double y,
+			double width, double height) {
+		System.err.println(s+" "+x+" "+y+" "+width+" "+height);
 		double dx=width/s.length();
 		for(int i=0;i < s.length();++i)
 			{
@@ -296,20 +325,43 @@ public class Hershey
 					}
 				}
 			}
-		return p;
 		}
 	
 	public String svgPath(
 			String s,
 			double x, double y,
 			double width, double height
+			) {
+		System.err.println(s+" "+x+" "+y+" "+width+" "+height);
+
+		StringWriter sw = new StringWriter();
+		String[] lines=s.split("\n");
+		double fonth= (height/lines.length)*(lines.length>1?0.9:1.0);
+		double max_len = Arrays.stream(lines).map(S->S.trim()).mapToInt(S->S.length()).max().orElse(0);
+		double fontw= width/Math.max(max_len,1);
+		double size= Math.min(fonth, fontw);
+		for(int y2=0;y2< lines.length;++y2) {
+			final String line=lines[y2].trim();
+			svgPath2(sw,line,
+					x,y,
+					line.length()*size,
+					size
+					);
+			y+=size;
+			}
+		return sw.toString();
+		}
+	
+	private void svgPath2(
+			StringWriter sw,
+			String s,
+			double x, double y,
+			double width, double height
 			)
 		{
-		final StringWriter sw=new StringWriter();
-		
-		
-		if(s.isEmpty() || width==0 || height==0) return "";
-		
+		System.err.println("shape2"+s+" "+x+" "+y+" "+width+" "+height);
+
+		if(s.isEmpty() || width==0 || height==0) return ;
 		double dx=width/s.length();
 		for(int i=0;i < s.length();++i)
 			{
@@ -334,7 +386,6 @@ public class Hershey
 			
 			}
 		//sw.append("z");
-		return sw.toString();
 		}
 	
 	public List<BitSet> asciiArt(

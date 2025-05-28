@@ -221,7 +221,7 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
         atommerger pubmedtrending cookiestorefile softwarefitness \
 	packageeclipsejars xslserver java2xml flickrrss \
 	geneticpainting json2dom  twittergraph twitterfollow  twitter01   \
-	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom  xmlpath imagemap \
+	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom  imagemap \
 	pcaviewer swap2bits
 
 
@@ -267,7 +267,6 @@ $(eval $(call compile,insta2atom,sandbox.ig.InstagramToAtom,${jcommander.jar} ${
 $(eval $(call compile,insta2json,sandbox.ig.InstagramToJson,${jcommander.jar} ${apache.httpclient.jars} ${google.gson.jars}))
 $(eval $(call compile,insta2gexf,sandbox.ig.InstagramGraph,${jcommander.jar} ${apache.httpclient.jars} ${jtidy.jars}))
 $(eval $(call compile,atomxhtml,sandbox.AtomXhtmlContent,${jcommander.jar} ${jtidy.jars}))
-$(eval $(call compile,xmlpath,sandbox.XmlPath,${jcommander.jar} ${jtidy.jars}))
 $(eval $(call compile,imagemap,sandbox.ImageMap,${jcommander.jar}))
 $(eval $(call compile,dccomicsscraper,sandbox.DcComicsScraper,${jcommander.jar} ${google.gson.jars} ${jtidy.jars} ${apache.httpclient.jars} ${berkeleydb.jar}))
 $(eval $(call compile,image2ascii,sandbox.tools.img2ascii.ImageToAscii,${jcommander.jar}))

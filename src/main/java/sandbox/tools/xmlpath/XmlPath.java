@@ -1,12 +1,10 @@
-package sandbox;
+package sandbox.tools.xmlpath;
 
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 import java.util.stream.Collectors;
 
 import javax.xml.parsers.SAXParser;
@@ -16,8 +14,11 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
+import sandbox.Launcher;
+import sandbox.Logger;
 import sandbox.io.IOUtils;
 import sandbox.lang.StringUtils;
+import sandbox.tools.central.ProgramDescriptor;
 
 
 public class XmlPath extends Launcher {
@@ -99,38 +100,34 @@ public class XmlPath extends Launcher {
 	
 @Override
 public int doWork(final List<String> args) {
-		InputStream in = null;
 		try
 			{
 			String file = oneFileOrNull(args);
-			if(file==null)
-				{
-				in  = System.in;
+			try(InputStream in = (file==null?System.in:IOUtils.openStream(file))) {
+				final SAXParserFactory spf = SAXParserFactory.newInstance();
+				spf.setNamespaceAware(true);
+				spf.setValidating(false);
+				final SAXParser saxParser = spf.newSAXParser();
+				final MyHandler dh = new MyHandler();
+				saxParser.parse(in, dh);
 				}
-			else
-				{
-				in = IOUtils.openStream(file);
-				}
-			final SAXParserFactory spf = SAXParserFactory.newInstance();
-			spf.setNamespaceAware(true);
-			spf.setValidating(false);
-			final SAXParser saxParser = spf.newSAXParser();
-			final MyHandler dh = new MyHandler();
-			saxParser.parse(in, dh);
-			
 			return 0;
 			}
 		catch(final Exception err) {
 			LOG.error(err);
 			return -1;
+			}	
+	}		
+
+public static ProgramDescriptor getProgramDescriptor() {
+	return new ProgramDescriptor() {
+		@Override
+		public String getName() {
+			return "xmpath";
 			}
-		finally
-			{
-			IOUtils.close(in);
-			}
-		
-	}	
-	
+		};
+	}
+
 public static void main(final String[] args) {
 	new XmlPath().instanceMainWithExit(args);
 	}

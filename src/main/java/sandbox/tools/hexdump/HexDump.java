@@ -19,8 +19,54 @@ import sandbox.io.IndentWriter;
 import sandbox.nashorn.NashornParameters;
 import sandbox.nashorn.NashornUtils;
 import sandbox.tools.central.ProgramDescriptor;
+/**
+
+example for BGEN
+
+```
+var o1=context.readUInt();
+context.println("offset:"+o1);
+var header_block_size = context.readUInt();
+context.println("header block size:"+header_block_size);
+context.ftell();
+//context.readNBytes(header_block_size);
+
+if(1==1) {
+context.println("N-variants : "+context.readUInt());
+context.println("N-vsamples : "+context.readUInt());
+context.println("magic");
+context.readNBytes(4);
+var skip = header_block_size-20;
+context.skipNBytes(skip);
+context.ftell();
+context.println("flags:");
+context.readNBytes(4);
+context.ftell();
 
 
+context.println("sample block size : "+context.readUInt());
+var n_samples = context.readUInt();
+context.println("n-samples2 ="+n_samples);
+for(var i=0;i< n_samples;i++) {
+	context.readStringUShort();
+	}
+context.ftell();
+
+
+//
+n=context.readUShort();
+context.readString(n);
+context.readStringUShort();
+context.readStringUShort();
+context.readUInt();
+var n = context.readUShort();
+for(var i=0;i< n;i++) {
+	context.readStringUInt();	
+	}
+}
+```
+
+*/
 public class HexDump extends Launcher {
 	
     @ParametersDelegate

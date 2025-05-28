@@ -121,10 +121,10 @@ public class ImageUtils
 		}
 	
 	public void saveToPathOrStandout(final RenderedImage im,final Path out) throws IOException {
-		final OutputStream os = (out==null?System.out:Files.newOutputStream(out));
-		ImageIO.write(im,out==null?"PNG":formatForFile(out.getFileName().toString()), os);
-		os.flush();
-		os.close();
+		try(final OutputStream os = (out==null?System.out:Files.newOutputStream(out))) {
+			ImageIO.write(im,out==null?"PNG":formatForFile(out.getFileName().toString()), os);
+			os.flush();
+			}
 		}
 	public static String toBase64(final RenderedImage im,final String fmt) throws IOException {
 		try(final ByteArrayOutputStream os = new ByteArrayOutputStream()) {
@@ -139,7 +139,7 @@ public class ImageUtils
 	
 	public static boolean isPng(final Path path) throws IOException {
 		try(InputStream fin=Files.newInputStream(path)) {
-			byte[] array = new byte[4];
+			final byte[] array = new byte[4];
 			if(fin.read(array)!=array.length) return false;
 			return array[0]==0x89 && 
 				   array[1]==0x50 &&

@@ -40,6 +40,7 @@ import sandbox.tools.thesesfr.ThesesfrToGraph;
 import sandbox.tools.treemap.TreeMapMaker;
 import sandbox.tools.urlencoder.UrlEncoder;
 import sandbox.tools.velocityjson.VelocityJson;
+import sandbox.tools.xmlpath.XmlPath;
 import sandbox.tools.yaml2xml.YamlToXml;
 import sandbox.util.Pair;
 
@@ -103,6 +104,7 @@ public class SandboxCentral {
 		register(YamlToXml.class);
 		register(NashornServer.class);
 		register(TreeMapMaker.class);
+		register(XmlPath.class);
 		
 		Collections.sort(programs,(A,B)->A.getValue().getName().compareTo(B.getValue().getName()));
 		if(args.isEmpty()) {
