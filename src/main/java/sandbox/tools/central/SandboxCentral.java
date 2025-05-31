@@ -30,6 +30,7 @@ import sandbox.tools.mail2xml.Mail2Xml;
 import sandbox.tools.makegraphdependencies.MakeGraphDependencies;
 import sandbox.tools.miniivy.MiniIvy;
 import sandbox.tools.mosaic.MosaicOfPictures;
+import sandbox.tools.mywordle.MyWordle;
 import sandbox.tools.nashornserver.NashornServer;
 import sandbox.tools.saxscript.SAXScript;
 import sandbox.tools.svgshow.SVGShow;
@@ -72,6 +73,7 @@ public class SandboxCentral {
 	
 	private void instanceMain(List<String> args) {
 		register(Aksum.class);
+		register(Angel.class);
 		register(AtomToHtml.class);
 		register(BiostarsBlame.class);
 		register(ChalkBoard.class);
@@ -80,9 +82,6 @@ public class SandboxCentral {
 		register(FeedBurner.class);
 		register(ThesesfrToGraph.class);
 		register(SAXScript.class);
-		register(SwapTwoBits.class);
-		register(SwingFactory.class);
-		register(SwingWatcher.class);
 		register(ImagesToBase64.class);
 		register(HexDump.class);
 		register(JavaToXml.class);
@@ -97,7 +96,10 @@ public class SandboxCentral {
 		register(MosaicOfPictures.class);
 		register(MakeGraphDependencies.class);
 		register(Mail2Xml.class);
-		register(Angel.class);
+		register(MyWordle.class);
+		register(SwapTwoBits.class);
+		register(SwingFactory.class);
+		register(SwingWatcher.class);
 		//register(LispApp.class);
 		register(UrlEncoder.class);
 		register(VelocityJson.class);

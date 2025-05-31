@@ -221,11 +221,10 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
         atommerger pubmedtrending cookiestorefile softwarefitness \
 	packageeclipsejars xslserver java2xml flickrrss \
 	geneticpainting json2dom  twittergraph twitterfollow  twitter01   \
-	jfxwatcher mywordle atom500px gimpprocs2xml instagram2atom  imagemap \
+	jfxwatcher  atom500px gimpprocs2xml instagram2atom  imagemap \
 	pcaviewer swap2bits
 
 
-$(eval $(call compile,mywordle,sandbox.MyWordle,${jcommander.jar}))
 $(eval $(call compile,jfxwatcher,sandbox.JFXWatcher,))
 $(eval $(call compile,twitter01,sandbox.Twitter01, ${twitter.hbc.jars}))
 $(eval $(call compile,twitterfollow,sandbox.TwitterFollow, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))

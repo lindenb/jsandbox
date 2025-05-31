@@ -48,7 +48,6 @@ import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 
-import sandbox.MyWordle.Word;
 
 
 

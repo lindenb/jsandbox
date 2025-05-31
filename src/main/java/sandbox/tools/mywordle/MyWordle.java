@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.tools.mywordle;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -16,8 +16,6 @@ import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -37,7 +35,10 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 import com.beust.jcommander.Parameter;
 
+import sandbox.Launcher;
+import sandbox.Logger;
 import sandbox.io.IOUtils;
+import sandbox.tools.central.ProgramDescriptor;
 
 
 public class MyWordle extends Launcher
@@ -727,6 +728,14 @@ public class MyWordle extends Launcher
 		{
 		
 		}
+	public static ProgramDescriptor getProgramDescriptor() {
+    	return new ProgramDescriptor() {
+    		@Override
+    		public String getName() {
+    			return "mywordle";
+    			}
+    		};
+    	}
 	
 	@Override
 	public int doWork(final List<String> args) {
