@@ -38,6 +38,7 @@ import sandbox.tools.swap2bits.SwapTwoBits;
 import sandbox.tools.swingfactory.SwingFactory;
 import sandbox.tools.swingwatcher.SwingWatcher;
 import sandbox.tools.thesesfr.ThesesfrToGraph;
+import sandbox.tools.timeline.TimeLineMaker;
 import sandbox.tools.treemap.TreeMapMaker;
 import sandbox.tools.urlencoder.UrlEncoder;
 import sandbox.tools.velocityjson.VelocityJson;
@@ -101,6 +102,7 @@ public class SandboxCentral {
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
 		//register(LispApp.class);
+		register(TimeLineMaker.class);
 		register(UrlEncoder.class);
 		register(VelocityJson.class);
 		register(YamlToXml.class);

@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.tools.timeline;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -6,12 +6,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StreamTokenizer;
 import java.io.StringReader;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -23,7 +25,12 @@ import javax.xml.stream.XMLStreamWriter;
 import com.beust.jcommander.Parameter;
 import com.google.gson.stream.JsonWriter;
 
+import sandbox.Launcher;
+import sandbox.Logger;
 import sandbox.io.IOUtils;
+import sandbox.lang.StringUtils;
+import sandbox.tools.central.ProgramDescriptor;
+import sandbox.util.stream.MyCollectors;
 
 public class TimeLineMaker  extends Launcher
 	{
@@ -33,6 +40,25 @@ public class TimeLineMaker  extends Launcher
 	@Parameter(names={"-lib","--lib"},description="library path")
 	private String libpath="..";
 
+	
+	private class Record {
+		private List<Map.Entry<String, String>> entries= new ArrayList<>();
+		public String get(final String key) {
+			return oneOrNone(key).orElseThrow(()->new IllegalArgumentException("cannot find ${key}"));
+			}
+		public Optional<String> oneOrNone(final String key) {
+			return entries.stream().
+					filter(KV->KV.getKey().equals(key)).
+					map(KV->KV.getValue()).
+					collect(MyCollectors.oneOrNone());
+			}
+		
+		public boolean hasKey(final String key) {
+			return  entries.stream().
+					anyMatch(KV->KV.getKey().equals(key));
+		}
+	}
+	
 	
 	private class TDate
 		{
@@ -390,7 +416,7 @@ public class TimeLineMaker  extends Launcher
 	private final List<EraEntity> all_eras = new ArrayList<>();
 	private final List<TMedia> all_medias = new ArrayList<>();
 	
-	TimeLineMaker() {
+	public TimeLineMaker() {
 		}
 	
 	private Supplier<TMedia> parseMedia(String s) {
@@ -468,21 +494,22 @@ public class TimeLineMaker  extends Launcher
 	}
 	
 	private String readline(final BufferedReader br) throws IOException {
-		String line=null;
+		StringBuilder line=null;
 		String line2;
 		while((line2=br.readLine())!=null)
 			{
 			if(line==null)
 				{
-				line=line2;
+				line=new StringBuilder(line2);
 				}
 			else
 				{
-				line = line+line2;
+				line.append(line2);
 				}
 			if(!line2.endsWith("\\")) break;
+			line.deleteCharAt(line.length()-1);
 			}
-		return line;
+		return line==null?null:line.toString();
 		}
 	
 	private Entity createEntity(final String line) throws IOException {	
@@ -519,6 +546,28 @@ public class TimeLineMaker  extends Launcher
 		else
 			{
 			 throw new IOException("Bad entity : "+line);
+			}
+		}
+	
+	
+	private void parseDocument(BufferedReader br) throws IOException {
+		Record record = new Record();
+		for(;;)  {
+			final String line = readline(br);
+			if(line!=null && line.startsWith("#")) continue;
+			if(StringUtils.isBlank(line)) {
+				if(!record.entries.isEmpty()) {
+					
+					}
+				if(line==null) break;
+				record = new Record();
+				}
+			final int colon = line.indexOf(":");
+			if(colon<=0) throw new IOException("key missing in "+line);
+			final String key = line.substring(0,colon).trim();
+			if(StringUtils.isBlank(key))  throw new IOException("key missing in "+line);
+			final String value = line.substring(colon+1).trim();
+			record.entries.add(new AbstractMap.SimpleEntry<>(key, value));
 			}
 		}
 	
@@ -579,6 +628,17 @@ public class TimeLineMaker  extends Launcher
 			return -1;
 			}
 		}
+	
+	
+	public static ProgramDescriptor getProgramDescriptor() {
+    	return new ProgramDescriptor() {
+    		@Override
+    		public String getName() {
+    			return "timelinemaker";
+    			}
+    		};
+    	}
+	
 	
 	public static void main(final String[] args) {
 		new TimeLineMaker().instanceMainWithExit(args);
