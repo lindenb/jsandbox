@@ -23,6 +23,7 @@ import sandbox.tools.fileserver.FileServer;
 import sandbox.tools.hexdump.HexDump;
 import sandbox.tools.htmlinxml.HtmlInXml;
 import sandbox.tools.img2base64.ImagesToBase64;
+import sandbox.tools.java2jni.JavaToJNI;
 import sandbox.tools.java2xml.JavaToXml;
 import sandbox.tools.json2xml.Json2Xml;
 //import sandbox.tools.lisp.LispApp;
@@ -86,6 +87,7 @@ public class SandboxCentral {
 		register(ImagesToBase64.class);
 		register(HexDump.class);
 		register(JavaToXml.class);
+		register(JavaToJNI.class);
 		register(Json2Xml.class);
 		register(FileServer.class);
 		register(MiniIvy.class);

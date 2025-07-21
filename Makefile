@@ -26,6 +26,7 @@ $(1)  : $(addsuffix .java,$(addprefix src/main/java/,$(subst .,/,$(2)))) $(3) di
 	# copy source
 	mkdir -p  '${tmp.dir}/$(dir $(subst .,/,$(firstword $(2))))'
 	cp -v  '$$(firstword $$(filter %.java,$$^))'  '${tmp.dir}/$(dir $(subst .,/,$(firstword $(2))))'
+	for F in $$(filter %.vm,$$^) ; do echo $$$$F '${tmp.dir}/$(dir $(subst .,/,$(firstword $(2))))' ; done
 	#create META-INF/MANIFEST.MF
 	echo "Manifest-Version: 1.0" > ${tmp.dir}/tmp.mf
 	echo "Main-Class: $(2)" >> ${tmp.dir}/tmp.mf
@@ -306,7 +307,7 @@ $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommand
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/main/java/sandbox/tools/pojogenerator/parser/PojoParser.java))
 $(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander.jar} ${jaxb.jar}))
 $(eval $(call compile,jeter,sandbox.tools.comicsbuilder.v1.ComicsBuilderV1,${jcommander.jar} ${nashorn.jars}))
-$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}  ${jetty.jars} ${apache.httpclient.jars} $(mime4j.jars) $(nashorn.jars)) )
+$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}  ${jetty.jars} ${apache.httpclient.jars} $(mime4j.jars) $(nashorn.jars) src/main/java/sandbox/tools/java2jni/java2jni.c.vm ))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))
