@@ -33,6 +33,7 @@ import sandbox.Logger;
 import sandbox.gexf.Gexf;
 import sandbox.io.IOUtils;
 import sandbox.lang.StringUtils;
+import sandbox.tools.central.ProgramDescriptor;
 import sandbox.xml.stream.XmlStreamWriter;
 
 public class RdfToGraph extends Launcher
@@ -375,6 +376,16 @@ public int doWork(final List<String> args) {
 		LOG.error(err);
 		return -1;
 		}
+	}
+
+
+public static ProgramDescriptor getProgramDescriptor() {
+	return new ProgramDescriptor() {
+		@Override
+		public String getName() {
+			return "rdf2graph";
+			}
+		};
 	}
 
 public static void main(String[] args) {

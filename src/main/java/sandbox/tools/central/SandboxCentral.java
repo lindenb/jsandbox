@@ -33,6 +33,7 @@ import sandbox.tools.miniivy.MiniIvy;
 import sandbox.tools.mosaic.MosaicOfPictures;
 import sandbox.tools.mywordle.MyWordle;
 import sandbox.tools.nashornserver.NashornServer;
+import sandbox.tools.rdf2graph.RdfToGraph;
 import sandbox.tools.saxscript.SAXScript;
 import sandbox.tools.svgshow.SVGShow;
 import sandbox.tools.swap2bits.SwapTwoBits;
@@ -104,6 +105,7 @@ public class SandboxCentral {
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
 		//register(LispApp.class);
+		register(RdfToGraph.class);
 		register(TimeLineMaker.class);
 		register(UrlEncoder.class);
 		register(VelocityJson.class);

@@ -37,10 +37,24 @@ public class JavaToJNI extends Launcher
 	private List<File> userJarFiles = new ArrayList<>();
 	
 	
-	
+	public static class DataType {
+		Class<?> clazz;
+		DataType(Class<?> clazz) {
+			this.clazz=clazz;
+			}
+		}
+	public static class NamedParam {
+		String name;
+		DataType dataType;
+		NamedParam(Parameter param) {
+			this.name = param.getName();
+			this.dataType = new DataType(param.getType());
+			}
+		}
 	
 	public static abstract class AbstractFunction {
 		private final ClassInfo ci;
+		private final List<NamedParam> parameters = new ArrayList<>();
 		AbstractFunction(final ClassInfo ci) {
 			this.ci = ci;
 			}
@@ -51,20 +65,47 @@ public class JavaToJNI extends Launcher
 		MyConstructor(ClassInfo ci,Constructor<?> ctor) {
 			super(ci);
 			this.ctor =ctor;
+			for(Parameter  param : ctor.getParameters()) {
+				super.parameters.add(new NamedParam(param));
+				}
+			
 			}
 		public String getFunctionName() {
 			return super.ci.getSimpleName()+"New";
 			}
 		}
 	
+	public static class MyMethod extends AbstractFunction {
+		private final Method  method;
+		private DataType retType;
+		MyMethod(ClassInfo ci,Method method) {
+			super(ci);
+			this.method =method;
+			for(Parameter  param : method.getParameters()) {
+				super.parameters.add(new NamedParam(param));
+				}
+			retType = new DataType(method.getReturnType());
+			}
+		public DataType getReturnType() {
+			return retType;
+			}
+		public String getFunctionName() {
+			return super.ci.getSimpleName()+method.getName();
+			}
+		}
+	
 	public static class ClassInfo {
 		private final Class<?> clazz;
 		final List<MyConstructor> constructors = new ArrayList<>();
+		final List<MyMethod> methods = new ArrayList<>();
 		ClassInfo(Class<?> clazz) {
 			this.clazz = clazz;
 			}
 		public List<MyConstructor> getConstructors() {
 			return constructors;
+			}
+		public List<MyMethod> getMethods() {
+			return methods;
 			}
 		public String getSimpleName() {
 			return this.clazz.getSimpleName();
@@ -114,11 +155,12 @@ public class JavaToJNI extends Launcher
 		
 		for(Method method : clazz.getMethods()) {
 			if(!Modifier.isPublic(method.getModifiers())) continue;
-			if(!Modifier.isAbstract(method.getModifiers())) continue;
+			if(Modifier.isAbstract(method.getModifiers())) continue;
+			if(Modifier.isNative(method.getModifiers())) continue;
 			for(Parameter param:method.getParameters()) {
 				processClass(classLoader,param.getType().getName());
 				}
-			
+			ci.methods.add(new MyMethod(ci, method));
 			}
 		
 		}

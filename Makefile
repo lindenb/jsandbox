@@ -41,17 +41,6 @@ endef
 jakarta.mail.jar = \
 	$(lib.dir)/jakarta/mail/jakarta.mail-api/2.1.3/jakarta.mail-api-2.1.3.jar
 
-twitter.hbc.jars  = \
-	$(lib.dir)/org/apache/httpcomponents/httpcore/4.4.3/httpcore-4.4.3.jar \
-	$(lib.dir)/commons-codec/commons-codec/1.10/commons-codec-1.10.jar \
-	$(lib.dir)/org/apache/httpcomponents/httpclient/4.2.5/httpclient-4.2.5.jar \
-	$(lib.dir)/com/google/guava/guava/14.0.1/guava-14.0.1.jar \
-	$(lib.dir)/com/twitter/joauth/6.0.2/joauth-6.0.2.jar \
-	$(lib.dir)/com/google/code/findbugs/jsr305/1.3.9/jsr305-1.3.9.jar \
-	$(lib.dir)/commons-logging/commons-logging/1.2/commons-logging-1.2.jar \
-	$(lib.dir)/com/twitter/hbc-core/2.2.0/hbc-core-2.2.0.jar \
-	$(lib.dir)/org/slf4j/slf4j-api/1.6.6/slf4j-api-1.6.6.jar \
-	$(lib.dir)/com/google/guava/guava/15.0/guava-15.0.jar
 
 apache.commons.cli  = \
 	$(lib.dir)/commons-cli/commons-cli/1.3.1/commons-cli-1.3.1.jar
@@ -213,7 +202,7 @@ nashorn.jars=\
 	$(lib.dir)/org/ow2/asm/asm/7.3.1/asm-7.3.1.jar
 
 all_maven_jars = $(sort $(apache.poi.jar) ${jcommander.jar} ${jgit.jars} ${velocity.jars} ${jersey-server.jars} \
-	$(jakarta.mail.jar) ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars} ${twitter.hbc.jars} ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar} ${freemarker.jar} ${jaxb.jar} ${snakeyaml.jar} $(mime4j.jars) $(nashorn.jars) )
+	$(jakarta.mail.jar) ${apache-derby.jars} ${jena-core.jars} ${jtidy.jars} ${jetty.jars} ${servlet.api.jars} ${spring-beans.jars} ${apache.httpclient.jars} ${slf4j.jars} ${jtidy.jars}  ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars} ${sqlite3.jdbc.jar} ${emf.core.jars} ${berkeleydb.jar} ${log4j.jars} ${commons-math3.jar} ${freemarker.jar} ${jaxb.jar} ${snakeyaml.jar} $(mime4j.jars) $(nashorn.jars) )
 
 top: jsandbox
 
@@ -221,16 +210,12 @@ all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
 	xml2xsd weatherarchive gribouille java2graph githistory  \
         atommerger pubmedtrending cookiestorefile softwarefitness \
 	packageeclipsejars xslserver java2xml flickrrss \
-	geneticpainting json2dom  twittergraph twitterfollow  twitter01   \
+	geneticpainting json2dom     \
 	jfxwatcher  atom500px gimpprocs2xml instagram2atom  imagemap \
 	pcaviewer swap2bits
 
 
 $(eval $(call compile,jfxwatcher,sandbox.JFXWatcher,))
-$(eval $(call compile,twitter01,sandbox.Twitter01, ${twitter.hbc.jars}))
-$(eval $(call compile,twitterfollow,sandbox.TwitterFollow, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
-$(eval $(call compile,twitteruserlookup,sandbox.TwitterUserLookup, ${apache.commons.cli} ${org.scribe.jars} ${google.gson.jars}))
-$(eval $(call compile,twittergraph,sandbox.TwitterGraph, ${sqlite3.jdbc.jar} ${jcommander.jar} ${org.scribe.jars} ${google.gson.jars}))
 $(eval $(call compile,json2dom,sandbox.Json2Dom,${google.gson.jars}))
 $(eval $(call compile,timelinemaker,sandbox.TimeLineMaker,${google.gson.jars} ${jcommander.jar}))
 $(eval $(call compile,geneticpainting,sandbox.tools.geneticpaint.GeneticPainting,${jcommander.jar}))
@@ -302,12 +287,11 @@ $(eval $(call compile,test,sandbox.tools.xml2ppt.XmlToPPT,${jcommander.jar} ${ap
 $(eval $(call compile,tonic,sandbox.tools.tonic.Tonic,${jcommander.jar}))
 $(eval $(call compile,xml2jni,sandbox.tools.jni.XmlToJNI,${jcommander.jar} ${freemarker.jar}))
 $(eval $(call compile,rdftemplate,sandbox.tools.rdftemplate.RDFTemplate,${jcommander.jar} ${jena-core.jars}))
-$(eval $(call compile,rdf2graph,sandbox.tools.rdf2graph.RdfToGraph,${jcommander.jar} ${jena-core.jars}))
 $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommander.jar} ./src/main/java/sandbox/tools/streamplot/parser/StreamPlotParser.java))
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/main/java/sandbox/tools/pojogenerator/parser/PojoParser.java))
 $(eval $(call compile,jaxb2java,sandbox.tools.jaxb2java.JaxbToJava, ${jcommander.jar} ${jaxb.jar}))
 $(eval $(call compile,jeter,sandbox.tools.comicsbuilder.v1.ComicsBuilderV1,${jcommander.jar} ${nashorn.jars}))
-$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}  ${jetty.jars} ${apache.httpclient.jars} $(mime4j.jars) $(nashorn.jars) src/main/java/sandbox/tools/java2jni/java2jni.c.vm ))
+$(eval $(call compile,jsandbox,sandbox.tools.central.SandboxCentral, ${jcommander.jar} ${jtidy.jars}  ${google.gson.jars} ${velocity.jars} ${snakeyaml.jar}  ${jetty.jars} ${apache.httpclient.jars} $(mime4j.jars) $(nashorn.jars) ${jena-core.jars} ))
 
 
 ##$(eval $(call compile,autolexyacc,sandbox.AutoLexYacc,  ))

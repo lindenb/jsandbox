@@ -27,6 +27,7 @@ import com.google.gson.JsonParser;
 
 import sandbox.Launcher;
 import sandbox.io.IOUtils;
+import sandbox.nashorn.NashornUtils;
 import sandbox.tools.central.ProgramDescriptor;
 
 public class SAXScript  extends Launcher {
@@ -171,14 +172,8 @@ public class SAXScript  extends Launcher {
 				LOG.error("options '-f' and '-e' both defined");
 				return -1; 
 			 	}
-			 final ScriptEngineManager mgr=new  ScriptEngineManager();
-			 final ScriptEngine scripEngine= mgr.getEngineByExtension("nashorn");
+			 final ScriptEngine scripEngine= NashornUtils.makeRequiredEngine();
 			
-		     if(scripEngine==null)
-		     	{
-		    	LOG.error("Cannot get a javascript engine");
-		    	return -1;
-		     	}
 		     scripEngine.put("userData", userData);
 	     
 	     try(Reader scriptReader=scripFile!=null?

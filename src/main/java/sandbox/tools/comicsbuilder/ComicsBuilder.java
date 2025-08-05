@@ -55,6 +55,9 @@ import sandbox.xml.XMLException;
 import sandbox.xml.XmlUtils;
 
 public class ComicsBuilder extends Launcher {
+	
+	priate
+	
 	private abstract class AbstractNode {
 		private ElementNode parent=null;
 		public abstract List<AbstractNode> getChildren();
