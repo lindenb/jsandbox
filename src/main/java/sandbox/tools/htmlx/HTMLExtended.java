@@ -1,16 +1,20 @@
 package sandbox.tools.htmlx;
 
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import javax.imageio.ImageIO;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -50,15 +54,27 @@ public class HTMLExtended extends Launcher{
 		// TODO Auto-generated constructor stub
 	}
 
+	/**
+	 * NodeHandler
+	 */
 	private interface NodeHandler {
-		Node apply(Node n) throws Exception;
+		public String getName();
+		public default String getDescription() {
+			return getName();
+			}
+		public void apply(Document dom) throws Exception;
 		}
+	/**
+	 * NodeHandler
+	 */
 	private abstract class AbstractHandler implements NodeHandler {
 		boolean isA(Node n, String name) {
 			return n.getNodeType()==Node.ELEMENT_NODE && n.getNodeName().equals("bash");
 		}
 		
-		void transfertChildAndAttributes(Element src,Element dest) {
+		Element transfertChildAndAttributes(Node root,Element dest) {
+			if(root.getNodeType()!=Node.ELEMENT_NODE) throw new IllegalArgumentException();
+			Element src=Element.class.cast(root);
 			if(src.hasAttributes()) {
 				NamedNodeMap atts= src.getAttributes();
 				for(int i=0;i< atts.getLength();i++) {
@@ -71,7 +87,7 @@ public class HTMLExtended extends Launcher{
 					dest.appendChild(c);
 					}
 				}
-			
+			return dest;
 			}
 
 		void inheritIO(final InputStream src, final OutputStream dest) throws Exception {
@@ -88,39 +104,76 @@ public class HTMLExtended extends Launcher{
 		        }
 		    }).start();
 		   }
+		
+		public Node visitNode(Node root) throws Exception {
+			visitChildrenOf(root);
+			return root;
+			}
+
+		public void visitChildrenOf(Node root) throws Exception {
+			for(Node n1=root.getFirstChild();n1!=null;n1=n1.getNextSibling()) {
+				n1=visitNode(n1);
+				}
+			}
+		
+		@Override
+		public void apply(Document dom) throws Exception {
+			Element root=dom.getDocumentElement();
+			if(root==null) return;
+			visitNode(root);
+			}
 		}
 	
 	private abstract class ElementHandler extends AbstractHandler {
-		abstract Node applyE(Element root) throws Exception ;
 		@Override
-		public final Node apply(Node n) throws Exception {
-			if(n.getNodeType()==Node.ELEMENT_NODE) {
-				return applyE(Element.class.cast(n));
-				}
-			return null;
+		public void apply(Document dom) throws Exception {
+			Element root=dom.getDocumentElement();
+			if(root==null) return;
+			visitNode(root);
 			}
 		}
 	private class AutoHeading extends ElementHandler {
-		Node applyE(Element root) throws Exception {
-			if(!isA(root,"hx")) return null;
-			int level=1;
-			Node n=root;
-			while(n.getParentNode()!=null) {
-				if(n.getNodeType()==Node.ELEMENT_NODE && n.getNodeName().matches("h[1-6]")) {
-					level= 1 + Integer.parseInt(n.getNodeName().substring(1));
-					}
-				n=n.getParentNode();
-				}
-			Element h = root.getOwnerDocument().createElement("h"+level);
-			transfertChildAndAttributes(root,h);
-			return h;
+		@Override
+		public String getName() {
+			return "hx";
 			}
-	}
+		@Override
+		public String getDescription() {
+			return "use <hx>title</hx> as auto header. Will be replaced by <h1>, <h2> , etc... according to the depth of the <hx>";
+			}
+		@Override
+		public Node visitNode(org.w3c.dom.Node root) throws Exception {
+			if(isA(root,"hx")) {
+				int level=1;
+				Node n=root;
+				while(n.getParentNode()!=null) {
+					if(n.getNodeType()==Node.ELEMENT_NODE && n.getNodeName().matches("h[1-6]")) {
+						level= 1 + Integer.parseInt(n.getNodeName().substring(1));
+						}
+					n=n.getParentNode();
+					}
+				Element h = root.getOwnerDocument().createElement("h"+level);
+				root = transfertChildAndAttributes(root,h);
+				}
+			visitChildrenOf(root);
+			return root;
+			}
+		}
 	
 	private class RemoteImage extends ElementHandler {
-		Node applyE(Element root) throws Exception {
-			if(!isA(root,"remote-image")) return null;
-			if(!root.hasAttribute("src")) return null;
+		@Override
+		public String getName() {
+			return "remote-image";
+			}
+		@Override
+		public String getDescription() {
+			return "remote-image";
+			}
+		@Override
+		public org.w3c.dom.Node visitNode(org.w3c.dom.Node node) throws Exception {
+			if(!isA(node,"remote-image")) return node;
+			Element root = Element.class.cast(node);
+			if(!root.hasAttribute("src")) return root;
 			String src =root.getAttribute("src");
 			if(!IOUtils.isURL(src)) return null;
 			String md5= StringUtils.md5(src);
@@ -148,89 +201,115 @@ public class HTMLExtended extends Launcher{
 			
 			return img;
 			}
-
 		}
 	private class BashHandler extends ElementHandler {
 		@Override
-		Node applyE(Element root) throws Exception {
-			if(!isA(root,"bash")) return null;
-			String script=root.getTextContent();
-			File f=File.createTempFile("tmp", ".bash");
-			Files.writeString(f.toPath(), script);
-			Element div = root.getOwnerDocument().createElement("div");
-			ByteArrayOutputStream stdout =new ByteArrayOutputStream();
-			ByteArrayOutputStream stderr =new ByteArrayOutputStream();
-			Process p = new ProcessBuilder("/bin/bash", f.toString()).start();
-			inheritIO(p.getInputStream(), stdout);
-			inheritIO(p.getErrorStream(), stderr);
-			int exit_value=p.waitFor();
-			stdout.close();
-			stderr.close();
-			f.delete();
-			
-			Element pre= root.getOwnerDocument().createElement("pre");
-			pre.setAttribute("class", "script");
-			pre.setAttribute("lang", "bash");
-			pre.appendChild(root.getOwnerDocument().createTextNode(script));
-			div.appendChild(pre);
-			
-			pre= root.getOwnerDocument().createElement("pre");
-			pre.setAttribute("class", "stdout");
-			pre.setAttribute("lang", "bash");
-			pre.appendChild(root.getOwnerDocument().createTextNode(new String(stdout.toByteArray())));
-			div.appendChild(pre);
-			
-			pre= root.getOwnerDocument().createElement("pre");
-			pre.setAttribute("class", "stderr");
-			pre.setAttribute("lang", "bash");
-			pre.appendChild(root.getOwnerDocument().createTextNode(new String(stderr.toByteArray())));
-			div.appendChild(pre);
-
-			
-			return div;
+		public String getName() {
+			return "bash";
+			}
+		@Override
+		public org.w3c.dom.Node visitNode(org.w3c.dom.Node node) throws Exception {
+				if(isA(node,"bash")) {
+				Element root = Element.class.cast(node);
+				String script=root.getTextContent();
+				File f=File.createTempFile("tmp", ".bash");
+				Files.writeString(f.toPath(), script);
+				Element div = root.getOwnerDocument().createElement("div");
+				ByteArrayOutputStream stdout =new ByteArrayOutputStream();
+				ByteArrayOutputStream stderr =new ByteArrayOutputStream();
+				Process p = new ProcessBuilder("/bin/bash", f.toString()).start();
+				inheritIO(p.getInputStream(), stdout);
+				inheritIO(p.getErrorStream(), stderr);
+				int exit_value=p.waitFor();
+				stdout.close();
+				stderr.close();
+				f.delete();
+				
+				Element pre= root.getOwnerDocument().createElement("pre");
+				pre.setAttribute("class", "script");
+				pre.setAttribute("lang", "bash");
+				pre.appendChild(root.getOwnerDocument().createTextNode(script));
+				div.appendChild(pre);
+				
+				pre= root.getOwnerDocument().createElement("pre");
+				pre.setAttribute("class", "stdout");
+				pre.setAttribute("lang", "bash");
+				pre.appendChild(root.getOwnerDocument().createTextNode(new String(stdout.toByteArray())));
+				div.appendChild(pre);
+				
+				pre= root.getOwnerDocument().createElement("pre");
+				pre.setAttribute("class", "stderr");
+				pre.setAttribute("lang", "bash");
+				pre.appendChild(root.getOwnerDocument().createTextNode(new String(stderr.toByteArray())));
+				div.appendChild(pre);
+				return div;
+				}
+			visitChildrenOf(node);
+			return node;
 			}
 		}
 	
 	private class GraphVizHandler extends ElementHandler {
 		@Override
-		Node applyE(Element root) throws Exception {
-			if(!isA(root,"graphviz")) return null;
-			String script=root.getTextContent();
-			File f=File.createTempFile("tmp", ".dot");
-			Files.writeString(f.toPath(), script);
-			Process p = new ProcessBuilder("dot", f.toString()).start();
-			
-			f.delete();
-			return null;
+		public String getName() {
+			return "graphviz";
+			}
+		@Override
+		public String getDescription() {
+			return "invoke graphviz dot";
+			}
+		@Override
+		public Node visitNode(Node root) throws Exception {
+			if(!isA(root,"graphviz")) {
+				String script=root.getTextContent();
+				File f=File.createTempFile("tmp", ".dot");
+				Files.writeString(f.toPath(), script);
+				Process p = new ProcessBuilder("dot", f.toString()).start();
+				
+				f.delete();
+				}
+			return root;
+			}
+		}
+	
+	private class ImageBase64 extends ElementHandler {
+		@Override
+		public String getName() {
+			return "img64";
+			}
+		@Override
+		public String getDescription() {
+			return "include image as data:base64";
+			}
+		@Override
+		public Node visitNode(Node node) throws Exception {
+			if(isA(node,"img")) {
+				Element root = Element.class.cast(node);
+				if(root.hasAttribute("src")) {
+					String src = root.getAttribute("src");
+					BufferedImage img=null;
+					if(src.endsWith(".svg") || src.endsWith(".svg.gz")) {
+						//nothing
+						}
+					else if(IOUtils.isURL(src)) {
+						img= ImageIO.read(URI.create(src).toURL());
+						}
+					else if(!src.startsWith("data:")) {
+						img = ImageIO.read(new File(src));
+						}
+					if(img!=null) {
+						
+						}
+					}
+				}
+			visitChildrenOf(node);
+			return node;
 			}
 		}
 	
 	private final List<NodeHandler> handlers= new ArrayList<>();
 	
 	
-	private boolean apply(Node root) throws Exception {
-		boolean handled=false;
-		for(;;) {
-			boolean handled2 =false;
-			for(NodeHandler h: this.handlers) {
-				final Node n=h.apply(root); 
-				if(n!=null) {
-					root.getParentNode().replaceChild(n, root);
-					root=n;
-					System.err.println("OK");
-					root=n;
-					handled2=true;
-					break;
-					}
-				}
-			if(!handled2) break;
-			handled = true;
-			}
-		for(Node c=root.getFirstChild();c!=null;c=c.getNextSibling()) {
-			if(apply(c)) handled=true;
-			}
-		return handled;
-		}
 	
 	
 	private CloseableHttpClient getHttpClient() {
@@ -264,13 +343,15 @@ public class HTMLExtended extends Launcher{
 				}
 			
 			this.handlers.add(new BashHandler());
+			this.handlers.add(new AutoHeading());
+			this.handlers.add(new GraphVizHandler());
 			
-			while(apply(dom)) {
-				// continue
+			for(NodeHandler h:this.handlers) {
+				h.apply(dom);
 				}
-			Result result= new StreamResult(System.out);
-			TransformerFactory trf=TransformerFactory.newInstance();
-			Transformer tr=trf.newTransformer();
+			final Result result= new StreamResult(System.out);
+			final TransformerFactory trf=TransformerFactory.newInstance();
+			final Transformer tr=trf.newTransformer();
 			tr.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION,"yes");
 			tr.transform(new DOMSource(dom), result);
 			return -1;
