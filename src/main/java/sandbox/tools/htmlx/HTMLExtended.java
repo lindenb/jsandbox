@@ -3,14 +3,17 @@ package sandbox.tools.htmlx;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Reader;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,16 +47,23 @@ import sandbox.image.ImageMetaData;
 import sandbox.io.IOUtils;
 import sandbox.lang.StringUtils;
 import sandbox.tools.central.ProgramDescriptor;
+import sandbox.xml.XmlUtils;
 
 public class HTMLExtended extends Launcher{
 	protected static final Logger LOG=Logger.builder(HTMLExtended.class).build();
     @Parameter(names={"-d","--data"},description="data directory")
     private File data_directory = null; 
 	private CloseableHttpClient httpClient = null;
+	private File baseDir = null;
+	
 	public HTMLExtended() {
 		// TODO Auto-generated constructor stub
 	}
 
+	public File getBaseDir () {
+		return baseDir;
+	}
+	
 	/**
 	 * NodeHandler
 	 */
@@ -69,8 +79,27 @@ public class HTMLExtended extends Launcher{
 	 */
 	private abstract class AbstractHandler implements NodeHandler {
 		boolean isA(Node n, String name) {
-			return n.getNodeType()==Node.ELEMENT_NODE && n.getNodeName().equals("bash");
-		}
+			return n.getNodeType()==Node.ELEMENT_NODE && n.getNodeName().equals(name);
+			}
+		
+		Reader openReader(String s) throws IOException {
+			return IOUtils.openBufferedReader(s);
+			}
+		
+		String getSuffix(String s) {
+			sandbox.lang.Result<URL> ru = IOUtils.toURL(s);
+			if(ru.isSuccess()) {
+				s = ru.get().getPath();
+				}
+			s=s.toLowerCase();
+			if(s.endsWith(".png")) return ".png";
+			if(s.endsWith(".jpg")) return ".jpg";
+			if(s.endsWith(".jpeg")) return ".jpg";
+			if(s.endsWith(".gif")) return ".gif";
+			if(s.endsWith(".svg")) return ".svg";
+			if(s.endsWith(".svg.gz")) return ".svg.gz";
+			return "";
+			}
 		
 		Element transfertChildAndAttributes(Node root,Element dest) {
 			if(root.getNodeType()!=Node.ELEMENT_NODE) throw new IllegalArgumentException();
@@ -159,8 +188,91 @@ public class HTMLExtended extends Launcher{
 			return root;
 			}
 		}
+	private class NoRemoteJS extends ElementHandler {
+		@Override
+		public String getName() {
+			return "remote-js";
+			}
+		@Override
+		public String getDescription() {
+			return "remote-js";
+			}
+		
+		private Element doIt(Element root) throws Exception {
+			if(!root.hasAttribute("src")) return root;
+			if(!XmlUtils.isBlank(root)) return root;
+			String src =root.getAttribute("src");
+			String script;
+			if(IOUtils.isURL(src)) {
+				try(Reader r=IOUtils.openReader(src)) {
+					script = IOUtils.slurp(r);
+					}
+				}
+			else
+				{
+				try(Reader r=new FileReader(new File(getBaseDir(),src))) {
+					script = IOUtils.slurp(r);
+					}
+				}
+			root.removeAttribute("src");
+			root.appendChild(root.getOwnerDocument().createTextNode(script));
+			return root;
+			}
+		
+		@Override
+		public org.w3c.dom.Node visitNode(org.w3c.dom.Node node) throws Exception {
+			if(isA(node,"script")) {
+				node = doIt(Element.class.cast(node));
+				}
+			visitChildrenOf(node);
+			return node;
+			}
+		}
 	
-	private class RemoteImage extends ElementHandler {
+	private class NoRemoteCSS extends ElementHandler {
+		@Override
+		public String getName() {
+			return "remote-css";
+			}
+		@Override
+		public String getDescription() {
+			return "remote-css";
+			}
+		
+		private Element doIt(Element root) throws Exception {
+			if(!root.hasAttribute("src")) return root;
+			if(!XmlUtils.isBlank(root)) return root;
+			String src =root.getAttribute("src");
+			String script;
+			if(IOUtils.isURL(src)) {
+				try(Reader r=IOUtils.openReader(src)) {
+					script = IOUtils.slurp(r);
+					}
+				}
+			else
+				{
+				try(Reader r=new FileReader(new File(getBaseDir(),src))) {
+					script = IOUtils.slurp(r);
+					}
+				}
+			root.removeAttribute("src");
+			root.appendChild(root.getOwnerDocument().createTextNode(script));
+			return root;
+			}
+		
+		@Override
+		public org.w3c.dom.Node visitNode(org.w3c.dom.Node node) throws Exception {
+			if(isA(node,"style")) {
+				node = doIt(Element.class.cast(node));
+				}
+			visitChildrenOf(node);
+			return node;
+			}
+		}
+	
+	
+	
+	private class NoRemoteImage extends ElementHandler {
 		@Override
 		public String getName() {
 			return "remote-image";
@@ -169,19 +281,15 @@ public class HTMLExtended extends Launcher{
 		public String getDescription() {
 			return "remote-image";
 			}
-		@Override
-		public org.w3c.dom.Node visitNode(org.w3c.dom.Node node) throws Exception {
-			if(!isA(node,"remote-image")) return node;
-			Element root = Element.class.cast(node);
+		
+		private Element doIt(Element root) throws Exception {
 			if(!root.hasAttribute("src")) return root;
 			String src =root.getAttribute("src");
-			if(!IOUtils.isURL(src)) return null;
-			String md5= StringUtils.md5(src);
-			Element img= root.getOwnerDocument().createElement("img");
-			img.removeAttribute("img");
- 			transfertChildAndAttributes(root, img);
-			File toFile =new File(data_directory,md5+".png");
-			if(toFile.exists()) {
+			if(src.startsWith("data:"))return root;
+			if(!IOUtils.isURL(src)) return root;
+			final String md5= StringUtils.md5(src)+ getSuffix(src);
+			final File toFile =new File(data_directory,md5);
+			if(!toFile.exists()) {
 				try(CloseableHttpResponse resp=getHttpClient().execute(new HttpGet(src))) {
 					if(resp.getStatusLine().getStatusCode()==HttpStatus.SC_OK) {
 						IOUtils.copyTo(resp.getEntity().getContent(), toFile);
@@ -189,17 +297,17 @@ public class HTMLExtended extends Launcher{
 					
 					}
 				}
-			if(toFile.exists()) {
-				Optional<ImageMetaData> meta= sandbox.image.ImageUtils.getMetaData(toFile);
-				if(meta.isPresent()) {
-					if(!img.hasAttribute("width")) img.setAttribute("width", String.valueOf(meta.get().getWidth()));
-					if(!img.hasAttribute("height")) img.setAttribute("height", String.valueOf(meta.get().getHeight()));
-					}
-				img.setAttribute("img", toFile.toString());
+			root.setAttribute("img", toFile.toString());
+			return root;
+			}
+		
+		@Override
+		public org.w3c.dom.Node visitNode(org.w3c.dom.Node node) throws Exception {
+			if(isA(node,"img")) {
+				node = doIt(Element.class.cast(node));
 				}
-			
-			
-			return img;
+			visitChildrenOf(node);
+			return node;
 			}
 		}
 	private class BashHandler extends ElementHandler {
@@ -281,26 +389,40 @@ public class HTMLExtended extends Launcher{
 		public String getDescription() {
 			return "include image as data:base64";
 			}
+		
+		private Element apply(Element root) throws Exception {
+			if(!root.hasAttribute("src")) return root;
+			String src = root.getAttribute("src");
+			BufferedImage img=null;
+			if(src.endsWith(".svg") || src.endsWith(".svg.gz") || src.startsWith("data:")) {
+				return root;
+				}
+			try 
+				{
+				if(IOUtils.isURL(src)) {
+					img= ImageIO.read(URI.create(src).toURL());
+					}
+				else {
+					img = ImageIO.read(new File(getBaseDir(),src));
+					}
+				}
+			catch(Throwable err) {
+				return root;
+				}
+			if(img==null) return root;
+			String pfx = getSuffix(src);
+			try(ByteArrayOutputStream baos=new ByteArrayOutputStream()) {
+				final String format=(pfx.contains("png")?"PNG":"JPG");
+				ImageIO.write(img, format, baos);
+				root.setAttribute("src", "data:image/"+format.toLowerCase()+";base64,"+Base64.getEncoder().encodeToString(baos.toByteArray()));
+				}
+			return root;
+			}
+		
 		@Override
 		public Node visitNode(Node node) throws Exception {
 			if(isA(node,"img")) {
-				Element root = Element.class.cast(node);
-				if(root.hasAttribute("src")) {
-					String src = root.getAttribute("src");
-					BufferedImage img=null;
-					if(src.endsWith(".svg") || src.endsWith(".svg.gz")) {
-						//nothing
-						}
-					else if(IOUtils.isURL(src)) {
-						img= ImageIO.read(URI.create(src).toURL());
-						}
-					else if(!src.startsWith("data:")) {
-						img = ImageIO.read(new File(src));
-						}
-					if(img!=null) {
-						
-						}
-					}
+				node = apply(Element.class.cast(node));
 				}
 			visitChildrenOf(node);
 			return node;
@@ -326,8 +448,14 @@ public class HTMLExtended extends Launcher{
 		
 		try {
 			
-			
 			String input = super.oneFileOrNull(args);
+			if(input==null) {
+				this.baseDir = new File(".");
+				}
+			else
+				{
+				this.baseDir = new File(input).getParentFile();
+				}
 			DocumentBuilderFactory dbf=DocumentBuilderFactory.newInstance();
 			dbf.setNamespaceAware(true);
 			dbf.setCoalescing(true);
@@ -345,6 +473,7 @@ public class HTMLExtended extends Launcher{
 			this.handlers.add(new BashHandler());
 			this.handlers.add(new AutoHeading());
 			this.handlers.add(new GraphVizHandler());
+			this.handlers.add(new NoRemoteImage());
 			
 			for(NodeHandler h:this.handlers) {
 				h.apply(dom);

@@ -6,6 +6,9 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import sandbox.util.function.FailableFunction;
+import sandbox.util.function.FailableSupplier;
+
 public interface Result<T> extends Supplier<T> {
 	public boolean isSuccess();
 	public T orElse(T default_value);
@@ -74,7 +77,7 @@ public interface Result<T> extends Supplier<T> {
 	  public static <T> Result<T> fail(final Throwable error) {
     		return new Failure<>(Objects.requireNonNull(error));
   		}
-	  public static <T,ERR extends Throwable> Result<T> of(final org.apache.commons.lang3.function.FailableSupplier<T,ERR> fun) {
+	  public static <T,ERR extends Throwable> Result<T> of(final FailableSupplier<T,ERR> fun) {
   		try {
   			return success(fun.get());
   			}
@@ -82,7 +85,7 @@ public interface Result<T> extends Supplier<T> {
   			return fail(err);
   			}
 		}
-	  public static <ARG,T,ERR extends Throwable> Result<T> of(final org.apache.commons.lang3.function.FailableFunction<ARG,T,ERR> fun,ARG arg) {
+	  public static <ARG,T,ERR extends Throwable> Result<T> of(final FailableFunction<ARG,T,ERR> fun,ARG arg) {
 	  		try {
 	  			return success(fun.apply(arg));
 	  			}

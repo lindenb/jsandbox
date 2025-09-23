@@ -17,6 +17,8 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -29,6 +31,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 
+import sandbox.lang.Result;
 import sandbox.lang.StringUtils;
 
 public class IOUtils {
@@ -36,6 +39,17 @@ public class IOUtils {
 private IOUtils(){
 }
 
+
+/** convert string to URL */
+public static Result<URL> toURL(final String s) {
+	try {
+		final URL u= URI.create(s).toURL();
+		return Result.success(u);
+		}
+	catch(Throwable err) {
+		return Result.fail(err);
+		}
+	}
 
 /** return file suffix (INCLUDING the dot) or empty string if there is no dot */
 public static String getFileSuffix(final Path path) {
@@ -220,7 +234,7 @@ public static Reader openPathAsReader(final Path path) throws IOException {
 public static InputStream openStream(final String path) throws IOException {
 	Objects.requireNonNull(path, "path is null");
 	if(isURL(path)) {
-		final InputStream in = new java.net.URL(path).openStream();
+		final InputStream in = URI.create(path).toURL().openStream();
 		return mayGzipInputStream(in);
 	}
 	else {

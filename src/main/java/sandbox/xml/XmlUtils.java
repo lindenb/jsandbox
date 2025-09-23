@@ -193,6 +193,19 @@ public static String getNodePath(final org.w3c.dom.Node node) {
 	return (node.getParentNode()!=null?getNodePath(node.getParentNode())+"/":"")+s;
 	}
 
+/** retturn true if node contains no children and blank text */
+public static boolean isBlank(final org.w3c.dom.Node node) {
+	switch(node.getNodeType()) {
+		case Node.COMMENT_NODE: return true;
+		case Node.TEXT_NODE:
+		case Node.CDATA_SECTION_NODE:
+			return StringUtils.isBlank(CharacterData.class.cast(node).getData());
+		case Node.DOCUMENT_NODE: return children(node).stream().allMatch(N->isBlank(N));
+		case Node.ELEMENT_NODE: return false;
+		default:throw new IllegalArgumentException("TODO");
+		}
+	}
+
 /** return true if 'n' is not a  Node.ELEMENT_NODE
  * also check that text node are blank
  * */
