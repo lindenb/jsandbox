@@ -22,6 +22,7 @@ import sandbox.tools.feedburner.FeedBurner;
 import sandbox.tools.fileserver.FileServer;
 import sandbox.tools.hexdump.HexDump;
 import sandbox.tools.htmlinxml.HtmlInXml;
+import sandbox.tools.htmlx.HTMLExtended;
 import sandbox.tools.img2base64.ImagesToBase64;
 import sandbox.tools.java2jni.JavaToJNI;
 import sandbox.tools.java2xml.JavaToXml;
@@ -87,6 +88,7 @@ public class SandboxCentral {
 		register(SAXScript.class);
 		register(ImagesToBase64.class);
 		register(HexDump.class);
+		register(HTMLExtended.class);
 		register(JavaToXml.class);
 		register(JavaToJNI.class);
 		register(Json2Xml.class);

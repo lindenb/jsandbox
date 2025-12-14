@@ -1,5 +1,7 @@
 package sandbox.tools.yaml2xml;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -8,10 +10,20 @@ import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
+import org.w3c.dom.Attr;
+import org.w3c.dom.CDATASection;
+import org.w3c.dom.Comment;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.Text;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.events.CommentEvent;
 import org.yaml.snakeyaml.events.Event;
@@ -32,9 +44,61 @@ public class YamlToXml extends Launcher {
     private Path out = null; 
     @Parameter(names={"-S","--string"},description="all scalar are strings")
     private boolean all_scalar_are_string=false;
+    @Parameter(names={"-X","--xml"},description="try to convert String as DOM")
+    private boolean try_dom=false;
 
+    private void writeXml(final XMLStreamWriter w,Node root) throws XMLStreamException {
+    	switch(root.getNodeType()) {
+    		case Node.TEXT_NODE:w.writeCharacters(Text.class.cast(root).getData()); break;
+    		case Node.COMMENT_NODE: w.writeCharacters(Comment.class.cast(root).getData()); break;
+    		case Node.CDATA_SECTION_NODE: w.writeCData(CDATASection.class.cast(root).getData());break;
+    		case Node.ATTRIBUTE_NODE:
+    			Attr att=Attr.class.cast(root);
+    			w.writeAttribute(att.getName()	,att.getValue());
+    			break;
+    		case Node.ELEMENT_NODE:
+    			Element E=Element.class.cast(root);
+    			if(E.hasChildNodes()) {
+    				w.writeStartElement(E.getNodeName());
+    				}
+    			else
+    				{	
+    				w.writeEmptyElement(E.getNodeName());
+    				}
+    			if(E.hasAttributes()) {
+    				NamedNodeMap m= E.getAttributes();
+    				for(int i=0;i< m.getLength();i++) writeXml(w,m.item(i));
+    				}
+    			if(E.hasChildNodes()) {
+    				for(Node c=E.getFirstChild();c!=null;c=c.getNextSibling()) {
+        				writeXml(w,c);
+    	    			}
+    				w.writeEndElement();
+    				}
+    			break;
+    		default: LOG.warning("Node.Type no handled:"+root.getNodeType());break;
+    		}
+    	}
     
-    private void recurse(XMLStreamWriter w,final PeekIterator<Event> iter,String mykey) throws XMLStreamException {
+    private void writeXmlString(final XMLStreamWriter w, final String s) throws XMLStreamException {
+    	String xmlS="<node>"+s+"</node>";
+    	try {
+    		final DocumentBuilderFactory dbf=DocumentBuilderFactory.newInstance();
+    		final DocumentBuilder db=dbf.newDocumentBuilder();
+    		try(InputStream is=new ByteArrayInputStream(xmlS.getBytes())) {
+    			Document dom= db.parse(is);
+    			Element root=dom.getDocumentElement();
+    			for(Node c=root.getFirstChild();c!=null;c=c.getNextSibling()) {
+    				writeXml(w,c);
+	    			}
+	    		}
+	    	}
+    	catch(Throwable err) {
+    		
+    		}
+    	}
+    
+    private void recurse(final XMLStreamWriter w,final PeekIterator<Event> iter,String mykey) throws XMLStreamException {
     	final Event evt = iter.next();
     	switch(evt.getEventId()) {
 			case StreamStart: break;
@@ -93,7 +157,13 @@ public class YamlToXml extends Launcher {
 					}
 				w.writeStartElement("j",tag,JSONX.NS);
 				if(mykey!=null) w.writeAttribute("name", mykey);
-				w.writeCharacters(str);
+				if(this.try_dom) {
+					writeXmlString(w,str);
+					}
+				else
+					{
+					w.writeCharacters(str);
+					}
 				w.writeEndElement();
 				break;
     		case Comment:

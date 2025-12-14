@@ -6,6 +6,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -30,46 +31,60 @@ public class ImageUtils
 	{
 	public final List<String> SUFFIXES = Arrays.asList(".jpg",".jpeg",".JPG",".JPEG",".png",".PNG");
 	
+	
 	private ImageUtils() {
 		}
 	public static ImageUtils getInstance() {
 		return new ImageUtils();
 		}
-	
+	public Optional<Dimension> getDimension(final File f) {
+		try(InputStream in=new FileInputStream(f)) {
+			return getDimension(in);
+		}
+		catch(final Throwable err) {
+			return Optional.empty();
+			}
+	}
+
 	public Optional<Dimension> getDimension(final String pathOrUrl) {
 		if(StringUtils.isBlank(pathOrUrl)) return Optional.empty();
-		InputStream in0 = null;
-		ImageInputStream in = null;
 		try
 			{
 			if(IOUtils.isURL(pathOrUrl)) {
-				in0 = new URL(pathOrUrl).openStream();
+				try(InputStream in0 = new URL(pathOrUrl).openStream()) {
+					return getDimension(in0);
+					}
 				}
 			else
 				{
-				in0 = Files.newInputStream(Paths.get(pathOrUrl));
+				try(InputStream in0 = Files.newInputStream(Paths.get(pathOrUrl))) {
+					return getDimension(in0);
+					}
 				}
-			in = ImageIO.createImageInputStream(in0);
-		    final Iterator<ImageReader> readers = ImageIO.getImageReaders(in0);
-		    if (readers.hasNext()) {
-		        final ImageReader reader = readers.next();
-		        try {
-		            reader.setInput(in);
-		           return Optional.of(new Dimension(reader.getWidth(0), reader.getHeight(0)));
-		        } finally {
-		            reader.dispose();
-			        }
-			    }
-		    return Optional.empty();
-			} 			
-		catch(final Exception err) {
+			}
+		catch(final Throwable err) {
 			return Optional.empty();
 			}
-		finally {
-			IOUtils.close(in);
-			IOUtils.close(in0);
-			}
 		}
+	
+		private Optional<Dimension> getDimension(InputStream in0) {
+			try(ImageInputStream in = ImageIO.createImageInputStream(in0)) {
+			    final Iterator<ImageReader> readers = ImageIO.getImageReaders(in0);
+			    if (readers.hasNext()) {
+			        final ImageReader reader = readers.next();
+			        try {
+			            reader.setInput(in);
+			           return Optional.of(new Dimension(reader.getWidth(0), reader.getHeight(0)));
+			        } finally {
+			            reader.dispose();
+				        }
+				    }
+			    return Optional.empty();
+				} 			
+			catch(final Exception err) {
+				return Optional.empty();
+				}
+			}
 	
 	public boolean hasImageSuffix(final File f) {
 		return hasImageSuffix(f.toPath());
