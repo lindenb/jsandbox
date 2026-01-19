@@ -273,7 +273,6 @@ $(eval $(call compile,xmlstream,sandbox.xml.tools.xmlstream.XmlStream,${jcommand
 $(eval $(call compile,rdoc,sandbox.tools.rdoc.RDocGenerator,${jcommander.jar}))
 $(eval $(call compile,ig2table,sandbox.tools.ig.IgToTable,${jcommander.jar} ${google.gson.jars} ${apache.httpclient.jars}))
 $(eval $(call compile,makegrid,sandbox.tools.kirby.MakeGrid,${jcommander.jar}))
-$(eval $(call compile,owltool,sandbox.tools.owl.OWLTool,${jcommander.jar}))
 $(eval $(call compile,ffcache,sandbox.tools.ffcache.FirefoxCache,${jcommander.jar}))
 $(eval $(call compile,pcaviewer,sandbox.tools.pca.PcaViewer,${commons-math3.jar}))
 $(eval $(call compile,atom2html,sandbox.tools.feed.AtomToHtml,${jcommander.jar} ${apache.httpclient.jars}  ${jtidy.jars}))

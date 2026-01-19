@@ -26,6 +26,7 @@ import sandbox.Launcher;
 import sandbox.Logger;
 import sandbox.io.IOUtils;
 import sandbox.lang.StringUtils;
+import sandbox.tools.central.ProgramDescriptor;
 
 public class OWLTool extends Launcher
 	{
@@ -124,6 +125,70 @@ public class OWLTool extends Launcher
 		}
     }
     
+    private String parseRestriction(final XMLEventReader r) throws IOException,XMLStreamException {
+    	boolean onPropertyOk=true;
+    	String parentUri  = null;
+    	while(r.hasNext())
+    		{
+    		final XMLEvent evt=r.nextEvent();
+    		if(evt.isStartElement())
+    			{
+    			final StartElement E=evt.asStartElement();
+    			final QName qN=E.getName();
+    			if( OWL.equals(qN.getNamespaceURI()) && qN.getLocalPart().equals("someValuesFrom"))
+    				{
+    				final Attribute att=E.getAttributeByName(rdfRsrc);
+    				if(att!=null) {
+    					parentUri = att.getValue();
+    					}
+    				}
+    			else if( OWL.equals(qN.getNamespaceURI()) && qN.getLocalPart().equals("onProperty"))
+					{
+					final Attribute att=E.getAttributeByName(rdfRsrc);
+					if(att!=null) {
+						//System.err.println( "RESTRICTION\t"+  att.getValue());
+						
+						/*
+						String onProperty = att.getValue();
+						if(!(onProperty.equals("http://purl.obolibrary.org/obo/RO_0002202"))) {
+							onPropertyOk  = false;
+							}*/
+						}
+					}
+    			consumme(r);	
+    			}
+    		else if(evt.isEndElement()) {
+    			break;
+    			}
+    		}
+    	return onPropertyOk?parentUri:null;
+        }
+    
+    private String subClassWithRestriction(final XMLEventReader r) throws IOException,XMLStreamException {
+    	String parentUri  = null;
+    	while(r.hasNext())
+    		{
+    		final XMLEvent evt=r.nextEvent();
+    		if(evt.isStartElement())
+    			{
+    			final StartElement E=evt.asStartElement();
+    			final QName qN=E.getName();
+    			if( OWL.equals(qN.getNamespaceURI()) && qN.getLocalPart().equals("Restriction"))
+    				{
+    				parentUri = parseRestriction(r);
+    				}
+    			else
+    				{
+    				consumme(r);
+    				}
+    			}
+    		else if(evt.isEndElement()) {
+    			break;
+    			}
+    		}
+    	return parentUri;
+        }
+    
 	private void parseClass(
 			final StartElement root,
 			final XMLEventReader r) throws IOException,XMLStreamException
@@ -164,17 +229,22 @@ public class OWLTool extends Launcher
 					}
 				else if( RDFS.equals(qN.getNamespaceURI()) && localName.equals("subClassOf"))
 					{
+					String parentUri = null;
 					final Attribute rsrc=E.getAttributeByName(rdfRsrc);
 					if(rsrc!=null){
-						final String parentUri=rsrc.getValue();
-						if(!parentUri.equals(termUri)) {
-							parents.add(findTermByUri(parentUri));
-							}
-						}
-					else
-						{
+						parentUri = rsrc.getValue();
 						consumme(r);
+						}
+					else {
+						parentUri = subClassWithRestriction(r);
+						}
+					
+					if(parentUri==null)
+						{
 						LOG.warning("no subClassOf/@rdf:resource for "+termUri);
+						}
+					else if(!parentUri.equals(termUri)) {
+						parents.add(findTermByUri(parentUri));
 						}
 					}
 				else
@@ -300,6 +370,16 @@ public class OWLTool extends Launcher
 			return -1;
 			}
 		}
+    
+    public static ProgramDescriptor getProgramDescriptor() {
+    	return new ProgramDescriptor() {
+    		@Override
+    		public String getName() {
+    			return "owltool";
+    			}
+    		};
+    	}	
+    
 	public static void main(final String[] args) {
 		new OWLTool().instanceMainWithExit(args);
 		}

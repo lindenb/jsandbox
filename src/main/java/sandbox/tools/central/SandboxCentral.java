@@ -34,6 +34,7 @@ import sandbox.tools.miniivy.MiniIvy;
 import sandbox.tools.mosaic.MosaicOfPictures;
 import sandbox.tools.mywordle.MyWordle;
 import sandbox.tools.nashornserver.NashornServer;
+import sandbox.tools.owl.OWLTool;
 import sandbox.tools.rdf2graph.RdfToGraph;
 import sandbox.tools.saxscript.SAXScript;
 import sandbox.tools.svgshow.SVGShow;
@@ -103,6 +104,7 @@ public class SandboxCentral {
 		register(MakeGraphDependencies.class);
 		register(Mail2Xml.class);
 		register(MyWordle.class);
+		register(OWLTool.class);
 		register(SwapTwoBits.class);
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
