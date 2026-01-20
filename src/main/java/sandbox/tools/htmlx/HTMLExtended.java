@@ -380,6 +380,47 @@ public class HTMLExtended extends Launcher{
 			}
 		}
 	
+	
+
+	private class EmbbedSVG extends ElementHandler {
+		@Override
+		public String getName() {
+			return "svg";
+			}
+		@Override
+		public String getDescription() {
+			return "svg";
+			}
+		private Element apply(Element root) throws Exception {
+			if(!root.hasAttribute("src")) return root;
+			String src= root.getAttribute("src");
+			if(src.endsWith(".svg.gz") || src.endsWith(".svg")) {
+				final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+				dbf.setCoalescing(true);
+				final DocumentBuilder db = dbf.newDocumentBuilder();
+				try(InputStream in=IOUtils.openStream(src)) {
+					Document svgdoc = db.parse(in);
+					Element root2 = svgdoc.getDocumentElement();
+					if(root2!=null) {
+						root2 =(Element) root.getOwnerDocument().importNode(root2, true);
+						root.getParentNode().replaceChild(root2, root);
+						root = root2;
+						}
+					}
+				}
+			return root;
+			}
+		
+		@Override
+		public Node visitNode(Node node) throws Exception {
+			if(isA(node,"img")) {
+				node = apply(Element.class.cast(node));
+				}
+			visitChildrenOf(node);
+			return node;
+			}
+		}
+	
 	private class ImageBase64 extends ElementHandler {
 		@Override
 		public String getName() {
