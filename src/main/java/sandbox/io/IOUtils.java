@@ -166,9 +166,15 @@ public static BufferedReader openBufferedReaderFromPath(final Path path) throws 
 
 
 public static String slurp(final File file) throws IOException {
-	Reader r=null;
-	try { r = openReader(file); return slurp(r);} 
-	finally {close(r);}
+	try (Reader r = openReader(file)) {
+		return slurp(r);
+		} 
+	}
+
+public static String slurp(final Path file) throws IOException {
+	try (Reader r = openReader(file)) {
+		return slurp(r);
+		} 
 	}
 
 
@@ -221,6 +227,11 @@ public static Reader openReader(final String path) throws IOException {
 public static Reader openReader(final File path) throws IOException {
 	return new InputStreamReader(openStream(path));
 	}
+
+public static Reader openReader(final Path path) throws IOException {
+	return new InputStreamReader(openStream(path));
+	}
+
 public static InputStream openPathAsInputStream(final Path path) throws IOException {
 	return mayGzipInputStream(Files.newInputStream(path));
 	}
@@ -244,9 +255,11 @@ public static InputStream openStream(final String path) throws IOException {
 }
 
 public static InputStream openStream(final File path) throws IOException {
-	return openPathAsInputStream(path.toPath());
+	return openStream(path.toPath());
 	}
-
+public static InputStream openStream(final Path path) throws IOException {
+	return openPathAsInputStream(path);
+	}
 /**
  * return stdout if argument is null
  * return gzip compressed file if argument ends with gz

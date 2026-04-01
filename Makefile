@@ -22,7 +22,7 @@ $(1)  : $(addsuffix .java,$(addprefix src/main/java/,$(subst .,/,$(2)))) $(3) di
 	echo "### COMPILING $(1) ######"
 	mkdir -p ${tmp.dir}/META-INF ${bin.dir}
 	#compile
-	${JAVAC} -Xlint -d ${tmp.dir} -implicit:class -processor sandbox.annotation.processing.MyProcessor -processorpath dist/annotproc.jar -g -classpath "$$(subst $$(SPACE),:,$$(filter-out dist/annotproc.jar,$$(filter %.jar,$$^)))" -sourcepath ${src.dir} $$(filter %.java,$$^)
+	${JAVAC} -h src/main/c -Xlint -d ${tmp.dir} -implicit:class -processor sandbox.annotation.processing.MyProcessor -processorpath dist/annotproc.jar -g -classpath "$$(subst $$(SPACE),:,$$(filter-out dist/annotproc.jar,$$(filter %.jar,$$^)))" -sourcepath ${src.dir} $$(filter %.java,$$^)
 	# copy source
 	mkdir -p  '${tmp.dir}/$(dir $(subst .,/,$(firstword $(2))))'
 	cp -v  '$$(firstword $$(filter %.java,$$^))'  '${tmp.dir}/$(dir $(subst .,/,$(firstword $(2))))'
@@ -37,6 +37,14 @@ $(1)  : $(addsuffix .java,$(addprefix src/main/java/,$(subst .,/,$(2)))) $(3) di
 	rm -rf ${tmp.dir}
 
 endef
+
+lib/libjavancurses.o: src/main/c/sandbox_ncurses_NCurses.o
+	mkdir -p $(dir $@)
+	gcc -shared -fPIC -o $@ $^ -lncurses
+
+src/main/c/sandbox_ncurses_NCurses.o : src/main/c/sandbox_ncurses_NCurses.c src/main/c/sandbox_ncurses_NCurses.h
+	mkdir -p $(dir $@)
+	gcc -o $@ -c `find ${JAVA_HOME} -type f \( -name "jni.h" -o -name "jni_md.h" \) -printf " -I%h " ` $<
 
 jakarta.mail.jar = \
 	$(lib.dir)/jakarta/mail/jakarta.mail-api/2.1.3/jakarta.mail-api-2.1.3.jar
@@ -207,7 +215,7 @@ all_maven_jars = $(sort $(apache.poi.jar) ${jcommander.jar} ${jgit.jars} ${veloc
 top: jsandbox
 
 all: 	rss2atom bouletmaton genisansbouillir treemapviewer \
-	xml2xsd weatherarchive gribouille java2graph githistory  \
+	weatherarchive gribouille java2graph githistory  \
         atommerger pubmedtrending cookiestorefile softwarefitness \
 	packageeclipsejars xslserver java2xml flickrrss \
 	geneticpainting json2dom     \
@@ -236,7 +244,6 @@ $(eval $(call compile,nashornserver,sandbox.NashornServer,${apache.commons.cli} 
 $(eval $(call compile,filesaveserver,sandbox.http.FileSaveServer,${jcommander.jar} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars} ${log4j.jars}))
 $(eval $(call compile,urlsurveyserver,sandbox.http.UrlSurveyServer,${jcommander.jar} ${slf4j.jars} ${jetty.jars} ${apache.httpclient.jars} ${log4j.jars}))
 $(eval $(call compile,githistory,sandbox.GitHistory,${apache.commons.cli}  ))
-$(eval $(call compile,xml2xsd,sandbox.tools.xmls2xsd.XmlToXsd,${jcommander.jar}))
 $(eval $(call compile,java2graph,sandbox.Java2Graph,${apache.commons.cli}  ))
 $(eval $(call compile,gribouille,sandbox.Gribouille,${jcommander.jar}  ))
 $(eval $(call compile,weatherarchive,sandbox.WeatherArchive,${apache.commons.cli} ${slf4j.jars}  ${jtidy.jars}  ${apache.httpclient.jars} ))
@@ -284,7 +291,7 @@ $(eval $(call compile,mastodongraph,sandbox.tools.mastodongraph.MastodonGraph,${
 $(eval $(call compile,gimppatterns,sandbox.tools.gimppat.GimpPatterns,${jcommander.jar}))
 $(eval $(call compile,test,sandbox.tools.xml2ppt.XmlToPPT,${jcommander.jar} ${apache.poi.jar}))
 $(eval $(call compile,tonic,sandbox.tools.tonic.Tonic,${jcommander.jar}))
-$(eval $(call compile,xml2jni,sandbox.tools.jni.XmlToJNI,${jcommander.jar} ${freemarker.jar}))
+$(eval $(call compile,xml2jni,sandbox.tools.xml2jni.XmlToJNI,${jcommander.jar}))
 $(eval $(call compile,rdftemplate,sandbox.tools.rdftemplate.RDFTemplate,${jcommander.jar} ${jena-core.jars}))
 $(eval $(call compile,streamplot,sandbox.tools.streamplot.StreamPlot, ${jcommander.jar} ./src/main/java/sandbox/tools/streamplot/parser/StreamPlotParser.java))
 $(eval $(call compile,pojogenerator,sandbox.tools.pojogenerator.PojoGenerator, ${jcommander.jar} ./src/main/java/sandbox/tools/pojogenerator/parser/PojoParser.java))

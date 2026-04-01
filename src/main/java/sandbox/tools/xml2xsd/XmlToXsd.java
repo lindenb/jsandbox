@@ -2,8 +2,6 @@ package sandbox.tools.xml2xsd;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,6 +47,7 @@ import com.beust.jcommander.Parameter;
 import sandbox.Launcher;
 import sandbox.io.IOUtils;
 import sandbox.lang.StorageTypePredictor;
+import sandbox.tools.central.ProgramDescriptor;
 
 public class XmlToXsd extends Launcher {
 	private static final String XSD=XMLConstants.W3C_XML_SCHEMA_NS_URI;
@@ -299,6 +298,17 @@ public class XmlToXsd extends Launcher {
 		
 		}
 
+	
+	public static ProgramDescriptor getProgramDescriptor() {
+		return new ProgramDescriptor() {
+			@Override
+			public String getName() {
+				return "xml2xsd";
+				}
+			};
+		}
+
+	
 	@Override
 	public int doWork(final List<String> args) {
 		try {	

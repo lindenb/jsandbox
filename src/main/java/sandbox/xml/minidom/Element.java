@@ -168,15 +168,35 @@ public Stream<Node> stream() {
 	return nodes().stream();
 	}
 
-/** returns all child Elements */
-public IterableHasStream<Node> nodes() {
-	return MiniDomIterator.nodes(this);
+/** returns all child Nodes */
+public List<Node> nodes() {
+	final List<Node> L=new ArrayList<>();
+	for(Node c=this.getFirstChild();c!=null;c=c.getNextSibling()) {
+		L.add(c);
+		}
+	return L;
 	}
 
 /** returns all child Elements */
-public IterableHasStream<Element> elements() {
-	return MiniDomIterator.elements(this);
+public List<Element> elements() {
+	final List<Element> L=new ArrayList<>();
+	for(Node c=this.getFirstChild();c!=null;c=c.getNextSibling()) {
+		if(!c.isElement()) continue;
+		L.add(c.asElement());
+		}
+	return L;
 	}
+
+/** returns all child Elements */
+public List<Element> elements(Predicate<Element> p) {
+	final List<Element> L=new ArrayList<>();
+	for(Node c=this.getFirstChild();c!=null;c=c.getNextSibling()) {
+		if(!c.isElement() || !p.test(c.asElement())) continue;
+		L.add(c.asElement());
+		}
+	return L;
+	}
+
 
 /** count child Element  */
 public int countChildElements() {

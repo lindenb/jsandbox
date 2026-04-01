@@ -72,7 +72,7 @@ public abstract class Launcher
 		{
 		return IOUtils.openBufferedReader(pathOrNull);
 		}
-	}	
+		}
 
 	
 	protected OutputStream openPathAsOuputStream(final Path path) throws IOException {

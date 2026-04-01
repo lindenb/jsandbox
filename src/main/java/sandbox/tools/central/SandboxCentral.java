@@ -46,9 +46,12 @@ import sandbox.tools.timeline.TimeLineMaker;
 import sandbox.tools.treemap.TreeMapMaker;
 import sandbox.tools.urlencoder.UrlEncoder;
 import sandbox.tools.velocityjson.VelocityJson;
+import sandbox.tools.xml2jni.XmlToJNI;
+import sandbox.tools.xml2xsd.XmlToXsd;
 import sandbox.tools.xmlpath.XmlPath;
 import sandbox.tools.yaml2xml.YamlToXml;
 import sandbox.util.Pair;
+import sandbox.ncurses.NCurses;//force ncurses
 
 public class SandboxCentral {
 	private final List<Pair<Class<?>,ProgramDescriptor>> programs= new ArrayList<>();
@@ -117,6 +120,8 @@ public class SandboxCentral {
 		register(NashornServer.class);
 		register(TreeMapMaker.class);
 		register(XmlPath.class);
+		register(XmlToXsd.class);
+		register(XmlToJNI.class);
 		
 		Collections.sort(programs,(A,B)->A.getValue().getName().compareTo(B.getValue().getName()));
 		if(args.isEmpty()) {

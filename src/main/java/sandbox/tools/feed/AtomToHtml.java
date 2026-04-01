@@ -82,7 +82,7 @@ public class AtomToHtml extends Launcher {
 		String url;
 		String date;
 		String title;
-		Set<String> userNames=new HashSet<>();
+		Set<String> userNames =new HashSet<>();
 		String imgUrl;
 	}
 	
@@ -132,8 +132,14 @@ public class AtomToHtml extends Launcher {
 		return true;
 		}	
 	
+	private String sanitizeUserName(final String s) {
+		final String flic = "https://www.flickr.com/people/";
+		if(s.startsWith(flic)) return sanitizeUserName(s.substring(flic.length()));
+		if(s.endsWith("/")) return sanitizeUserName(s.substring(0,s.length()-1));
+		return s;
+		}
 	
-	private FeedItem parseAtomEntry(Node root) {
+	private FeedItem parseAtomEntry(final Node root) {
 		String title = null;
 		String updated = null;
 		String url = null;
@@ -183,10 +189,19 @@ public class AtomToHtml extends Launcher {
 						userNames.add(e2.getTextContent());
 						}
 					else if(localName2.equals("uri")) {
-						userNames.add(e2.getTextContent());
+						userNames.add(sanitizeUserName(e2.getTextContent()));
 						}
 					else if(localName2.equals("nsid") && "flickr".equals(e2.getPrefix())) {
-						userNames.add(e2.getTextContent());
+						final String flickUser = e2.getTextContent().trim();
+						//System.err.println("flickr user:"+flickUser);
+						userNames.add(sanitizeUserName(flickUser));
+						}
+					else if(localName2.equals("buddyicon")) {
+						//ignore
+						}
+					else
+						{
+						LOG.warning("unkwnon field in author <"+localName2+"/>");
 						}
 					}
 				}
@@ -419,8 +434,10 @@ public class AtomToHtml extends Launcher {
 		final Element imgE = document.createElement("img");
 		if(width>0) imgE.setAttribute("width", String.valueOf(width));
 		a.appendChild(imgE);
-		if(!StringUtils.isBlank(feed.title)) imgE.setAttribute("alt", feed.title);
-		if(!StringUtils.isBlank(feed.title)) a.setAttribute("title", feed.title + (feed.userNames.isEmpty()?"":" \""+feed.userNames.iterator().next()+"\"")+(StringUtils.isBlank(feed.date)?"":" "+feed.date));
+		final String title= StringUtils.ifBlank(feed.title,"")+" by "+String.join(" ",feed.userNames)+" on "+(StringUtils.isBlank(feed.date)?"":" "+feed.date);
+		imgE.setAttribute("alt",  title);
+		imgE.setAttribute("title",  title);
+		a.setAttribute("title", title);
 		imgE.setAttribute("src", feed.imgUrl);
 		return a;
 		}

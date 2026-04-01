@@ -19,10 +19,12 @@ import sandbox.io.RuntimeIOException;
 
 public class MiniDomReader {
 	private Function<StartElement,Element> elementCreator= (SE)->new Element(SE);
-	public Text createText(Characters chars) {
-		return new Text(chars.getData());
+	public final Text createText(final Characters chars) {
+		return createText(chars.getData());
 		}
-	
+	public Text createText(final String chars) {
+		return new Text(chars);
+		}
 	
 	public MiniDomReader setElementCreator(Function<StartElement, Element> elementCreator) {
 		this.elementCreator = elementCreator;
@@ -31,6 +33,10 @@ public class MiniDomReader {
 	
 	public Element createElement(StartElement se) {
 		return this.elementCreator.apply(se);
+		}
+	
+	public Element createElement(org.w3c.dom.Element E) {
+		return new Element(E);
 		}
 	
 	protected XMLInputFactory newXMLInputFactory() {
@@ -111,6 +117,25 @@ public class MiniDomReader {
 		}
 	protected boolean accept(Element root,Node n) {
 		return true;
-	}
+		}
+	
+	public Node importDOM(org.w3c.dom.Node n) {
+		if(n.getNodeType()==org.w3c.dom.Node.DOCUMENT_NODE) {
+			return importDOM(org.w3c.dom.Document.class.cast(n).getDocumentElement());
+			}
+		else if(n.getNodeType()==org.w3c.dom.Node.TEXT_NODE ||n.getNodeType()==org.w3c.dom.Node.CDATA_SECTION_NODE ) {
+			return createText(org.w3c.dom.CharacterData.class.cast(n).getData());
+			}
+		else if(n.getNodeType()==org.w3c.dom.Node.ELEMENT_NODE ) {
+			Element E= createElement(org.w3c.dom.Element.class.cast(n));
+			for(org.w3c.dom.Node c=n.getFirstChild();c!=null;c=c.getNextSibling() ) {
+				Node c2 = importDOM(c);
+				if(c2!=null &&  accept(E,c2)) E.appendChild(c2);
+				}
+ 			return E;
+			}
+		return null;
+		}
+	
 	
 }

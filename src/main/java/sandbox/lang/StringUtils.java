@@ -10,6 +10,8 @@ import java.util.Properties;
 
 public class StringUtils {
 
+
+	
 public static String subStringBefore(String s, String delim) {
 	int i=s.indexOf(delim);
 	if(i<0) return s;
@@ -72,7 +74,12 @@ public static String ifBlank(final String s,final String def) {
 	return isBlank(s)?def:s;
 }
 
-public static boolean isBlank(final String s) {
+public static <T extends CharSequence> T assertNoBlank(final T s) {
+	if(isBlank(s)) throw new IllegalArgumentException("argument is null or blank");
+	return s;
+	}
+
+public static boolean isBlank(final CharSequence s) {
 	if(s==null) return true;
 	for(int i=0;i< s.length();i++) {
 		if(!Character.isWhitespace(s.charAt(i))) return false;
@@ -200,4 +207,99 @@ public static String unescape(String s) {
 		}
 	return sb.toString();
 	}
+/* GPT version because I'm lazy */
+public static String removeCComments(final CharSequence s) {
+    final StringBuilder out = new StringBuilder(s.length());
+    boolean in_single_quote = false;
+    boolean in_double_quote = false;
+    boolean inLineComment = false;
+    boolean inBlockComment = false;
+    boolean escape = false;
+
+    for (int i = 0; i < s.length(); i++) {
+        char c = s.charAt(i);
+        char next = (i + 1 < s.length()) ? s.charAt(i + 1) : '\0';
+
+        if (inLineComment) {
+            if (c == '\n') {
+                inLineComment = false;
+                out.append(c); // preserve newline
+            } else {
+                out.append(' '); // preserve position
+            }
+            continue;
+        }
+
+        if (inBlockComment) {
+            if (c == '*' && next == '/') {
+                // replace both '*' and '/' with spaces
+                out.append(' ');
+                out.append(' ');
+                i++; // skip '/'
+                inBlockComment = false;
+            } else if (c == '\n') {
+                out.append('\n'); // preserve newline
+            } else {
+                out.append(' ');
+            }
+            continue;
+        }
+
+        if (in_single_quote) {
+            out.append(c);
+            if (escape) {
+                escape = false;
+            } else if (c == '\\') {
+                escape = true;
+            } else if (c == '\'') {
+                in_single_quote = false;
+            }
+            continue;
+        }
+
+        if (in_double_quote) {
+            out.append(c);
+            if (escape) {
+                escape = false;
+            } else if (c == '\\') {
+                escape = true;
+            } else if (c == '"') {
+                in_double_quote = false;
+            }
+            continue;
+        }
+
+        if (c == '/' && next == '/') {
+            out.append(' ');
+            out.append(' ');
+            i++;
+            inLineComment = true;
+            continue;
+        }
+
+        if (c == '/' && next == '*') {
+            out.append(' ');
+            out.append(' ');
+            i++;
+            inBlockComment = true;
+            continue;
+        }
+
+        if (c == '\'') {
+            in_single_quote = true;
+            out.append(c);
+            continue;
+        }
+
+        if (c == '"') {
+            in_double_quote = true;
+            out.append(c);
+            continue;
+        }
+
+        out.append(c);
+    }
+
+    return out.toString();
+}
 }
