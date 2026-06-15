@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -64,7 +65,10 @@ public class AtomToHtml extends Launcher {
 	@Parameter(names={"--directory"},description="Save images in that directory")
 	private Path saveDirectory = null;
 	@Parameter(names={"--no-gif"},description="remove images with .gif suffix")
-	private boolean no_gif = false;
+	private boolean no_gif = false;	
+	@Parameter(names={"--sleep","--wait"},description="wait x seconds between each fetch")
+	private int sleep_seconds=2;
+
 
 	private static class FeedSource extends StringWrapper {
 		FeedSource(String url) {
@@ -457,12 +461,14 @@ public class AtomToHtml extends Launcher {
 		}
 	
 	private Optional<Feed> parseFeed(CloseableHttpClient client,final FeedSource feedSrc) throws Exception {
+		try {
 		final RssToAtom rss2atom = new RssToAtom();
 		final Optional<Document> rss;
 		try {
 			rss = parseUrl(client, feedSrc);
 			}
 		catch(Throwable err) {
+			LOG.error(feedSrc.toString());
 			LOG.error(err);
 			return Optional.empty();
 			}
@@ -499,6 +505,12 @@ public class AtomToHtml extends Launcher {
 			return Optional.of(feeds);
 			}
 		}
+	catch(Throwable err2) {
+		LOG.error(feedSrc.toString());
+		LOG.error(err2);
+		return Optional.empty();
+		}
+	}
 	
 	@Override
 	public int doWork(final List<String> args) {
@@ -538,8 +550,12 @@ public class AtomToHtml extends Launcher {
 
 			try(CloseableHttpClient client = builder.build()) {
 				for(final FeedSource feedSrc :feedSources) {
-					Optional<Feed> n = parseFeed(client, feedSrc);
+					LOG.debug(feedSrc.toString());
+					final Optional<Feed> n = parseFeed(client, feedSrc);
 					if(n.isPresent()) all_feeds.add(n.get());
+					if(this.sleep_seconds>0) {
+						TimeUnit.SECONDS.sleep(this.sleep_seconds);
+						}
 				}
 			
 			final Document document = this.documentBuilder.newDocument();
