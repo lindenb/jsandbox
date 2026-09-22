@@ -37,6 +37,7 @@ import sandbox.tools.nashornserver.NashornServer;
 import sandbox.tools.owl.OWLTool;
 import sandbox.tools.rdf2graph.RdfToGraph;
 import sandbox.tools.saxscript.SAXScript;
+import sandbox.tools.scriptreplay.ScriptReplay;
 import sandbox.tools.svgshow.SVGShow;
 import sandbox.tools.swap2bits.SwapTwoBits;
 import sandbox.tools.swingfactory.SwingFactory;
@@ -51,7 +52,7 @@ import sandbox.tools.xml2xsd.XmlToXsd;
 import sandbox.tools.xmlpath.XmlPath;
 import sandbox.tools.yaml2xml.YamlToXml;
 import sandbox.util.Pair;
-import sandbox.ncurses.NCurses;//force ncurses
+//import sandbox.ncurses.NCurses;//force ncurses
 
 public class SandboxCentral {
 	private final List<Pair<Class<?>,ProgramDescriptor>> programs= new ArrayList<>();
@@ -113,6 +114,7 @@ public class SandboxCentral {
 		register(SwingWatcher.class);
 		//register(LispApp.class);
 		register(RdfToGraph.class);
+		register(ScriptReplay.class);
 		register(TimeLineMaker.class);
 		register(UrlEncoder.class);
 		register(VelocityJson.class);

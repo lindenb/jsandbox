@@ -1,4 +1,4 @@
-package sandbox;
+package sandbox.jena;
 
 import java.util.Spliterator;
 import java.util.Spliterators;
