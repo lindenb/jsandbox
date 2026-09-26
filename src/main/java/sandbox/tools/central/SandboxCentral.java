@@ -37,6 +37,7 @@ import sandbox.tools.nashornserver.NashornServer;
 import sandbox.tools.owl.OWLTool;
 import sandbox.tools.rdf2graph.RdfToGraph;
 import sandbox.tools.saxscript.SAXScript;
+import sandbox.tools.srtshifter.SrtShifter;
 import sandbox.tools.svgshow.SVGShow;
 import sandbox.tools.swap2bits.SwapTwoBits;
 import sandbox.tools.swingfactory.SwingFactory;
@@ -109,6 +110,7 @@ public class SandboxCentral {
 		register(MyWordle.class);
 		register(OWLTool.class);
 		register(SwapTwoBits.class);
+		register(SrtShifter.class);
 		register(SwingFactory.class);
 		register(SwingWatcher.class);
 		//register(LispApp.class);

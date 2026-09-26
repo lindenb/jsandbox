@@ -12,7 +12,7 @@ public class StringWrapper implements CharSequence {
 		}
 	
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if(obj==this) return true;
 		if(obj==null || !(this.getClass().equals(obj.getClass()))) return false;
 		return this.getString().equals(StringWrapper.class.cast(obj).getString());
@@ -22,6 +22,9 @@ public class StringWrapper implements CharSequence {
 		return this.delegate;
 		}
 	
+	public int indexOf(char c) {
+		return this.delegate.indexOf(c);
+		}
 	
 	@Override
 	public String toString() {
@@ -38,8 +41,20 @@ public class StringWrapper implements CharSequence {
 		return getString().charAt(index);
 	}
 
+	public CharSequence subSequence(int start) {
+		return subSequence(start, length());
+		}
+	
 	@Override
 	public CharSequence subSequence(int start, int end) {
 		return getString().subSequence(start, end);
-	}
+		}
+	
+	public String substring(int start) {
+		return getString().substring(start);
+		}
+	
+	public String substring(int start, int end) {
+		return getString().substring(start, end);
+		}
 	}

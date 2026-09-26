@@ -1,7 +1,6 @@
 package sandbox.mail;
 
 import java.net.URI;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
