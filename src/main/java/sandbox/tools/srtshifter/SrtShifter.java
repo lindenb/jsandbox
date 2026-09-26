@@ -19,9 +19,9 @@ import sandbox.tools.central.ProgramDescriptor;
 
 public class SrtShifter extends Launcher {
 	private static final Logger LOG = Logger.builder(SrtShifter.class).build();
-    @Parameter(names= {"--start"},description="idx:seconds : idx is ID in srt file, seconds is number of seconds in media",required = true)
+    @Parameter(names= {"--start"},description="idx:seconds or idx:hour:minute:seconds where idx is ID in srt file, seconds is number of seconds in media",required = true)
     private String start_point;
-    @Parameter(names= {"--end"},description="idx:seconds : idx is ID in srt file, seconds is number of seconds in media",required = true)
+    @Parameter(names= {"--end"},description="idx:seconds or idx:hour:minute:seconds where idx is ID in srt file, seconds is number of seconds in media",required = true)
     private String end_point;
 
 	
@@ -30,7 +30,7 @@ public class SrtShifter extends Launcher {
 
     private static class PointInTime {
 		int id;
-		 long millisec;
+		long destination_millisec;
 		}
     
 	private static class Entry {
@@ -38,6 +38,10 @@ public class SrtShifter extends Launcher {
 		 long millisec_start;
 		 long millisec_end;
 		 List<String> text = new ArrayList<String>();
+		 
+		long duration() {
+			return millisec_end-millisec_start;
+		}
 		 @Override
 		public String toString() {
 			return  id +" "+millisec_start+"-->"+millisec_end+" "+text;
@@ -46,8 +50,8 @@ public class SrtShifter extends Launcher {
     
 	// eg. "00:02:15,304"
 	private static long parseDuration(final String duration) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss,SSS");
-        LocalTime time = LocalTime.parse(duration, formatter);
+        final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss,SSS");
+        final LocalTime time = LocalTime.parse(duration, formatter);
         long milliseconds = Duration.ofNanos(time.toNanoOfDay()).toMillis();
 		//System.err.println(duration+" = > "+milliseconds);
 
@@ -69,12 +73,23 @@ public class SrtShifter extends Launcher {
 	
 	private static PointInTime parsePoint(String s) {
 		String tokens[]= s.split(":");
-		if(tokens.length!=2) throw new IllegalArgumentException("expected 1 colons in "+s);
-		PointInTime entry = new PointInTime();
-		entry.id= Integer.parseInt(tokens[0]);
-		entry.millisec = Integer.parseInt(tokens[1])*1000L;
-		return entry;
-	}
+		if(tokens.length==2) {
+			final PointInTime entry = new PointInTime();
+			entry.id= Integer.parseInt(tokens[0]);
+			entry.destination_millisec = Integer.parseInt(tokens[1])*1000L;
+			return entry;
+			}
+		else if(tokens.length==4) { //idx:hour:minute:seconds
+			final PointInTime entry = new PointInTime();
+			entry.id= Integer.parseInt(tokens[0]);
+			int hours = Integer.parseInt(tokens[1]);
+			int min = Integer.parseInt(tokens[2])+hours*60;
+			int sec = Integer.parseInt(tokens[3])+min*60;
+			entry.destination_millisec = sec*1000L;
+			return entry;
+			}
+		throw new IllegalArgumentException("expected 1 or 4 colons in "+s);
+		}
 	
 	private static String toDuration(long milliseconds) {
 		Duration duration = Duration.ofMillis(milliseconds);
@@ -92,7 +107,7 @@ public class SrtShifter extends Launcher {
 		}
 	
     @Override
-    public int doWork(List<String> args) {
+    public int doWork(final List<String> args) {
     	try {
     		final String input = oneFileOrNull(args);
     		final PointInTime my_start=parsePoint(this.start_point);
@@ -121,24 +136,26 @@ public class SrtShifter extends Launcher {
     				entries.add(entry);
     				}
     			
-    			double irl_duration = my_end.millisec - my_start.millisec;
     			
-    			Entry evtA = entries.stream().filter(E->E.id==my_start.id).findFirst().orElseThrow();
-    			Entry evtB = entries.stream().filter(E->E.id==my_end.id).findFirst().orElseThrow();
-    			double media_duration = evtB.millisec_end - evtA.millisec_start;
-    			
+    			final Entry evtBegin = entries.stream().filter(E->E.id==my_start.id).findFirst().orElseThrow();
+    			final Entry evtEnd = entries.stream().filter(E->E.id==my_end.id).findFirst().orElseThrow();
+    			// origina duraction between two point
+    			final double original_duration = evtEnd.millisec_start - evtBegin.millisec_start;
+    			final double dest_duration = my_end.destination_millisec - my_start.destination_millisec; 
     			try(PrintWriter pw=super.openPathAsPrintWriter(this.outFile)) {
     				final String CRLF="\r\n";
     				for(Entry entry: entries) {
     					pw.print(entry.id);
     					pw.print(CRLF);
-    					
-    					long time = (long)(my_start.millisec+((entry.millisec_start - evtA.millisec_start)/(media_duration))*irl_duration);
+    					double factor  = (entry.millisec_start - evtBegin.millisec_start)/original_duration;//YES start-start
+    					long time = my_start.destination_millisec + (long)((dest_duration)*factor);
+    								
+    							// (long)(my_start.millisec+((entry.millisec_start - evtA.millisec_start)/(media_duration))*irl_duration);
     					
     					pw.print(toDuration(time));
     					pw.print(" --> ");
     					
-    					//time = time + (entry.millisec_end- entry.millisec_start);
+    					time += entry.duration();
     					//time =  (long)(my_start.millisec+((entry.millisec_end - evtB.millisec_end)/(media_duration))*irl_duration);
     					pw.print(toDuration(time));
     					pw.print(CRLF);
