@@ -36,6 +36,7 @@ import sandbox.tools.mywordle.MyWordle;
 import sandbox.tools.nashornserver.NashornServer;
 import sandbox.tools.owl.OWLTool;
 import sandbox.tools.rdf2graph.RdfToGraph;
+import sandbox.tools.reversefile.ReverseFile;
 import sandbox.tools.saxscript.SAXScript;
 import sandbox.tools.srtshifter.SrtShifter;
 import sandbox.tools.scriptreplay.ScriptReplay;
@@ -110,6 +111,7 @@ public class SandboxCentral {
 		register(Mail2Xml.class);
 		register(MyWordle.class);
 		register(OWLTool.class);
+		register(ReverseFile.class);
 		register(SwapTwoBits.class);
 		register(SrtShifter.class);
 		register(SwingFactory.class);
