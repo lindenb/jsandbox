@@ -46,6 +46,7 @@ import sandbox.jcommander.DurationConverter;
 import sandbox.jcommander.NoSplitter;
 import sandbox.lang.StringUtils;
 import sandbox.lang.StringWrapper;
+import sandbox.reddit.RedditToAtom;
 import sandbox.tools.central.ProgramDescriptor;
 import sandbox.xml.XMLSerializer;
 
@@ -287,6 +288,9 @@ public class AtomToHtml extends Launcher {
 	
 	private Optional<Document> parseUrl(CloseableHttpClient client,final FeedSource feedSrc) throws Exception {
 		final String url = feedSrc.toString();
+		if(RedditToAtom.isRedditURL(url)) {
+			return new RedditToAtom().fetch(client, url);
+			}
 		if(IOUtils.isURL(url)) {
 			try(CloseableHttpResponse resp=client.execute(new HttpGet(url))) {
 				if(resp.getStatusLine().getStatusCode()!=200) {
