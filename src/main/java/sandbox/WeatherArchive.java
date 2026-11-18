@@ -308,7 +308,7 @@ public class WeatherArchive extends AbstractApplication {
 			HttpHost proxy=new HttpHost("cache.ha.univ-nantes.fr", 3128);
 			client = HttpClientBuilder.create().
 					setProxy(proxy).
-					setUserAgent("Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:47.0) Gecko/20100101 Firefox/47.0").
+					setUserAgent(IOUtils.getUserAgent()).
 					build();
 			System.out.println("create table if not exists wrecord ("
 					+ "placeId VARCHAR(10) NOT NULL,"

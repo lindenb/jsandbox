@@ -56,6 +56,8 @@ import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import sandbox.io.IOUtils;
+
 /**
  * 
  * VariantEffectPredictorRobot
@@ -64,7 +66,6 @@ import org.xml.sax.SAXException;
 public class VariantEffectPredictorRobot
 	{
 	private final URL BASE=new URL("http://www.ensembl.org/Homo_sapiens/UserData/UploadVariations");
-	private static final String MOZILLA_CLIENT="Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.8) Gecko/20100722 Firefox/3.6.8";
 	private static final int BATCH_SIZE=100;
 	private static Logger LOG=Logger.getLogger("ensembl.robot");
 	private DocumentBuilder builder;
@@ -254,7 +255,7 @@ public class VariantEffectPredictorRobot
 			URL url=new URL(BASE,"/Homo_sapiens/UserData/UploadVariations");
 			LOG.info(url.toString());
 			methodGet=new GetMethod(url.toString());
-			methodGet.setRequestHeader("User-Agent", MOZILLA_CLIENT);
+			methodGet.setRequestHeader("User-Agent", IOUtils.getUserAgent());
 			int status = httpClient.executeMethod(methodGet);
 			if(status!=HttpStatus.SC_OK)
 				{
